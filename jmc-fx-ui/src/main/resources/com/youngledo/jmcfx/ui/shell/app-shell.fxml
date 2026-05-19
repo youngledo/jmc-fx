@@ -1,0 +1,142 @@
+<?xml version="1.0" encoding="UTF-8"?>
+
+<?import javafx.scene.control.Button?>
+<?import javafx.scene.control.Label?>
+<?import javafx.scene.control.ListView?>
+<?import javafx.scene.control.MenuButton?>
+<?import javafx.scene.control.ProgressBar?>
+<?import javafx.scene.control.RadioButton?>
+<?import javafx.scene.control.SplitPane?>
+<?import javafx.scene.control.Tab?>
+<?import javafx.scene.control.TabPane?>
+<?import javafx.scene.control.TableView?>
+<?import javafx.scene.control.TextField?>
+<?import javafx.scene.control.ToggleGroup?>
+<?import javafx.scene.control.TreeView?>
+<?import javafx.scene.layout.BorderPane?>
+<?import javafx.scene.layout.HBox?>
+<?import javafx.scene.layout.StackPane?>
+<?import javafx.scene.layout.VBox?>
+<?import com.youngledo.jmcfx.ui.shell.AppSidebar?>
+
+<BorderPane fx:id="root" styleClass="enterprise-shell" xmlns="http://javafx.com/javafx/25"
+            xmlns:fx="http://javafx.com/fxml/1"
+            fx:controller="com.youngledo.jmcfx.ui.shell.AppShellController">
+    <left>
+        <AppSidebar fx:id="sidebar"/>
+    </left>
+    <center>
+        <VBox styleClass="workspace-shell">
+        <TabPane fx:id="recordingTabs" styleClass="recording-tabs"/>
+        <StackPane fx:id="workspaceStack" styleClass="work-area" VBox.vgrow="ALWAYS">
+            <VBox fx:id="homePane" styleClass="welcome-pane" spacing="18">
+                <VBox styleClass="home-hero" spacing="10">
+                    <Label fx:id="homeKickerLabel" styleClass="home-kicker"/>
+                    <Label fx:id="homeTitleLabel" styleClass="welcome-title"/>
+                    <Label fx:id="homeSubtitleLabel" styleClass="welcome-subtitle" wrapText="true"/>
+                    <HBox styleClass="home-actions" spacing="8">
+                        <Button fx:id="homeOpenRecordingButton" styleClass="toolbar-primary"/>
+                        <Button fx:id="homeConnectJvmButton" styleClass="toolbar-secondary" disable="true"/>
+                    </HBox>
+                </VBox>
+                <HBox styleClass="workflow-tiles" spacing="12">
+                    <VBox styleClass="workflow-tile" spacing="6" HBox.hgrow="ALWAYS">
+                        <Label fx:id="homeOpenWorkflowTitleLabel" styleClass="workflow-tile-title"/>
+                        <Label fx:id="homeOpenWorkflowDescriptionLabel" styleClass="workflow-tile-copy" wrapText="true"/>
+                    </VBox>
+                    <VBox styleClass="workflow-tile" spacing="6" HBox.hgrow="ALWAYS">
+                        <Label fx:id="homeEventsWorkflowTitleLabel" styleClass="workflow-tile-title"/>
+                        <Label fx:id="homeEventsWorkflowDescriptionLabel" styleClass="workflow-tile-copy" wrapText="true"/>
+                    </VBox>
+                    <VBox styleClass="workflow-tile" spacing="6" HBox.hgrow="ALWAYS">
+                        <Label fx:id="homeJvmWorkflowTitleLabel" styleClass="workflow-tile-title"/>
+                        <Label fx:id="homeJvmWorkflowDescriptionLabel" styleClass="workflow-tile-copy" wrapText="true"/>
+                    </VBox>
+                </HBox>
+                <Label fx:id="homeDisclaimerLabel" styleClass="legal-disclaimer" wrapText="true"/>
+            </VBox>
+            <VBox fx:id="overviewPane" spacing="12">
+                <Label fx:id="overviewTitleLabel" styleClass="view-title"/>
+                <VBox styleClass="summary-panel" spacing="6">
+                    <Label fx:id="overviewRecordingNameLabel" styleClass="detail-title"/>
+                    <Label fx:id="overviewRecordingDetailsLabel" wrapText="true"/>
+                </VBox>
+                <HBox spacing="12">
+                    <VBox styleClass="summary-panel" spacing="6" HBox.hgrow="ALWAYS">
+                        <Label fx:id="overviewAnalysisTitleLabel" styleClass="detail-title"/>
+                        <Label fx:id="overviewAnalysisStatusLabel" styleClass="unavailable-state" wrapText="true"/>
+                    </VBox>
+                    <VBox styleClass="summary-panel" spacing="6" HBox.hgrow="ALWAYS">
+                        <Label fx:id="overviewJvmsTitleLabel" styleClass="detail-title"/>
+                        <Label fx:id="overviewJvmStatusLabel" styleClass="unavailable-state" wrapText="true"/>
+                    </VBox>
+                </HBox>
+            </VBox>
+            <VBox fx:id="eventsPane" spacing="8">
+                <Label fx:id="eventsTitleLabel" styleClass="view-title"/>
+                <HBox styleClass="event-filter-bar" spacing="8">
+                    <TextField fx:id="eventSearchField" HBox.hgrow="ALWAYS"/>
+                    <TextField fx:id="threadFilterField"/>
+                    <TextField fx:id="fieldFilterField"/>
+                    <Button fx:id="clearEventFiltersButton"/>
+                    <MenuButton fx:id="columnsButton"/>
+                </HBox>
+                <SplitPane fx:id="eventsSplitPane" VBox.vgrow="ALWAYS">
+                    <TreeView fx:id="eventTypesTree" minWidth="96" prefWidth="140" maxWidth="Infinity"/>
+                    <VBox spacing="6">
+                        <TableView fx:id="eventsTable" styleClass="dense-table" VBox.vgrow="ALWAYS"/>
+                        <Label fx:id="eventWindowStatusLabel" styleClass="event-window-status"/>
+                    </VBox>
+                </SplitPane>
+                <TabPane fx:id="eventDetailsTabs" prefHeight="220">
+                    <tabs>
+                        <Tab fx:id="eventPropertiesTab" closable="false">
+                            <TableView fx:id="eventPropertiesTable"/>
+                        </Tab>
+                        <Tab fx:id="eventTimingTab" closable="false">
+                            <VBox spacing="4">
+                                <Label fx:id="eventTimingLabel" wrapText="true"/>
+                            </VBox>
+                        </Tab>
+                        <Tab fx:id="eventThreadTab" closable="false">
+                            <VBox spacing="4">
+                                <Label fx:id="eventThreadLabel" wrapText="true"/>
+                            </VBox>
+                        </Tab>
+                        <Tab fx:id="eventStackTraceTab" closable="false">
+                            <ListView fx:id="eventStackTraceList"/>
+                        </Tab>
+                    </tabs>
+                </TabPane>
+            </VBox>
+            <VBox fx:id="analysisPane" spacing="8">
+                <Label fx:id="analysisTitleLabel" styleClass="view-title"/>
+                <Label fx:id="analysisUnavailableLabel" styleClass="unavailable-state" wrapText="true"/>
+            </VBox>
+            <VBox fx:id="jvmsPane" spacing="8">
+                <Label fx:id="jvmsTitleLabel" styleClass="view-title"/>
+                <Label fx:id="jvmsUnavailableLabel" styleClass="unavailable-state" wrapText="true"/>
+            </VBox>
+            <VBox fx:id="settingsPane" spacing="8">
+                <Label fx:id="settingsTitleLabel" styleClass="view-title"/>
+                <Label fx:id="settingsLanguageLabel" styleClass="detail-title"/>
+                <HBox spacing="16" styleClass="settings-language-options">
+                    <fx:define>
+                        <ToggleGroup fx:id="languageToggleGroup"/>
+                    </fx:define>
+                    <RadioButton fx:id="languageFollowSystemRadio" toggleGroup="$languageToggleGroup"/>
+                    <RadioButton fx:id="languageEnglishRadio" toggleGroup="$languageToggleGroup"/>
+                    <RadioButton fx:id="languageChineseRadio" toggleGroup="$languageToggleGroup"/>
+                </HBox>
+            </VBox>
+        </StackPane>
+        </VBox>
+    </center>
+    <bottom>
+        <HBox styleClass="status-bar" spacing="8">
+            <Label fx:id="statusLabel"/>
+            <ProgressBar prefWidth="160" progress="0"/>
+            <Label fx:id="taskSummaryLabel" styleClass="task-summary"/>
+        </HBox>
+    </bottom>
+</BorderPane>

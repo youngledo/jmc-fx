@@ -1,0 +1,9 @@
+JMC FX
+
+JMC FX is an independent project and is not affiliated with, endorsed by, or
+sponsored by Oracle or the OpenJDK project.
+
+This project may reuse OpenJDK JMC core/headless libraries. OpenJDK JMC is
+available from the OpenJDK project under its own open source licenses and
+notices. Redistributed JMC-derived artifacts must retain their original
+copyright, license, and third-party notices.
