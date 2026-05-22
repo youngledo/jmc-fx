@@ -3,6 +3,7 @@ package com.youngledo.jmcfx.app;
 import java.util.Locale;
 
 import atlantafx.base.theme.PrimerLight;
+import com.youngledo.jmcfx.adapter.jmc.JmcEnvironmentService;
 import com.youngledo.jmcfx.adapter.jmc.JmcEventQueryService;
 import com.youngledo.jmcfx.adapter.jmc.JmcExceptionService;
 import com.youngledo.jmcfx.adapter.jmc.JmcFileIOService;
@@ -44,6 +45,7 @@ public class JmcFxApplication extends Application {
                 new JmcHeapService(), new JmcLeakSuspectsService(),
                 new JmcTlabService(),
                 new JmcJvmInternalsService(),
+                new JmcEnvironmentService(),
                 new com.youngledo.jmcfx.ui.i18n.I18n(systemLocale)).create();
         Scene scene = new Scene(shell.root(), 1280, 800);
         scene.getStylesheets().add(getClass().getResource("/css/app.css").toExternalForm());

@@ -400,3 +400,12 @@
 .exception-grouping-bar .button {
     -fx-padding: 4px 12px;
 }
+
+.env-filter-bar {
+    -fx-padding: 4px 0;
+    -fx-spacing: 8px;
+    -fx-alignment: center-left;
+}
+.env-filter-bar .text-field {
+    -fx-pref-width: 300px;
+}

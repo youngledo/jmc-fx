@@ -301,6 +301,45 @@
                 <Label fx:id="vmOperationEventsLabel"/>
                 <TableView fx:id="vmOperationEventsTable" styleClass="dense-table" prefHeight="250" VBox.vgrow="ALWAYS"/>
             </VBox>
+            <VBox fx:id="processesPane" spacing="8" visible="false" managed="false">
+                <Label fx:id="processesTitleLabel" styleClass="view-title"/>
+                <TableView fx:id="processesTable" styleClass="dense-table" VBox.vgrow="ALWAYS"/>
+            </VBox>
+            <VBox fx:id="envVarsPane" spacing="8" visible="false" managed="false">
+                <Label fx:id="envVarsTitleLabel" styleClass="view-title"/>
+                <HBox spacing="8" styleClass="env-filter-bar">
+                    <TextField fx:id="envVarsSearchField" HBox.hgrow="ALWAYS"/>
+                </HBox>
+                <TableView fx:id="envVarsTable" styleClass="dense-table" VBox.vgrow="ALWAYS"/>
+            </VBox>
+            <VBox fx:id="sysPropsPane" spacing="8" visible="false" managed="false">
+                <Label fx:id="sysPropsTitleLabel" styleClass="view-title"/>
+                <HBox spacing="8" styleClass="env-filter-bar">
+                    <TextField fx:id="sysPropsSearchField" HBox.hgrow="ALWAYS"/>
+                </HBox>
+                <TableView fx:id="sysPropsTable" styleClass="dense-table" VBox.vgrow="ALWAYS"/>
+            </VBox>
+            <VBox fx:id="recordingInfoPane" spacing="8" visible="false" managed="false">
+                <Label fx:id="recordingInfoTitleLabel" styleClass="view-title"/>
+                <TabPane fx:id="recordingInfoTabs" VBox.vgrow="ALWAYS">
+                    <tabs>
+                        <Tab fx:id="recordingInfoRecordingsTab" closable="false">
+                            <TableView fx:id="recordingsTable" styleClass="dense-table"/>
+                        </Tab>
+                        <Tab fx:id="recordingInfoSettingsTab" closable="false">
+                            <TableView fx:id="settingsTable" styleClass="dense-table"/>
+                        </Tab>
+                    </tabs>
+                </TabPane>
+            </VBox>
+            <VBox fx:id="agentsPane" spacing="8" visible="false" managed="false">
+                <Label fx:id="agentsTitleLabel" styleClass="view-title"/>
+                <TableView fx:id="agentsTable" styleClass="dense-table" VBox.vgrow="ALWAYS"/>
+            </VBox>
+            <VBox fx:id="constantPoolsPane" spacing="8" visible="false" managed="false">
+                <Label fx:id="constantPoolsTitleLabel" styleClass="view-title"/>
+                <TableView fx:id="constantPoolsTable" styleClass="dense-table" VBox.vgrow="ALWAYS"/>
+            </VBox>
             <VBox fx:id="settingsPane" spacing="8">
                 <Label fx:id="settingsTitleLabel" styleClass="view-title"/>
                 <Label fx:id="settingsLanguageLabel" styleClass="detail-title"/>

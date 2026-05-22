@@ -5,12 +5,18 @@ import java.time.format.DateTimeFormatter;
 import java.util.List;
 import java.util.StringJoiner;
 
+import com.youngledo.jmcfx.domain.model.ActiveRecordingInfo;
+import com.youngledo.jmcfx.domain.model.ActiveSetting;
+import com.youngledo.jmcfx.domain.model.AgentInfo;
 import com.youngledo.jmcfx.domain.model.ClassloaderStatistics;
 import com.youngledo.jmcfx.domain.model.ClassloaderSummary;
 import com.youngledo.jmcfx.domain.model.ClassloadEvent;
 import com.youngledo.jmcfx.domain.model.CodeCacheStats;
 import com.youngledo.jmcfx.domain.model.CodeCacheSweep;
 import com.youngledo.jmcfx.domain.model.CompilationEvent;
+import com.youngledo.jmcfx.domain.model.ConstantPoolEntry;
+import com.youngledo.jmcfx.domain.model.ConstantPoolType;
+import com.youngledo.jmcfx.domain.model.EnvironmentVariable;
 import com.youngledo.jmcfx.domain.model.EventColumn;
 import com.youngledo.jmcfx.domain.model.EventDetails;
 import com.youngledo.jmcfx.domain.model.EventFieldCondition;
@@ -35,6 +41,7 @@ import com.youngledo.jmcfx.domain.model.GcHeapSummary;
 import com.youngledo.jmcfx.domain.model.GcReferenceStat;
 import com.youngledo.jmcfx.domain.model.GcSummary;
 import com.youngledo.jmcfx.domain.model.HeapClassHistogram;
+import com.youngledo.jmcfx.domain.model.ProcessInfo;
 import com.youngledo.jmcfx.domain.model.HotMethod;
 import com.youngledo.jmcfx.domain.model.JvmFlag;
 import com.youngledo.jmcfx.domain.model.JvmFlagChange;
@@ -49,10 +56,12 @@ import com.youngledo.jmcfx.domain.model.SocketIOEvent;
 import com.youngledo.jmcfx.domain.model.SocketIOGrouping;
 import com.youngledo.jmcfx.domain.model.SocketIOHistogram;
 import com.youngledo.jmcfx.domain.model.StackTreeNode;
+import com.youngledo.jmcfx.domain.model.SystemProperty;
 import com.youngledo.jmcfx.domain.model.ThreadSummary;
 import com.youngledo.jmcfx.domain.model.TlabAllocation;
 import com.youngledo.jmcfx.domain.model.VmOperationEvent;
 import com.youngledo.jmcfx.domain.model.VmOperationSummary;
+import com.youngledo.jmcfx.domain.service.EnvironmentService;
 import com.youngledo.jmcfx.domain.service.EventQueryService;
 import com.youngledo.jmcfx.domain.service.ExceptionService;
 import com.youngledo.jmcfx.domain.service.FileIOService;
@@ -69,6 +78,7 @@ import com.youngledo.jmcfx.domain.service.TlabService;
 import com.youngledo.jmcfx.ui.analysis.AnalysisSeverityCell;
 import com.youngledo.jmcfx.ui.events.EventBrowserViewModel;
 import com.youngledo.jmcfx.ui.events.VirtualThreadEventBrowserExecutor;
+import com.youngledo.jmcfx.ui.environment.EnvironmentViewModel;
 import com.youngledo.jmcfx.ui.exceptions.ExceptionViewModel;
 import com.youngledo.jmcfx.ui.fileio.FileIOViewModel;
 import com.youngledo.jmcfx.ui.heap.HeapViewModel;
@@ -152,6 +162,7 @@ public class AppShellController {
     private final LeakSuspectsService leakSuspectsService;
     private final TlabService tlabService;
     private final JvmInternalsService jvmInternalsService;
+    private final EnvironmentService environmentService;
     private final I18n i18n;
     private final ListChangeListener<EventTypeNode> eventTypeTreeListener = change -> rebuildEventTypeTree();
     private final ListChangeListener<EventColumn> eventColumnsListener = change -> rebuildEventColumns();
@@ -172,6 +183,7 @@ public class AppShellController {
     private HeapViewModel heapViewModel;
     private LeakSuspectsViewModel leaksViewModel;
     private TlabViewModel tlabViewModel;
+    private EnvironmentViewModel environmentViewModel;
     private boolean eventTypesDividerInitialized;
     private boolean updatingRecordingTabs;
 
@@ -202,6 +214,12 @@ public class AppShellController {
     @FXML private VBox codeCachePane;
     @FXML private VBox classLoadingPane;
     @FXML private VBox vmOperationsPane;
+    @FXML private VBox processesPane;
+    @FXML private VBox envVarsPane;
+    @FXML private VBox sysPropsPane;
+    @FXML private VBox recordingInfoPane;
+    @FXML private VBox agentsPane;
+    @FXML private VBox constantPoolsPane;
     @FXML private VBox settingsPane;
     @FXML private Label statusLabel;
     @FXML private Label taskSummaryLabel;
@@ -319,6 +337,18 @@ public class AppShellController {
     @FXML private TableView<ClassloaderStatistics> classLoadingStatsTable;
     @FXML private TableView<VmOperationSummary> vmOperationSummaryTable;
     @FXML private TableView<VmOperationEvent> vmOperationEventsTable;
+    @FXML private TableView<ProcessInfo> processesTable;
+    @FXML private TableView<EnvironmentVariable> envVarsTable;
+    @FXML private TextField envVarsSearchField;
+    @FXML private TableView<SystemProperty> sysPropsTable;
+    @FXML private TextField sysPropsSearchField;
+    @FXML private TableView<ActiveRecordingInfo> recordingsTable;
+    @FXML private TableView<ActiveSetting> settingsTable;
+    @FXML private TabPane recordingInfoTabs;
+    @FXML private Tab recordingInfoRecordingsTab;
+    @FXML private Tab recordingInfoSettingsTab;
+    @FXML private TableView<AgentInfo> agentsTable;
+    @FXML private TableView<ConstantPoolType> constantPoolsTable;
     @FXML private Label jvmInfoTitleLabel;
     @FXML private Label jvmFlagsLabel;
     @FXML private Label jvmFlagChangesLabel;
@@ -342,6 +372,12 @@ public class AppShellController {
     @FXML private Label vmOperationsTitleLabel;
     @FXML private Label vmOperationSummaryLabel;
     @FXML private Label vmOperationEventsLabel;
+    @FXML private Label processesTitleLabel;
+    @FXML private Label envVarsTitleLabel;
+    @FXML private Label sysPropsTitleLabel;
+    @FXML private Label recordingInfoTitleLabel;
+    @FXML private Label agentsTitleLabel;
+    @FXML private Label constantPoolsTitleLabel;
     @FXML private Label settingsTitleLabel;
     @FXML private Label settingsLanguageLabel;
     @FXML private ToggleGroup languageToggleGroup;
@@ -357,6 +393,7 @@ public class AppShellController {
             HeapService heapService, LeakSuspectsService leakSuspectsService,
             TlabService tlabService,
             JvmInternalsService jvmInternalsService,
+            EnvironmentService environmentService,
             I18n i18n) {
         this.viewModel = viewModel;
         this.recordingRepository = recordingRepository;
@@ -372,6 +409,7 @@ public class AppShellController {
         this.leakSuspectsService = leakSuspectsService;
         this.tlabService = tlabService;
         this.jvmInternalsService = jvmInternalsService;
+        this.environmentService = environmentService;
         this.i18n = i18n;
     }
 
@@ -437,6 +475,18 @@ public class AppShellController {
         classLoadingPane.managedProperty().bind(classLoadingPane.visibleProperty());
         vmOperationsPane.visibleProperty().bind(viewModel.selectedSectionProperty().isEqualTo("vmOperations"));
         vmOperationsPane.managedProperty().bind(vmOperationsPane.visibleProperty());
+        processesPane.visibleProperty().bind(viewModel.selectedSectionProperty().isEqualTo("processes"));
+        processesPane.managedProperty().bind(processesPane.visibleProperty());
+        envVarsPane.visibleProperty().bind(viewModel.selectedSectionProperty().isEqualTo("envVars"));
+        envVarsPane.managedProperty().bind(envVarsPane.visibleProperty());
+        sysPropsPane.visibleProperty().bind(viewModel.selectedSectionProperty().isEqualTo("sysProps"));
+        sysPropsPane.managedProperty().bind(sysPropsPane.visibleProperty());
+        recordingInfoPane.visibleProperty().bind(viewModel.selectedSectionProperty().isEqualTo("recordingInfo"));
+        recordingInfoPane.managedProperty().bind(recordingInfoPane.visibleProperty());
+        agentsPane.visibleProperty().bind(viewModel.selectedSectionProperty().isEqualTo("agents"));
+        agentsPane.managedProperty().bind(agentsPane.visibleProperty());
+        constantPoolsPane.visibleProperty().bind(viewModel.selectedSectionProperty().isEqualTo("constantPools"));
+        constantPoolsPane.managedProperty().bind(constantPoolsPane.visibleProperty());
         settingsPane.visibleProperty().bind(viewModel.selectedSectionProperty().isEqualTo("settings"));
         settingsPane.managedProperty().bind(settingsPane.visibleProperty());
         bindOverview(null);
@@ -466,6 +516,13 @@ public class AppShellController {
         configureClassLoadingStatsTable();
         configureVmOperationSummaryTable();
         configureVmOperationEventsTable();
+        configureProcessesTable();
+        configureEnvVarsTable();
+        configureSysPropsTable();
+        configureRecordingsTable();
+        configureSettingsTable();
+        configureAgentsTable();
+        configureConstantPoolsTable();
         bindWorkspaceSelection();
         i18n.localeProperty().addListener((observable, oldValue, newValue) -> refreshOverviewOnLocaleChange());
     }
@@ -1192,6 +1249,16 @@ public class AppShellController {
         vmOperationsTitleLabel.textProperty().bind(i18n.text("vmOperations.title"));
         vmOperationSummaryLabel.textProperty().bind(i18n.text("vmOperations.summary"));
         vmOperationEventsLabel.textProperty().bind(i18n.text("vmOperations.events"));
+        processesTitleLabel.textProperty().bind(i18n.text("processes.title"));
+        envVarsTitleLabel.textProperty().bind(i18n.text("envVars.title"));
+        sysPropsTitleLabel.textProperty().bind(i18n.text("sysProps.title"));
+        recordingInfoTitleLabel.textProperty().bind(i18n.text("recordingInfo.title"));
+        recordingInfoRecordingsTab.textProperty().bind(i18n.text("recordingInfo.tab.recordings"));
+        recordingInfoSettingsTab.textProperty().bind(i18n.text("recordingInfo.tab.settings"));
+        agentsTitleLabel.textProperty().bind(i18n.text("agents.title"));
+        constantPoolsTitleLabel.textProperty().bind(i18n.text("constantPools.title"));
+        envVarsSearchField.promptTextProperty().bind(i18n.text("envVars.search.prompt"));
+        sysPropsSearchField.promptTextProperty().bind(i18n.text("sysProps.search.prompt"));
         settingsTitleLabel.textProperty().bind(i18n.text("settings.title"));
         settingsLanguageLabel.textProperty().bind(i18n.text("settings.language"));
     }
@@ -1370,6 +1437,7 @@ public class AppShellController {
         bindCodeCache(workspace == null ? null : workspace.codeCacheViewModel());
         bindClassLoading(workspace == null ? null : workspace.classLoadingViewModel());
         bindVmOperations(workspace == null ? null : workspace.vmOperationsViewModel());
+        bindEnvironment(workspace == null ? null : workspace.environmentViewModel());
     }
 
     private void bindOverview(OverviewViewModel nextViewModel) {
@@ -1496,9 +1564,12 @@ public class AppShellController {
         CodeCacheViewModel codeCache = jvmInternalsService != null ? new CodeCacheViewModel(jvmInternalsService) : null;
         ClassLoadingViewModel classLoading = jvmInternalsService != null ? new ClassLoadingViewModel(jvmInternalsService) : null;
         VmOperationsViewModel vmOperations = jvmInternalsService != null ? new VmOperationsViewModel(jvmInternalsService) : null;
+        EnvironmentViewModel environment = environmentService != null
+                ? new EnvironmentViewModel(environmentService) : null;
         viewModel.openRecording(recording, overview, events, analysis, profiling, exceptions, threads,
                 fileio, socketio, locks, heap, leakSuspects, tlab,
-                jvmInfo, gcConfig, gcSummary, gcDetails, compilationsVm, codeCache, classLoading, vmOperations);
+                jvmInfo, gcConfig, gcSummary, gcDetails, compilationsVm, codeCache, classLoading, vmOperations,
+                environment);
         overview.showRecording(recording, i18n.format("overview.details.format",
                 recording.path(),
                 formatEventTime(recording.startTime()),
@@ -1557,6 +1628,9 @@ public class AppShellController {
         }
         if (vmOperations != null) {
             vmOperations.load(recording);
+        }
+        if (environment != null) {
+            environment.load(recording);
         }
     }
 
@@ -2119,5 +2193,167 @@ public class AppShellController {
         }
         vmOperationSummaryTable.setItems(nextViewModel.summary());
         vmOperationEventsTable.setItems(nextViewModel.events());
+    }
+
+    // --- Environment: configure methods ---
+
+    private void configureProcessesTable() {
+        processesTable.setPlaceholder(new Label(i18n.get("processes.empty")));
+        TableColumn<ProcessInfo, String> pidCol = new TableColumn<>();
+        pidCol.textProperty().bind(i18n.text("processes.column.pid"));
+        pidCol.setPrefWidth(80);
+        pidCol.setCellValueFactory(cell -> new ReadOnlyStringWrapper(cell.getValue().pid()));
+        TableColumn<ProcessInfo, String> cmdCol = new TableColumn<>();
+        cmdCol.textProperty().bind(i18n.text("processes.column.commandLine"));
+        cmdCol.setPrefWidth(600);
+        cmdCol.setCellValueFactory(cell -> new ReadOnlyStringWrapper(cell.getValue().commandLine()));
+        TableColumn<ProcessInfo, String> firstCol = new TableColumn<>();
+        firstCol.textProperty().bind(i18n.text("processes.column.firstSample"));
+        firstCol.setPrefWidth(180);
+        firstCol.setCellValueFactory(cell -> new ReadOnlyStringWrapper(cell.getValue().startTime()));
+        TableColumn<ProcessInfo, String> lastCol = new TableColumn<>();
+        lastCol.textProperty().bind(i18n.text("processes.column.lastSample"));
+        lastCol.setPrefWidth(180);
+        lastCol.setCellValueFactory(cell -> new ReadOnlyStringWrapper(cell.getValue().lastSample()));
+        processesTable.getColumns().setAll(List.of(pidCol, cmdCol, firstCol, lastCol));
+    }
+
+    private void configureEnvVarsTable() {
+        envVarsTable.setPlaceholder(new Label(i18n.get("envVars.empty")));
+        TableColumn<EnvironmentVariable, String> keyCol = new TableColumn<>();
+        keyCol.textProperty().bind(i18n.text("envVars.column.key"));
+        keyCol.setPrefWidth(300);
+        keyCol.setCellValueFactory(cell -> new ReadOnlyStringWrapper(cell.getValue().key()));
+        TableColumn<EnvironmentVariable, String> valCol = new TableColumn<>();
+        valCol.textProperty().bind(i18n.text("envVars.column.value"));
+        valCol.setPrefWidth(700);
+        valCol.setCellValueFactory(cell -> new ReadOnlyStringWrapper(cell.getValue().value()));
+        envVarsTable.getColumns().setAll(List.of(keyCol, valCol));
+        envVarsSearchField.textProperty().addListener((obs, old, val) -> {
+            if (environmentViewModel != null) {
+                environmentViewModel.setEnvironmentSearchFilter(val);
+            }
+        });
+    }
+
+    private void configureSysPropsTable() {
+        sysPropsTable.setPlaceholder(new Label(i18n.get("sysProps.empty")));
+        TableColumn<SystemProperty, String> keyCol = new TableColumn<>();
+        keyCol.textProperty().bind(i18n.text("sysProps.column.key"));
+        keyCol.setPrefWidth(350);
+        keyCol.setCellValueFactory(cell -> new ReadOnlyStringWrapper(cell.getValue().key()));
+        TableColumn<SystemProperty, String> valCol = new TableColumn<>();
+        valCol.textProperty().bind(i18n.text("sysProps.column.value"));
+        valCol.setPrefWidth(650);
+        valCol.setCellValueFactory(cell -> new ReadOnlyStringWrapper(cell.getValue().value()));
+        sysPropsTable.getColumns().setAll(List.of(keyCol, valCol));
+        sysPropsSearchField.textProperty().addListener((obs, old, val) -> {
+            if (environmentViewModel != null) {
+                environmentViewModel.setSystemPropertySearchFilter(val);
+            }
+        });
+    }
+
+    private void configureRecordingsTable() {
+        recordingsTable.setPlaceholder(new Label(i18n.get("recordingInfo.empty")));
+        TableColumn<ActiveRecordingInfo, String> idCol = new TableColumn<>();
+        idCol.textProperty().bind(i18n.text("recordingInfo.column.id"));
+        idCol.setPrefWidth(50);
+        idCol.setCellValueFactory(cell -> new ReadOnlyStringWrapper(cell.getValue().id()));
+        TableColumn<ActiveRecordingInfo, String> nameCol = new TableColumn<>();
+        nameCol.textProperty().bind(i18n.text("recordingInfo.column.name"));
+        nameCol.setPrefWidth(200);
+        nameCol.setCellValueFactory(cell -> new ReadOnlyStringWrapper(cell.getValue().name()));
+        TableColumn<ActiveRecordingInfo, String> destCol = new TableColumn<>();
+        destCol.textProperty().bind(i18n.text("recordingInfo.column.destination"));
+        destCol.setPrefWidth(200);
+        destCol.setCellValueFactory(cell -> new ReadOnlyStringWrapper(cell.getValue().destination()));
+        TableColumn<ActiveRecordingInfo, String> startCol = new TableColumn<>();
+        startCol.textProperty().bind(i18n.text("recordingInfo.column.startTime"));
+        startCol.setPrefWidth(180);
+        startCol.setCellValueFactory(cell -> new ReadOnlyStringWrapper(cell.getValue().startTime()));
+        TableColumn<ActiveRecordingInfo, Number> countCol = new TableColumn<>();
+        countCol.textProperty().bind(i18n.text("recordingInfo.column.eventCount"));
+        countCol.setPrefWidth(80);
+        countCol.setCellValueFactory(cell -> new javafx.beans.property.SimpleLongProperty(cell.getValue().eventCount()));
+        recordingsTable.getColumns().setAll(List.of(idCol, nameCol, destCol, startCol, countCol));
+    }
+
+    private void configureSettingsTable() {
+        settingsTable.setPlaceholder(new Label(i18n.get("recordingInfo.settings.empty")));
+        TableColumn<ActiveSetting, String> eventCol = new TableColumn<>();
+        eventCol.textProperty().bind(i18n.text("recordingInfo.settings.column.eventId"));
+        eventCol.setPrefWidth(300);
+        eventCol.setCellValueFactory(cell -> new ReadOnlyStringWrapper(cell.getValue().eventId()));
+        TableColumn<ActiveSetting, String> nameCol = new TableColumn<>();
+        nameCol.textProperty().bind(i18n.text("recordingInfo.settings.column.name"));
+        nameCol.setPrefWidth(200);
+        nameCol.setCellValueFactory(cell -> new ReadOnlyStringWrapper(cell.getValue().settingName()));
+        TableColumn<ActiveSetting, String> valCol = new TableColumn<>();
+        valCol.textProperty().bind(i18n.text("recordingInfo.settings.column.value"));
+        valCol.setPrefWidth(300);
+        valCol.setCellValueFactory(cell -> new ReadOnlyStringWrapper(cell.getValue().settingValue()));
+        settingsTable.getColumns().setAll(List.of(eventCol, nameCol, valCol));
+    }
+
+    private void configureAgentsTable() {
+        agentsTable.setPlaceholder(new Label(i18n.get("agents.empty")));
+        TableColumn<AgentInfo, String> nameCol = new TableColumn<>();
+        nameCol.textProperty().bind(i18n.text("agents.column.name"));
+        nameCol.setPrefWidth(300);
+        nameCol.setCellValueFactory(cell -> new ReadOnlyStringWrapper(cell.getValue().name()));
+        TableColumn<AgentInfo, String> optCol = new TableColumn<>();
+        optCol.textProperty().bind(i18n.text("agents.column.options"));
+        optCol.setPrefWidth(300);
+        optCol.setCellValueFactory(cell -> new ReadOnlyStringWrapper(cell.getValue().options()));
+        TableColumn<AgentInfo, String> initCol = new TableColumn<>();
+        initCol.textProperty().bind(i18n.text("agents.column.initTime"));
+        initCol.setPrefWidth(180);
+        initCol.setCellValueFactory(cell -> new ReadOnlyStringWrapper(cell.getValue().initTime()));
+        TableColumn<AgentInfo, String> dynCol = new TableColumn<>();
+        dynCol.textProperty().bind(i18n.text("agents.column.dynamic"));
+        dynCol.setPrefWidth(70);
+        dynCol.setCellValueFactory(cell -> new ReadOnlyStringWrapper(String.valueOf(cell.getValue().dynamic())));
+        TableColumn<AgentInfo, String> kindCol = new TableColumn<>();
+        kindCol.textProperty().bind(i18n.text("agents.column.kind"));
+        kindCol.setPrefWidth(80);
+        kindCol.setCellValueFactory(cell -> new ReadOnlyStringWrapper(cell.getValue().kind()));
+        agentsTable.getColumns().setAll(List.of(nameCol, optCol, initCol, dynCol, kindCol));
+    }
+
+    private void configureConstantPoolsTable() {
+        constantPoolsTable.setPlaceholder(new Label(i18n.get("constantPools.empty")));
+        TableColumn<ConstantPoolType, String> nameCol = new TableColumn<>();
+        nameCol.textProperty().bind(i18n.text("constantPools.column.typeName"));
+        nameCol.setPrefWidth(500);
+        nameCol.setCellValueFactory(cell -> new ReadOnlyStringWrapper(cell.getValue().typeName()));
+        TableColumn<ConstantPoolType, Number> countCol = new TableColumn<>();
+        countCol.textProperty().bind(i18n.text("constantPools.column.entryCount"));
+        countCol.setPrefWidth(100);
+        countCol.setCellValueFactory(cell -> new javafx.beans.property.SimpleIntegerProperty(cell.getValue().entryCount()));
+        constantPoolsTable.getColumns().setAll(List.of(nameCol, countCol));
+    }
+
+    // --- Environment: bind method ---
+
+    private void bindEnvironment(EnvironmentViewModel nextViewModel) {
+        processesTable.setItems(FXCollections.emptyObservableList());
+        envVarsTable.setItems(FXCollections.emptyObservableList());
+        sysPropsTable.setItems(FXCollections.emptyObservableList());
+        recordingsTable.setItems(FXCollections.emptyObservableList());
+        settingsTable.setItems(FXCollections.emptyObservableList());
+        agentsTable.setItems(FXCollections.emptyObservableList());
+        constantPoolsTable.setItems(FXCollections.emptyObservableList());
+        environmentViewModel = nextViewModel;
+        if (nextViewModel == null) {
+            return;
+        }
+        processesTable.setItems(nextViewModel.processesProperty());
+        envVarsTable.setItems(nextViewModel.filteredEnvironmentVariablesProperty());
+        sysPropsTable.setItems(nextViewModel.filteredSystemPropertiesProperty());
+        recordingsTable.setItems(nextViewModel.activeRecordingsProperty());
+        settingsTable.setItems(nextViewModel.activeSettingsProperty());
+        agentsTable.setItems(nextViewModel.agentsProperty());
+        constantPoolsTable.setItems(nextViewModel.constantPoolsProperty());
     }
 }

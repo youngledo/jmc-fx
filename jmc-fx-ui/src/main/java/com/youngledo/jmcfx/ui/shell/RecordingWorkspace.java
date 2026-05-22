@@ -5,6 +5,7 @@ import java.util.Objects;
 
 import com.youngledo.jmcfx.domain.model.RecordingSummary;
 import com.youngledo.jmcfx.ui.events.EventBrowserViewModel;
+import com.youngledo.jmcfx.ui.environment.EnvironmentViewModel;
 import com.youngledo.jmcfx.ui.exceptions.ExceptionViewModel;
 import com.youngledo.jmcfx.ui.fileio.FileIOViewModel;
 import com.youngledo.jmcfx.ui.heap.HeapViewModel;
@@ -54,6 +55,7 @@ public final class RecordingWorkspace {
     private final CodeCacheViewModel codeCacheViewModel;
     private final ClassLoadingViewModel classLoadingViewModel;
     private final VmOperationsViewModel vmOperationsViewModel;
+    private final EnvironmentViewModel environmentViewModel;
 
     public RecordingWorkspace(RecordingSummary recording, OverviewViewModel overviewViewModel,
             EventBrowserViewModel eventBrowserViewModel, RuleResultsViewModel ruleResultsViewModel,
@@ -69,7 +71,8 @@ public final class RecordingWorkspace {
             CompilationsViewModel compilationsViewModel,
             CodeCacheViewModel codeCacheViewModel,
             ClassLoadingViewModel classLoadingViewModel,
-            VmOperationsViewModel vmOperationsViewModel) {
+            VmOperationsViewModel vmOperationsViewModel,
+            EnvironmentViewModel environmentViewModel) {
         this.recording = Objects.requireNonNull(recording, "recording");
         this.overviewViewModel = Objects.requireNonNull(overviewViewModel, "overviewViewModel");
         this.eventBrowserViewModel = Objects.requireNonNull(eventBrowserViewModel, "eventBrowserViewModel");
@@ -91,6 +94,7 @@ public final class RecordingWorkspace {
         this.codeCacheViewModel = codeCacheViewModel;
         this.classLoadingViewModel = classLoadingViewModel;
         this.vmOperationsViewModel = vmOperationsViewModel;
+        this.environmentViewModel = environmentViewModel;
     }
 
     public String id() {
@@ -183,6 +187,10 @@ public final class RecordingWorkspace {
 
     public VmOperationsViewModel vmOperationsViewModel() {
         return vmOperationsViewModel;
+    }
+
+    public EnvironmentViewModel environmentViewModel() {
+        return environmentViewModel;
     }
 
     public void close() {

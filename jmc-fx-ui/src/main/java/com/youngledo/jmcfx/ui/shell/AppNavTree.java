@@ -30,6 +30,7 @@ final class AppNavTree extends TreeView<AppNavItem> {
         TreeItem<AppNavItem> recording = group("nav.group.recording", Material2AL.ANALYTICS);
         TreeItem<AppNavItem> javaApp = group("nav.group.javaApplication", Material2AL.INSIGHTS);
         TreeItem<AppNavItem> memoryAnalysis = group("nav.group.memoryAnalysis", Material2MZ.MEMORY);
+        TreeItem<AppNavItem> environment = group("nav.group.environment", Material2MZ.PUBLIC);
         TreeItem<AppNavItem> application = group("nav.group.application", Material2MZ.SETTINGS);
 
         TreeItem<AppNavItem> home = page("home", "nav.home", Material2AL.HOME, false);
@@ -46,19 +47,28 @@ final class AppNavTree extends TreeView<AppNavItem> {
         TreeItem<AppNavItem> heap = page("heap", "nav.heap", Material2MZ.MEMORY, true);
         TreeItem<AppNavItem> leaks = page("leaks", "nav.leaks", Material2AL.BUG_REPORT, true);
         TreeItem<AppNavItem> tlab = page("tlab", "nav.tlab", Material2MZ.STORAGE, true);
+        TreeItem<AppNavItem> processPage = page("processes", "nav.processes", Material2MZ.MEMORY, true);
+        TreeItem<AppNavItem> envVarsPage = page("envVars", "nav.envVars", Material2MZ.PUBLIC, true);
+        TreeItem<AppNavItem> sysPropsPage = page("sysProps", "nav.sysProps", Material2MZ.SETTINGS, true);
+        TreeItem<AppNavItem> recordingInfoPage = page("recordingInfo", "nav.recordingInfo", Material2MZ.SAVE, true);
+        TreeItem<AppNavItem> agentsPage = page("agents", "nav.agents", Material2MZ.SECURITY, true);
+        TreeItem<AppNavItem> constantPoolsPage = page("constantPools", "nav.constantPools", Material2MZ.VIEW_LIST, true);
         TreeItem<AppNavItem> settings = page("settings", "settings.title", Material2MZ.SETTINGS, false);
 
         workspace.getChildren().setAll(List.of(home, jvms));
         recording.getChildren().setAll(List.of(analysis, overview, events));
         javaApp.getChildren().setAll(List.of(profiling, exceptions, threads, fileio, socketio, locks));
         memoryAnalysis.getChildren().setAll(List.of(heap, leaks, tlab));
+        environment.getChildren().setAll(List.of(processPage, envVarsPage, sysPropsPage,
+                recordingInfoPage, agentsPage, constantPoolsPage));
         application.getChildren().setAll(List.of(settings));
-        rootItem.getChildren().setAll(List.of(workspace, recording, javaApp, memoryAnalysis, application));
+        rootItem.getChildren().setAll(List.of(workspace, recording, javaApp, memoryAnalysis, environment, application));
         rootItem.setExpanded(true);
         workspace.setExpanded(true);
         recording.setExpanded(true);
         javaApp.setExpanded(true);
         memoryAnalysis.setExpanded(true);
+        environment.setExpanded(true);
         application.setExpanded(true);
 
         pageItems = new HashMap<>(Map.of(
@@ -77,6 +87,12 @@ final class AppNavTree extends TreeView<AppNavItem> {
         pageItems.put("heap", heap);
         pageItems.put("leaks", leaks);
         pageItems.put("tlab", tlab);
+        pageItems.put("processes", processPage);
+        pageItems.put("envVars", envVarsPage);
+        pageItems.put("sysProps", sysPropsPage);
+        pageItems.put("recordingInfo", recordingInfoPage);
+        pageItems.put("agents", agentsPage);
+        pageItems.put("constantPools", constantPoolsPage);
 
         getStyleClass().add("app-nav-tree");
         setShowRoot(false);
