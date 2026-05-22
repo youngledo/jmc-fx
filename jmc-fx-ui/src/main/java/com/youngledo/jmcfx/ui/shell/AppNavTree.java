@@ -1,5 +1,6 @@
 package com.youngledo.jmcfx.ui.shell;
 
+import java.util.HashMap;
 import java.util.Map;
 import java.util.List;
 import java.util.function.Consumer;
@@ -38,11 +39,14 @@ final class AppNavTree extends TreeView<AppNavItem> {
         TreeItem<AppNavItem> profiling = page("profiling", "nav.profiling", Material2AL.ASSIGNMENT, true);
         TreeItem<AppNavItem> exceptions = page("exceptions", "nav.exceptions", Material2MZ.REPORT, true);
         TreeItem<AppNavItem> threads = page("threads", "nav.threads", Material2AL.LIST, true);
+        TreeItem<AppNavItem> fileio = page("fileio", "nav.fileio", Material2AL.FOLDER, true);
+        TreeItem<AppNavItem> socketio = page("socketio", "nav.socketio", Material2MZ.LANGUAGE, true);
+        TreeItem<AppNavItem> locks = page("locks", "nav.locks", Material2AL.LOCK, true);
         TreeItem<AppNavItem> settings = page("settings", "settings.title", Material2MZ.SETTINGS, false);
 
         workspace.getChildren().setAll(List.of(home, jvms));
         recording.getChildren().setAll(List.of(analysis, overview, events));
-        javaApp.getChildren().setAll(List.of(profiling, exceptions, threads));
+        javaApp.getChildren().setAll(List.of(profiling, exceptions, threads, fileio, socketio, locks));
         application.getChildren().setAll(List.of(settings));
         rootItem.getChildren().setAll(List.of(workspace, recording, javaApp, application));
         rootItem.setExpanded(true);
@@ -51,7 +55,7 @@ final class AppNavTree extends TreeView<AppNavItem> {
         javaApp.setExpanded(true);
         application.setExpanded(true);
 
-        pageItems = Map.of(
+        pageItems = new HashMap<>(Map.of(
                 "home", home,
                 "jvms", jvms,
                 "analysis", analysis,
@@ -60,7 +64,10 @@ final class AppNavTree extends TreeView<AppNavItem> {
                 "profiling", profiling,
                 "exceptions", exceptions,
                 "threads", threads,
-                "settings", settings);
+                "settings", settings));
+        pageItems.put("fileio", fileio);
+        pageItems.put("socketio", socketio);
+        pageItems.put("locks", locks);
 
         getStyleClass().add("app-nav-tree");
         setShowRoot(false);

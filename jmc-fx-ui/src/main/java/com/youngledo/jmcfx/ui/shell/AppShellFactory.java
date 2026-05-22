@@ -4,9 +4,12 @@ import java.io.IOException;
 
 import com.youngledo.jmcfx.domain.service.EventQueryService;
 import com.youngledo.jmcfx.domain.service.ExceptionService;
+import com.youngledo.jmcfx.domain.service.FileIOService;
+import com.youngledo.jmcfx.domain.service.LockService;
 import com.youngledo.jmcfx.domain.service.ProfilingService;
 import com.youngledo.jmcfx.domain.service.RecordingRepository;
 import com.youngledo.jmcfx.domain.service.RuleAnalysisService;
+import com.youngledo.jmcfx.domain.service.SocketIOService;
 import com.youngledo.jmcfx.domain.service.ThreadService;
 import com.youngledo.jmcfx.ui.i18n.I18n;
 import com.youngledo.jmcfx.ui.preferences.AppPreferences;
@@ -27,40 +30,50 @@ public class AppShellFactory {
     private final ProfilingService profilingService;
     private final ExceptionService exceptionService;
     private final ThreadService threadService;
+    private final FileIOService fileIOService;
+    private final SocketIOService socketIOService;
+    private final LockService lockService;
     private final I18n i18n;
     private final AppPreferences preferences;
 
     public AppShellFactory(RecordingRepository recordingRepository, EventQueryService eventQueryService,
             RuleAnalysisService ruleAnalysisService) {
         this(recordingRepository, eventQueryService, ruleAnalysisService,
-                null, null, null,
+                null, null, null, null, null, null,
                 new I18n(java.util.Locale.getDefault()), new JavaAppPreferences());
     }
 
     public AppShellFactory(RecordingRepository recordingRepository, EventQueryService eventQueryService,
             RuleAnalysisService ruleAnalysisService, ProfilingService profilingService,
-            ExceptionService exceptionService, ThreadService threadService, I18n i18n) {
+            ExceptionService exceptionService, ThreadService threadService,
+            FileIOService fileIOService, SocketIOService socketIOService,
+            LockService lockService, I18n i18n) {
         this(recordingRepository, eventQueryService, ruleAnalysisService,
                 profilingService, exceptionService, threadService,
+                fileIOService, socketIOService, lockService,
                 i18n, new JavaAppPreferences());
     }
 
     AppShellFactory(RecordingRepository recordingRepository, EventQueryService eventQueryService,
             RuleAnalysisService ruleAnalysisService, I18n i18n, AppPreferences preferences) {
         this(recordingRepository, eventQueryService, ruleAnalysisService,
-                null, null, null, i18n, preferences);
+                null, null, null, null, null, null, i18n, preferences);
     }
 
     AppShellFactory(RecordingRepository recordingRepository, EventQueryService eventQueryService,
             RuleAnalysisService ruleAnalysisService, ProfilingService profilingService,
             ExceptionService exceptionService, ThreadService threadService,
-            I18n i18n, AppPreferences preferences) {
+            FileIOService fileIOService, SocketIOService socketIOService,
+            LockService lockService, I18n i18n, AppPreferences preferences) {
         this.recordingRepository = recordingRepository;
         this.eventQueryService = eventQueryService;
         this.ruleAnalysisService = ruleAnalysisService;
         this.profilingService = profilingService;
         this.exceptionService = exceptionService;
         this.threadService = threadService;
+        this.fileIOService = fileIOService;
+        this.socketIOService = socketIOService;
+        this.lockService = lockService;
         this.i18n = i18n;
         this.preferences = preferences;
     }
@@ -85,7 +98,8 @@ public class AppShellFactory {
     Object controllerFor(Class<?> type, AppShellViewModel viewModel) {
         if (type == AppShellController.class) {
             return new AppShellController(viewModel, recordingRepository, eventQueryService, ruleAnalysisService,
-                    profilingService, exceptionService, threadService, i18n);
+                    profilingService, exceptionService, threadService,
+                    fileIOService, socketIOService, lockService, i18n);
         }
         throw new IllegalArgumentException("Unsupported controller: " + type.getName());
     }
