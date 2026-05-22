@@ -92,7 +92,7 @@ public class AppSidebar extends VBox {
     }
 
     private HBox createBrand() {
-        StackPane mark = new StackPane(new Label("J"));
+        StackPane mark = new StackPane(new Label(i18n.get("sidebar.productMark")));
         mark.getStyleClass().add("sidebar-product-mark");
 
         title = new Label("JMC FX");

@@ -42,6 +42,7 @@ import javafx.scene.control.Label;
 import javafx.scene.control.ListView;
 import javafx.scene.control.MenuButton;
 import javafx.scene.control.RadioButton;
+import javafx.scene.control.ProgressBar;
 import javafx.scene.control.SplitPane;
 import javafx.scene.control.Tab;
 import javafx.scene.control.TableColumn;
@@ -101,6 +102,7 @@ public class AppShellController {
     @FXML private VBox settingsPane;
     @FXML private Label statusLabel;
     @FXML private Label taskSummaryLabel;
+    @FXML private ProgressBar progressBar;
     @FXML private Label homeKickerLabel;
     @FXML private Label homeTitleLabel;
     @FXML private Label homeSubtitleLabel;
@@ -166,6 +168,8 @@ public class AppShellController {
         viewModel.currentRecordingNameProperty().set(i18n.get("status.noRecording"));
         statusLabel.textProperty().bind(viewModel.statusMessageProperty());
         taskSummaryLabel.textProperty().bind(viewModel.taskSummaryProperty());
+        progressBar.setVisible(false);
+        progressBar.setManaged(false);
         sidebar.bind(viewModel);
         sidebar.setNavigationHandler(viewModel::showSection);
         sidebar.setI18n(i18n);
