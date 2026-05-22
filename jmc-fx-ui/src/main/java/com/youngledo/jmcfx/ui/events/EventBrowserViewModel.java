@@ -18,6 +18,7 @@ import com.youngledo.jmcfx.domain.model.EventWindowRequest;
 import com.youngledo.jmcfx.domain.model.RecordingSummary;
 import com.youngledo.jmcfx.domain.service.EventQueryService;
 import com.youngledo.jmcfx.domain.service.EventQuerySession;
+import com.youngledo.jmcfx.ui.i18n.I18n;
 
 import javafx.application.Platform;
 import javafx.beans.property.BooleanProperty;
@@ -40,6 +41,7 @@ public class EventBrowserViewModel implements AutoCloseable {
 
     private final EventQueryService eventQueryService;
     private final EventBrowserBackgroundExecutor backgroundExecutor;
+    private I18n i18n;
     private final AtomicLong requestSequence = new AtomicLong();
     private EventQuerySession activeSession;
 
@@ -56,7 +58,7 @@ public class EventBrowserViewModel implements AutoCloseable {
     private final BooleanProperty loading = new SimpleBooleanProperty();
     private final BooleanProperty error = new SimpleBooleanProperty();
     private final StringProperty errorMessage = new SimpleStringProperty("");
-    private final StringProperty statusMessage = new SimpleStringProperty("Open a JFR recording to begin.");
+    private final StringProperty statusMessage = new SimpleStringProperty("");
 
     public EventBrowserViewModel(EventQueryService eventQueryService) {
         this(eventQueryService, new VirtualThreadEventBrowserExecutor());
@@ -64,8 +66,15 @@ public class EventBrowserViewModel implements AutoCloseable {
 
     public EventBrowserViewModel(EventQueryService eventQueryService,
             EventBrowserBackgroundExecutor backgroundExecutor) {
+        this(eventQueryService, backgroundExecutor, new I18n(java.util.Locale.getDefault()));
+    }
+
+    public EventBrowserViewModel(EventQueryService eventQueryService,
+            EventBrowserBackgroundExecutor backgroundExecutor, I18n i18n) {
         this.eventQueryService = eventQueryService;
         this.backgroundExecutor = backgroundExecutor;
+        this.i18n = i18n;
+        statusMessage.set(i18n.get("events.status.openPrompt"));
     }
 
     public ObjectProperty<RecordingSummary> currentRecordingProperty() {
@@ -130,7 +139,7 @@ public class EventBrowserViewModel implements AutoCloseable {
         loading.set(true);
         resetEventState();
         currentRecording.set(recording);
-        statusMessage.set("Loading events from " + recording.name() + ".");
+        statusMessage.set(i18n.format("events.status.loading", recording.name()));
         executeRequest(sequence, () -> {
             EventQuerySession session = eventQueryService.openSession(recording);
             List<EventTypeNode> loadedTree = session.loadEventTypeTree();
@@ -151,7 +160,7 @@ public class EventBrowserViewModel implements AutoCloseable {
                 rows.clear();
                 selectedDetails.set(null);
                 loading.set(false);
-                statusMessage.set("Select an event type to load events from " + recording.name() + ".");
+                statusMessage.set(i18n.format("events.status.selectType", recording.name()));
             });
         });
     }
@@ -178,7 +187,7 @@ public class EventBrowserViewModel implements AutoCloseable {
                 rows.setAll(window.rows());
                 selectedDetails.set(details);
                 loading.set(false);
-                statusMessage.set("Loaded " + rows.size() + " events from " + selection.label() + ".");
+                statusMessage.set(i18n.format("events.status.loaded", rows.size(), selection.label()));
             });
         });
     }
@@ -217,8 +226,8 @@ public class EventBrowserViewModel implements AutoCloseable {
             selectedEventTypeId.set("");
             clearSelectionData();
             statusMessage.set(currentRecording.get() == null
-                    ? "Open a JFR recording to begin."
-                    : "Select an event type to load events from " + currentRecording.get().name() + ".");
+                    ? i18n.get("events.status.openPrompt")
+                    : i18n.format("events.status.selectType", currentRecording.get().name()));
             return;
         }
         EventTypeSelection selection = selectionFrom(node);
@@ -226,7 +235,7 @@ public class EventBrowserViewModel implements AutoCloseable {
             selectedEventTypeSelection.set(null);
             selectedEventTypeId.set(node.id());
             clearSelectionData();
-            statusMessage.set("No events found in " + node.label() + ".");
+            statusMessage.set(i18n.format("events.status.noEvents", node.label()));
             return;
         }
         if (sameSelection(selection)) {
@@ -254,7 +263,7 @@ public class EventBrowserViewModel implements AutoCloseable {
                 }
                 selectedDetails.set(details);
                 loading.set(false);
-                statusMessage.set("Loaded details for " + row.id() + ".");
+                statusMessage.set(i18n.get("events.status.detailsLoaded"));
             });
         });
     }
@@ -307,7 +316,7 @@ public class EventBrowserViewModel implements AutoCloseable {
                 selectionProperties.set(loadedSelectionProperties);
                 selectedDetails.set(details);
                 loading.set(false);
-                statusMessage.set("Loaded " + rows.size() + " events from " + selection.label() + ".");
+                statusMessage.set(i18n.format("events.status.loaded", rows.size(), selection.label()));
             });
         });
     }
@@ -353,7 +362,7 @@ public class EventBrowserViewModel implements AutoCloseable {
                 .toList();
         if (selection != null && !selection.singleType()) {
             java.util.ArrayList<EventColumn> columns = new java.util.ArrayList<>();
-            columns.add(EventColumn.common("eventType", "Event Type", EVENT_TYPE_COLUMN_WIDTH));
+            columns.add(EventColumn.common("eventType", i18n.get("events.column.eventType"), EVENT_TYPE_COLUMN_WIDTH));
             columns.addAll(fieldColumns);
             return List.copyOf(columns);
         }
@@ -457,7 +466,7 @@ public class EventBrowserViewModel implements AutoCloseable {
                     ? exception.getClass().getSimpleName()
                     : exception.getMessage();
             errorMessage.set(message);
-            statusMessage.set("Failed to load events: " + message);
+            statusMessage.set(i18n.format("events.status.loadFailed", message));
         });
     }
 
