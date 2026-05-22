@@ -407,13 +407,6 @@ public class EventBrowserViewModel implements AutoCloseable {
         return List.copyOf(ids);
     }
 
-    private String statusFor(RecordingSummary recording, String eventTypeId, int rowCount) {
-        if (eventTypeId.isBlank()) {
-            return "No events found in " + recording.name() + ".";
-        }
-        return "Loaded " + rowCount + " events from " + eventTypeId + ".";
-    }
-
     private boolean stale(long sequence) {
         return sequence != requestSequence.get();
     }

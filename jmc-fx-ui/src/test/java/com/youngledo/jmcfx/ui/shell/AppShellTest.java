@@ -186,7 +186,6 @@ class AppShellTest {
     void eventTypesPaneWidthConstraintsAllowUserResizing() {
         assertEquals(180, AppShellController.MIN_EVENT_TYPES_WIDTH);
         assertEquals(360, AppShellController.MAX_EVENT_TYPES_WIDTH);
-        assertEquals(true, AppShellController.shouldResizeEventTypesWithParent());
     }
 
     @Test

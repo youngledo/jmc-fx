@@ -6,7 +6,6 @@ import java.util.List;
 import java.util.StringJoiner;
 
 import com.youngledo.jmcfx.domain.model.EventColumn;
-import com.youngledo.jmcfx.domain.model.EventColumnKind;
 import com.youngledo.jmcfx.domain.model.EventDetails;
 import com.youngledo.jmcfx.domain.model.EventFieldCondition;
 import com.youngledo.jmcfx.domain.model.EventFieldDescriptor;
@@ -71,8 +70,6 @@ public class AppShellController {
     static final int DEFAULT_EVENT_TYPES_WIDTH = 260;
     static final double MAX_EVENT_TYPES_WIDTH = 360;
     static final double DEFAULT_EVENT_TYPES_DIVIDER_POSITION = 0.25;
-
-    private static final int INITIAL_VISIBLE_ROWS = 100;
 
     private final AppShellViewModel viewModel;
     private final RecordingRepository recordingRepository;
@@ -285,10 +282,6 @@ public class AppShellController {
         return !shouldSelectEventTypesTreeNode(eventTypeId);
     }
 
-    static boolean shouldResizeEventTypesWithParent() {
-        return true;
-    }
-
     static boolean shouldInitializeEventTypesDivider(boolean initialized, boolean eventsVisible) {
         return !initialized && eventsVisible;
     }
@@ -434,7 +427,7 @@ public class AppShellController {
         eventTypesTree.setMinWidth(MIN_EVENT_TYPES_WIDTH);
         eventTypesTree.setPrefWidth(DEFAULT_EVENT_TYPES_WIDTH);
         eventTypesTree.setMaxWidth(MAX_EVENT_TYPES_WIDTH);
-        SplitPane.setResizableWithParent(eventTypesTree, shouldResizeEventTypesWithParent());
+        SplitPane.setResizableWithParent(eventTypesTree, true);
         eventsPane.visibleProperty().addListener((observable, oldValue, newValue) -> initializeEventTypesDivider());
         initializeEventTypesDivider();
         eventTypesTree.setCellFactory(tree -> new javafx.scene.control.TreeCell<>() {
