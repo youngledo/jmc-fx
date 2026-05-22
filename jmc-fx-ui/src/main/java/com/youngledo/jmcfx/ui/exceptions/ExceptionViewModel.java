@@ -1,0 +1,60 @@
+package com.youngledo.jmcfx.ui.exceptions;
+
+import java.util.List;
+
+import com.youngledo.jmcfx.domain.model.ChartDefinition;
+import com.youngledo.jmcfx.domain.model.ExceptionGrouping;
+import com.youngledo.jmcfx.domain.model.ExceptionSummary;
+import com.youngledo.jmcfx.domain.model.RecordingSummary;
+import com.youngledo.jmcfx.domain.service.ExceptionService;
+
+import javafx.beans.property.ObjectProperty;
+import javafx.beans.property.SimpleObjectProperty;
+import javafx.collections.FXCollections;
+import javafx.collections.ObservableList;
+
+/// View model for the v1 Exceptions page.
+///
+/// Manages exception histogram with configurable grouping and timeline chart.
+public class ExceptionViewModel {
+
+    private final ExceptionService exceptionService;
+    private final ObservableList<ExceptionSummary> histogram = FXCollections.observableArrayList();
+    private final ObjectProperty<ExceptionGrouping> grouping = new SimpleObjectProperty<>(ExceptionGrouping.BY_CLASS);
+    private final ObjectProperty<ChartDefinition> timeline = new SimpleObjectProperty<>();
+    private RecordingSummary currentRecording;
+
+    public ExceptionViewModel(ExceptionService exceptionService) {
+        this.exceptionService = exceptionService;
+    }
+
+    public ObservableList<ExceptionSummary> histogramProperty() {
+        return histogram;
+    }
+
+    public ObjectProperty<ExceptionGrouping> groupingProperty() {
+        return grouping;
+    }
+
+    public ObjectProperty<ChartDefinition> timelineProperty() {
+        return timeline;
+    }
+
+    public void load(RecordingSummary recording) {
+        currentRecording = recording;
+        reloadHistogram();
+        timeline.set(exceptionService.loadTimeline(recording));
+    }
+
+    public void setGrouping(ExceptionGrouping newGrouping) {
+        grouping.set(newGrouping);
+        if (currentRecording != null) {
+            reloadHistogram();
+        }
+    }
+
+    private void reloadHistogram() {
+        List<ExceptionSummary> data = exceptionService.loadHistogram(currentRecording, grouping.get());
+        histogram.setAll(data);
+    }
+}
