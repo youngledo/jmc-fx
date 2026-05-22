@@ -63,6 +63,7 @@ class AppShellTest {
                 new FakeRecordingRepository(),
                 new FakeEventQueryService(),
                 new FakeRuleAnalysisService(),
+                null, null, null,
                 new I18n(java.util.Locale.SIMPLIFIED_CHINESE));
 
         assertEquals(java.util.Locale.ENGLISH, controller.i18n().localeProperty().get());
@@ -220,7 +221,8 @@ class AppShellTest {
                 recording("rec-1", "first-recording.jfr"),
                 new OverviewViewModel(),
                 new EventBrowserViewModel(new FakeEventQueryService()),
-                new RuleResultsViewModel(rec -> List.of()));
+                new RuleResultsViewModel(rec -> List.of()),
+                null, null, null);
 
         assertEquals("first-recording.jfr", AppShellController.tabTitleFor(workspace));
     }

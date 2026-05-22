@@ -128,6 +128,40 @@
                 <Label fx:id="jvmsTitleLabel" styleClass="view-title"/>
                 <Label fx:id="jvmsUnavailableLabel" styleClass="unavailable-state" wrapText="true"/>
             </VBox>
+            <VBox fx:id="profilingPane" spacing="8">
+                <Label fx:id="profilingTitleLabel" styleClass="view-title"/>
+                <SplitPane VBox.vgrow="ALWAYS" DividerPositions="0.5">
+                    <TableView fx:id="profilingTable" styleClass="dense-table" prefHeight="300"/>
+                    <TabPane fx:id="profilingTreeTabs" prefHeight="300">
+                        <tabs>
+                            <Tab fx:id="profilingCallersTab" closable="false">
+                                <TreeView fx:id="profilingCallersTree"/>
+                            </Tab>
+                            <Tab fx:id="profilingCalleesTab" closable="false">
+                                <TreeView fx:id="profilingCalleesTree"/>
+                            </Tab>
+                        </tabs>
+                    </TabPane>
+                </SplitPane>
+            </VBox>
+            <VBox fx:id="exceptionsPane" spacing="8">
+                <Label fx:id="exceptionsTitleLabel" styleClass="view-title"/>
+                <HBox spacing="8" styleClass="exception-grouping-bar">
+                    <Button fx:id="exceptionsGroupByClass"/>
+                    <Button fx:id="exceptionsGroupByMessage"/>
+                    <Button fx:id="exceptionsGroupByClassAndMessage"/>
+                </HBox>
+                <SplitPane VBox.vgrow="ALWAYS" DividerPositions="0.6">
+                    <TableView fx:id="exceptionsTable" styleClass="dense-table" prefHeight="300"/>
+                    <VBox>
+                        <Label fx:id="exceptionsTimelineLabel" styleClass="detail-title"/>
+                    </VBox>
+                </SplitPane>
+            </VBox>
+            <VBox fx:id="threadsPane" spacing="8">
+                <Label fx:id="threadsTitleLabel" styleClass="view-title"/>
+                <TableView fx:id="threadsTable" styleClass="dense-table" VBox.vgrow="ALWAYS"/>
+            </VBox>
             <VBox fx:id="settingsPane" spacing="8">
                 <Label fx:id="settingsTitleLabel" styleClass="view-title"/>
                 <Label fx:id="settingsLanguageLabel" styleClass="detail-title"/>

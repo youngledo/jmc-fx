@@ -391,3 +391,12 @@
 .analysis-detail-explanation .html-italic {
     -fx-font-style: italic;
 }
+
+.exception-grouping-bar {
+    -fx-padding: 4px 0;
+    -fx-spacing: 4px;
+    -fx-alignment: center-left;
+}
+.exception-grouping-bar .button {
+    -fx-padding: 4px 12px;
+}

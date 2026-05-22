@@ -27,6 +27,7 @@ final class AppNavTree extends TreeView<AppNavItem> {
         TreeItem<AppNavItem> rootItem = new TreeItem<>(AppNavItem.group("nav.root", Material2AL.ACCOUNT_TREE));
         TreeItem<AppNavItem> workspace = group("nav.group.workspace", Material2AL.HOME);
         TreeItem<AppNavItem> recording = group("nav.group.recording", Material2AL.ANALYTICS);
+        TreeItem<AppNavItem> javaApp = group("nav.group.javaApplication", Material2AL.INSIGHTS);
         TreeItem<AppNavItem> application = group("nav.group.application", Material2MZ.SETTINGS);
 
         TreeItem<AppNavItem> home = page("home", "nav.home", Material2AL.HOME, false);
@@ -34,15 +35,20 @@ final class AppNavTree extends TreeView<AppNavItem> {
         TreeItem<AppNavItem> analysis = page("analysis", "analysis.title", Material2AL.INSIGHTS, true);
         TreeItem<AppNavItem> overview = page("overview", "overview.title", Material2MZ.PAGEVIEW, true);
         TreeItem<AppNavItem> events = page("events", "events.title", Material2AL.EVENT, true);
+        TreeItem<AppNavItem> profiling = page("profiling", "nav.profiling", Material2AL.ASSIGNMENT, true);
+        TreeItem<AppNavItem> exceptions = page("exceptions", "nav.exceptions", Material2MZ.REPORT, true);
+        TreeItem<AppNavItem> threads = page("threads", "nav.threads", Material2AL.LIST, true);
         TreeItem<AppNavItem> settings = page("settings", "settings.title", Material2MZ.SETTINGS, false);
 
         workspace.getChildren().setAll(List.of(home, jvms));
         recording.getChildren().setAll(List.of(analysis, overview, events));
+        javaApp.getChildren().setAll(List.of(profiling, exceptions, threads));
         application.getChildren().setAll(List.of(settings));
-        rootItem.getChildren().setAll(List.of(workspace, recording, application));
+        rootItem.getChildren().setAll(List.of(workspace, recording, javaApp, application));
         rootItem.setExpanded(true);
         workspace.setExpanded(true);
         recording.setExpanded(true);
+        javaApp.setExpanded(true);
         application.setExpanded(true);
 
         pageItems = Map.of(
@@ -51,6 +57,9 @@ final class AppNavTree extends TreeView<AppNavItem> {
                 "analysis", analysis,
                 "overview", overview,
                 "events", events,
+                "profiling", profiling,
+                "exceptions", exceptions,
+                "threads", threads,
                 "settings", settings);
 
         getStyleClass().add("app-nav-tree");

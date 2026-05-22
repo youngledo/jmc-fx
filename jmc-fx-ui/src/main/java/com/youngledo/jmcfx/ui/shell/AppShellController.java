@@ -20,21 +20,32 @@ import com.youngledo.jmcfx.domain.model.EventTiming;
 import com.youngledo.jmcfx.domain.model.EventTypeNode;
 import com.youngledo.jmcfx.domain.model.EventTypeNodeKind;
 import com.youngledo.jmcfx.domain.model.EventTypeSelection;
+import com.youngledo.jmcfx.domain.model.ExceptionGrouping;
+import com.youngledo.jmcfx.domain.model.ExceptionSummary;
+import com.youngledo.jmcfx.domain.model.HotMethod;
 import com.youngledo.jmcfx.domain.model.RecordingSummary;
 import com.youngledo.jmcfx.domain.model.RuleResult;
 import com.youngledo.jmcfx.domain.model.Severity;
+import com.youngledo.jmcfx.domain.model.StackTreeNode;
+import com.youngledo.jmcfx.domain.model.ThreadSummary;
 import com.youngledo.jmcfx.domain.service.EventQueryService;
+import com.youngledo.jmcfx.domain.service.ExceptionService;
+import com.youngledo.jmcfx.domain.service.ProfilingService;
 import com.youngledo.jmcfx.domain.service.RecordingRepository;
 import com.youngledo.jmcfx.domain.service.RuleAnalysisService;
+import com.youngledo.jmcfx.domain.service.ThreadService;
 import com.youngledo.jmcfx.ui.analysis.AnalysisSeverityCell;
 import com.youngledo.jmcfx.ui.events.EventBrowserViewModel;
 import com.youngledo.jmcfx.ui.events.VirtualThreadEventBrowserExecutor;
+import com.youngledo.jmcfx.ui.exceptions.ExceptionViewModel;
 import com.youngledo.jmcfx.ui.i18n.I18n;
 import com.youngledo.jmcfx.ui.i18n.LanguageMode;
 import com.youngledo.jmcfx.ui.util.DisplayFormats;
 import com.youngledo.jmcfx.ui.util.HtmlToTextFlow;
 import com.youngledo.jmcfx.ui.overview.OverviewViewModel;
+import com.youngledo.jmcfx.ui.profiling.ProfilingViewModel;
 import com.youngledo.jmcfx.ui.rules.RuleResultsViewModel;
+import com.youngledo.jmcfx.ui.threads.ThreadViewModel;
 
 import javafx.application.Platform;
 import javafx.beans.property.ReadOnlyStringWrapper;
@@ -62,6 +73,7 @@ import javafx.scene.control.ToggleGroup;
 import javafx.scene.control.TreeItem;
 import javafx.scene.control.TreeView;
 import javafx.scene.layout.BorderPane;
+import javafx.scene.layout.HBox;
 import javafx.scene.layout.Region;
 import javafx.scene.layout.VBox;
 import javafx.stage.FileChooser;
@@ -84,6 +96,9 @@ public class AppShellController {
     private final RecordingRepository recordingRepository;
     private final EventQueryService eventQueryService;
     private final RuleAnalysisService ruleAnalysisService;
+    private final ProfilingService profilingService;
+    private final ExceptionService exceptionService;
+    private final ThreadService threadService;
     private final I18n i18n;
     private final ListChangeListener<EventTypeNode> eventTypeTreeListener = change -> rebuildEventTypeTree();
     private final ListChangeListener<EventColumn> eventColumnsListener = change -> rebuildEventColumns();
@@ -95,6 +110,9 @@ public class AppShellController {
             (observable, oldValue, newValue) -> showSelectionProperties(newValue);
     private OverviewViewModel overviewViewModel;
     private EventBrowserViewModel eventBrowserViewModel;
+    private ProfilingViewModel profilingViewModel;
+    private ExceptionViewModel exceptionViewModel;
+    private ThreadViewModel threadViewModel;
     private boolean eventTypesDividerInitialized;
     private boolean updatingRecordingTabs;
 
@@ -108,6 +126,9 @@ public class AppShellController {
     @FXML private VBox eventsPane;
     @FXML private VBox analysisPane;
     @FXML private VBox jvmsPane;
+    @FXML private VBox profilingPane;
+    @FXML private VBox exceptionsPane;
+    @FXML private VBox threadsPane;
     @FXML private VBox settingsPane;
     @FXML private Label statusLabel;
     @FXML private Label taskSummaryLabel;
@@ -154,6 +175,21 @@ public class AppShellController {
     @FXML private TextArea analysisDetailExplanation;
     @FXML private Label jvmsTitleLabel;
     @FXML private Label jvmsUnavailableLabel;
+    @FXML private Label profilingTitleLabel;
+    @FXML private TableView<HotMethod> profilingTable;
+    @FXML private TabPane profilingTreeTabs;
+    @FXML private Tab profilingCallersTab;
+    @FXML private TreeView<StackTreeNode> profilingCallersTree;
+    @FXML private Tab profilingCalleesTab;
+    @FXML private TreeView<StackTreeNode> profilingCalleesTree;
+    @FXML private Label exceptionsTitleLabel;
+    @FXML private Button exceptionsGroupByClass;
+    @FXML private Button exceptionsGroupByMessage;
+    @FXML private Button exceptionsGroupByClassAndMessage;
+    @FXML private TableView<ExceptionSummary> exceptionsTable;
+    @FXML private Label exceptionsTimelineLabel;
+    @FXML private Label threadsTitleLabel;
+    @FXML private TableView<ThreadSummary> threadsTable;
     @FXML private Label settingsTitleLabel;
     @FXML private Label settingsLanguageLabel;
     @FXML private ToggleGroup languageToggleGroup;
@@ -162,11 +198,16 @@ public class AppShellController {
     @FXML private RadioButton languageChineseRadio;
 
     public AppShellController(AppShellViewModel viewModel, RecordingRepository recordingRepository,
-            EventQueryService eventQueryService, RuleAnalysisService ruleAnalysisService, I18n i18n) {
+            EventQueryService eventQueryService, RuleAnalysisService ruleAnalysisService,
+            ProfilingService profilingService, ExceptionService exceptionService,
+            ThreadService threadService, I18n i18n) {
         this.viewModel = viewModel;
         this.recordingRepository = recordingRepository;
         this.eventQueryService = eventQueryService;
         this.ruleAnalysisService = ruleAnalysisService;
+        this.profilingService = profilingService;
+        this.exceptionService = exceptionService;
+        this.threadService = threadService;
         this.i18n = i18n;
     }
 
@@ -176,8 +217,6 @@ public class AppShellController {
 
     @FXML
     void initialize() {
-        viewModel.showStatus(i18n.get("status.ready"));
-        viewModel.currentRecordingNameProperty().set(i18n.get("status.noRecording"));
         statusLabel.textProperty().bind(viewModel.statusMessageProperty());
         taskSummaryLabel.textProperty().bind(viewModel.taskSummaryProperty());
         progressBar.setVisible(false);
@@ -200,11 +239,20 @@ public class AppShellController {
         analysisPane.managedProperty().bind(analysisPane.visibleProperty());
         jvmsPane.visibleProperty().bind(viewModel.selectedSectionProperty().isEqualTo("jvms"));
         jvmsPane.managedProperty().bind(jvmsPane.visibleProperty());
+        profilingPane.visibleProperty().bind(viewModel.selectedSectionProperty().isEqualTo("profiling"));
+        profilingPane.managedProperty().bind(profilingPane.visibleProperty());
+        exceptionsPane.visibleProperty().bind(viewModel.selectedSectionProperty().isEqualTo("exceptions"));
+        exceptionsPane.managedProperty().bind(exceptionsPane.visibleProperty());
+        threadsPane.visibleProperty().bind(viewModel.selectedSectionProperty().isEqualTo("threads"));
+        threadsPane.managedProperty().bind(threadsPane.visibleProperty());
         settingsPane.visibleProperty().bind(viewModel.selectedSectionProperty().isEqualTo("settings"));
         settingsPane.managedProperty().bind(settingsPane.visibleProperty());
         bindOverview(null);
         bindEvents();
         configureAnalysisTable();
+        configureProfilingTable();
+        configureExceptionTable();
+        configureThreadTable();
         bindWorkspaceSelection();
         i18n.localeProperty().addListener((observable, oldValue, newValue) -> refreshOverviewOnLocaleChange());
     }
@@ -282,6 +330,166 @@ public class AppShellController {
                 HtmlToTextFlow.toPlainText(result.explanation()));
     }
 
+    private void configureProfilingTable() {
+        profilingTable.setPlaceholder(new Label(i18n.get("profiling.empty")));
+
+        TableColumn<HotMethod, String> methodCol = new TableColumn<>();
+        methodCol.textProperty().bind(i18n.text("profiling.column.method"));
+        methodCol.setPrefWidth(500);
+        methodCol.setCellValueFactory(cell -> new ReadOnlyStringWrapper(cell.getValue().method()));
+
+        TableColumn<HotMethod, String> frameTypeCol = new TableColumn<>();
+        frameTypeCol.textProperty().bind(i18n.text("profiling.column.frameType"));
+        frameTypeCol.setPrefWidth(100);
+        frameTypeCol.setCellValueFactory(cell -> new ReadOnlyStringWrapper(cell.getValue().frameType()));
+
+        TableColumn<HotMethod, Number> countCol = new TableColumn<>();
+        countCol.textProperty().bind(i18n.text("profiling.column.count"));
+        countCol.setPrefWidth(80);
+        countCol.setCellValueFactory(cell -> new javafx.beans.property.SimpleIntegerProperty(cell.getValue().count()));
+
+        TableColumn<HotMethod, String> pctCol = new TableColumn<>();
+        pctCol.textProperty().bind(i18n.text("profiling.column.percentage"));
+        pctCol.setPrefWidth(80);
+        pctCol.setCellValueFactory(cell -> new ReadOnlyStringWrapper(
+                String.format("%.1f%%", cell.getValue().percentage())));
+
+        profilingTable.getColumns().setAll(List.of(methodCol, frameTypeCol, countCol, pctCol));
+        profilingTable.getSelectionModel().selectedItemProperty()
+                .addListener((obs, old, val) -> selectProfilingMethod(val));
+
+        profilingCallersTree.setShowRoot(false);
+        profilingCallersTree.setCellFactory(tree -> new javafx.scene.control.TreeCell<>() {
+            @Override
+            protected void updateItem(StackTreeNode item, boolean empty) {
+                super.updateItem(item, empty);
+                setText(empty || item == null ? null : item.method() + " (" + item.count() + ")");
+            }
+        });
+        profilingCalleesTree.setShowRoot(false);
+        profilingCalleesTree.setCellFactory(tree -> new javafx.scene.control.TreeCell<>() {
+            @Override
+            protected void updateItem(StackTreeNode item, boolean empty) {
+                super.updateItem(item, empty);
+                setText(empty || item == null ? null : item.method() + " (" + item.count() + ")");
+            }
+        });
+    }
+
+    private void configureExceptionTable() {
+        exceptionsTable.setPlaceholder(new Label(i18n.get("exceptions.empty")));
+
+        TableColumn<ExceptionSummary, String> keyCol = new TableColumn<>();
+        keyCol.textProperty().bind(i18n.text("exceptions.column.key"));
+        keyCol.setPrefWidth(500);
+        keyCol.setCellValueFactory(cell -> new ReadOnlyStringWrapper(cell.getValue().key()));
+
+        TableColumn<ExceptionSummary, Number> countCol = new TableColumn<>();
+        countCol.textProperty().bind(i18n.text("exceptions.column.count"));
+        countCol.setPrefWidth(80);
+        countCol.setCellValueFactory(cell -> new javafx.beans.property.SimpleIntegerProperty(cell.getValue().count()));
+
+        TableColumn<ExceptionSummary, String> pctCol = new TableColumn<>();
+        pctCol.textProperty().bind(i18n.text("exceptions.column.percentage"));
+        pctCol.setPrefWidth(80);
+        pctCol.setCellValueFactory(cell -> new ReadOnlyStringWrapper(
+                String.format("%.1f%%", cell.getValue().percentage())));
+
+        exceptionsTable.getColumns().setAll(List.of(keyCol, countCol, pctCol));
+
+        exceptionsGroupByClass.setOnAction(event -> setExceptionGrouping(ExceptionGrouping.BY_CLASS));
+        exceptionsGroupByMessage.setOnAction(event -> setExceptionGrouping(ExceptionGrouping.BY_MESSAGE));
+        exceptionsGroupByClassAndMessage.setOnAction(event -> setExceptionGrouping(ExceptionGrouping.BY_CLASS_AND_MESSAGE));
+    }
+
+    private void configureThreadTable() {
+        threadsTable.setPlaceholder(new Label(i18n.get("threads.empty")));
+
+        TableColumn<ThreadSummary, String> nameCol = new TableColumn<>();
+        nameCol.textProperty().bind(i18n.text("threads.column.name"));
+        nameCol.setPrefWidth(400);
+        nameCol.setCellValueFactory(cell -> new ReadOnlyStringWrapper(cell.getValue().threadName()));
+
+        TableColumn<ThreadSummary, Number> samplesCol = new TableColumn<>();
+        samplesCol.textProperty().bind(i18n.text("threads.column.samples"));
+        samplesCol.setPrefWidth(100);
+        samplesCol.setCellValueFactory(cell -> new javafx.beans.property.SimpleIntegerProperty(cell.getValue().sampleCount()));
+
+        TableColumn<ThreadSummary, Number> blockedCol = new TableColumn<>();
+        blockedCol.textProperty().bind(i18n.text("threads.column.blockedMs"));
+        blockedCol.setPrefWidth(120);
+        blockedCol.setCellValueFactory(cell -> new javafx.beans.property.SimpleLongProperty(cell.getValue().blockedDurationMillis()));
+
+        threadsTable.getColumns().setAll(List.of(nameCol, samplesCol, blockedCol));
+    }
+
+    private void bindProfiling(ProfilingViewModel nextViewModel) {
+        profilingTable.setItems(FXCollections.emptyObservableList());
+        profilingCallersTree.setRoot(new TreeItem<>());
+        profilingCalleesTree.setRoot(new TreeItem<>());
+        profilingViewModel = nextViewModel;
+        if (nextViewModel == null) {
+            return;
+        }
+        profilingTable.setItems(nextViewModel.hotMethodsProperty());
+        nextViewModel.callersTreeProperty().addListener((obs, old, val) -> rebuildStackTree(profilingCallersTree, val));
+        nextViewModel.calleesTreeProperty().addListener((obs, old, val) -> rebuildStackTree(profilingCalleesTree, val));
+        rebuildStackTree(profilingCallersTree, nextViewModel.callersTreeProperty().get());
+        rebuildStackTree(profilingCalleesTree, nextViewModel.calleesTreeProperty().get());
+    }
+
+    private void bindExceptions(ExceptionViewModel nextViewModel) {
+        exceptionsTable.setItems(FXCollections.emptyObservableList());
+        exceptionViewModel = nextViewModel;
+        if (nextViewModel == null) {
+            return;
+        }
+        exceptionsTable.setItems(nextViewModel.histogramProperty());
+    }
+
+    private void bindThreads(ThreadViewModel nextViewModel) {
+        threadsTable.setItems(FXCollections.emptyObservableList());
+        threadViewModel = nextViewModel;
+        if (nextViewModel == null) {
+            return;
+        }
+        threadsTable.setItems(nextViewModel.threadSummariesProperty());
+    }
+
+    private void selectProfilingMethod(HotMethod method) {
+        if (profilingViewModel == null || method == null) {
+            return;
+        }
+        profilingViewModel.selectMethod(method.method());
+    }
+
+    private void setExceptionGrouping(ExceptionGrouping grouping) {
+        if (exceptionViewModel == null) {
+            return;
+        }
+        exceptionViewModel.setGrouping(grouping);
+    }
+
+    private void rebuildStackTree(TreeView<StackTreeNode> tree, StackTreeNode root) {
+        if (root == null || root == StackTreeNode.EMPTY) {
+            tree.setRoot(new TreeItem<>());
+            return;
+        }
+        TreeItem<StackTreeNode> rootItem = toStackTreeNodeItem(root);
+        rootItem.setExpanded(true);
+        tree.setRoot(rootItem);
+    }
+
+    private TreeItem<StackTreeNode> toStackTreeNodeItem(StackTreeNode node) {
+        TreeItem<StackTreeNode> item = new TreeItem<>(node);
+        if (node.children() != null) {
+            node.children().stream()
+                    .map(this::toStackTreeNodeItem)
+                    .forEach(item.getChildren()::add);
+        }
+        return item;
+    }
+
     private void bindLocalizedText() {
         homeKickerLabel.textProperty().bind(i18n.text("home.kicker"));
         homeTitleLabel.textProperty().bind(i18n.text("home.title"));
@@ -311,6 +519,15 @@ public class AppShellController {
         analysisTitleLabel.textProperty().bind(i18n.text("analysis.title"));
         jvmsTitleLabel.textProperty().bind(i18n.text("jvms.title"));
         jvmsUnavailableLabel.textProperty().bind(i18n.text("jvms.unavailable"));
+        profilingTitleLabel.textProperty().bind(i18n.text("profiling.title"));
+        profilingCallersTab.textProperty().bind(i18n.text("profiling.tab.callers"));
+        profilingCalleesTab.textProperty().bind(i18n.text("profiling.tab.callees"));
+        exceptionsTitleLabel.textProperty().bind(i18n.text("exceptions.title"));
+        exceptionsGroupByClass.textProperty().bind(i18n.text("exceptions.grouping.byClass"));
+        exceptionsGroupByMessage.textProperty().bind(i18n.text("exceptions.grouping.byMessage"));
+        exceptionsGroupByClassAndMessage.textProperty().bind(i18n.text("exceptions.grouping.byClassAndMessage"));
+        exceptionsTimelineLabel.textProperty().bind(i18n.text("exceptions.timeline"));
+        threadsTitleLabel.textProperty().bind(i18n.text("threads.title"));
         settingsTitleLabel.textProperty().bind(i18n.text("settings.title"));
         settingsLanguageLabel.textProperty().bind(i18n.text("settings.language"));
     }
@@ -472,6 +689,9 @@ public class AppShellController {
         bindOverview(workspace == null ? null : workspace.overviewViewModel());
         bindEventBrowser(workspace == null ? null : workspace.eventBrowserViewModel());
         bindAnalysis(workspace == null ? null : workspace.ruleResultsViewModel());
+        bindProfiling(workspace == null ? null : workspace.profilingViewModel());
+        bindExceptions(workspace == null ? null : workspace.exceptionViewModel());
+        bindThreads(workspace == null ? null : workspace.threadViewModel());
     }
 
     private void bindOverview(OverviewViewModel nextViewModel) {
@@ -581,7 +801,10 @@ public class AppShellController {
         EventBrowserViewModel events = new EventBrowserViewModel(eventQueryService,
                 new VirtualThreadEventBrowserExecutor(), i18n);
         RuleResultsViewModel analysis = new RuleResultsViewModel(ruleAnalysisService);
-        viewModel.openRecording(recording, overview, events, analysis);
+        ProfilingViewModel profiling = profilingService != null ? new ProfilingViewModel(profilingService) : null;
+        ExceptionViewModel exceptions = exceptionService != null ? new ExceptionViewModel(exceptionService) : null;
+        ThreadViewModel threads = threadService != null ? new ThreadViewModel(threadService) : null;
+        viewModel.openRecording(recording, overview, events, analysis, profiling, exceptions, threads);
         overview.showRecording(recording, i18n.format("overview.details.format",
                 recording.path(),
                 formatEventTime(recording.startTime()),
@@ -590,8 +813,15 @@ public class AppShellController {
                 DisplayFormats.formatFileSize(recording.sizeBytes())));
         events.loadRecording(recording);
         analysis.analyze(recording);
-        viewModel.showStatus(i18n.format("status.openedRecording", recording.name()));
-        viewModel.showTaskSummary(i18n.get("taskSummary.eventsLoading"));
+        if (profiling != null) {
+            profiling.load(recording);
+        }
+        if (exceptions != null) {
+            exceptions.load(recording);
+        }
+        if (threads != null) {
+            threads.load(recording);
+        }
     }
 
     private void rebuildEventTypeTree() {
