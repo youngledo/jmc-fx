@@ -162,6 +162,64 @@
                 <Label fx:id="threadsTitleLabel" styleClass="view-title"/>
                 <TableView fx:id="threadsTable" styleClass="dense-table" VBox.vgrow="ALWAYS"/>
             </VBox>
+            <VBox fx:id="fileioPane" spacing="8">
+                <Label fx:id="fileioTitleLabel" styleClass="view-title"/>
+                <TabPane fx:id="fileioTabPane" VBox.vgrow="ALWAYS">
+                    <tabs>
+                        <Tab fx:id="fileioTimelineTab" closable="false">
+                            <Label fx:id="fileioTimelinePlaceholderLabel"/>
+                        </Tab>
+                        <Tab fx:id="fileioDurationTab" closable="false">
+                            <TableView fx:id="fileioHistogramTable" styleClass="dense-table"/>
+                        </Tab>
+                        <Tab fx:id="fileioEventLogTab" closable="false">
+                            <TableView fx:id="fileioEventTable" styleClass="dense-table"/>
+                        </Tab>
+                    </tabs>
+                </TabPane>
+            </VBox>
+            <VBox fx:id="socketioPane" spacing="8">
+                <Label fx:id="socketioTitleLabel" styleClass="view-title"/>
+                <HBox fx:id="socketioGroupingBar" spacing="8" styleClass="socketio-grouping-bar">
+                    <Button fx:id="socketioGroupByHostAndPort"/>
+                    <Button fx:id="socketioGroupByHost"/>
+                    <Button fx:id="socketioGroupByPort"/>
+                </HBox>
+                <TabPane fx:id="socketioTabPane" VBox.vgrow="ALWAYS">
+                    <tabs>
+                        <Tab fx:id="socketioTimelineTab" closable="false">
+                            <Label fx:id="socketioTimelinePlaceholderLabel"/>
+                        </Tab>
+                        <Tab fx:id="socketioDurationTab" closable="false">
+                            <TableView fx:id="socketioHistogramTable" styleClass="dense-table"/>
+                        </Tab>
+                        <Tab fx:id="socketioEventLogTab" closable="false">
+                            <TableView fx:id="socketioEventTable" styleClass="dense-table"/>
+                        </Tab>
+                    </tabs>
+                </TabPane>
+            </VBox>
+            <VBox fx:id="locksPane" spacing="8">
+                <Label fx:id="locksTitleLabel" styleClass="view-title"/>
+                <HBox fx:id="locksGroupingBar" spacing="8" styleClass="locks-grouping-bar">
+                    <Button fx:id="locksGroupByClass"/>
+                    <Button fx:id="locksGroupByAddress"/>
+                    <Button fx:id="locksGroupByThread"/>
+                </HBox>
+                <TabPane fx:id="locksTabPane" VBox.vgrow="ALWAYS">
+                    <tabs>
+                        <Tab fx:id="locksByClassTab" closable="false">
+                            <TableView fx:id="locksByClassTable" styleClass="dense-table"/>
+                        </Tab>
+                        <Tab fx:id="locksByAddressTab" closable="false">
+                            <TableView fx:id="locksByAddressTable" styleClass="dense-table"/>
+                        </Tab>
+                        <Tab fx:id="locksByThreadTab" closable="false">
+                            <TableView fx:id="locksByThreadTable" styleClass="dense-table"/>
+                        </Tab>
+                    </tabs>
+                </TabPane>
+            </VBox>
             <VBox fx:id="settingsPane" spacing="8">
                 <Label fx:id="settingsTitleLabel" styleClass="view-title"/>
                 <Label fx:id="settingsLanguageLabel" styleClass="detail-title"/>

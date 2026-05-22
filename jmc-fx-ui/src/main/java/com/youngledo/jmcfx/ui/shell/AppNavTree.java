@@ -40,7 +40,7 @@ final class AppNavTree extends TreeView<AppNavItem> {
         TreeItem<AppNavItem> exceptions = page("exceptions", "nav.exceptions", Material2MZ.REPORT, true);
         TreeItem<AppNavItem> threads = page("threads", "nav.threads", Material2AL.LIST, true);
         TreeItem<AppNavItem> fileio = page("fileio", "nav.fileio", Material2AL.FOLDER, true);
-        TreeItem<AppNavItem> socketio = page("socketio", "nav.socketio", Material2MZ.LANGUAGE, true);
+        TreeItem<AppNavItem> socketio = page("socketio", "nav.socketio", Material2MZ.NETWORK_CHECK, true);
         TreeItem<AppNavItem> locks = page("locks", "nav.locks", Material2AL.LOCK, true);
         TreeItem<AppNavItem> settings = page("settings", "settings.title", Material2MZ.SETTINGS, false);
 

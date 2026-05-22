@@ -22,29 +22,42 @@ import com.youngledo.jmcfx.domain.model.EventTypeNodeKind;
 import com.youngledo.jmcfx.domain.model.EventTypeSelection;
 import com.youngledo.jmcfx.domain.model.ExceptionGrouping;
 import com.youngledo.jmcfx.domain.model.ExceptionSummary;
+import com.youngledo.jmcfx.domain.model.FileIOEvent;
+import com.youngledo.jmcfx.domain.model.FileIOHistogram;
 import com.youngledo.jmcfx.domain.model.HotMethod;
+import com.youngledo.jmcfx.domain.model.LockGrouping;
+import com.youngledo.jmcfx.domain.model.LockHistogram;
 import com.youngledo.jmcfx.domain.model.RecordingSummary;
 import com.youngledo.jmcfx.domain.model.RuleResult;
 import com.youngledo.jmcfx.domain.model.Severity;
+import com.youngledo.jmcfx.domain.model.SocketIOEvent;
+import com.youngledo.jmcfx.domain.model.SocketIOGrouping;
+import com.youngledo.jmcfx.domain.model.SocketIOHistogram;
 import com.youngledo.jmcfx.domain.model.StackTreeNode;
 import com.youngledo.jmcfx.domain.model.ThreadSummary;
 import com.youngledo.jmcfx.domain.service.EventQueryService;
 import com.youngledo.jmcfx.domain.service.ExceptionService;
+import com.youngledo.jmcfx.domain.service.FileIOService;
+import com.youngledo.jmcfx.domain.service.LockService;
 import com.youngledo.jmcfx.domain.service.ProfilingService;
 import com.youngledo.jmcfx.domain.service.RecordingRepository;
 import com.youngledo.jmcfx.domain.service.RuleAnalysisService;
+import com.youngledo.jmcfx.domain.service.SocketIOService;
 import com.youngledo.jmcfx.domain.service.ThreadService;
 import com.youngledo.jmcfx.ui.analysis.AnalysisSeverityCell;
 import com.youngledo.jmcfx.ui.events.EventBrowserViewModel;
 import com.youngledo.jmcfx.ui.events.VirtualThreadEventBrowserExecutor;
 import com.youngledo.jmcfx.ui.exceptions.ExceptionViewModel;
+import com.youngledo.jmcfx.ui.fileio.FileIOViewModel;
 import com.youngledo.jmcfx.ui.i18n.I18n;
 import com.youngledo.jmcfx.ui.i18n.LanguageMode;
+import com.youngledo.jmcfx.ui.locks.LockViewModel;
 import com.youngledo.jmcfx.ui.util.DisplayFormats;
 import com.youngledo.jmcfx.ui.util.HtmlToTextFlow;
 import com.youngledo.jmcfx.ui.overview.OverviewViewModel;
 import com.youngledo.jmcfx.ui.profiling.ProfilingViewModel;
 import com.youngledo.jmcfx.ui.rules.RuleResultsViewModel;
+import com.youngledo.jmcfx.ui.socketio.SocketIOViewModel;
 import com.youngledo.jmcfx.ui.threads.ThreadViewModel;
 
 import javafx.application.Platform;
@@ -99,6 +112,9 @@ public class AppShellController {
     private final ProfilingService profilingService;
     private final ExceptionService exceptionService;
     private final ThreadService threadService;
+    private final FileIOService fileIOService;
+    private final SocketIOService socketIOService;
+    private final LockService lockService;
     private final I18n i18n;
     private final ListChangeListener<EventTypeNode> eventTypeTreeListener = change -> rebuildEventTypeTree();
     private final ListChangeListener<EventColumn> eventColumnsListener = change -> rebuildEventColumns();
@@ -113,6 +129,9 @@ public class AppShellController {
     private ProfilingViewModel profilingViewModel;
     private ExceptionViewModel exceptionViewModel;
     private ThreadViewModel threadViewModel;
+    private FileIOViewModel fileIOViewModel;
+    private SocketIOViewModel socketIOViewModel;
+    private LockViewModel lockViewModel;
     private boolean eventTypesDividerInitialized;
     private boolean updatingRecordingTabs;
 
@@ -129,6 +148,9 @@ public class AppShellController {
     @FXML private VBox profilingPane;
     @FXML private VBox exceptionsPane;
     @FXML private VBox threadsPane;
+    @FXML private VBox fileioPane;
+    @FXML private VBox socketioPane;
+    @FXML private VBox locksPane;
     @FXML private VBox settingsPane;
     @FXML private Label statusLabel;
     @FXML private Label taskSummaryLabel;
@@ -190,6 +212,38 @@ public class AppShellController {
     @FXML private Label exceptionsTimelineLabel;
     @FXML private Label threadsTitleLabel;
     @FXML private TableView<ThreadSummary> threadsTable;
+    @FXML private Label fileioTitleLabel;
+    @FXML private TabPane fileioTabPane;
+    @FXML private Tab fileioTimelineTab;
+    @FXML private Label fileioTimelinePlaceholderLabel;
+    @FXML private Tab fileioDurationTab;
+    @FXML private TableView<FileIOHistogram> fileioHistogramTable;
+    @FXML private Tab fileioEventLogTab;
+    @FXML private TableView<FileIOEvent> fileioEventTable;
+    @FXML private Label socketioTitleLabel;
+    @FXML private HBox socketioGroupingBar;
+    @FXML private Button socketioGroupByHostAndPort;
+    @FXML private Button socketioGroupByHost;
+    @FXML private Button socketioGroupByPort;
+    @FXML private TabPane socketioTabPane;
+    @FXML private Tab socketioTimelineTab;
+    @FXML private Label socketioTimelinePlaceholderLabel;
+    @FXML private Tab socketioDurationTab;
+    @FXML private TableView<SocketIOHistogram> socketioHistogramTable;
+    @FXML private Tab socketioEventLogTab;
+    @FXML private TableView<SocketIOEvent> socketioEventTable;
+    @FXML private Label locksTitleLabel;
+    @FXML private HBox locksGroupingBar;
+    @FXML private Button locksGroupByClass;
+    @FXML private Button locksGroupByAddress;
+    @FXML private Button locksGroupByThread;
+    @FXML private TabPane locksTabPane;
+    @FXML private Tab locksByClassTab;
+    @FXML private TableView<LockHistogram> locksByClassTable;
+    @FXML private Tab locksByAddressTab;
+    @FXML private TableView<LockHistogram> locksByAddressTable;
+    @FXML private Tab locksByThreadTab;
+    @FXML private TableView<LockHistogram> locksByThreadTable;
     @FXML private Label settingsTitleLabel;
     @FXML private Label settingsLanguageLabel;
     @FXML private ToggleGroup languageToggleGroup;
@@ -200,7 +254,8 @@ public class AppShellController {
     public AppShellController(AppShellViewModel viewModel, RecordingRepository recordingRepository,
             EventQueryService eventQueryService, RuleAnalysisService ruleAnalysisService,
             ProfilingService profilingService, ExceptionService exceptionService,
-            ThreadService threadService, I18n i18n) {
+            ThreadService threadService, FileIOService fileIOService,
+            SocketIOService socketIOService, LockService lockService, I18n i18n) {
         this.viewModel = viewModel;
         this.recordingRepository = recordingRepository;
         this.eventQueryService = eventQueryService;
@@ -208,6 +263,9 @@ public class AppShellController {
         this.profilingService = profilingService;
         this.exceptionService = exceptionService;
         this.threadService = threadService;
+        this.fileIOService = fileIOService;
+        this.socketIOService = socketIOService;
+        this.lockService = lockService;
         this.i18n = i18n;
     }
 
@@ -245,6 +303,12 @@ public class AppShellController {
         exceptionsPane.managedProperty().bind(exceptionsPane.visibleProperty());
         threadsPane.visibleProperty().bind(viewModel.selectedSectionProperty().isEqualTo("threads"));
         threadsPane.managedProperty().bind(threadsPane.visibleProperty());
+        fileioPane.visibleProperty().bind(viewModel.selectedSectionProperty().isEqualTo("fileio"));
+        fileioPane.managedProperty().bind(fileioPane.visibleProperty());
+        socketioPane.visibleProperty().bind(viewModel.selectedSectionProperty().isEqualTo("socketio"));
+        socketioPane.managedProperty().bind(socketioPane.visibleProperty());
+        locksPane.visibleProperty().bind(viewModel.selectedSectionProperty().isEqualTo("locks"));
+        locksPane.managedProperty().bind(locksPane.visibleProperty());
         settingsPane.visibleProperty().bind(viewModel.selectedSectionProperty().isEqualTo("settings"));
         settingsPane.managedProperty().bind(settingsPane.visibleProperty());
         bindOverview(null);
@@ -253,6 +317,9 @@ public class AppShellController {
         configureProfilingTable();
         configureExceptionTable();
         configureThreadTable();
+        configureFileIOTable();
+        configureSocketIOTable();
+        configureLockTables();
         bindWorkspaceSelection();
         i18n.localeProperty().addListener((observable, oldValue, newValue) -> refreshOverviewOnLocaleChange());
     }
@@ -423,6 +490,209 @@ public class AppShellController {
         threadsTable.getColumns().setAll(List.of(nameCol, samplesCol, blockedCol));
     }
 
+    private void configureFileIOTable() {
+        fileioHistogramTable.setPlaceholder(new Label(i18n.get("fileio.empty")));
+
+        TableColumn<FileIOHistogram, String> pathCol = new TableColumn<>();
+        pathCol.textProperty().bind(i18n.text("fileio.column.path"));
+        pathCol.setPrefWidth(400);
+        pathCol.setCellValueFactory(cell -> new ReadOnlyStringWrapper(cell.getValue().path()));
+
+        TableColumn<FileIOHistogram, Number> readCountCol = new TableColumn<>();
+        readCountCol.textProperty().bind(i18n.text("fileio.column.readCount"));
+        readCountCol.setPrefWidth(80);
+        readCountCol.setCellValueFactory(cell -> new javafx.beans.property.SimpleLongProperty(cell.getValue().readCount()));
+
+        TableColumn<FileIOHistogram, Number> writeCountCol = new TableColumn<>();
+        writeCountCol.textProperty().bind(i18n.text("fileio.column.writeCount"));
+        writeCountCol.setPrefWidth(80);
+        writeCountCol.setCellValueFactory(cell -> new javafx.beans.property.SimpleLongProperty(cell.getValue().writeCount()));
+
+        TableColumn<FileIOHistogram, Number> readSizeCol = new TableColumn<>();
+        readSizeCol.textProperty().bind(i18n.text("fileio.column.readSize"));
+        readSizeCol.setPrefWidth(100);
+        readSizeCol.setCellValueFactory(cell -> new javafx.beans.property.SimpleLongProperty(cell.getValue().readSize()));
+
+        TableColumn<FileIOHistogram, Number> writeSizeCol = new TableColumn<>();
+        writeSizeCol.textProperty().bind(i18n.text("fileio.column.writeSize"));
+        writeSizeCol.setPrefWidth(100);
+        writeSizeCol.setCellValueFactory(cell -> new javafx.beans.property.SimpleLongProperty(cell.getValue().writeSize()));
+
+        TableColumn<FileIOHistogram, String> avgDurationCol = new TableColumn<>();
+        avgDurationCol.textProperty().bind(i18n.text("fileio.column.avgDuration"));
+        avgDurationCol.setPrefWidth(100);
+        avgDurationCol.setCellValueFactory(cell -> new ReadOnlyStringWrapper(
+                String.format("%.2f ms", cell.getValue().avgDuration())));
+
+        fileioHistogramTable.getColumns().setAll(List.of(pathCol, readCountCol, writeCountCol,
+                readSizeCol, writeSizeCol, avgDurationCol));
+
+        fileioEventTable.setPlaceholder(new Label(i18n.get("fileio.events.empty")));
+
+        TableColumn<FileIOEvent, String> eventTypeCol = new TableColumn<>();
+        eventTypeCol.textProperty().bind(i18n.text("fileio.events.column.eventType"));
+        eventTypeCol.setPrefWidth(140);
+        eventTypeCol.setCellValueFactory(cell -> new ReadOnlyStringWrapper(cell.getValue().eventType()));
+
+        TableColumn<FileIOEvent, String> eventPathCol = new TableColumn<>();
+        eventPathCol.textProperty().bind(i18n.text("fileio.events.column.path"));
+        eventPathCol.setPrefWidth(400);
+        eventPathCol.setCellValueFactory(cell -> new ReadOnlyStringWrapper(cell.getValue().path()));
+
+        TableColumn<FileIOEvent, Number> eventBytesCol = new TableColumn<>();
+        eventBytesCol.textProperty().bind(i18n.text("fileio.events.column.bytes"));
+        eventBytesCol.setPrefWidth(100);
+        eventBytesCol.setCellValueFactory(cell -> new javafx.beans.property.SimpleLongProperty(cell.getValue().bytes()));
+
+        TableColumn<FileIOEvent, String> eventDurationCol = new TableColumn<>();
+        eventDurationCol.textProperty().bind(i18n.text("fileio.events.column.duration"));
+        eventDurationCol.setPrefWidth(100);
+        eventDurationCol.setCellValueFactory(cell -> new ReadOnlyStringWrapper(
+                String.format("%.2f ms", cell.getValue().durationMillis())));
+
+        TableColumn<FileIOEvent, String> eventThreadCol = new TableColumn<>();
+        eventThreadCol.textProperty().bind(i18n.text("fileio.events.column.thread"));
+        eventThreadCol.setPrefWidth(200);
+        eventThreadCol.setCellValueFactory(cell -> new ReadOnlyStringWrapper(cell.getValue().threadName()));
+
+        fileioEventTable.getColumns().setAll(List.of(eventTypeCol, eventPathCol, eventBytesCol,
+                eventDurationCol, eventThreadCol));
+    }
+
+    private void configureSocketIOTable() {
+        socketioHistogramTable.setPlaceholder(new Label(i18n.get("socketio.empty")));
+
+        TableColumn<SocketIOHistogram, String> keyCol = new TableColumn<>();
+        keyCol.textProperty().bind(i18n.text("socketio.column.key"));
+        keyCol.setPrefWidth(300);
+        keyCol.setCellValueFactory(cell -> new ReadOnlyStringWrapper(cell.getValue().key()));
+
+        TableColumn<SocketIOHistogram, Number> sockReadCountCol = new TableColumn<>();
+        sockReadCountCol.textProperty().bind(i18n.text("socketio.column.readCount"));
+        sockReadCountCol.setPrefWidth(80);
+        sockReadCountCol.setCellValueFactory(cell -> new javafx.beans.property.SimpleLongProperty(cell.getValue().readCount()));
+
+        TableColumn<SocketIOHistogram, Number> sockWriteCountCol = new TableColumn<>();
+        sockWriteCountCol.textProperty().bind(i18n.text("socketio.column.writeCount"));
+        sockWriteCountCol.setPrefWidth(80);
+        sockWriteCountCol.setCellValueFactory(cell -> new javafx.beans.property.SimpleLongProperty(cell.getValue().writeCount()));
+
+        TableColumn<SocketIOHistogram, Number> sockReadSizeCol = new TableColumn<>();
+        sockReadSizeCol.textProperty().bind(i18n.text("socketio.column.readSize"));
+        sockReadSizeCol.setPrefWidth(100);
+        sockReadSizeCol.setCellValueFactory(cell -> new javafx.beans.property.SimpleLongProperty(cell.getValue().readSize()));
+
+        TableColumn<SocketIOHistogram, Number> sockWriteSizeCol = new TableColumn<>();
+        sockWriteSizeCol.textProperty().bind(i18n.text("socketio.column.writeSize"));
+        sockWriteSizeCol.setPrefWidth(100);
+        sockWriteSizeCol.setCellValueFactory(cell -> new javafx.beans.property.SimpleLongProperty(cell.getValue().writeSize()));
+
+        TableColumn<SocketIOHistogram, String> sockAvgDurationCol = new TableColumn<>();
+        sockAvgDurationCol.textProperty().bind(i18n.text("socketio.column.avgDuration"));
+        sockAvgDurationCol.setPrefWidth(100);
+        sockAvgDurationCol.setCellValueFactory(cell -> new ReadOnlyStringWrapper(
+                String.format("%.2f ms", cell.getValue().avgDuration())));
+
+        socketioHistogramTable.getColumns().setAll(List.of(keyCol, sockReadCountCol, sockWriteCountCol,
+                sockReadSizeCol, sockWriteSizeCol, sockAvgDurationCol));
+
+        socketioGroupByHostAndPort.setOnAction(event -> setSocketIOGrouping(SocketIOGrouping.BY_HOST_AND_PORT));
+        socketioGroupByHost.setOnAction(event -> setSocketIOGrouping(SocketIOGrouping.BY_HOST));
+        socketioGroupByPort.setOnAction(event -> setSocketIOGrouping(SocketIOGrouping.BY_PORT));
+
+        socketioEventTable.setPlaceholder(new Label(i18n.get("socketio.events.empty")));
+
+        TableColumn<SocketIOEvent, String> sockEventTypeCol = new TableColumn<>();
+        sockEventTypeCol.textProperty().bind(i18n.text("socketio.events.column.eventType"));
+        sockEventTypeCol.setPrefWidth(140);
+        sockEventTypeCol.setCellValueFactory(cell -> new ReadOnlyStringWrapper(cell.getValue().eventType()));
+
+        TableColumn<SocketIOEvent, String> sockHostCol = new TableColumn<>();
+        sockHostCol.textProperty().bind(i18n.text("socketio.events.column.host"));
+        sockHostCol.setPrefWidth(200);
+        sockHostCol.setCellValueFactory(cell -> new ReadOnlyStringWrapper(cell.getValue().host()));
+
+        TableColumn<SocketIOEvent, Number> sockPortCol = new TableColumn<>();
+        sockPortCol.textProperty().bind(i18n.text("socketio.events.column.port"));
+        sockPortCol.setPrefWidth(80);
+        sockPortCol.setCellValueFactory(cell -> new javafx.beans.property.SimpleLongProperty(cell.getValue().port()));
+
+        TableColumn<SocketIOEvent, Number> sockBytesCol = new TableColumn<>();
+        sockBytesCol.textProperty().bind(i18n.text("socketio.events.column.bytes"));
+        sockBytesCol.setPrefWidth(100);
+        sockBytesCol.setCellValueFactory(cell -> new javafx.beans.property.SimpleLongProperty(cell.getValue().bytes()));
+
+        TableColumn<SocketIOEvent, String> sockDurationCol = new TableColumn<>();
+        sockDurationCol.textProperty().bind(i18n.text("socketio.events.column.duration"));
+        sockDurationCol.setPrefWidth(100);
+        sockDurationCol.setCellValueFactory(cell -> new ReadOnlyStringWrapper(
+                String.format("%.2f ms", cell.getValue().durationMillis())));
+
+        TableColumn<SocketIOEvent, String> sockThreadCol = new TableColumn<>();
+        sockThreadCol.textProperty().bind(i18n.text("socketio.events.column.thread"));
+        sockThreadCol.setPrefWidth(200);
+        sockThreadCol.setCellValueFactory(cell -> new ReadOnlyStringWrapper(cell.getValue().threadName()));
+
+        socketioEventTable.getColumns().setAll(List.of(sockEventTypeCol, sockHostCol, sockPortCol,
+                sockBytesCol, sockDurationCol, sockThreadCol));
+    }
+
+    private void configureLockTables() {
+        configureSingleLockTable(locksByClassTable, "locks.empty");
+        configureSingleLockTable(locksByAddressTable, "locks.empty");
+        configureSingleLockTable(locksByThreadTable, "locks.empty");
+
+        locksGroupByClass.setOnAction(event -> {
+            if (lockViewModel != null) {
+                lockViewModel.setPrimaryGrouping(LockGrouping.BY_CLASS);
+            }
+        });
+        locksGroupByAddress.setOnAction(event -> {
+            if (lockViewModel != null) {
+                lockViewModel.setPrimaryGrouping(LockGrouping.BY_ADDRESS);
+            }
+        });
+        locksGroupByThread.setOnAction(event -> {
+            if (lockViewModel != null) {
+                lockViewModel.setPrimaryGrouping(LockGrouping.BY_THREAD);
+            }
+        });
+    }
+
+    private void configureSingleLockTable(TableView<LockHistogram> table, String emptyKey) {
+        table.setPlaceholder(new Label(i18n.get(emptyKey)));
+
+        TableColumn<LockHistogram, String> keyCol = new TableColumn<>();
+        keyCol.textProperty().bind(i18n.text("locks.column.key"));
+        keyCol.setPrefWidth(400);
+        keyCol.setCellValueFactory(cell -> new ReadOnlyStringWrapper(cell.getValue().key()));
+
+        TableColumn<LockHistogram, Number> countCol = new TableColumn<>();
+        countCol.textProperty().bind(i18n.text("locks.column.count"));
+        countCol.setPrefWidth(80);
+        countCol.setCellValueFactory(cell -> new javafx.beans.property.SimpleLongProperty(cell.getValue().count()));
+
+        TableColumn<LockHistogram, String> totalDurCol = new TableColumn<>();
+        totalDurCol.textProperty().bind(i18n.text("locks.column.totalDuration"));
+        totalDurCol.setPrefWidth(120);
+        totalDurCol.setCellValueFactory(cell -> new ReadOnlyStringWrapper(
+                DisplayFormats.formatDuration(cell.getValue().totalDuration())));
+
+        TableColumn<LockHistogram, String> maxDurCol = new TableColumn<>();
+        maxDurCol.textProperty().bind(i18n.text("locks.column.maxDuration"));
+        maxDurCol.setPrefWidth(120);
+        maxDurCol.setCellValueFactory(cell -> new ReadOnlyStringWrapper(
+                DisplayFormats.formatDuration(cell.getValue().maxDuration())));
+
+        TableColumn<LockHistogram, String> avgDurCol = new TableColumn<>();
+        avgDurCol.textProperty().bind(i18n.text("locks.column.avgDuration"));
+        avgDurCol.setPrefWidth(120);
+        avgDurCol.setCellValueFactory(cell -> new ReadOnlyStringWrapper(
+                String.format("%.2f ms", cell.getValue().avgDuration())));
+
+        table.getColumns().setAll(List.of(keyCol, countCol, totalDurCol, maxDurCol, avgDurCol));
+    }
+
     private void bindProfiling(ProfilingViewModel nextViewModel) {
         profilingTable.setItems(FXCollections.emptyObservableList());
         profilingCallersTree.setRoot(new TreeItem<>());
@@ -454,6 +724,48 @@ public class AppShellController {
             return;
         }
         threadsTable.setItems(nextViewModel.threadSummariesProperty());
+    }
+
+    private void bindFileIO(FileIOViewModel nextViewModel) {
+        fileioHistogramTable.setItems(FXCollections.emptyObservableList());
+        fileioEventTable.setItems(FXCollections.emptyObservableList());
+        fileIOViewModel = nextViewModel;
+        if (nextViewModel == null) {
+            return;
+        }
+        fileioHistogramTable.setItems(nextViewModel.histogramProperty());
+        fileioEventTable.setItems(nextViewModel.eventsProperty());
+    }
+
+    private void bindSocketIO(SocketIOViewModel nextViewModel) {
+        socketioHistogramTable.setItems(FXCollections.emptyObservableList());
+        socketioEventTable.setItems(FXCollections.emptyObservableList());
+        socketIOViewModel = nextViewModel;
+        if (nextViewModel == null) {
+            return;
+        }
+        socketioHistogramTable.setItems(nextViewModel.histogramProperty());
+        socketioEventTable.setItems(nextViewModel.eventsProperty());
+    }
+
+    private void bindLocks(LockViewModel nextViewModel) {
+        locksByClassTable.setItems(FXCollections.emptyObservableList());
+        locksByAddressTable.setItems(FXCollections.emptyObservableList());
+        locksByThreadTable.setItems(FXCollections.emptyObservableList());
+        lockViewModel = nextViewModel;
+        if (nextViewModel == null) {
+            return;
+        }
+        locksByClassTable.setItems(nextViewModel.classHistogramProperty());
+        locksByAddressTable.setItems(nextViewModel.addressHistogramProperty());
+        locksByThreadTable.setItems(nextViewModel.threadHistogramProperty());
+    }
+
+    private void setSocketIOGrouping(SocketIOGrouping grouping) {
+        if (socketIOViewModel == null) {
+            return;
+        }
+        socketIOViewModel.setGrouping(grouping);
     }
 
     private void selectProfilingMethod(HotMethod method) {
@@ -528,6 +840,26 @@ public class AppShellController {
         exceptionsGroupByClassAndMessage.textProperty().bind(i18n.text("exceptions.grouping.byClassAndMessage"));
         exceptionsTimelineLabel.textProperty().bind(i18n.text("exceptions.timeline"));
         threadsTitleLabel.textProperty().bind(i18n.text("threads.title"));
+        fileioTitleLabel.textProperty().bind(i18n.text("fileio.title"));
+        fileioTimelineTab.textProperty().bind(i18n.text("fileio.tab.timeline"));
+        fileioTimelinePlaceholderLabel.textProperty().bind(i18n.text("fileio.timeline.unavailable"));
+        fileioDurationTab.textProperty().bind(i18n.text("fileio.tab.duration"));
+        fileioEventLogTab.textProperty().bind(i18n.text("fileio.tab.eventLog"));
+        socketioTitleLabel.textProperty().bind(i18n.text("socketio.title"));
+        socketioGroupByHostAndPort.textProperty().bind(i18n.text("socketio.grouping.byHostAndPort"));
+        socketioGroupByHost.textProperty().bind(i18n.text("socketio.grouping.byHost"));
+        socketioGroupByPort.textProperty().bind(i18n.text("socketio.grouping.byPort"));
+        socketioTimelineTab.textProperty().bind(i18n.text("socketio.tab.timeline"));
+        socketioTimelinePlaceholderLabel.textProperty().bind(i18n.text("socketio.timeline.unavailable"));
+        socketioDurationTab.textProperty().bind(i18n.text("socketio.tab.duration"));
+        socketioEventLogTab.textProperty().bind(i18n.text("socketio.tab.eventLog"));
+        locksTitleLabel.textProperty().bind(i18n.text("locks.title"));
+        locksGroupByClass.textProperty().bind(i18n.text("locks.grouping.byClass"));
+        locksGroupByAddress.textProperty().bind(i18n.text("locks.grouping.byAddress"));
+        locksGroupByThread.textProperty().bind(i18n.text("locks.grouping.byThread"));
+        locksByClassTab.textProperty().bind(i18n.text("locks.tab.byClass"));
+        locksByAddressTab.textProperty().bind(i18n.text("locks.tab.byAddress"));
+        locksByThreadTab.textProperty().bind(i18n.text("locks.tab.byThread"));
         settingsTitleLabel.textProperty().bind(i18n.text("settings.title"));
         settingsLanguageLabel.textProperty().bind(i18n.text("settings.language"));
     }
@@ -692,6 +1024,9 @@ public class AppShellController {
         bindProfiling(workspace == null ? null : workspace.profilingViewModel());
         bindExceptions(workspace == null ? null : workspace.exceptionViewModel());
         bindThreads(workspace == null ? null : workspace.threadViewModel());
+        bindFileIO(workspace == null ? null : workspace.fileIOViewModel());
+        bindSocketIO(workspace == null ? null : workspace.socketIOViewModel());
+        bindLocks(workspace == null ? null : workspace.lockViewModel());
     }
 
     private void bindOverview(OverviewViewModel nextViewModel) {
@@ -804,7 +1139,11 @@ public class AppShellController {
         ProfilingViewModel profiling = profilingService != null ? new ProfilingViewModel(profilingService) : null;
         ExceptionViewModel exceptions = exceptionService != null ? new ExceptionViewModel(exceptionService) : null;
         ThreadViewModel threads = threadService != null ? new ThreadViewModel(threadService) : null;
-        viewModel.openRecording(recording, overview, events, analysis, profiling, exceptions, threads);
+        FileIOViewModel fileio = fileIOService != null ? new FileIOViewModel(fileIOService) : null;
+        SocketIOViewModel socketio = socketIOService != null ? new SocketIOViewModel(socketIOService) : null;
+        LockViewModel locks = lockService != null ? new LockViewModel(lockService) : null;
+        viewModel.openRecording(recording, overview, events, analysis, profiling, exceptions, threads,
+                fileio, socketio, locks);
         overview.showRecording(recording, i18n.format("overview.details.format",
                 recording.path(),
                 formatEventTime(recording.startTime()),
@@ -821,6 +1160,15 @@ public class AppShellController {
         }
         if (threads != null) {
             threads.load(recording);
+        }
+        if (fileio != null) {
+            fileio.load(recording);
+        }
+        if (socketio != null) {
+            socketio.load(recording);
+        }
+        if (locks != null) {
+            locks.load(recording);
         }
     }
 
