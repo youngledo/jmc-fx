@@ -321,3 +321,42 @@
     -fx-text-fill: -color-fg-muted;
     -fx-padding: 4px 0 0 0;
 }
+
+/* Histogram percentage bar */
+.percentage-bar .bar {
+    -fx-background-insets: 0;
+    -fx-padding: 0;
+}
+.percentage-bar {
+    -fx-indeterminate-bar-animation-time: 0;
+    -fx-background-insets: 0;
+}
+.histogram-table {
+    -fx-table-cell-horizontal-padding: 6px;
+}
+
+/* Timeline chart */
+.timeline-chart {
+    -fx-padding: 0;
+}
+.timeline-chart .chart-plot-background {
+    -fx-background-color: -color-bg-default;
+}
+
+/* Aggregate viewer */
+.aggregate-viewer {
+    -fx-padding: 12px;
+    -fx-spacing: 12px;
+}
+.aggregate-section-title {
+    -fx-font-weight: bold;
+    -fx-text-fill: -color-fg-default;
+    -fx-padding: 0 0 4px 0;
+}
+.aggregate-key {
+    -fx-text-fill: -color-fg-muted;
+}
+.aggregate-value {
+    -fx-text-fill: -color-fg-default;
+    -fx-wrap-text: true;
+}
