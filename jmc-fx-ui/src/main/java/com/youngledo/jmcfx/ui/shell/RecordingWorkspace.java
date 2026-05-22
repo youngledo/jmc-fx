@@ -6,6 +6,7 @@ import java.util.Objects;
 import com.youngledo.jmcfx.domain.model.RecordingSummary;
 import com.youngledo.jmcfx.ui.events.EventBrowserViewModel;
 import com.youngledo.jmcfx.ui.overview.OverviewViewModel;
+import com.youngledo.jmcfx.ui.rules.RuleResultsViewModel;
 
 import javafx.beans.property.SimpleStringProperty;
 import javafx.beans.property.StringProperty;
@@ -18,12 +19,14 @@ public final class RecordingWorkspace {
     private final StringProperty selectedSection = new SimpleStringProperty("analysis");
     private final OverviewViewModel overviewViewModel;
     private final EventBrowserViewModel eventBrowserViewModel;
+    private final RuleResultsViewModel ruleResultsViewModel;
 
     public RecordingWorkspace(RecordingSummary recording, OverviewViewModel overviewViewModel,
-            EventBrowserViewModel eventBrowserViewModel) {
+            EventBrowserViewModel eventBrowserViewModel, RuleResultsViewModel ruleResultsViewModel) {
         this.recording = Objects.requireNonNull(recording, "recording");
         this.overviewViewModel = Objects.requireNonNull(overviewViewModel, "overviewViewModel");
         this.eventBrowserViewModel = Objects.requireNonNull(eventBrowserViewModel, "eventBrowserViewModel");
+        this.ruleResultsViewModel = Objects.requireNonNull(ruleResultsViewModel, "ruleResultsViewModel");
     }
 
     public String id() {
@@ -44,6 +47,10 @@ public final class RecordingWorkspace {
 
     public EventBrowserViewModel eventBrowserViewModel() {
         return eventBrowserViewModel;
+    }
+
+    public RuleResultsViewModel ruleResultsViewModel() {
+        return ruleResultsViewModel;
     }
 
     public void close() {

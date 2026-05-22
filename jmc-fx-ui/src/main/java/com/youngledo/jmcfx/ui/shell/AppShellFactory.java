@@ -4,6 +4,7 @@ import java.io.IOException;
 
 import com.youngledo.jmcfx.domain.service.EventQueryService;
 import com.youngledo.jmcfx.domain.service.RecordingRepository;
+import com.youngledo.jmcfx.domain.service.RuleAnalysisService;
 import com.youngledo.jmcfx.ui.i18n.I18n;
 import com.youngledo.jmcfx.ui.preferences.AppPreferences;
 import com.youngledo.jmcfx.ui.preferences.JavaAppPreferences;
@@ -19,21 +20,26 @@ public class AppShellFactory {
 
     private final RecordingRepository recordingRepository;
     private final EventQueryService eventQueryService;
+    private final RuleAnalysisService ruleAnalysisService;
     private final I18n i18n;
     private final AppPreferences preferences;
 
-    public AppShellFactory(RecordingRepository recordingRepository, EventQueryService eventQueryService) {
-        this(recordingRepository, eventQueryService, new I18n(java.util.Locale.getDefault()), new JavaAppPreferences());
+    public AppShellFactory(RecordingRepository recordingRepository, EventQueryService eventQueryService,
+            RuleAnalysisService ruleAnalysisService) {
+        this(recordingRepository, eventQueryService, ruleAnalysisService,
+                new I18n(java.util.Locale.getDefault()), new JavaAppPreferences());
     }
 
-    AppShellFactory(RecordingRepository recordingRepository, EventQueryService eventQueryService, I18n i18n) {
-        this(recordingRepository, eventQueryService, i18n, new JavaAppPreferences());
+    public AppShellFactory(RecordingRepository recordingRepository, EventQueryService eventQueryService,
+            RuleAnalysisService ruleAnalysisService, I18n i18n) {
+        this(recordingRepository, eventQueryService, ruleAnalysisService, i18n, new JavaAppPreferences());
     }
 
-    AppShellFactory(RecordingRepository recordingRepository, EventQueryService eventQueryService, I18n i18n,
-            AppPreferences preferences) {
+    AppShellFactory(RecordingRepository recordingRepository, EventQueryService eventQueryService,
+            RuleAnalysisService ruleAnalysisService, I18n i18n, AppPreferences preferences) {
         this.recordingRepository = recordingRepository;
         this.eventQueryService = eventQueryService;
+        this.ruleAnalysisService = ruleAnalysisService;
         this.i18n = i18n;
         this.preferences = preferences;
     }
@@ -57,7 +63,7 @@ public class AppShellFactory {
 
     Object controllerFor(Class<?> type, AppShellViewModel viewModel) {
         if (type == AppShellController.class) {
-            return new AppShellController(viewModel, recordingRepository, eventQueryService, i18n);
+            return new AppShellController(viewModel, recordingRepository, eventQueryService, ruleAnalysisService, i18n);
         }
         throw new IllegalArgumentException("Unsupported controller: " + type.getName());
     }

@@ -1,5 +1,6 @@
 package com.youngledo.jmcfx.ui.shell;
 
+import java.util.List;
 import java.util.Objects;
 import java.util.Set;
 
@@ -8,6 +9,7 @@ import com.youngledo.jmcfx.ui.events.EventBrowserViewModel;
 import com.youngledo.jmcfx.ui.i18n.LanguageMode;
 import com.youngledo.jmcfx.ui.overview.OverviewViewModel;
 import com.youngledo.jmcfx.domain.service.EventQueryService;
+import com.youngledo.jmcfx.ui.rules.RuleResultsViewModel;
 
 import javafx.beans.property.BooleanProperty;
 import javafx.beans.property.ObjectProperty;
@@ -91,15 +93,18 @@ public class AppShellViewModel {
     }
 
     public RecordingWorkspace openRecording(RecordingSummary recording) {
-        return openRecording(recording, new OverviewViewModel(), new EventBrowserViewModel(new UnavailableEventQueryService()));
+        return openRecording(recording, new OverviewViewModel(),
+                new EventBrowserViewModel(new UnavailableEventQueryService()),
+                new RuleResultsViewModel(rec -> List.of()));
     }
 
     public RecordingWorkspace openRecording(RecordingSummary recording, OverviewViewModel overview,
-            EventBrowserViewModel events) {
+            EventBrowserViewModel events, RuleResultsViewModel ruleResults) {
         Objects.requireNonNull(recording, "recording");
         Objects.requireNonNull(overview, "overview");
         Objects.requireNonNull(events, "events");
-        RecordingWorkspace workspace = new RecordingWorkspace(recording, overview, events);
+        Objects.requireNonNull(ruleResults, "ruleResults");
+        RecordingWorkspace workspace = new RecordingWorkspace(recording, overview, events, ruleResults);
         workspace.selectedSectionProperty().set(DEFAULT_RECORDING_SECTION);
         recordingWorkspaces.add(workspace);
         selectWorkspace(workspace);

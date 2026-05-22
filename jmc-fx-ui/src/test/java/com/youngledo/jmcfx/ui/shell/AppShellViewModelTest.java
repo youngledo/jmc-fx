@@ -18,6 +18,7 @@ import com.youngledo.jmcfx.domain.service.EventQuerySession;
 import com.youngledo.jmcfx.ui.events.EventBrowserBackgroundExecutor;
 import com.youngledo.jmcfx.ui.events.EventBrowserViewModel;
 import com.youngledo.jmcfx.ui.overview.OverviewViewModel;
+import com.youngledo.jmcfx.ui.rules.RuleResultsViewModel;
 
 class AppShellViewModelTest {
 
@@ -52,7 +53,7 @@ class AppShellViewModelTest {
         AppShellViewModel viewModel = new AppShellViewModel();
 
         RecordingWorkspace workspace = viewModel.openRecording(
-                recording(), new OverviewViewModel(), eventBrowserViewModel());
+                recording(), new OverviewViewModel(), eventBrowserViewModel(), ruleResultsViewModel());
 
         assertTrue(viewModel.recordingOpenProperty().get());
         assertEquals("rec.jfr", viewModel.currentRecordingNameProperty().get());
@@ -89,9 +90,9 @@ class AppShellViewModelTest {
     void tracksRecordingSectionsPerWorkspaceAndGlobalSectionsInShell() {
         AppShellViewModel viewModel = new AppShellViewModel();
         RecordingWorkspace first = viewModel.openRecording(
-                recording("first", "first.jfr"), new OverviewViewModel(), eventBrowserViewModel());
+                recording("first", "first.jfr"), new OverviewViewModel(), eventBrowserViewModel(), ruleResultsViewModel());
         RecordingWorkspace second = viewModel.openRecording(
-                recording("second", "second.jfr"), new OverviewViewModel(), eventBrowserViewModel());
+                recording("second", "second.jfr"), new OverviewViewModel(), eventBrowserViewModel(), ruleResultsViewModel());
 
         viewModel.showSection("events");
         viewModel.selectWorkspace(first);
@@ -120,9 +121,9 @@ class AppShellViewModelTest {
     void exposesSidebarStateForSelectedWorkspace() {
         AppShellViewModel viewModel = new AppShellViewModel();
         RecordingWorkspace first = viewModel.openRecording(
-                recording("first", "first.jfr"), new OverviewViewModel(), eventBrowserViewModel());
+                recording("first", "first.jfr"), new OverviewViewModel(), eventBrowserViewModel(), ruleResultsViewModel());
         RecordingWorkspace second = viewModel.openRecording(
-                recording("second", "second.jfr"), new OverviewViewModel(), eventBrowserViewModel());
+                recording("second", "second.jfr"), new OverviewViewModel(), eventBrowserViewModel(), ruleResultsViewModel());
 
         assertTrue(viewModel.recordingOpenProperty().get());
         assertEquals("second.jfr", viewModel.currentRecordingNameProperty().get());
@@ -141,9 +142,9 @@ class AppShellViewModelTest {
         TestEventBrowserBackgroundExecutor firstExecutor = new TestEventBrowserBackgroundExecutor();
         TestEventBrowserBackgroundExecutor secondExecutor = new TestEventBrowserBackgroundExecutor();
         RecordingWorkspace first = viewModel.openRecording(
-                recording("first", "first.jfr"), new OverviewViewModel(), eventBrowserViewModel(firstExecutor));
+                recording("first", "first.jfr"), new OverviewViewModel(), eventBrowserViewModel(firstExecutor), ruleResultsViewModel());
         RecordingWorkspace second = viewModel.openRecording(
-                recording("second", "second.jfr"), new OverviewViewModel(), eventBrowserViewModel(secondExecutor));
+                recording("second", "second.jfr"), new OverviewViewModel(), eventBrowserViewModel(secondExecutor), ruleResultsViewModel());
 
         viewModel.closeWorkspace(second);
 
@@ -169,9 +170,9 @@ class AppShellViewModelTest {
         TestEventBrowserBackgroundExecutor firstExecutor = new TestEventBrowserBackgroundExecutor();
         TestEventBrowserBackgroundExecutor secondExecutor = new TestEventBrowserBackgroundExecutor();
         RecordingWorkspace first = viewModel.openRecording(
-                recording("first", "first.jfr"), new OverviewViewModel(), eventBrowserViewModel(firstExecutor));
+                recording("first", "first.jfr"), new OverviewViewModel(), eventBrowserViewModel(firstExecutor), ruleResultsViewModel());
         RecordingWorkspace second = viewModel.openRecording(
-                recording("second", "second.jfr"), new OverviewViewModel(), eventBrowserViewModel(secondExecutor));
+                recording("second", "second.jfr"), new OverviewViewModel(), eventBrowserViewModel(secondExecutor), ruleResultsViewModel());
 
         viewModel.closeWorkspace(first);
 
@@ -187,14 +188,14 @@ class AppShellViewModelTest {
         AppShellViewModel viewModel = new AppShellViewModel();
 
         assertThrows(NullPointerException.class,
-                () -> viewModel.openRecording(recording(), new OverviewViewModel(), null));
+                () -> viewModel.openRecording(recording(), new OverviewViewModel(), null, ruleResultsViewModel()));
     }
 
     @Test
     void ignoresUnknownSectionsAndNullSections() {
         AppShellViewModel viewModel = new AppShellViewModel();
         RecordingWorkspace workspace = viewModel.openRecording(
-                recording(), new OverviewViewModel(), eventBrowserViewModel());
+                recording(), new OverviewViewModel(), eventBrowserViewModel(), ruleResultsViewModel());
 
         viewModel.showSection("events");
         viewModel.showSection("typo");
@@ -208,7 +209,7 @@ class AppShellViewModelTest {
     void workspaceCollectionsAreReadOnlyFromOutside() {
         AppShellViewModel viewModel = new AppShellViewModel();
         RecordingWorkspace workspace = viewModel.openRecording(
-                recording(), new OverviewViewModel(), eventBrowserViewModel());
+                recording(), new OverviewViewModel(), eventBrowserViewModel(), ruleResultsViewModel());
 
         assertThrows(UnsupportedOperationException.class, () -> viewModel.recordingWorkspacesProperty().clear());
         assertSame(workspace, viewModel.selectedWorkspaceProperty().get());
@@ -230,6 +231,10 @@ class AppShellViewModelTest {
 
     private static EventBrowserViewModel eventBrowserViewModel(EventBrowserBackgroundExecutor executor) {
         return new EventBrowserViewModel(new EmptyEventQueryService(), executor);
+    }
+
+    private static RuleResultsViewModel ruleResultsViewModel() {
+        return new RuleResultsViewModel(rec -> java.util.List.of());
     }
 
     private static final class EmptyEventQueryService implements EventQueryService {

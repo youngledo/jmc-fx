@@ -360,3 +360,34 @@
     -fx-text-fill: -color-fg-default;
     -fx-wrap-text: true;
 }
+
+/* Analysis severity icons */
+.severity-icon { -fx-font-size: 16px; }
+.severity-ok { -fx-fill: -color-success-fg; }
+.severity-info { -fx-fill: -color-accent-fg; }
+.severity-warning { -fx-fill: -color-warning-fg; }
+.severity-critical { -fx-fill: -color-danger-fg; }
+.severity-unknown { -fx-fill: -color-fg-muted; }
+
+/* Analysis detail */
+.analysis-detail {
+    -fx-padding: 12px;
+    -fx-spacing: 8px;
+}
+.analysis-detail-title {
+    -fx-font-weight: bold;
+    -fx-font-size: 14px;
+}
+.analysis-detail-explanation {
+    -fx-text-fill: -color-fg-default;
+}
+.analysis-detail-scroll {
+    -fx-background-color: transparent;
+    -fx-border-color: transparent;
+}
+.analysis-detail-explanation .html-bold {
+    -fx-font-weight: bold;
+}
+.analysis-detail-explanation .html-italic {
+    -fx-font-style: italic;
+}

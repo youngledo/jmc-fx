@@ -9,6 +9,7 @@ import java.io.InputStream;
 import java.nio.file.Path;
 import java.time.Instant;
 import java.time.ZoneId;
+import java.util.List;
 import java.util.Map;
 import java.util.concurrent.atomic.AtomicInteger;
 
@@ -27,8 +28,10 @@ import com.youngledo.jmcfx.ui.events.EventBrowserViewModel;
 import com.youngledo.jmcfx.ui.i18n.I18n;
 import com.youngledo.jmcfx.ui.i18n.LanguageMode;
 import com.youngledo.jmcfx.ui.overview.OverviewViewModel;
+import com.youngledo.jmcfx.ui.rules.RuleResultsViewModel;
 import com.youngledo.jmcfx.testsupport.FakeEventQueryService;
 import com.youngledo.jmcfx.testsupport.FakeRecordingRepository;
+import com.youngledo.jmcfx.testsupport.FakeRuleAnalysisService;
 
 import javafx.scene.layout.Region;
 
@@ -46,7 +49,7 @@ class AppShellTest {
 
     @Test
     void factorySupportsShellController() {
-        AppShellFactory factory = new AppShellFactory(new FakeRecordingRepository(), new FakeEventQueryService());
+        AppShellFactory factory = new AppShellFactory(new FakeRecordingRepository(), new FakeEventQueryService(), new FakeRuleAnalysisService());
 
         Object controller = factory.controllerFor(AppShellController.class, new AppShellViewModel());
 
@@ -59,6 +62,7 @@ class AppShellTest {
                 new AppShellViewModel(),
                 new FakeRecordingRepository(),
                 new FakeEventQueryService(),
+                new FakeRuleAnalysisService(),
                 new I18n(java.util.Locale.SIMPLIFIED_CHINESE));
 
         assertEquals(java.util.Locale.ENGLISH, controller.i18n().localeProperty().get());
@@ -215,7 +219,8 @@ class AppShellTest {
         RecordingWorkspace workspace = new RecordingWorkspace(
                 recording("rec-1", "first-recording.jfr"),
                 new OverviewViewModel(),
-                new EventBrowserViewModel(new FakeEventQueryService()));
+                new EventBrowserViewModel(new FakeEventQueryService()),
+                new RuleResultsViewModel(rec -> List.of()));
 
         assertEquals("first-recording.jfr", AppShellController.tabTitleFor(workspace));
     }

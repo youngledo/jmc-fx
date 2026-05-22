@@ -1,8 +1,11 @@
 package com.youngledo.jmcfx.app;
 
+import java.util.Locale;
+
 import atlantafx.base.theme.PrimerLight;
 import com.youngledo.jmcfx.adapter.jmc.JmcEventQueryService;
 import com.youngledo.jmcfx.adapter.jmc.JmcRecordingRepository;
+import com.youngledo.jmcfx.adapter.jmc.JmcRuleAnalysisService;
 import com.youngledo.jmcfx.ui.shell.AppShell;
 import com.youngledo.jmcfx.ui.shell.AppShellFactory;
 import javafx.application.Application;
@@ -20,7 +23,11 @@ public class JmcFxApplication extends Application {
     @Override
     public void start(Stage stage) {
         Application.setUserAgentStylesheet(new PrimerLight().getUserAgentStylesheet());
-        shell = new AppShellFactory(new JmcRecordingRepository(), new JmcEventQueryService()).create();
+        Locale systemLocale = Locale.getDefault();
+        Locale.setDefault(Locale.ENGLISH);
+        shell = new AppShellFactory(new JmcRecordingRepository(),
+                new JmcEventQueryService(), new JmcRuleAnalysisService(),
+                new com.youngledo.jmcfx.ui.i18n.I18n(systemLocale)).create();
         Scene scene = new Scene(shell.root(), 1280, 800);
         scene.getStylesheets().add(getClass().getResource("/css/app.css").toExternalForm());
         stage.titleProperty().bind(shell.titleBinding());

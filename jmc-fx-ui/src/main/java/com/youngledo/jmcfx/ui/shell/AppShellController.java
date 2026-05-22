@@ -21,17 +21,24 @@ import com.youngledo.jmcfx.domain.model.EventTypeNode;
 import com.youngledo.jmcfx.domain.model.EventTypeNodeKind;
 import com.youngledo.jmcfx.domain.model.EventTypeSelection;
 import com.youngledo.jmcfx.domain.model.RecordingSummary;
+import com.youngledo.jmcfx.domain.model.RuleResult;
+import com.youngledo.jmcfx.domain.model.Severity;
 import com.youngledo.jmcfx.domain.service.EventQueryService;
 import com.youngledo.jmcfx.domain.service.RecordingRepository;
+import com.youngledo.jmcfx.domain.service.RuleAnalysisService;
+import com.youngledo.jmcfx.ui.analysis.AnalysisSeverityCell;
 import com.youngledo.jmcfx.ui.events.EventBrowserViewModel;
 import com.youngledo.jmcfx.ui.events.VirtualThreadEventBrowserExecutor;
 import com.youngledo.jmcfx.ui.i18n.I18n;
 import com.youngledo.jmcfx.ui.i18n.LanguageMode;
 import com.youngledo.jmcfx.ui.util.DisplayFormats;
+import com.youngledo.jmcfx.ui.util.HtmlToTextFlow;
 import com.youngledo.jmcfx.ui.overview.OverviewViewModel;
+import com.youngledo.jmcfx.ui.rules.RuleResultsViewModel;
 
 import javafx.application.Platform;
 import javafx.beans.property.ReadOnlyStringWrapper;
+import javafx.beans.property.SimpleObjectProperty;
 import javafx.beans.value.ChangeListener;
 import javafx.collections.FXCollections;
 import javafx.collections.ListChangeListener;
@@ -41,6 +48,7 @@ import javafx.scene.control.ContentDisplay;
 import javafx.scene.control.Label;
 import javafx.scene.control.ListView;
 import javafx.scene.control.MenuButton;
+import javafx.scene.control.TextArea;
 import javafx.scene.control.RadioButton;
 import javafx.scene.control.ProgressBar;
 import javafx.scene.control.SplitPane;
@@ -75,6 +83,7 @@ public class AppShellController {
     private final AppShellViewModel viewModel;
     private final RecordingRepository recordingRepository;
     private final EventQueryService eventQueryService;
+    private final RuleAnalysisService ruleAnalysisService;
     private final I18n i18n;
     private final ListChangeListener<EventTypeNode> eventTypeTreeListener = change -> rebuildEventTypeTree();
     private final ListChangeListener<EventColumn> eventColumnsListener = change -> rebuildEventColumns();
@@ -140,7 +149,9 @@ public class AppShellController {
     @FXML private Label eventThreadLabel;
     @FXML private ListView<String> eventStackTraceList;
     @FXML private Label analysisTitleLabel;
-    @FXML private Label analysisUnavailableLabel;
+    @FXML private TableView<RuleResult> analysisTable;
+    @FXML private Label analysisDetailTitle;
+    @FXML private TextArea analysisDetailExplanation;
     @FXML private Label jvmsTitleLabel;
     @FXML private Label jvmsUnavailableLabel;
     @FXML private Label settingsTitleLabel;
@@ -151,10 +162,11 @@ public class AppShellController {
     @FXML private RadioButton languageChineseRadio;
 
     public AppShellController(AppShellViewModel viewModel, RecordingRepository recordingRepository,
-            EventQueryService eventQueryService, I18n i18n) {
+            EventQueryService eventQueryService, RuleAnalysisService ruleAnalysisService, I18n i18n) {
         this.viewModel = viewModel;
         this.recordingRepository = recordingRepository;
         this.eventQueryService = eventQueryService;
+        this.ruleAnalysisService = ruleAnalysisService;
         this.i18n = i18n;
     }
 
@@ -192,6 +204,7 @@ public class AppShellController {
         settingsPane.managedProperty().bind(settingsPane.visibleProperty());
         bindOverview(null);
         bindEvents();
+        configureAnalysisTable();
         bindWorkspaceSelection();
         i18n.localeProperty().addListener((observable, oldValue, newValue) -> refreshOverviewOnLocaleChange());
     }
@@ -213,6 +226,60 @@ public class AppShellController {
         }
         overviewAnalysisStatusLabel.setText(i18n.get("overview.analysisUnavailable"));
         overviewJvmStatusLabel.setText(i18n.get("overview.jvmUnavailable"));
+    }
+
+    private RuleResultsViewModel analysisViewModel;
+
+    private void configureAnalysisTable() {
+        analysisTable.setPlaceholder(new Label(i18n.get("analysis.empty")));
+
+        TableColumn<RuleResult, Severity> severityCol = new TableColumn<>();
+        severityCol.textProperty().bind(i18n.text("analysis.column.severity"));
+        severityCol.setPrefWidth(80);
+        severityCol.setCellValueFactory(cell -> new SimpleObjectProperty<>(cell.getValue().severity()));
+        severityCol.setCellFactory(col -> new AnalysisSeverityCell<>());
+
+        TableColumn<RuleResult, String> nameCol = new TableColumn<>();
+        nameCol.textProperty().bind(i18n.text("analysis.column.name"));
+        nameCol.setPrefWidth(300);
+        nameCol.setCellValueFactory(cell -> new ReadOnlyStringWrapper(cell.getValue().name()));
+
+        TableColumn<RuleResult, Number> scoreCol = new TableColumn<>();
+        scoreCol.textProperty().bind(i18n.text("analysis.column.score"));
+        scoreCol.setPrefWidth(60);
+        scoreCol.setCellValueFactory(cell -> new javafx.beans.property.SimpleIntegerProperty(cell.getValue().score()));
+
+        TableColumn<RuleResult, String> summaryCol = new TableColumn<>();
+        summaryCol.textProperty().bind(i18n.text("analysis.column.summary"));
+        summaryCol.setPrefWidth(800);
+        summaryCol.setCellValueFactory(cell -> new ReadOnlyStringWrapper(cell.getValue().summary()));
+
+        analysisTable.getColumns().setAll(List.of(severityCol, nameCol, scoreCol, summaryCol));
+        analysisTable.getSelectionModel().selectedItemProperty()
+                .addListener((obs, old, val) -> showAnalysisDetail(val));
+    }
+
+    private void bindAnalysis(RuleResultsViewModel nextViewModel) {
+        analysisTable.setItems(FXCollections.emptyObservableList());
+        analysisDetailTitle.setText("");
+        analysisDetailExplanation.setText("");
+        analysisViewModel = nextViewModel;
+        if (nextViewModel == null) {
+            return;
+        }
+        analysisTable.setItems(nextViewModel.resultsProperty());
+        analysisTable.getSelectionModel().selectFirst();
+    }
+
+    private void showAnalysisDetail(RuleResult result) {
+        if (result == null) {
+            analysisDetailTitle.setText("");
+            analysisDetailExplanation.setText("");
+            return;
+        }
+        analysisDetailTitle.setText(result.name());
+        analysisDetailExplanation.setText(
+                HtmlToTextFlow.toPlainText(result.explanation()));
     }
 
     private void bindLocalizedText() {
@@ -242,7 +309,6 @@ public class AppShellController {
         eventThreadTab.textProperty().bind(i18n.text("events.details.thread"));
         eventStackTraceTab.textProperty().bind(i18n.text("events.details.stackTrace"));
         analysisTitleLabel.textProperty().bind(i18n.text("analysis.title"));
-        analysisUnavailableLabel.textProperty().bind(i18n.text("analysis.unavailable"));
         jvmsTitleLabel.textProperty().bind(i18n.text("jvms.title"));
         jvmsUnavailableLabel.textProperty().bind(i18n.text("jvms.unavailable"));
         settingsTitleLabel.textProperty().bind(i18n.text("settings.title"));
@@ -405,6 +471,7 @@ public class AppShellController {
         selectRecordingTab(workspace);
         bindOverview(workspace == null ? null : workspace.overviewViewModel());
         bindEventBrowser(workspace == null ? null : workspace.eventBrowserViewModel());
+        bindAnalysis(workspace == null ? null : workspace.ruleResultsViewModel());
     }
 
     private void bindOverview(OverviewViewModel nextViewModel) {
@@ -512,8 +579,9 @@ public class AppShellController {
         RecordingSummary recording = recordingRepository.open(file.toPath());
         OverviewViewModel overview = new OverviewViewModel();
         EventBrowserViewModel events = new EventBrowserViewModel(eventQueryService,
-                new VirtualThreadEventBrowserExecutor());
-        viewModel.openRecording(recording, overview, events);
+                new VirtualThreadEventBrowserExecutor(), i18n);
+        RuleResultsViewModel analysis = new RuleResultsViewModel(ruleAnalysisService);
+        viewModel.openRecording(recording, overview, events, analysis);
         overview.showRecording(recording, i18n.format("overview.details.format",
                 recording.path(),
                 formatEventTime(recording.startTime()),
@@ -521,6 +589,7 @@ public class AppShellController {
                 DisplayFormats.formatDuration(recording.durationMillis()),
                 DisplayFormats.formatFileSize(recording.sizeBytes())));
         events.loadRecording(recording);
+        analysis.analyze(recording);
         viewModel.showStatus(i18n.format("status.openedRecording", recording.name()));
         viewModel.showTaskSummary(i18n.get("taskSummary.eventsLoading"));
     }

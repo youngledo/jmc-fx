@@ -17,6 +17,7 @@
 <?import javafx.scene.layout.HBox?>
 <?import javafx.scene.layout.StackPane?>
 <?import javafx.scene.layout.VBox?>
+<?import javafx.scene.control.TextArea?>
 <?import com.youngledo.jmcfx.ui.shell.AppSidebar?>
 
 <BorderPane fx:id="root" styleClass="enterprise-shell" xmlns="http://javafx.com/javafx/25"
@@ -111,7 +112,17 @@
             </VBox>
             <VBox fx:id="analysisPane" spacing="8">
                 <Label fx:id="analysisTitleLabel" styleClass="view-title"/>
-                <Label fx:id="analysisUnavailableLabel" styleClass="unavailable-state" wrapText="true"/>
+                <SplitPane orientation="VERTICAL" VBox.vgrow="ALWAYS" DividerPositions="0.6">
+                    <items>
+                        <TableView fx:id="analysisTable" styleClass="dense-table" prefHeight="400"/>
+                        <VBox styleClass="analysis-detail">
+                            <children>
+                                <Label fx:id="analysisDetailTitle" styleClass="analysis-detail-title"/>
+                                <TextArea fx:id="analysisDetailExplanation" styleClass="analysis-detail-explanation" wrapText="true" editable="false" VBox.vgrow="ALWAYS"/>
+                            </children>
+                        </VBox>
+                    </items>
+                </SplitPane>
             </VBox>
             <VBox fx:id="jvmsPane" spacing="8">
                 <Label fx:id="jvmsTitleLabel" styleClass="view-title"/>
