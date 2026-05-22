@@ -1,7 +1,11 @@
 package com.youngledo.jmcfx.domain.model;
 
+/// Grouping strategy for the exception histogram.
 public enum ExceptionGrouping {
-    BY_CLASS,
-    BY_MESSAGE,
-    BY_CLASS_AND_MESSAGE
+	/// Group by exception class name only.
+	BY_CLASS,
+	/// Group by exception message only.
+	BY_MESSAGE,
+	/// Group by class name and message combined.
+	BY_CLASS_AND_MESSAGE
 }
