@@ -29,6 +29,7 @@ final class AppNavTree extends TreeView<AppNavItem> {
         TreeItem<AppNavItem> workspace = group("nav.group.workspace", Material2AL.HOME);
         TreeItem<AppNavItem> recording = group("nav.group.recording", Material2AL.ANALYTICS);
         TreeItem<AppNavItem> javaApp = group("nav.group.javaApplication", Material2AL.INSIGHTS);
+        TreeItem<AppNavItem> memoryAnalysis = group("nav.group.memoryAnalysis", Material2MZ.MEMORY);
         TreeItem<AppNavItem> application = group("nav.group.application", Material2MZ.SETTINGS);
 
         TreeItem<AppNavItem> home = page("home", "nav.home", Material2AL.HOME, false);
@@ -42,17 +43,22 @@ final class AppNavTree extends TreeView<AppNavItem> {
         TreeItem<AppNavItem> fileio = page("fileio", "nav.fileio", Material2AL.FOLDER, true);
         TreeItem<AppNavItem> socketio = page("socketio", "nav.socketio", Material2MZ.NETWORK_CHECK, true);
         TreeItem<AppNavItem> locks = page("locks", "nav.locks", Material2AL.LOCK, true);
+        TreeItem<AppNavItem> heap = page("heap", "nav.heap", Material2MZ.MEMORY, true);
+        TreeItem<AppNavItem> leaks = page("leaks", "nav.leaks", Material2AL.BUG_REPORT, true);
+        TreeItem<AppNavItem> tlab = page("tlab", "nav.tlab", Material2MZ.STORAGE, true);
         TreeItem<AppNavItem> settings = page("settings", "settings.title", Material2MZ.SETTINGS, false);
 
         workspace.getChildren().setAll(List.of(home, jvms));
         recording.getChildren().setAll(List.of(analysis, overview, events));
         javaApp.getChildren().setAll(List.of(profiling, exceptions, threads, fileio, socketio, locks));
+        memoryAnalysis.getChildren().setAll(List.of(heap, leaks, tlab));
         application.getChildren().setAll(List.of(settings));
-        rootItem.getChildren().setAll(List.of(workspace, recording, javaApp, application));
+        rootItem.getChildren().setAll(List.of(workspace, recording, javaApp, memoryAnalysis, application));
         rootItem.setExpanded(true);
         workspace.setExpanded(true);
         recording.setExpanded(true);
         javaApp.setExpanded(true);
+        memoryAnalysis.setExpanded(true);
         application.setExpanded(true);
 
         pageItems = new HashMap<>(Map.of(
@@ -68,6 +74,9 @@ final class AppNavTree extends TreeView<AppNavItem> {
         pageItems.put("fileio", fileio);
         pageItems.put("socketio", socketio);
         pageItems.put("locks", locks);
+        pageItems.put("heap", heap);
+        pageItems.put("leaks", leaks);
+        pageItems.put("tlab", tlab);
 
         getStyleClass().add("app-nav-tree");
         setShowRoot(false);

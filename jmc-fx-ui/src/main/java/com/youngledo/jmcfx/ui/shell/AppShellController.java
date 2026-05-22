@@ -24,7 +24,10 @@ import com.youngledo.jmcfx.domain.model.ExceptionGrouping;
 import com.youngledo.jmcfx.domain.model.ExceptionSummary;
 import com.youngledo.jmcfx.domain.model.FileIOEvent;
 import com.youngledo.jmcfx.domain.model.FileIOHistogram;
+import com.youngledo.jmcfx.domain.model.HeapClassHistogram;
 import com.youngledo.jmcfx.domain.model.HotMethod;
+import com.youngledo.jmcfx.domain.model.LeakCandidate;
+import com.youngledo.jmcfx.domain.model.LeakReferenceNode;
 import com.youngledo.jmcfx.domain.model.LockGrouping;
 import com.youngledo.jmcfx.domain.model.LockHistogram;
 import com.youngledo.jmcfx.domain.model.RecordingSummary;
@@ -35,22 +38,28 @@ import com.youngledo.jmcfx.domain.model.SocketIOGrouping;
 import com.youngledo.jmcfx.domain.model.SocketIOHistogram;
 import com.youngledo.jmcfx.domain.model.StackTreeNode;
 import com.youngledo.jmcfx.domain.model.ThreadSummary;
+import com.youngledo.jmcfx.domain.model.TlabAllocation;
 import com.youngledo.jmcfx.domain.service.EventQueryService;
 import com.youngledo.jmcfx.domain.service.ExceptionService;
 import com.youngledo.jmcfx.domain.service.FileIOService;
+import com.youngledo.jmcfx.domain.service.HeapService;
+import com.youngledo.jmcfx.domain.service.LeakSuspectsService;
 import com.youngledo.jmcfx.domain.service.LockService;
 import com.youngledo.jmcfx.domain.service.ProfilingService;
 import com.youngledo.jmcfx.domain.service.RecordingRepository;
 import com.youngledo.jmcfx.domain.service.RuleAnalysisService;
 import com.youngledo.jmcfx.domain.service.SocketIOService;
 import com.youngledo.jmcfx.domain.service.ThreadService;
+import com.youngledo.jmcfx.domain.service.TlabService;
 import com.youngledo.jmcfx.ui.analysis.AnalysisSeverityCell;
 import com.youngledo.jmcfx.ui.events.EventBrowserViewModel;
 import com.youngledo.jmcfx.ui.events.VirtualThreadEventBrowserExecutor;
 import com.youngledo.jmcfx.ui.exceptions.ExceptionViewModel;
 import com.youngledo.jmcfx.ui.fileio.FileIOViewModel;
+import com.youngledo.jmcfx.ui.heap.HeapViewModel;
 import com.youngledo.jmcfx.ui.i18n.I18n;
 import com.youngledo.jmcfx.ui.i18n.LanguageMode;
+import com.youngledo.jmcfx.ui.leaks.LeakSuspectsViewModel;
 import com.youngledo.jmcfx.ui.locks.LockViewModel;
 import com.youngledo.jmcfx.ui.util.DisplayFormats;
 import com.youngledo.jmcfx.ui.util.HtmlToTextFlow;
@@ -59,6 +68,7 @@ import com.youngledo.jmcfx.ui.profiling.ProfilingViewModel;
 import com.youngledo.jmcfx.ui.rules.RuleResultsViewModel;
 import com.youngledo.jmcfx.ui.socketio.SocketIOViewModel;
 import com.youngledo.jmcfx.ui.threads.ThreadViewModel;
+import com.youngledo.jmcfx.ui.tlab.TlabViewModel;
 
 import javafx.application.Platform;
 import javafx.beans.property.ReadOnlyStringWrapper;
@@ -115,6 +125,9 @@ public class AppShellController {
     private final FileIOService fileIOService;
     private final SocketIOService socketIOService;
     private final LockService lockService;
+    private final HeapService heapService;
+    private final LeakSuspectsService leakSuspectsService;
+    private final TlabService tlabService;
     private final I18n i18n;
     private final ListChangeListener<EventTypeNode> eventTypeTreeListener = change -> rebuildEventTypeTree();
     private final ListChangeListener<EventColumn> eventColumnsListener = change -> rebuildEventColumns();
@@ -132,6 +145,9 @@ public class AppShellController {
     private FileIOViewModel fileIOViewModel;
     private SocketIOViewModel socketIOViewModel;
     private LockViewModel lockViewModel;
+    private HeapViewModel heapViewModel;
+    private LeakSuspectsViewModel leaksViewModel;
+    private TlabViewModel tlabViewModel;
     private boolean eventTypesDividerInitialized;
     private boolean updatingRecordingTabs;
 
@@ -151,6 +167,9 @@ public class AppShellController {
     @FXML private VBox fileioPane;
     @FXML private VBox socketioPane;
     @FXML private VBox locksPane;
+    @FXML private VBox heapPane;
+    @FXML private VBox leaksPane;
+    @FXML private VBox tlabPane;
     @FXML private VBox settingsPane;
     @FXML private Label statusLabel;
     @FXML private Label taskSummaryLabel;
@@ -244,6 +263,15 @@ public class AppShellController {
     @FXML private TableView<LockHistogram> locksByAddressTable;
     @FXML private Tab locksByThreadTab;
     @FXML private TableView<LockHistogram> locksByThreadTable;
+    @FXML private Label heapTitleLabel;
+    @FXML private TableView<HeapClassHistogram> heapTable;
+    @FXML private Label heapTimelineLabel;
+    @FXML private Label leaksTitleLabel;
+    @FXML private TableView<LeakCandidate> leaksTable;
+    @FXML private TreeView<LeakReferenceNode> leaksReferenceTree;
+    @FXML private Label tlabTitleLabel;
+    @FXML private TableView<TlabAllocation> tlabTable;
+    @FXML private Label tlabTimelineLabel;
     @FXML private Label settingsTitleLabel;
     @FXML private Label settingsLanguageLabel;
     @FXML private ToggleGroup languageToggleGroup;
@@ -255,7 +283,9 @@ public class AppShellController {
             EventQueryService eventQueryService, RuleAnalysisService ruleAnalysisService,
             ProfilingService profilingService, ExceptionService exceptionService,
             ThreadService threadService, FileIOService fileIOService,
-            SocketIOService socketIOService, LockService lockService, I18n i18n) {
+            SocketIOService socketIOService, LockService lockService,
+            HeapService heapService, LeakSuspectsService leakSuspectsService,
+            TlabService tlabService, I18n i18n) {
         this.viewModel = viewModel;
         this.recordingRepository = recordingRepository;
         this.eventQueryService = eventQueryService;
@@ -266,6 +296,9 @@ public class AppShellController {
         this.fileIOService = fileIOService;
         this.socketIOService = socketIOService;
         this.lockService = lockService;
+        this.heapService = heapService;
+        this.leakSuspectsService = leakSuspectsService;
+        this.tlabService = tlabService;
         this.i18n = i18n;
     }
 
@@ -309,6 +342,12 @@ public class AppShellController {
         socketioPane.managedProperty().bind(socketioPane.visibleProperty());
         locksPane.visibleProperty().bind(viewModel.selectedSectionProperty().isEqualTo("locks"));
         locksPane.managedProperty().bind(locksPane.visibleProperty());
+        heapPane.visibleProperty().bind(viewModel.selectedSectionProperty().isEqualTo("heap"));
+        heapPane.managedProperty().bind(heapPane.visibleProperty());
+        leaksPane.visibleProperty().bind(viewModel.selectedSectionProperty().isEqualTo("leaks"));
+        leaksPane.managedProperty().bind(leaksPane.visibleProperty());
+        tlabPane.visibleProperty().bind(viewModel.selectedSectionProperty().isEqualTo("tlab"));
+        tlabPane.managedProperty().bind(tlabPane.visibleProperty());
         settingsPane.visibleProperty().bind(viewModel.selectedSectionProperty().isEqualTo("settings"));
         settingsPane.managedProperty().bind(settingsPane.visibleProperty());
         bindOverview(null);
@@ -320,6 +359,9 @@ public class AppShellController {
         configureFileIOTable();
         configureSocketIOTable();
         configureLockTables();
+        configureHeapTable();
+        configureLeaksTable();
+        configureTlabTable();
         bindWorkspaceSelection();
         i18n.localeProperty().addListener((observable, oldValue, newValue) -> refreshOverviewOnLocaleChange());
     }
@@ -761,6 +803,164 @@ public class AppShellController {
         locksByThreadTable.setItems(nextViewModel.threadHistogramProperty());
     }
 
+    private void configureHeapTable() {
+        heapTable.setPlaceholder(new Label(i18n.get("heap.empty")));
+
+        TableColumn<HeapClassHistogram, String> classNameCol = new TableColumn<>();
+        classNameCol.textProperty().bind(i18n.text("heap.column.className"));
+        classNameCol.setPrefWidth(300);
+        classNameCol.setCellValueFactory(cell -> new ReadOnlyStringWrapper(cell.getValue().className()));
+
+        TableColumn<HeapClassHistogram, Number> instancesCol = new TableColumn<>();
+        instancesCol.textProperty().bind(i18n.text("heap.column.instances"));
+        instancesCol.setPrefWidth(100);
+        instancesCol.setCellValueFactory(cell -> new javafx.beans.property.SimpleLongProperty(cell.getValue().instances()));
+
+        TableColumn<HeapClassHistogram, Number> sizeCol = new TableColumn<>();
+        sizeCol.textProperty().bind(i18n.text("heap.column.size"));
+        sizeCol.setPrefWidth(100);
+        sizeCol.setCellValueFactory(cell -> new javafx.beans.property.SimpleLongProperty(cell.getValue().size()));
+
+        TableColumn<HeapClassHistogram, String> pctCol = new TableColumn<>();
+        pctCol.textProperty().bind(i18n.text("heap.column.allocationPct"));
+        pctCol.setPrefWidth(120);
+        pctCol.setCellValueFactory(cell -> new ReadOnlyStringWrapper(
+                String.format("%.1f%%", cell.getValue().allocationPct())));
+
+        heapTable.getColumns().setAll(List.of(classNameCol, instancesCol, sizeCol, pctCol));
+    }
+
+    private void configureLeaksTable() {
+        leaksTable.setPlaceholder(new Label(i18n.get("leaks.empty")));
+
+        TableColumn<LeakCandidate, String> objectCol = new TableColumn<>();
+        objectCol.textProperty().bind(i18n.text("leaks.column.object"));
+        objectCol.setPrefWidth(300);
+        objectCol.setCellValueFactory(cell -> new ReadOnlyStringWrapper(cell.getValue().object()));
+
+        TableColumn<LeakCandidate, Number> countCol = new TableColumn<>();
+        countCol.textProperty().bind(i18n.text("leaks.column.count"));
+        countCol.setPrefWidth(80);
+        countCol.setCellValueFactory(cell -> new javafx.beans.property.SimpleIntegerProperty(cell.getValue().count()));
+
+        TableColumn<LeakCandidate, String> descCol = new TableColumn<>();
+        descCol.textProperty().bind(i18n.text("leaks.column.description"));
+        descCol.setPrefWidth(200);
+        descCol.setCellValueFactory(cell -> new ReadOnlyStringWrapper(cell.getValue().description()));
+
+        TableColumn<LeakCandidate, String> addressCol = new TableColumn<>();
+        addressCol.textProperty().bind(i18n.text("leaks.column.address"));
+        addressCol.setPrefWidth(100);
+        addressCol.setCellValueFactory(cell -> new ReadOnlyStringWrapper(cell.getValue().address()));
+
+        TableColumn<LeakCandidate, String> relevanceCol = new TableColumn<>();
+        relevanceCol.textProperty().bind(i18n.text("leaks.column.relevance"));
+        relevanceCol.setPrefWidth(120);
+        relevanceCol.setCellValueFactory(cell -> new ReadOnlyStringWrapper(
+                String.format("%.1f%%", cell.getValue().relevance())));
+
+        leaksTable.getColumns().setAll(List.of(objectCol, countCol, descCol, addressCol, relevanceCol));
+        leaksTable.getSelectionModel().selectedItemProperty()
+                .addListener((obs, old, val) -> {
+                    if (val != null) {
+                        int idx = leaksTable.getItems().indexOf(val);
+                        leaksViewModel.selectCandidate(idx);
+                    }
+                });
+
+        leaksReferenceTree.setShowRoot(false);
+        leaksReferenceTree.setCellFactory(tree -> new javafx.scene.control.TreeCell<>() {
+            @Override
+            protected void updateItem(LeakReferenceNode item, boolean empty) {
+                super.updateItem(item, empty);
+                setText(empty || item == null ? null : item.object());
+            }
+        });
+    }
+
+    private void configureTlabTable() {
+        tlabTable.setPlaceholder(new Label(i18n.get("tlab.empty")));
+
+        TableColumn<TlabAllocation, String> threadCol = new TableColumn<>();
+        threadCol.textProperty().bind(i18n.text("tlab.column.thread"));
+        threadCol.setPrefWidth(200);
+        threadCol.setCellValueFactory(cell -> new ReadOnlyStringWrapper(cell.getValue().thread()));
+
+        TableColumn<TlabAllocation, Number> insideCountCol = new TableColumn<>();
+        insideCountCol.textProperty().bind(i18n.text("tlab.column.insideCount"));
+        insideCountCol.setPrefWidth(100);
+        insideCountCol.setCellValueFactory(cell -> new javafx.beans.property.SimpleLongProperty(cell.getValue().insideCount()));
+
+        TableColumn<TlabAllocation, Number> outsideCountCol = new TableColumn<>();
+        outsideCountCol.textProperty().bind(i18n.text("tlab.column.outsideCount"));
+        outsideCountCol.setPrefWidth(100);
+        outsideCountCol.setCellValueFactory(cell -> new javafx.beans.property.SimpleLongProperty(cell.getValue().outsideCount()));
+
+        TableColumn<TlabAllocation, Number> insideTotalCol = new TableColumn<>();
+        insideTotalCol.textProperty().bind(i18n.text("tlab.column.insideTotalSize"));
+        insideTotalCol.setPrefWidth(120);
+        insideTotalCol.setCellValueFactory(cell -> new javafx.beans.property.SimpleLongProperty(cell.getValue().insideTotalSize()));
+
+        TableColumn<TlabAllocation, Number> outsideTotalCol = new TableColumn<>();
+        outsideTotalCol.textProperty().bind(i18n.text("tlab.column.outsideTotalSize"));
+        outsideTotalCol.setPrefWidth(120);
+        outsideTotalCol.setCellValueFactory(cell -> new javafx.beans.property.SimpleLongProperty(cell.getValue().outsideTotalSize()));
+
+        tlabTable.getColumns().setAll(List.of(threadCol, insideCountCol, outsideCountCol, insideTotalCol, outsideTotalCol));
+    }
+
+    private void bindHeap(HeapViewModel nextViewModel) {
+        heapTable.setItems(FXCollections.emptyObservableList());
+        heapTimelineLabel.setText("");
+        heapViewModel = nextViewModel;
+        if (nextViewModel == null) {
+            return;
+        }
+        heapTable.setItems(nextViewModel.histogramProperty());
+        heapTable.getSelectionModel().selectFirst();
+    }
+
+    private void bindLeaks(LeakSuspectsViewModel nextViewModel) {
+        leaksTable.setItems(FXCollections.emptyObservableList());
+        leaksReferenceTree.setRoot(null);
+        leaksViewModel = nextViewModel;
+        if (nextViewModel == null) {
+            return;
+        }
+        leaksTable.setItems(nextViewModel.candidatesProperty());
+        nextViewModel.referenceTreeProperty().addListener((obs, old, val) -> updateLeakReferenceTree(val));
+        leaksTable.getSelectionModel().selectFirst();
+    }
+
+    private void bindTlab(TlabViewModel nextViewModel) {
+        tlabTable.setItems(FXCollections.emptyObservableList());
+        tlabTimelineLabel.setText("");
+        tlabViewModel = nextViewModel;
+        if (nextViewModel == null) {
+            return;
+        }
+        tlabTable.setItems(nextViewModel.allocationsProperty());
+        tlabTable.getSelectionModel().selectFirst();
+    }
+
+    private void updateLeakReferenceTree(LeakReferenceNode node) {
+        if (node == null || node == LeakReferenceNode.EMPTY) {
+            leaksReferenceTree.setRoot(null);
+            return;
+        }
+        TreeItem<LeakReferenceNode> root = buildReferenceTreeItem(node);
+        root.setExpanded(true);
+        leaksReferenceTree.setRoot(root);
+    }
+
+    private TreeItem<LeakReferenceNode> buildReferenceTreeItem(LeakReferenceNode node) {
+        TreeItem<LeakReferenceNode> item = new TreeItem<>(node);
+        for (LeakReferenceNode child : node.children()) {
+            item.getChildren().add(buildReferenceTreeItem(child));
+        }
+        return item;
+    }
+
     private void setSocketIOGrouping(SocketIOGrouping grouping) {
         if (socketIOViewModel == null) {
             return;
@@ -860,6 +1060,11 @@ public class AppShellController {
         locksByClassTab.textProperty().bind(i18n.text("locks.tab.byClass"));
         locksByAddressTab.textProperty().bind(i18n.text("locks.tab.byAddress"));
         locksByThreadTab.textProperty().bind(i18n.text("locks.tab.byThread"));
+        heapTitleLabel.textProperty().bind(i18n.text("heap.title"));
+        heapTimelineLabel.textProperty().bind(i18n.text("heap.timeline"));
+        leaksTitleLabel.textProperty().bind(i18n.text("leaks.title"));
+        tlabTitleLabel.textProperty().bind(i18n.text("tlab.title"));
+        tlabTimelineLabel.textProperty().bind(i18n.text("tlab.timeline"));
         settingsTitleLabel.textProperty().bind(i18n.text("settings.title"));
         settingsLanguageLabel.textProperty().bind(i18n.text("settings.language"));
     }
@@ -1027,6 +1232,9 @@ public class AppShellController {
         bindFileIO(workspace == null ? null : workspace.fileIOViewModel());
         bindSocketIO(workspace == null ? null : workspace.socketIOViewModel());
         bindLocks(workspace == null ? null : workspace.lockViewModel());
+        bindHeap(workspace == null ? null : workspace.heapViewModel());
+        bindLeaks(workspace == null ? null : workspace.leakSuspectsViewModel());
+        bindTlab(workspace == null ? null : workspace.tlabViewModel());
     }
 
     private void bindOverview(OverviewViewModel nextViewModel) {
@@ -1142,8 +1350,11 @@ public class AppShellController {
         FileIOViewModel fileio = fileIOService != null ? new FileIOViewModel(fileIOService) : null;
         SocketIOViewModel socketio = socketIOService != null ? new SocketIOViewModel(socketIOService) : null;
         LockViewModel locks = lockService != null ? new LockViewModel(lockService) : null;
+        HeapViewModel heap = heapService != null ? new HeapViewModel(heapService) : null;
+        LeakSuspectsViewModel leakSuspects = leakSuspectsService != null ? new LeakSuspectsViewModel(leakSuspectsService) : null;
+        TlabViewModel tlab = tlabService != null ? new TlabViewModel(tlabService) : null;
         viewModel.openRecording(recording, overview, events, analysis, profiling, exceptions, threads,
-                fileio, socketio, locks);
+                fileio, socketio, locks, heap, leakSuspects, tlab);
         overview.showRecording(recording, i18n.format("overview.details.format",
                 recording.path(),
                 formatEventTime(recording.startTime()),
@@ -1169,6 +1380,15 @@ public class AppShellController {
         }
         if (locks != null) {
             locks.load(recording);
+        }
+        if (heap != null) {
+            heap.load(recording);
+        }
+        if (leakSuspects != null) {
+            leakSuspects.load(recording);
+        }
+        if (tlab != null) {
+            tlab.load(recording);
         }
     }
 

@@ -220,6 +220,33 @@
                     </tabs>
                 </TabPane>
             </VBox>
+            <VBox fx:id="heapPane" spacing="8" visible="false" managed="false">
+                <Label fx:id="heapTitleLabel" styleClass="view-title"/>
+                <SplitPane VBox.vgrow="ALWAYS" DividerPositions="0.6">
+                    <TableView fx:id="heapTable" styleClass="dense-table" prefHeight="300"/>
+                    <VBox>
+                        <Label fx:id="heapTimelineLabel" styleClass="detail-title"/>
+                    </VBox>
+                </SplitPane>
+            </VBox>
+            <VBox fx:id="leaksPane" spacing="8" visible="false" managed="false">
+                <Label fx:id="leaksTitleLabel" styleClass="view-title"/>
+                <SplitPane VBox.vgrow="ALWAYS" DividerPositions="0.5">
+                    <TableView fx:id="leaksTable" styleClass="dense-table" prefHeight="300"/>
+                    <VBox spacing="4">
+                        <TreeView fx:id="leaksReferenceTree" VBox.vgrow="ALWAYS"/>
+                    </VBox>
+                </SplitPane>
+            </VBox>
+            <VBox fx:id="tlabPane" spacing="8" visible="false" managed="false">
+                <Label fx:id="tlabTitleLabel" styleClass="view-title"/>
+                <SplitPane VBox.vgrow="ALWAYS" DividerPositions="0.6">
+                    <TableView fx:id="tlabTable" styleClass="dense-table" prefHeight="300"/>
+                    <VBox>
+                        <Label fx:id="tlabTimelineLabel" styleClass="detail-title"/>
+                    </VBox>
+                </SplitPane>
+            </VBox>
             <VBox fx:id="settingsPane" spacing="8">
                 <Label fx:id="settingsTitleLabel" styleClass="view-title"/>
                 <Label fx:id="settingsLanguageLabel" styleClass="detail-title"/>
