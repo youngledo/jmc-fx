@@ -34,6 +34,13 @@ Use Java 25 style deliberately where it improves clarity:
 
 ## Architecture Boundaries
 
+JMC FX follows the **Hexagonal (Ports & Adapters)** architecture:
+
+- **Domain core** (`jmc-fx-domain`) defines ports (interfaces) and data records, depending on nothing.
+- **Adapters** (`jmc-fx-adapter-jmc`) implement those ports by calling external frameworks (JMC core APIs).
+- **UI** (`jmc-fx-ui`) depends only on domain ports, never on adapter internals.
+- **App** (`jmc-fx-app`) assembles concrete adapters and injects them at startup.
+
 The intended subprojects are:
 
 - `jmc-fx-domain`: UI-neutral records, enums, ports, and exceptions.
