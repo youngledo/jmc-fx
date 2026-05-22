@@ -14,6 +14,14 @@ import com.youngledo.jmcfx.ui.overview.OverviewViewModel;
 import com.youngledo.jmcfx.ui.profiling.ProfilingViewModel;
 import com.youngledo.jmcfx.ui.rules.RuleResultsViewModel;
 import com.youngledo.jmcfx.ui.socketio.SocketIOViewModel;
+import com.youngledo.jmcfx.ui.jvm.ClassLoadingViewModel;
+import com.youngledo.jmcfx.ui.jvm.CodeCacheViewModel;
+import com.youngledo.jmcfx.ui.jvm.CompilationsViewModel;
+import com.youngledo.jmcfx.ui.jvm.GcConfigViewModel;
+import com.youngledo.jmcfx.ui.jvm.GcDetailsViewModel;
+import com.youngledo.jmcfx.ui.jvm.GcSummaryViewModel;
+import com.youngledo.jmcfx.ui.jvm.JvmInfoViewModel;
+import com.youngledo.jmcfx.ui.jvm.VmOperationsViewModel;
 import com.youngledo.jmcfx.ui.tlab.TlabViewModel;
 import com.youngledo.jmcfx.ui.threads.ThreadViewModel;
 
@@ -38,6 +46,14 @@ public final class RecordingWorkspace {
     private final HeapViewModel heapViewModel;
     private final LeakSuspectsViewModel leakSuspectsViewModel;
     private final TlabViewModel tlabViewModel;
+    private final JvmInfoViewModel jvmInfoViewModel;
+    private final GcConfigViewModel gcConfigViewModel;
+    private final GcSummaryViewModel gcSummaryViewModel;
+    private final GcDetailsViewModel gcDetailsViewModel;
+    private final CompilationsViewModel compilationsViewModel;
+    private final CodeCacheViewModel codeCacheViewModel;
+    private final ClassLoadingViewModel classLoadingViewModel;
+    private final VmOperationsViewModel vmOperationsViewModel;
 
     public RecordingWorkspace(RecordingSummary recording, OverviewViewModel overviewViewModel,
             EventBrowserViewModel eventBrowserViewModel, RuleResultsViewModel ruleResultsViewModel,
@@ -45,7 +61,15 @@ public final class RecordingWorkspace {
             ThreadViewModel threadViewModel, FileIOViewModel fileIOViewModel,
             SocketIOViewModel socketIOViewModel, LockViewModel lockViewModel,
             HeapViewModel heapViewModel, LeakSuspectsViewModel leakSuspectsViewModel,
-            TlabViewModel tlabViewModel) {
+            TlabViewModel tlabViewModel,
+            JvmInfoViewModel jvmInfoViewModel,
+            GcConfigViewModel gcConfigViewModel,
+            GcSummaryViewModel gcSummaryViewModel,
+            GcDetailsViewModel gcDetailsViewModel,
+            CompilationsViewModel compilationsViewModel,
+            CodeCacheViewModel codeCacheViewModel,
+            ClassLoadingViewModel classLoadingViewModel,
+            VmOperationsViewModel vmOperationsViewModel) {
         this.recording = Objects.requireNonNull(recording, "recording");
         this.overviewViewModel = Objects.requireNonNull(overviewViewModel, "overviewViewModel");
         this.eventBrowserViewModel = Objects.requireNonNull(eventBrowserViewModel, "eventBrowserViewModel");
@@ -59,6 +83,14 @@ public final class RecordingWorkspace {
         this.heapViewModel = heapViewModel;
         this.leakSuspectsViewModel = leakSuspectsViewModel;
         this.tlabViewModel = tlabViewModel;
+        this.jvmInfoViewModel = jvmInfoViewModel;
+        this.gcConfigViewModel = gcConfigViewModel;
+        this.gcSummaryViewModel = gcSummaryViewModel;
+        this.gcDetailsViewModel = gcDetailsViewModel;
+        this.compilationsViewModel = compilationsViewModel;
+        this.codeCacheViewModel = codeCacheViewModel;
+        this.classLoadingViewModel = classLoadingViewModel;
+        this.vmOperationsViewModel = vmOperationsViewModel;
     }
 
     public String id() {
@@ -119,6 +151,38 @@ public final class RecordingWorkspace {
 
     public TlabViewModel tlabViewModel() {
         return tlabViewModel;
+    }
+
+    public JvmInfoViewModel jvmInfoViewModel() {
+        return jvmInfoViewModel;
+    }
+
+    public GcConfigViewModel gcConfigViewModel() {
+        return gcConfigViewModel;
+    }
+
+    public GcSummaryViewModel gcSummaryViewModel() {
+        return gcSummaryViewModel;
+    }
+
+    public GcDetailsViewModel gcDetailsViewModel() {
+        return gcDetailsViewModel;
+    }
+
+    public CompilationsViewModel compilationsViewModel() {
+        return compilationsViewModel;
+    }
+
+    public CodeCacheViewModel codeCacheViewModel() {
+        return codeCacheViewModel;
+    }
+
+    public ClassLoadingViewModel classLoadingViewModel() {
+        return classLoadingViewModel;
+    }
+
+    public VmOperationsViewModel vmOperationsViewModel() {
+        return vmOperationsViewModel;
     }
 
     public void close() {

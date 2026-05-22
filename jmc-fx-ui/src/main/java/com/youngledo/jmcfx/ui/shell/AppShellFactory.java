@@ -6,6 +6,7 @@ import com.youngledo.jmcfx.domain.service.EventQueryService;
 import com.youngledo.jmcfx.domain.service.ExceptionService;
 import com.youngledo.jmcfx.domain.service.FileIOService;
 import com.youngledo.jmcfx.domain.service.HeapService;
+import com.youngledo.jmcfx.domain.service.JvmInternalsService;
 import com.youngledo.jmcfx.domain.service.LeakSuspectsService;
 import com.youngledo.jmcfx.domain.service.LockService;
 import com.youngledo.jmcfx.domain.service.ProfilingService;
@@ -39,13 +40,14 @@ public class AppShellFactory {
     private final HeapService heapService;
     private final LeakSuspectsService leakSuspectsService;
     private final TlabService tlabService;
+    private final JvmInternalsService jvmInternalsService;
     private final I18n i18n;
     private final AppPreferences preferences;
 
     public AppShellFactory(RecordingRepository recordingRepository, EventQueryService eventQueryService,
             RuleAnalysisService ruleAnalysisService) {
         this(recordingRepository, eventQueryService, ruleAnalysisService,
-                null, null, null, null, null, null, null, null, null,
+                null, null, null, null, null, null, null, null, null, null,
                 new I18n(java.util.Locale.getDefault()), new JavaAppPreferences());
     }
 
@@ -54,18 +56,20 @@ public class AppShellFactory {
             ExceptionService exceptionService, ThreadService threadService,
             FileIOService fileIOService, SocketIOService socketIOService,
             LockService lockService, HeapService heapService,
-            LeakSuspectsService leakSuspectsService, TlabService tlabService, I18n i18n) {
+            LeakSuspectsService leakSuspectsService, TlabService tlabService,
+            JvmInternalsService jvmInternalsService, I18n i18n) {
         this(recordingRepository, eventQueryService, ruleAnalysisService,
                 profilingService, exceptionService, threadService,
                 fileIOService, socketIOService, lockService,
                 heapService, leakSuspectsService, tlabService,
+                jvmInternalsService,
                 i18n, new JavaAppPreferences());
     }
 
     AppShellFactory(RecordingRepository recordingRepository, EventQueryService eventQueryService,
             RuleAnalysisService ruleAnalysisService, I18n i18n, AppPreferences preferences) {
         this(recordingRepository, eventQueryService, ruleAnalysisService,
-                null, null, null, null, null, null, null, null, null, i18n, preferences);
+                null, null, null, null, null, null, null, null, null, null, i18n, preferences);
     }
 
     AppShellFactory(RecordingRepository recordingRepository, EventQueryService eventQueryService,
@@ -74,6 +78,7 @@ public class AppShellFactory {
             FileIOService fileIOService, SocketIOService socketIOService,
             LockService lockService, HeapService heapService,
             LeakSuspectsService leakSuspectsService, TlabService tlabService,
+            JvmInternalsService jvmInternalsService,
             I18n i18n, AppPreferences preferences) {
         this.recordingRepository = recordingRepository;
         this.eventQueryService = eventQueryService;
@@ -87,6 +92,7 @@ public class AppShellFactory {
         this.heapService = heapService;
         this.leakSuspectsService = leakSuspectsService;
         this.tlabService = tlabService;
+        this.jvmInternalsService = jvmInternalsService;
         this.i18n = i18n;
         this.preferences = preferences;
     }
@@ -113,7 +119,8 @@ public class AppShellFactory {
             return new AppShellController(viewModel, recordingRepository, eventQueryService, ruleAnalysisService,
                     profilingService, exceptionService, threadService,
                     fileIOService, socketIOService, lockService,
-                    heapService, leakSuspectsService, tlabService, i18n);
+                    heapService, leakSuspectsService, tlabService,
+                    jvmInternalsService, i18n);
         }
         throw new IllegalArgumentException("Unsupported controller: " + type.getName());
     }

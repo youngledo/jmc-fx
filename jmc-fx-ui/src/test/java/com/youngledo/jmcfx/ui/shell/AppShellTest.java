@@ -66,6 +66,7 @@ class AppShellTest {
                 null, null, null,
                 null, null, null,
                 null, null, null,
+                null,
                 new I18n(java.util.Locale.SIMPLIFIED_CHINESE));
 
         assertEquals(java.util.Locale.ENGLISH, controller.i18n().localeProperty().get());
@@ -226,7 +227,10 @@ class AppShellTest {
                 new RuleResultsViewModel(rec -> List.of()),
                 null, null, null,
                 null, null, null,
-                null, null, null);
+                null, null, null,
+                null, null, null,
+                null, null, null,
+                null, null);
 
         assertEquals("first-recording.jfr", AppShellController.tabTitleFor(workspace));
     }

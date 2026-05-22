@@ -1,0 +1,62 @@
+package com.youngledo.jmcfx.ui.jvm;
+
+import java.util.List;
+
+import com.youngledo.jmcfx.domain.model.ChartDefinition;
+import com.youngledo.jmcfx.domain.model.CodeCacheStats;
+import com.youngledo.jmcfx.domain.model.CodeCacheSweep;
+import com.youngledo.jmcfx.domain.model.RecordingSummary;
+import com.youngledo.jmcfx.domain.service.JvmInternalsService;
+
+import javafx.application.Platform;
+import javafx.beans.property.ObjectProperty;
+import javafx.beans.property.SimpleObjectProperty;
+import javafx.collections.FXCollections;
+import javafx.collections.ObservableList;
+
+/// View model for the Code Cache page.
+///
+/// Loads code cache sweeps, statistics, and chart definitions.
+public class CodeCacheViewModel {
+
+    private final JvmInternalsService service;
+    private final ObservableList<CodeCacheSweep> sweeps = FXCollections.observableArrayList();
+    private final ObservableList<CodeCacheStats> statistics = FXCollections.observableArrayList();
+    private final ObjectProperty<ChartDefinition> entriesChart = new SimpleObjectProperty<>();
+    private final ObjectProperty<ChartDefinition> sweepChart = new SimpleObjectProperty<>();
+
+    public CodeCacheViewModel(JvmInternalsService service) {
+        this.service = service;
+    }
+
+    public ObservableList<CodeCacheSweep> sweeps() {
+        return sweeps;
+    }
+
+    public ObservableList<CodeCacheStats> statistics() {
+        return statistics;
+    }
+
+    public ObjectProperty<ChartDefinition> entriesChartProperty() {
+        return entriesChart;
+    }
+
+    public ObjectProperty<ChartDefinition> sweepChartProperty() {
+        return sweepChart;
+    }
+
+    public void load(RecordingSummary recording) {
+        Thread.startVirtualThread(() -> {
+            List<CodeCacheSweep> sweepList = service.loadCodeCacheSweeps(recording);
+            List<CodeCacheStats> statsList = service.loadCodeCacheStatistics(recording);
+            ChartDefinition entries = service.loadCodeCacheEntriesChart(recording);
+            ChartDefinition sweep = service.loadCodeCacheSweepChart(recording);
+            Platform.runLater(() -> {
+                sweeps.setAll(sweepList);
+                statistics.setAll(statsList);
+                entriesChart.set(entries);
+                sweepChart.set(sweep);
+            });
+        });
+    }
+}

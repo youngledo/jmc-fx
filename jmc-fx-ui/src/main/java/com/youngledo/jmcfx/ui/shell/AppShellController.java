@@ -5,6 +5,12 @@ import java.time.format.DateTimeFormatter;
 import java.util.List;
 import java.util.StringJoiner;
 
+import com.youngledo.jmcfx.domain.model.ClassloaderStatistics;
+import com.youngledo.jmcfx.domain.model.ClassloaderSummary;
+import com.youngledo.jmcfx.domain.model.ClassloadEvent;
+import com.youngledo.jmcfx.domain.model.CodeCacheStats;
+import com.youngledo.jmcfx.domain.model.CodeCacheSweep;
+import com.youngledo.jmcfx.domain.model.CompilationEvent;
 import com.youngledo.jmcfx.domain.model.EventColumn;
 import com.youngledo.jmcfx.domain.model.EventDetails;
 import com.youngledo.jmcfx.domain.model.EventFieldCondition;
@@ -24,8 +30,14 @@ import com.youngledo.jmcfx.domain.model.ExceptionGrouping;
 import com.youngledo.jmcfx.domain.model.ExceptionSummary;
 import com.youngledo.jmcfx.domain.model.FileIOEvent;
 import com.youngledo.jmcfx.domain.model.FileIOHistogram;
+import com.youngledo.jmcfx.domain.model.GcEvent;
+import com.youngledo.jmcfx.domain.model.GcHeapSummary;
+import com.youngledo.jmcfx.domain.model.GcReferenceStat;
+import com.youngledo.jmcfx.domain.model.GcSummary;
 import com.youngledo.jmcfx.domain.model.HeapClassHistogram;
 import com.youngledo.jmcfx.domain.model.HotMethod;
+import com.youngledo.jmcfx.domain.model.JvmFlag;
+import com.youngledo.jmcfx.domain.model.JvmFlagChange;
 import com.youngledo.jmcfx.domain.model.LeakCandidate;
 import com.youngledo.jmcfx.domain.model.LeakReferenceNode;
 import com.youngledo.jmcfx.domain.model.LockGrouping;
@@ -39,10 +51,13 @@ import com.youngledo.jmcfx.domain.model.SocketIOHistogram;
 import com.youngledo.jmcfx.domain.model.StackTreeNode;
 import com.youngledo.jmcfx.domain.model.ThreadSummary;
 import com.youngledo.jmcfx.domain.model.TlabAllocation;
+import com.youngledo.jmcfx.domain.model.VmOperationEvent;
+import com.youngledo.jmcfx.domain.model.VmOperationSummary;
 import com.youngledo.jmcfx.domain.service.EventQueryService;
 import com.youngledo.jmcfx.domain.service.ExceptionService;
 import com.youngledo.jmcfx.domain.service.FileIOService;
 import com.youngledo.jmcfx.domain.service.HeapService;
+import com.youngledo.jmcfx.domain.service.JvmInternalsService;
 import com.youngledo.jmcfx.domain.service.LeakSuspectsService;
 import com.youngledo.jmcfx.domain.service.LockService;
 import com.youngledo.jmcfx.domain.service.ProfilingService;
@@ -59,6 +74,14 @@ import com.youngledo.jmcfx.ui.fileio.FileIOViewModel;
 import com.youngledo.jmcfx.ui.heap.HeapViewModel;
 import com.youngledo.jmcfx.ui.i18n.I18n;
 import com.youngledo.jmcfx.ui.i18n.LanguageMode;
+import com.youngledo.jmcfx.ui.jvm.ClassLoadingViewModel;
+import com.youngledo.jmcfx.ui.jvm.CodeCacheViewModel;
+import com.youngledo.jmcfx.ui.jvm.CompilationsViewModel;
+import com.youngledo.jmcfx.ui.jvm.GcConfigViewModel;
+import com.youngledo.jmcfx.ui.jvm.GcDetailsViewModel;
+import com.youngledo.jmcfx.ui.jvm.GcSummaryViewModel;
+import com.youngledo.jmcfx.ui.jvm.JvmInfoViewModel;
+import com.youngledo.jmcfx.ui.jvm.VmOperationsViewModel;
 import com.youngledo.jmcfx.ui.leaks.LeakSuspectsViewModel;
 import com.youngledo.jmcfx.ui.locks.LockViewModel;
 import com.youngledo.jmcfx.ui.util.DisplayFormats;
@@ -128,6 +151,7 @@ public class AppShellController {
     private final HeapService heapService;
     private final LeakSuspectsService leakSuspectsService;
     private final TlabService tlabService;
+    private final JvmInternalsService jvmInternalsService;
     private final I18n i18n;
     private final ListChangeListener<EventTypeNode> eventTypeTreeListener = change -> rebuildEventTypeTree();
     private final ListChangeListener<EventColumn> eventColumnsListener = change -> rebuildEventColumns();
@@ -170,6 +194,14 @@ public class AppShellController {
     @FXML private VBox heapPane;
     @FXML private VBox leaksPane;
     @FXML private VBox tlabPane;
+    @FXML private VBox jvmInfoPane;
+    @FXML private VBox gcConfigPane;
+    @FXML private VBox gcSummaryPane;
+    @FXML private VBox gcDetailsPane;
+    @FXML private VBox compilationsPane;
+    @FXML private VBox codeCachePane;
+    @FXML private VBox classLoadingPane;
+    @FXML private VBox vmOperationsPane;
     @FXML private VBox settingsPane;
     @FXML private Label statusLabel;
     @FXML private Label taskSummaryLabel;
@@ -272,6 +304,44 @@ public class AppShellController {
     @FXML private Label tlabTitleLabel;
     @FXML private TableView<TlabAllocation> tlabTable;
     @FXML private Label tlabTimelineLabel;
+    @FXML private TableView<JvmFlag> jvmFlagsTable;
+    @FXML private TableView<JvmFlagChange> jvmFlagChangesTable;
+    @FXML private TableView<GcSummary> gcSummaryTable;
+    @FXML private TableView<GcEvent> gcEventsTable;
+    @FXML private TableView<GcReferenceStat> gcReferenceStatsTable;
+    @FXML private TableView<GcHeapSummary> gcHeapSummaryTable;
+    @FXML private TableView<CompilationEvent> compilationsTable;
+    @FXML private TableView<CompilationEvent> compilationFailuresTable;
+    @FXML private TableView<CodeCacheSweep> codeCacheSweepsTable;
+    @FXML private TableView<CodeCacheStats> codeCacheStatsTable;
+    @FXML private TableView<ClassloaderSummary> classLoadingHistogramTable;
+    @FXML private TableView<ClassloadEvent> classLoadingEventsTable;
+    @FXML private TableView<ClassloaderStatistics> classLoadingStatsTable;
+    @FXML private TableView<VmOperationSummary> vmOperationSummaryTable;
+    @FXML private TableView<VmOperationEvent> vmOperationEventsTable;
+    @FXML private Label jvmInfoTitleLabel;
+    @FXML private Label jvmFlagsLabel;
+    @FXML private Label jvmFlagChangesLabel;
+    @FXML private Label gcConfigTitleLabel;
+    @FXML private Label gcConfigDescriptionLabel;
+    @FXML private Label gcSummaryTitleLabel;
+    @FXML private Label gcDetailsTitleLabel;
+    @FXML private Label gcEventsLabel;
+    @FXML private Label gcReferenceStatsLabel;
+    @FXML private Label gcHeapSummaryLabel;
+    @FXML private Label compilationsTitleLabel;
+    @FXML private Label compilationEventsLabel;
+    @FXML private Label compilationFailuresLabel;
+    @FXML private Label codeCacheTitleLabel;
+    @FXML private Label codeCacheSweepsLabel;
+    @FXML private Label codeCacheStatsLabel;
+    @FXML private Label classLoadingTitleLabel;
+    @FXML private Label classLoadingHistogramLabel;
+    @FXML private Label classLoadingEventsLabel;
+    @FXML private Label classLoadingStatsLabel;
+    @FXML private Label vmOperationsTitleLabel;
+    @FXML private Label vmOperationSummaryLabel;
+    @FXML private Label vmOperationEventsLabel;
     @FXML private Label settingsTitleLabel;
     @FXML private Label settingsLanguageLabel;
     @FXML private ToggleGroup languageToggleGroup;
@@ -285,7 +355,9 @@ public class AppShellController {
             ThreadService threadService, FileIOService fileIOService,
             SocketIOService socketIOService, LockService lockService,
             HeapService heapService, LeakSuspectsService leakSuspectsService,
-            TlabService tlabService, I18n i18n) {
+            TlabService tlabService,
+            JvmInternalsService jvmInternalsService,
+            I18n i18n) {
         this.viewModel = viewModel;
         this.recordingRepository = recordingRepository;
         this.eventQueryService = eventQueryService;
@@ -299,6 +371,7 @@ public class AppShellController {
         this.heapService = heapService;
         this.leakSuspectsService = leakSuspectsService;
         this.tlabService = tlabService;
+        this.jvmInternalsService = jvmInternalsService;
         this.i18n = i18n;
     }
 
@@ -348,6 +421,22 @@ public class AppShellController {
         leaksPane.managedProperty().bind(leaksPane.visibleProperty());
         tlabPane.visibleProperty().bind(viewModel.selectedSectionProperty().isEqualTo("tlab"));
         tlabPane.managedProperty().bind(tlabPane.visibleProperty());
+        jvmInfoPane.visibleProperty().bind(viewModel.selectedSectionProperty().isEqualTo("jvmInfo"));
+        jvmInfoPane.managedProperty().bind(jvmInfoPane.visibleProperty());
+        gcConfigPane.visibleProperty().bind(viewModel.selectedSectionProperty().isEqualTo("gcConfig"));
+        gcConfigPane.managedProperty().bind(gcConfigPane.visibleProperty());
+        gcSummaryPane.visibleProperty().bind(viewModel.selectedSectionProperty().isEqualTo("gcSummary"));
+        gcSummaryPane.managedProperty().bind(gcSummaryPane.visibleProperty());
+        gcDetailsPane.visibleProperty().bind(viewModel.selectedSectionProperty().isEqualTo("gcDetails"));
+        gcDetailsPane.managedProperty().bind(gcDetailsPane.visibleProperty());
+        compilationsPane.visibleProperty().bind(viewModel.selectedSectionProperty().isEqualTo("compilations"));
+        compilationsPane.managedProperty().bind(compilationsPane.visibleProperty());
+        codeCachePane.visibleProperty().bind(viewModel.selectedSectionProperty().isEqualTo("codeCache"));
+        codeCachePane.managedProperty().bind(codeCachePane.visibleProperty());
+        classLoadingPane.visibleProperty().bind(viewModel.selectedSectionProperty().isEqualTo("classLoading"));
+        classLoadingPane.managedProperty().bind(classLoadingPane.visibleProperty());
+        vmOperationsPane.visibleProperty().bind(viewModel.selectedSectionProperty().isEqualTo("vmOperations"));
+        vmOperationsPane.managedProperty().bind(vmOperationsPane.visibleProperty());
         settingsPane.visibleProperty().bind(viewModel.selectedSectionProperty().isEqualTo("settings"));
         settingsPane.managedProperty().bind(settingsPane.visibleProperty());
         bindOverview(null);
@@ -362,6 +451,21 @@ public class AppShellController {
         configureHeapTable();
         configureLeaksTable();
         configureTlabTable();
+        configureJvmFlagsTable();
+        configureJvmFlagChangesTable();
+        configureGcSummaryTable();
+        configureGcEventsTable();
+        configureGcReferenceStatsTable();
+        configureGcHeapSummaryTable();
+        configureCompilationsTable();
+        configureCompilationFailuresTable();
+        configureCodeCacheSweepsTable();
+        configureCodeCacheStatsTable();
+        configureClassLoadingHistogramTable();
+        configureClassLoadingEventsTable();
+        configureClassLoadingStatsTable();
+        configureVmOperationSummaryTable();
+        configureVmOperationEventsTable();
         bindWorkspaceSelection();
         i18n.localeProperty().addListener((observable, oldValue, newValue) -> refreshOverviewOnLocaleChange());
     }
@@ -1065,6 +1169,29 @@ public class AppShellController {
         leaksTitleLabel.textProperty().bind(i18n.text("leaks.title"));
         tlabTitleLabel.textProperty().bind(i18n.text("tlab.title"));
         tlabTimelineLabel.textProperty().bind(i18n.text("tlab.timeline"));
+        jvmInfoTitleLabel.textProperty().bind(i18n.text("jvmInfo.title"));
+        jvmFlagsLabel.textProperty().bind(i18n.text("jvmInfo.flags"));
+        jvmFlagChangesLabel.textProperty().bind(i18n.text("jvmInfo.flagChanges"));
+        gcConfigTitleLabel.textProperty().bind(i18n.text("gcConfig.title"));
+        gcConfigDescriptionLabel.textProperty().bind(i18n.text("gcConfig.empty"));
+        gcSummaryTitleLabel.textProperty().bind(i18n.text("gcSummary.title"));
+        gcDetailsTitleLabel.textProperty().bind(i18n.text("gcDetails.title"));
+        gcEventsLabel.textProperty().bind(i18n.text("gcDetails.events"));
+        gcReferenceStatsLabel.textProperty().bind(i18n.text("gcDetails.referenceStats"));
+        gcHeapSummaryLabel.textProperty().bind(i18n.text("gcDetails.heapSummaries"));
+        compilationsTitleLabel.textProperty().bind(i18n.text("compilations.title"));
+        compilationEventsLabel.textProperty().bind(i18n.text("compilations.events"));
+        compilationFailuresLabel.textProperty().bind(i18n.text("compilations.failures"));
+        codeCacheTitleLabel.textProperty().bind(i18n.text("codeCache.title"));
+        codeCacheSweepsLabel.textProperty().bind(i18n.text("codeCache.sweeps"));
+        codeCacheStatsLabel.textProperty().bind(i18n.text("codeCache.statistics"));
+        classLoadingTitleLabel.textProperty().bind(i18n.text("classLoading.title"));
+        classLoadingHistogramLabel.textProperty().bind(i18n.text("classLoading.histogram"));
+        classLoadingEventsLabel.textProperty().bind(i18n.text("classLoading.events"));
+        classLoadingStatsLabel.textProperty().bind(i18n.text("classLoading.statistics"));
+        vmOperationsTitleLabel.textProperty().bind(i18n.text("vmOperations.title"));
+        vmOperationSummaryLabel.textProperty().bind(i18n.text("vmOperations.summary"));
+        vmOperationEventsLabel.textProperty().bind(i18n.text("vmOperations.events"));
         settingsTitleLabel.textProperty().bind(i18n.text("settings.title"));
         settingsLanguageLabel.textProperty().bind(i18n.text("settings.language"));
     }
@@ -1235,6 +1362,14 @@ public class AppShellController {
         bindHeap(workspace == null ? null : workspace.heapViewModel());
         bindLeaks(workspace == null ? null : workspace.leakSuspectsViewModel());
         bindTlab(workspace == null ? null : workspace.tlabViewModel());
+        bindJvmInfo(workspace == null ? null : workspace.jvmInfoViewModel());
+        bindGcConfig(workspace == null ? null : workspace.gcConfigViewModel());
+        bindGcSummary(workspace == null ? null : workspace.gcSummaryViewModel());
+        bindGcDetails(workspace == null ? null : workspace.gcDetailsViewModel());
+        bindCompilations(workspace == null ? null : workspace.compilationsViewModel());
+        bindCodeCache(workspace == null ? null : workspace.codeCacheViewModel());
+        bindClassLoading(workspace == null ? null : workspace.classLoadingViewModel());
+        bindVmOperations(workspace == null ? null : workspace.vmOperationsViewModel());
     }
 
     private void bindOverview(OverviewViewModel nextViewModel) {
@@ -1353,8 +1488,17 @@ public class AppShellController {
         HeapViewModel heap = heapService != null ? new HeapViewModel(heapService) : null;
         LeakSuspectsViewModel leakSuspects = leakSuspectsService != null ? new LeakSuspectsViewModel(leakSuspectsService) : null;
         TlabViewModel tlab = tlabService != null ? new TlabViewModel(tlabService) : null;
+        JvmInfoViewModel jvmInfo = jvmInternalsService != null ? new JvmInfoViewModel(jvmInternalsService) : null;
+        GcConfigViewModel gcConfig = jvmInternalsService != null ? new GcConfigViewModel(jvmInternalsService) : null;
+        GcSummaryViewModel gcSummary = jvmInternalsService != null ? new GcSummaryViewModel(jvmInternalsService) : null;
+        GcDetailsViewModel gcDetails = jvmInternalsService != null ? new GcDetailsViewModel(jvmInternalsService) : null;
+        CompilationsViewModel compilationsVm = jvmInternalsService != null ? new CompilationsViewModel(jvmInternalsService) : null;
+        CodeCacheViewModel codeCache = jvmInternalsService != null ? new CodeCacheViewModel(jvmInternalsService) : null;
+        ClassLoadingViewModel classLoading = jvmInternalsService != null ? new ClassLoadingViewModel(jvmInternalsService) : null;
+        VmOperationsViewModel vmOperations = jvmInternalsService != null ? new VmOperationsViewModel(jvmInternalsService) : null;
         viewModel.openRecording(recording, overview, events, analysis, profiling, exceptions, threads,
-                fileio, socketio, locks, heap, leakSuspects, tlab);
+                fileio, socketio, locks, heap, leakSuspects, tlab,
+                jvmInfo, gcConfig, gcSummary, gcDetails, compilationsVm, codeCache, classLoading, vmOperations);
         overview.showRecording(recording, i18n.format("overview.details.format",
                 recording.path(),
                 formatEventTime(recording.startTime()),
@@ -1389,6 +1533,30 @@ public class AppShellController {
         }
         if (tlab != null) {
             tlab.load(recording);
+        }
+        if (jvmInfo != null) {
+            jvmInfo.load(recording);
+        }
+        if (gcConfig != null) {
+            gcConfig.load(recording);
+        }
+        if (gcSummary != null) {
+            gcSummary.load(recording);
+        }
+        if (gcDetails != null) {
+            gcDetails.load(recording);
+        }
+        if (compilationsVm != null) {
+            compilationsVm.load(recording);
+        }
+        if (codeCache != null) {
+            codeCache.load(recording);
+        }
+        if (classLoading != null) {
+            classLoading.load(recording);
+        }
+        if (vmOperations != null) {
+            vmOperations.load(recording);
         }
     }
 
@@ -1635,5 +1803,321 @@ public class AppShellController {
                 ? ""
                 : " (" + frame.fileName() + ":" + frame.lineNumber() + ")";
         return frame.typeName() + "." + frame.methodName() + location;
+    }
+
+    // --- JVM Internals: configure methods ---
+
+    private void configureJvmFlagsTable() {
+        TableColumn<JvmFlag, String> nameCol = new TableColumn<>("Flag");
+        nameCol.setCellValueFactory(data -> new ReadOnlyStringWrapper(data.getValue().name()));
+        TableColumn<JvmFlag, String> valueCol = new TableColumn<>("Value");
+        valueCol.setCellValueFactory(data -> new ReadOnlyStringWrapper(data.getValue().value()));
+        TableColumn<JvmFlag, String> originCol = new TableColumn<>("Origin");
+        originCol.setCellValueFactory(data -> new ReadOnlyStringWrapper(data.getValue().origin()));
+        jvmFlagsTable.getColumns().setAll(List.of(nameCol, valueCol, originCol));
+    }
+
+    private void configureJvmFlagChangesTable() {
+        TableColumn<JvmFlagChange, String> timeCol = new TableColumn<>("Time");
+        timeCol.setCellValueFactory(data -> new ReadOnlyStringWrapper(
+                data.getValue().startTime() != null ? data.getValue().startTime().toString() : ""));
+        TableColumn<JvmFlagChange, String> flagCol = new TableColumn<>("Flag");
+        flagCol.setCellValueFactory(data -> new ReadOnlyStringWrapper(data.getValue().flagName()));
+        TableColumn<JvmFlagChange, String> oldCol = new TableColumn<>("Old Value");
+        oldCol.setCellValueFactory(data -> new ReadOnlyStringWrapper(data.getValue().oldValue()));
+        TableColumn<JvmFlagChange, String> newCol = new TableColumn<>("New Value");
+        newCol.setCellValueFactory(data -> new ReadOnlyStringWrapper(data.getValue().newValue()));
+        TableColumn<JvmFlagChange, String> originCol = new TableColumn<>("Origin");
+        originCol.setCellValueFactory(data -> new ReadOnlyStringWrapper(data.getValue().origin()));
+        jvmFlagChangesTable.getColumns().setAll(List.of(timeCol, flagCol, oldCol, newCol, originCol));
+    }
+
+    private void configureGcSummaryTable() {
+        TableColumn<GcSummary, String> genCol = new TableColumn<>("Generation");
+        genCol.setCellValueFactory(data -> new ReadOnlyStringWrapper(data.getValue().generation()));
+        TableColumn<GcSummary, String> countCol = new TableColumn<>("Count");
+        countCol.setCellValueFactory(data -> new ReadOnlyStringWrapper(String.valueOf(data.getValue().collectionCount())));
+        TableColumn<GcSummary, String> totalCol = new TableColumn<>("Total (ms)");
+        totalCol.setCellValueFactory(data -> new ReadOnlyStringWrapper(String.valueOf(data.getValue().totalDurationMillis())));
+        TableColumn<GcSummary, String> avgCol = new TableColumn<>("Avg (ms)");
+        avgCol.setCellValueFactory(data -> new ReadOnlyStringWrapper(String.format("%.2f", data.getValue().avgDurationMillis())));
+        TableColumn<GcSummary, String> maxCol = new TableColumn<>("Max (ms)");
+        maxCol.setCellValueFactory(data -> new ReadOnlyStringWrapper(String.valueOf(data.getValue().maxDurationMillis())));
+        gcSummaryTable.getColumns().setAll(List.of(genCol, countCol, totalCol, avgCol, maxCol));
+    }
+
+    private void configureGcEventsTable() {
+        TableColumn<GcEvent, String> idCol = new TableColumn<>("GC ID");
+        idCol.setCellValueFactory(data -> new ReadOnlyStringWrapper(String.valueOf(data.getValue().gcId())));
+        TableColumn<GcEvent, String> nameCol = new TableColumn<>("Name");
+        nameCol.setCellValueFactory(data -> new ReadOnlyStringWrapper(data.getValue().name()));
+        TableColumn<GcEvent, String> causeCol = new TableColumn<>("Cause");
+        causeCol.setCellValueFactory(data -> new ReadOnlyStringWrapper(data.getValue().cause()));
+        TableColumn<GcEvent, String> pauseCol = new TableColumn<>("Longest Pause");
+        pauseCol.setCellValueFactory(data -> new ReadOnlyStringWrapper(String.valueOf(data.getValue().longestPauseMicros())));
+        TableColumn<GcEvent, String> totalPauseCol = new TableColumn<>("Total Pause");
+        totalPauseCol.setCellValueFactory(data -> new ReadOnlyStringWrapper(String.valueOf(data.getValue().totalPauseMicros())));
+        TableColumn<GcEvent, String> timeCol = new TableColumn<>("Time");
+        timeCol.setCellValueFactory(data -> new ReadOnlyStringWrapper(
+                data.getValue().startTime() != null ? data.getValue().startTime().toString() : ""));
+        gcEventsTable.getColumns().setAll(List.of(idCol, nameCol, causeCol, pauseCol, totalPauseCol, timeCol));
+    }
+
+    private void configureGcReferenceStatsTable() {
+        TableColumn<GcReferenceStat, String> idCol = new TableColumn<>("GC ID");
+        idCol.setCellValueFactory(data -> new ReadOnlyStringWrapper(String.valueOf(data.getValue().gcId())));
+        TableColumn<GcReferenceStat, String> typeCol = new TableColumn<>("Reference Type");
+        typeCol.setCellValueFactory(data -> new ReadOnlyStringWrapper(data.getValue().referenceType()));
+        TableColumn<GcReferenceStat, String> countCol = new TableColumn<>("Count");
+        countCol.setCellValueFactory(data -> new ReadOnlyStringWrapper(String.valueOf(data.getValue().count())));
+        gcReferenceStatsTable.getColumns().setAll(List.of(idCol, typeCol, countCol));
+    }
+
+    private void configureGcHeapSummaryTable() {
+        TableColumn<GcHeapSummary, String> idCol = new TableColumn<>("GC ID");
+        idCol.setCellValueFactory(data -> new ReadOnlyStringWrapper(String.valueOf(data.getValue().gcId())));
+        TableColumn<GcHeapSummary, String> whenCol = new TableColumn<>("When");
+        whenCol.setCellValueFactory(data -> new ReadOnlyStringWrapper(data.getValue().when()));
+        TableColumn<GcHeapSummary, String> usedCol = new TableColumn<>("Heap Used");
+        usedCol.setCellValueFactory(data -> new ReadOnlyStringWrapper(String.valueOf(data.getValue().heapUsed())));
+        TableColumn<GcHeapSummary, String> committedCol = new TableColumn<>("Heap Committed");
+        committedCol.setCellValueFactory(data -> new ReadOnlyStringWrapper(String.valueOf(data.getValue().heapCommitted())));
+        TableColumn<GcHeapSummary, String> metaUsedCol = new TableColumn<>("Metaspace Used");
+        metaUsedCol.setCellValueFactory(data -> new ReadOnlyStringWrapper(String.valueOf(data.getValue().metaspaceUsed())));
+        TableColumn<GcHeapSummary, String> metaCommittedCol = new TableColumn<>("Metaspace Committed");
+        metaCommittedCol.setCellValueFactory(data -> new ReadOnlyStringWrapper(String.valueOf(data.getValue().metaspaceCommitted())));
+        gcHeapSummaryTable.getColumns().setAll(List.of(idCol, whenCol, usedCol, committedCol, metaUsedCol, metaCommittedCol));
+    }
+
+    private void configureCompilationsTable() {
+        TableColumn<CompilationEvent, String> idCol = new TableColumn<>("ID");
+        idCol.setCellValueFactory(data -> new ReadOnlyStringWrapper(String.valueOf(data.getValue().compilationId())));
+        TableColumn<CompilationEvent, String> methodCol = new TableColumn<>("Method");
+        methodCol.setCellValueFactory(data -> new ReadOnlyStringWrapper(data.getValue().method()));
+        TableColumn<CompilationEvent, String> okCol = new TableColumn<>("Succeeded");
+        okCol.setCellValueFactory(data -> new ReadOnlyStringWrapper(String.valueOf(data.getValue().succeeded())));
+        TableColumn<CompilationEvent, String> durCol = new TableColumn<>("Duration");
+        durCol.setCellValueFactory(data -> new ReadOnlyStringWrapper(String.valueOf(data.getValue().durationMicros())));
+        TableColumn<CompilationEvent, String> sizeCol = new TableColumn<>("Code Size");
+        sizeCol.setCellValueFactory(data -> new ReadOnlyStringWrapper(String.valueOf(data.getValue().codeSize())));
+        TableColumn<CompilationEvent, String> inlineCol = new TableColumn<>("Inlined");
+        inlineCol.setCellValueFactory(data -> new ReadOnlyStringWrapper(String.valueOf(data.getValue().inlinedBytes())));
+        TableColumn<CompilationEvent, String> timeCol = new TableColumn<>("Time");
+        timeCol.setCellValueFactory(data -> new ReadOnlyStringWrapper(
+                data.getValue().startTime() != null ? data.getValue().startTime().toString() : ""));
+        compilationsTable.getColumns().setAll(List.of(idCol, methodCol, okCol, durCol, sizeCol, inlineCol, timeCol));
+    }
+
+    private void configureCompilationFailuresTable() {
+        TableColumn<CompilationEvent, String> idCol = new TableColumn<>("ID");
+        idCol.setCellValueFactory(data -> new ReadOnlyStringWrapper(String.valueOf(data.getValue().compilationId())));
+        TableColumn<CompilationEvent, String> methodCol = new TableColumn<>("Method");
+        methodCol.setCellValueFactory(data -> new ReadOnlyStringWrapper(data.getValue().method()));
+        TableColumn<CompilationEvent, String> durCol = new TableColumn<>("Duration");
+        durCol.setCellValueFactory(data -> new ReadOnlyStringWrapper(String.valueOf(data.getValue().durationMicros())));
+        TableColumn<CompilationEvent, String> timeCol = new TableColumn<>("Time");
+        timeCol.setCellValueFactory(data -> new ReadOnlyStringWrapper(
+                data.getValue().startTime() != null ? data.getValue().startTime().toString() : ""));
+        compilationFailuresTable.getColumns().setAll(List.of(idCol, methodCol, durCol, timeCol));
+    }
+
+    private void configureCodeCacheSweepsTable() {
+        TableColumn<CodeCacheSweep, String> timeCol = new TableColumn<>("Time");
+        timeCol.setCellValueFactory(data -> new ReadOnlyStringWrapper(
+                data.getValue().startTime() != null ? data.getValue().startTime().toString() : ""));
+        TableColumn<CodeCacheSweep, String> idxCol = new TableColumn<>("Index");
+        idxCol.setCellValueFactory(data -> new ReadOnlyStringWrapper(String.valueOf(data.getValue().sweepIndex())));
+        TableColumn<CodeCacheSweep, String> durCol = new TableColumn<>("Duration");
+        durCol.setCellValueFactory(data -> new ReadOnlyStringWrapper(String.valueOf(data.getValue().durationMicros())));
+        TableColumn<CodeCacheSweep, String> flushedCol = new TableColumn<>("Flushed");
+        flushedCol.setCellValueFactory(data -> new ReadOnlyStringWrapper(String.valueOf(data.getValue().flushed())));
+        TableColumn<CodeCacheSweep, String> sweptCol = new TableColumn<>("Swept");
+        sweptCol.setCellValueFactory(data -> new ReadOnlyStringWrapper(String.valueOf(data.getValue().swept())));
+        TableColumn<CodeCacheSweep, String> countCol = new TableColumn<>("Swept Count");
+        countCol.setCellValueFactory(data -> new ReadOnlyStringWrapper(String.valueOf(data.getValue().sweptCount())));
+        codeCacheSweepsTable.getColumns().setAll(List.of(timeCol, idxCol, durCol, flushedCol, sweptCol, countCol));
+    }
+
+    private void configureCodeCacheStatsTable() {
+        TableColumn<CodeCacheStats, String> timeCol = new TableColumn<>("Time");
+        timeCol.setCellValueFactory(data -> new ReadOnlyStringWrapper(
+                data.getValue().startTime() != null ? data.getValue().startTime().toString() : ""));
+        TableColumn<CodeCacheStats, String> heapCol = new TableColumn<>("Code Heap");
+        heapCol.setCellValueFactory(data -> new ReadOnlyStringWrapper(data.getValue().codeHeap()));
+        TableColumn<CodeCacheStats, String> entriesCol = new TableColumn<>("Entries");
+        entriesCol.setCellValueFactory(data -> new ReadOnlyStringWrapper(String.valueOf(data.getValue().entries())));
+        TableColumn<CodeCacheStats, String> methodsCol = new TableColumn<>("Methods");
+        methodsCol.setCellValueFactory(data -> new ReadOnlyStringWrapper(String.valueOf(data.getValue().methods())));
+        TableColumn<CodeCacheStats, String> adaptersCol = new TableColumn<>("Adapters");
+        adaptersCol.setCellValueFactory(data -> new ReadOnlyStringWrapper(String.valueOf(data.getValue().adapters())));
+        TableColumn<CodeCacheStats, String> unallocCol = new TableColumn<>("Unallocated");
+        unallocCol.setCellValueFactory(data -> new ReadOnlyStringWrapper(String.valueOf(data.getValue().unallocated())));
+        codeCacheStatsTable.getColumns().setAll(List.of(timeCol, heapCol, entriesCol, methodsCol, adaptersCol, unallocCol));
+    }
+
+    private void configureClassLoadingHistogramTable() {
+        TableColumn<ClassloaderSummary, String> loaderCol = new TableColumn<>("Classloader");
+        loaderCol.setCellValueFactory(data -> new ReadOnlyStringWrapper(data.getValue().classloader()));
+        TableColumn<ClassloaderSummary, String> loadedCol = new TableColumn<>("Loaded");
+        loadedCol.setCellValueFactory(data -> new ReadOnlyStringWrapper(String.valueOf(data.getValue().loadedCount())));
+        TableColumn<ClassloaderSummary, String> unloadedCol = new TableColumn<>("Unloaded");
+        unloadedCol.setCellValueFactory(data -> new ReadOnlyStringWrapper(String.valueOf(data.getValue().unloadedCount())));
+        classLoadingHistogramTable.getColumns().setAll(List.of(loaderCol, loadedCol, unloadedCol));
+    }
+
+    private void configureClassLoadingEventsTable() {
+        TableColumn<ClassloadEvent, String> typeCol = new TableColumn<>("Event");
+        typeCol.setCellValueFactory(data -> new ReadOnlyStringWrapper(data.getValue().eventType()));
+        TableColumn<ClassloadEvent, String> timeCol = new TableColumn<>("Time");
+        timeCol.setCellValueFactory(data -> new ReadOnlyStringWrapper(
+                data.getValue().startTime() != null ? data.getValue().startTime().toString() : ""));
+        TableColumn<ClassloadEvent, String> classCol = new TableColumn<>("Class");
+        classCol.setCellValueFactory(data -> new ReadOnlyStringWrapper(data.getValue().loadedClass()));
+        TableColumn<ClassloadEvent, String> defLoaderCol = new TableColumn<>("Defining Loader");
+        defLoaderCol.setCellValueFactory(data -> new ReadOnlyStringWrapper(data.getValue().definingClassloader()));
+        TableColumn<ClassloadEvent, String> initLoaderCol = new TableColumn<>("Initiating Loader");
+        initLoaderCol.setCellValueFactory(data -> new ReadOnlyStringWrapper(data.getValue().initiatingClassloader()));
+        TableColumn<ClassloadEvent, String> durCol = new TableColumn<>("Duration");
+        durCol.setCellValueFactory(data -> new ReadOnlyStringWrapper(String.valueOf(data.getValue().durationMicros())));
+        classLoadingEventsTable.getColumns().setAll(List.of(typeCol, timeCol, classCol, defLoaderCol, initLoaderCol, durCol));
+    }
+
+    private void configureClassLoadingStatsTable() {
+        TableColumn<ClassloaderStatistics, String> loaderCol = new TableColumn<>("Classloader");
+        loaderCol.setCellValueFactory(data -> new ReadOnlyStringWrapper(data.getValue().classloader()));
+        TableColumn<ClassloaderStatistics, String> parentCol = new TableColumn<>("Parent");
+        parentCol.setCellValueFactory(data -> new ReadOnlyStringWrapper(data.getValue().parentClassloader()));
+        TableColumn<ClassloaderStatistics, String> countCol = new TableColumn<>("Loaded Classes");
+        countCol.setCellValueFactory(data -> new ReadOnlyStringWrapper(String.valueOf(data.getValue().loadedClassCount())));
+        TableColumn<ClassloaderStatistics, String> chunkCol = new TableColumn<>("Chunk Size");
+        chunkCol.setCellValueFactory(data -> new ReadOnlyStringWrapper(String.valueOf(data.getValue().anonymousBlockChunkSize())));
+        TableColumn<ClassloaderStatistics, String> blockCol = new TableColumn<>("Block Size");
+        blockCol.setCellValueFactory(data -> new ReadOnlyStringWrapper(String.valueOf(data.getValue().anonymousBlockSize())));
+        TableColumn<ClassloaderStatistics, String> anonCol = new TableColumn<>("Anonymous Classes");
+        anonCol.setCellValueFactory(data -> new ReadOnlyStringWrapper(String.valueOf(data.getValue().anonymousClassCount())));
+        classLoadingStatsTable.getColumns().setAll(List.of(loaderCol, parentCol, countCol, chunkCol, blockCol, anonCol));
+    }
+
+    private void configureVmOperationSummaryTable() {
+        TableColumn<VmOperationSummary, String> opCol = new TableColumn<>("Operation");
+        opCol.setCellValueFactory(data -> new ReadOnlyStringWrapper(data.getValue().operation()));
+        TableColumn<VmOperationSummary, String> countCol = new TableColumn<>("Count");
+        countCol.setCellValueFactory(data -> new ReadOnlyStringWrapper(String.valueOf(data.getValue().count())));
+        TableColumn<VmOperationSummary, String> totalCol = new TableColumn<>("Total Duration");
+        totalCol.setCellValueFactory(data -> new ReadOnlyStringWrapper(String.valueOf(data.getValue().totalDurationMicros())));
+        TableColumn<VmOperationSummary, String> maxCol = new TableColumn<>("Max Duration");
+        maxCol.setCellValueFactory(data -> new ReadOnlyStringWrapper(String.valueOf(data.getValue().maxDurationMicros())));
+        vmOperationSummaryTable.getColumns().setAll(List.of(opCol, countCol, totalCol, maxCol));
+    }
+
+    private void configureVmOperationEventsTable() {
+        TableColumn<VmOperationEvent, String> timeCol = new TableColumn<>("Time");
+        timeCol.setCellValueFactory(data -> new ReadOnlyStringWrapper(
+                data.getValue().startTime() != null ? data.getValue().startTime().toString() : ""));
+        TableColumn<VmOperationEvent, String> opCol = new TableColumn<>("Operation");
+        opCol.setCellValueFactory(data -> new ReadOnlyStringWrapper(data.getValue().operation()));
+        TableColumn<VmOperationEvent, String> blockCol = new TableColumn<>("Blocking");
+        blockCol.setCellValueFactory(data -> new ReadOnlyStringWrapper(String.valueOf(data.getValue().blocking())));
+        TableColumn<VmOperationEvent, String> safeCol = new TableColumn<>("Safepoint");
+        safeCol.setCellValueFactory(data -> new ReadOnlyStringWrapper(String.valueOf(data.getValue().safepoint())));
+        TableColumn<VmOperationEvent, String> durCol = new TableColumn<>("Duration");
+        durCol.setCellValueFactory(data -> new ReadOnlyStringWrapper(String.valueOf(data.getValue().durationMicros())));
+        TableColumn<VmOperationEvent, String> threadCol = new TableColumn<>("Thread");
+        threadCol.setCellValueFactory(data -> new ReadOnlyStringWrapper(data.getValue().threadName()));
+        vmOperationEventsTable.getColumns().setAll(List.of(timeCol, opCol, blockCol, safeCol, durCol, threadCol));
+    }
+
+    // --- JVM Internals: bind methods ---
+
+    private JvmInfoViewModel jvmInfoViewModel;
+    private GcConfigViewModel gcConfigViewModel;
+    private GcSummaryViewModel gcSummaryViewModel;
+    private GcDetailsViewModel gcDetailsViewModel;
+    private CompilationsViewModel compilationsViewModel;
+    private CodeCacheViewModel codeCacheViewModel;
+    private ClassLoadingViewModel classLoadingViewModel;
+    private VmOperationsViewModel vmOperationsViewModel;
+
+    private void bindJvmInfo(JvmInfoViewModel nextViewModel) {
+        jvmFlagsTable.setItems(FXCollections.emptyObservableList());
+        jvmFlagChangesTable.setItems(FXCollections.emptyObservableList());
+        jvmInfoViewModel = nextViewModel;
+        if (nextViewModel == null) {
+            return;
+        }
+        jvmFlagsTable.setItems(nextViewModel.flags());
+        jvmFlagChangesTable.setItems(nextViewModel.flagChanges());
+    }
+
+    private void bindGcConfig(GcConfigViewModel nextViewModel) {
+        gcConfigViewModel = nextViewModel;
+    }
+
+    private void bindGcSummary(GcSummaryViewModel nextViewModel) {
+        gcSummaryTable.setItems(FXCollections.emptyObservableList());
+        gcSummaryViewModel = nextViewModel;
+        if (nextViewModel == null) {
+            return;
+        }
+        gcSummaryTable.setItems(nextViewModel.summaries());
+    }
+
+    private void bindGcDetails(GcDetailsViewModel nextViewModel) {
+        gcEventsTable.setItems(FXCollections.emptyObservableList());
+        gcReferenceStatsTable.setItems(FXCollections.emptyObservableList());
+        gcHeapSummaryTable.setItems(FXCollections.emptyObservableList());
+        gcDetailsViewModel = nextViewModel;
+        if (nextViewModel == null) {
+            return;
+        }
+        gcEventsTable.setItems(nextViewModel.gcEvents());
+        gcReferenceStatsTable.setItems(nextViewModel.referenceStats());
+        gcHeapSummaryTable.setItems(nextViewModel.heapSummaries());
+    }
+
+    private void bindCompilations(CompilationsViewModel nextViewModel) {
+        compilationsTable.setItems(FXCollections.emptyObservableList());
+        compilationFailuresTable.setItems(FXCollections.emptyObservableList());
+        compilationsViewModel = nextViewModel;
+        if (nextViewModel == null) {
+            return;
+        }
+        compilationsTable.setItems(nextViewModel.compilations());
+        compilationFailuresTable.setItems(nextViewModel.failures());
+    }
+
+    private void bindCodeCache(CodeCacheViewModel nextViewModel) {
+        codeCacheSweepsTable.setItems(FXCollections.emptyObservableList());
+        codeCacheStatsTable.setItems(FXCollections.emptyObservableList());
+        codeCacheViewModel = nextViewModel;
+        if (nextViewModel == null) {
+            return;
+        }
+        codeCacheSweepsTable.setItems(nextViewModel.sweeps());
+        codeCacheStatsTable.setItems(nextViewModel.statistics());
+    }
+
+    private void bindClassLoading(ClassLoadingViewModel nextViewModel) {
+        classLoadingHistogramTable.setItems(FXCollections.emptyObservableList());
+        classLoadingEventsTable.setItems(FXCollections.emptyObservableList());
+        classLoadingStatsTable.setItems(FXCollections.emptyObservableList());
+        classLoadingViewModel = nextViewModel;
+        if (nextViewModel == null) {
+            return;
+        }
+        classLoadingHistogramTable.setItems(nextViewModel.histogram());
+        classLoadingEventsTable.setItems(nextViewModel.events());
+        classLoadingStatsTable.setItems(nextViewModel.statistics());
+    }
+
+    private void bindVmOperations(VmOperationsViewModel nextViewModel) {
+        vmOperationSummaryTable.setItems(FXCollections.emptyObservableList());
+        vmOperationEventsTable.setItems(FXCollections.emptyObservableList());
+        vmOperationsViewModel = nextViewModel;
+        if (nextViewModel == null) {
+            return;
+        }
+        vmOperationSummaryTable.setItems(nextViewModel.summary());
+        vmOperationEventsTable.setItems(nextViewModel.events());
     }
 }
