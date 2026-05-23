@@ -4,6 +4,7 @@ import java.io.IOException;
 
 import com.youngledo.jmcfx.domain.service.EnvironmentService;
 import com.youngledo.jmcfx.domain.service.EventQueryService;
+import com.youngledo.jmcfx.domain.service.JavaAppService;
 import com.youngledo.jmcfx.domain.service.ExceptionService;
 import com.youngledo.jmcfx.domain.service.FileIOService;
 import com.youngledo.jmcfx.domain.service.HeapService;
@@ -43,13 +44,17 @@ public class AppShellFactory {
     private final TlabService tlabService;
     private final JvmInternalsService jvmInternalsService;
     private final EnvironmentService environmentService;
+    private final JavaAppService javaAppService;
     private final I18n i18n;
     private final AppPreferences preferences;
 
     public AppShellFactory(RecordingRepository recordingRepository, EventQueryService eventQueryService,
             RuleAnalysisService ruleAnalysisService) {
         this(recordingRepository, eventQueryService, ruleAnalysisService,
-                null, null, null, null, null, null, null, null, null, null, null,
+                null, null, null,
+                null, null, null,
+                null, null, null,
+                null, null, null,
                 new I18n(java.util.Locale.getDefault()), new JavaAppPreferences());
     }
 
@@ -64,7 +69,7 @@ public class AppShellFactory {
                 profilingService, exceptionService, threadService,
                 fileIOService, socketIOService, lockService,
                 heapService, leakSuspectsService, tlabService,
-                jvmInternalsService, null,
+                jvmInternalsService, null, null,
                 i18n, new JavaAppPreferences());
     }
 
@@ -76,19 +81,24 @@ public class AppShellFactory {
             LeakSuspectsService leakSuspectsService, TlabService tlabService,
             JvmInternalsService jvmInternalsService,
             EnvironmentService environmentService,
+            JavaAppService javaAppService,
             I18n i18n) {
         this(recordingRepository, eventQueryService, ruleAnalysisService,
                 profilingService, exceptionService, threadService,
                 fileIOService, socketIOService, lockService,
                 heapService, leakSuspectsService, tlabService,
-                jvmInternalsService, environmentService,
+                jvmInternalsService, environmentService, javaAppService,
                 i18n, new JavaAppPreferences());
     }
 
     AppShellFactory(RecordingRepository recordingRepository, EventQueryService eventQueryService,
             RuleAnalysisService ruleAnalysisService, I18n i18n, AppPreferences preferences) {
         this(recordingRepository, eventQueryService, ruleAnalysisService,
-                null, null, null, null, null, null, null, null, null, null, null, i18n, preferences);
+                null, null, null,
+                null, null, null,
+                null, null, null,
+                null, null, null,
+                i18n, preferences);
     }
 
     AppShellFactory(RecordingRepository recordingRepository, EventQueryService eventQueryService,
@@ -99,6 +109,7 @@ public class AppShellFactory {
             LeakSuspectsService leakSuspectsService, TlabService tlabService,
             JvmInternalsService jvmInternalsService,
             EnvironmentService environmentService,
+            JavaAppService javaAppService,
             I18n i18n, AppPreferences preferences) {
         this.recordingRepository = recordingRepository;
         this.eventQueryService = eventQueryService;
@@ -114,6 +125,7 @@ public class AppShellFactory {
         this.tlabService = tlabService;
         this.jvmInternalsService = jvmInternalsService;
         this.environmentService = environmentService;
+        this.javaAppService = javaAppService;
         this.i18n = i18n;
         this.preferences = preferences;
     }
@@ -141,7 +153,7 @@ public class AppShellFactory {
                     profilingService, exceptionService, threadService,
                     fileIOService, socketIOService, lockService,
                     heapService, leakSuspectsService, tlabService,
-                    jvmInternalsService, environmentService, i18n);
+                    jvmInternalsService, environmentService, javaAppService, i18n);
         }
         throw new IllegalArgumentException("Unsupported controller: " + type.getName());
     }

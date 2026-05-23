@@ -67,6 +67,7 @@ import com.youngledo.jmcfx.domain.service.ExceptionService;
 import com.youngledo.jmcfx.domain.service.FileIOService;
 import com.youngledo.jmcfx.domain.service.HeapService;
 import com.youngledo.jmcfx.domain.service.JvmInternalsService;
+import com.youngledo.jmcfx.domain.service.JavaAppService;
 import com.youngledo.jmcfx.domain.service.LeakSuspectsService;
 import com.youngledo.jmcfx.domain.service.LockService;
 import com.youngledo.jmcfx.domain.service.ProfilingService;
@@ -84,6 +85,10 @@ import com.youngledo.jmcfx.ui.fileio.FileIOViewModel;
 import com.youngledo.jmcfx.ui.heap.HeapViewModel;
 import com.youngledo.jmcfx.ui.i18n.I18n;
 import com.youngledo.jmcfx.ui.i18n.LanguageMode;
+import com.youngledo.jmcfx.ui.javaapp.JavaAppOverviewViewModel;
+import com.youngledo.jmcfx.ui.javaapp.NativeLibraryViewModel;
+import com.youngledo.jmcfx.ui.javaapp.SecurityViewModel;
+import com.youngledo.jmcfx.ui.javaapp.ThreadDumpViewModel;
 import com.youngledo.jmcfx.ui.jvm.ClassLoadingViewModel;
 import com.youngledo.jmcfx.ui.jvm.CodeCacheViewModel;
 import com.youngledo.jmcfx.ui.jvm.CompilationsViewModel;
@@ -163,6 +168,7 @@ public class AppShellController {
     private final TlabService tlabService;
     private final JvmInternalsService jvmInternalsService;
     private final EnvironmentService environmentService;
+    private final JavaAppService javaAppService;
     private final I18n i18n;
     private final ListChangeListener<EventTypeNode> eventTypeTreeListener = change -> rebuildEventTypeTree();
     private final ListChangeListener<EventColumn> eventColumnsListener = change -> rebuildEventColumns();
@@ -184,6 +190,10 @@ public class AppShellController {
     private LeakSuspectsViewModel leaksViewModel;
     private TlabViewModel tlabViewModel;
     private EnvironmentViewModel environmentViewModel;
+    private JavaAppOverviewViewModel javaAppOverviewViewModel;
+    private SecurityViewModel securityViewModel;
+    private NativeLibraryViewModel nativeLibraryViewModel;
+    private ThreadDumpViewModel threadDumpViewModel;
     private boolean eventTypesDividerInitialized;
     private boolean updatingRecordingTabs;
 
@@ -394,6 +404,7 @@ public class AppShellController {
             TlabService tlabService,
             JvmInternalsService jvmInternalsService,
             EnvironmentService environmentService,
+            JavaAppService javaAppService,
             I18n i18n) {
         this.viewModel = viewModel;
         this.recordingRepository = recordingRepository;
@@ -410,6 +421,7 @@ public class AppShellController {
         this.tlabService = tlabService;
         this.jvmInternalsService = jvmInternalsService;
         this.environmentService = environmentService;
+        this.javaAppService = javaAppService;
         this.i18n = i18n;
     }
 
@@ -1568,10 +1580,14 @@ public class AppShellController {
         VmOperationsViewModel vmOperations = jvmInternalsService != null ? new VmOperationsViewModel(jvmInternalsService) : null;
         EnvironmentViewModel environment = environmentService != null
                 ? new EnvironmentViewModel(environmentService) : null;
+        JavaAppOverviewViewModel javaAppOverview = javaAppService != null ? new JavaAppOverviewViewModel(javaAppService) : null;
+        SecurityViewModel security = javaAppService != null ? new SecurityViewModel(javaAppService) : null;
+        NativeLibraryViewModel nativeLibraries = javaAppService != null ? new NativeLibraryViewModel(javaAppService) : null;
+        ThreadDumpViewModel threadDumps = javaAppService != null ? new ThreadDumpViewModel(javaAppService) : null;
         viewModel.openRecording(recording, overview, events, analysis, profiling, exceptions, threads,
                 fileio, socketio, locks, heap, leakSuspects, tlab,
                 jvmInfo, gcConfig, gcSummary, gcDetails, compilationsVm, codeCache, classLoading, vmOperations,
-                environment);
+                environment, javaAppOverview, security, nativeLibraries, threadDumps);
         overview.showRecording(recording, i18n.format("overview.details.format",
                 recording.path(),
                 formatEventTime(recording.startTime()),
@@ -1633,6 +1649,18 @@ public class AppShellController {
         }
         if (environment != null) {
             environment.load(recording);
+        }
+        if (javaAppOverview != null) {
+            javaAppOverview.load(recording);
+        }
+        if (security != null) {
+            security.load(recording);
+        }
+        if (nativeLibraries != null) {
+            nativeLibraries.load(recording);
+        }
+        if (threadDumps != null) {
+            threadDumps.load(recording);
         }
     }
 
