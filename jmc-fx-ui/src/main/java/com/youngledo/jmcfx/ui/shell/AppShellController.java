@@ -58,10 +58,14 @@ import com.youngledo.jmcfx.domain.model.SocketIOGrouping;
 import com.youngledo.jmcfx.domain.model.SocketIOHistogram;
 import com.youngledo.jmcfx.domain.model.StackTreeNode;
 import com.youngledo.jmcfx.domain.model.SystemProperty;
+import com.youngledo.jmcfx.domain.model.ThreadDumpEntry;
+import com.youngledo.jmcfx.domain.model.ThreadHistogramRow;
 import com.youngledo.jmcfx.domain.model.ThreadSummary;
+import com.youngledo.jmcfx.domain.model.NativeLibraryEntry;
 import com.youngledo.jmcfx.domain.model.TlabAllocation;
 import com.youngledo.jmcfx.domain.model.VmOperationEvent;
 import com.youngledo.jmcfx.domain.model.VmOperationSummary;
+import com.youngledo.jmcfx.domain.model.X509CertificateEntry;
 import com.youngledo.jmcfx.domain.service.EnvironmentService;
 import com.youngledo.jmcfx.domain.service.EventQueryService;
 import com.youngledo.jmcfx.domain.service.ExceptionService;
@@ -218,6 +222,10 @@ public class AppShellController {
     @FXML private VBox fileioPane;
     @FXML private VBox socketioPane;
     @FXML private VBox locksPane;
+    @FXML private VBox threadHistogramPane;
+    @FXML private VBox securityPane;
+    @FXML private VBox nativeLibrariesPane;
+    @FXML private VBox threadDumpsPane;
     @FXML private VBox heapPane;
     @FXML private VBox leaksPane;
     @FXML private VBox tlabPane;
@@ -331,6 +339,17 @@ public class AppShellController {
     @FXML private TableView<LockHistogram> locksByAddressTable;
     @FXML private Tab locksByThreadTab;
     @FXML private TableView<LockHistogram> locksByThreadTable;
+    @FXML private Label threadHistogramTitleLabel;
+    @FXML private VBox threadHistogramChartContainer;
+    private final TimelineChart threadHistogramChart = new TimelineChart();
+    @FXML private TableView<ThreadHistogramRow> threadHistogramTable;
+    @FXML private Label securityTitleLabel;
+    @FXML private TableView<X509CertificateEntry> securityTable;
+    @FXML private Label nativeLibrariesTitleLabel;
+    @FXML private TableView<NativeLibraryEntry> nativeLibrariesTable;
+    @FXML private Label threadDumpsTitleLabel;
+    @FXML private TableView<ThreadDumpEntry> threadDumpsTable;
+    @FXML private TextArea threadDumpTextArea;
     @FXML private Label heapTitleLabel;
     @FXML private TableView<HeapClassHistogram> heapTable;
     @FXML private VBox heapTimelineContainer;
@@ -475,6 +494,14 @@ public class AppShellController {
         socketioPane.managedProperty().bind(socketioPane.visibleProperty());
         locksPane.visibleProperty().bind(viewModel.selectedSectionProperty().isEqualTo("locks"));
         locksPane.managedProperty().bind(locksPane.visibleProperty());
+        threadHistogramPane.visibleProperty().bind(viewModel.selectedSectionProperty().isEqualTo("threadHistogram"));
+        threadHistogramPane.managedProperty().bind(threadHistogramPane.visibleProperty());
+        securityPane.visibleProperty().bind(viewModel.selectedSectionProperty().isEqualTo("security"));
+        securityPane.managedProperty().bind(securityPane.visibleProperty());
+        nativeLibrariesPane.visibleProperty().bind(viewModel.selectedSectionProperty().isEqualTo("nativeLibraries"));
+        nativeLibrariesPane.managedProperty().bind(nativeLibrariesPane.visibleProperty());
+        threadDumpsPane.visibleProperty().bind(viewModel.selectedSectionProperty().isEqualTo("threadDumps"));
+        threadDumpsPane.managedProperty().bind(threadDumpsPane.visibleProperty());
         heapPane.visibleProperty().bind(viewModel.selectedSectionProperty().isEqualTo("heap"));
         heapPane.managedProperty().bind(heapPane.visibleProperty());
         leaksPane.visibleProperty().bind(viewModel.selectedSectionProperty().isEqualTo("leaks"));
@@ -516,6 +543,7 @@ public class AppShellController {
         socketioTimelineContainer.getChildren().add(socketioTimelineChart);
         heapTimelineContainer.getChildren().add(heapTimelineChart);
         tlabTimelineContainer.getChildren().add(tlabTimelineChart);
+        threadHistogramChartContainer.getChildren().add(threadHistogramChart);
         bindOverview(null);
         bindEvents();
         configureAnalysisTable();
@@ -525,6 +553,10 @@ public class AppShellController {
         configureFileIOTable();
         configureSocketIOTable();
         configureLockTables();
+        configureThreadHistogramTable();
+        configureSecurityTable();
+        configureNativeLibrariesTable();
+        configureThreadDumpsTable();
         configureHeapTable();
         configureLeaksTable();
         configureTlabTable();
@@ -924,6 +956,123 @@ public class AppShellController {
         table.getColumns().setAll(List.of(keyCol, countCol, totalDurCol, maxDurCol, avgDurCol));
     }
 
+    private void configureThreadHistogramTable() {
+        threadHistogramTable.setPlaceholder(new Label(i18n.get("threadHistogram.empty")));
+
+        TableColumn<ThreadHistogramRow, String> threadCol = new TableColumn<>();
+        threadCol.textProperty().bind(i18n.text("threadHistogram.column.threadName"));
+        threadCol.setPrefWidth(250);
+        threadCol.setCellValueFactory(cell -> new ReadOnlyStringWrapper(cell.getValue().threadName()));
+
+        TableColumn<ThreadHistogramRow, Number> profilingCol = new TableColumn<>();
+        profilingCol.textProperty().bind(i18n.text("threadHistogram.column.profilingCount"));
+        profilingCol.setPrefWidth(100);
+        profilingCol.setCellValueFactory(cell -> new javafx.beans.property.SimpleIntegerProperty(cell.getValue().profilingCount()));
+
+        TableColumn<ThreadHistogramRow, String> ioCol = new TableColumn<>();
+        ioCol.textProperty().bind(i18n.text("threadHistogram.column.ioDurationMs"));
+        ioCol.setPrefWidth(100);
+        ioCol.setCellValueFactory(cell -> new ReadOnlyStringWrapper(
+                DisplayFormats.formatDuration(cell.getValue().ioDurationMillis())));
+
+        TableColumn<ThreadHistogramRow, String> blockedCol = new TableColumn<>();
+        blockedCol.textProperty().bind(i18n.text("threadHistogram.column.blockedDurationMs"));
+        blockedCol.setPrefWidth(100);
+        blockedCol.setCellValueFactory(cell -> new ReadOnlyStringWrapper(
+                DisplayFormats.formatDuration(cell.getValue().blockedDurationMillis())));
+
+        TableColumn<ThreadHistogramRow, String> allocCol = new TableColumn<>();
+        allocCol.textProperty().bind(i18n.text("threadHistogram.column.allocatedBytes"));
+        allocCol.setPrefWidth(120);
+        allocCol.setCellValueFactory(cell -> new ReadOnlyStringWrapper(
+                DisplayFormats.formatFileSize(cell.getValue().allocatedBytes())));
+
+        TableColumn<ThreadHistogramRow, Number> excCol = new TableColumn<>();
+        excCol.textProperty().bind(i18n.text("threadHistogram.column.exceptionCount"));
+        excCol.setPrefWidth(80);
+        excCol.setCellValueFactory(cell -> new javafx.beans.property.SimpleIntegerProperty(cell.getValue().exceptionCount()));
+
+        threadHistogramTable.getColumns().setAll(List.of(threadCol, profilingCol, ioCol, blockedCol, allocCol, excCol));
+    }
+
+    private void configureSecurityTable() {
+        securityTable.setPlaceholder(new Label(i18n.get("security.empty")));
+
+        TableColumn<X509CertificateEntry, String> algoCol = new TableColumn<>();
+        algoCol.textProperty().bind(i18n.text("security.column.algorithm"));
+        algoCol.setPrefWidth(100);
+        algoCol.setCellValueFactory(cell -> new ReadOnlyStringWrapper(cell.getValue().algorithm()));
+
+        TableColumn<X509CertificateEntry, String> subjectCol = new TableColumn<>();
+        subjectCol.textProperty().bind(i18n.text("security.column.subject"));
+        subjectCol.setPrefWidth(300);
+        subjectCol.setCellValueFactory(cell -> new ReadOnlyStringWrapper(cell.getValue().subject()));
+
+        TableColumn<X509CertificateEntry, String> issuerCol = new TableColumn<>();
+        issuerCol.textProperty().bind(i18n.text("security.column.issuer"));
+        issuerCol.setPrefWidth(300);
+        issuerCol.setCellValueFactory(cell -> new ReadOnlyStringWrapper(cell.getValue().issuer()));
+
+        TableColumn<X509CertificateEntry, String> serialCol = new TableColumn<>();
+        serialCol.textProperty().bind(i18n.text("security.column.serialNumber"));
+        serialCol.setPrefWidth(150);
+        serialCol.setCellValueFactory(cell -> new ReadOnlyStringWrapper(cell.getValue().serialNumber()));
+
+        TableColumn<X509CertificateEntry, String> validFromCol = new TableColumn<>();
+        validFromCol.textProperty().bind(i18n.text("security.column.validFrom"));
+        validFromCol.setPrefWidth(160);
+        validFromCol.setCellValueFactory(cell -> new ReadOnlyStringWrapper(
+                formatEventTimeForDisplay(cell.getValue().validFrom(), ZoneId.systemDefault())));
+
+        TableColumn<X509CertificateEntry, String> validToCol = new TableColumn<>();
+        validToCol.textProperty().bind(i18n.text("security.column.validTo"));
+        validToCol.setPrefWidth(160);
+        validToCol.setCellValueFactory(cell -> new ReadOnlyStringWrapper(
+                formatEventTimeForDisplay(cell.getValue().validTo(), ZoneId.systemDefault())));
+
+        TableColumn<X509CertificateEntry, Number> keyLenCol = new TableColumn<>();
+        keyLenCol.textProperty().bind(i18n.text("security.column.keyLength"));
+        keyLenCol.setPrefWidth(80);
+        keyLenCol.setCellValueFactory(cell -> new javafx.beans.property.SimpleIntegerProperty(cell.getValue().keyLength()));
+
+        securityTable.getColumns().setAll(List.of(algoCol, subjectCol, issuerCol, serialCol, validFromCol, validToCol, keyLenCol));
+    }
+
+    private void configureNativeLibrariesTable() {
+        nativeLibrariesTable.setPlaceholder(new Label(i18n.get("nativeLibraries.empty")));
+
+        TableColumn<NativeLibraryEntry, String> nameCol = new TableColumn<>();
+        nameCol.textProperty().bind(i18n.text("nativeLibraries.column.name"));
+        nameCol.setPrefWidth(250);
+        nameCol.setCellValueFactory(cell -> new ReadOnlyStringWrapper(cell.getValue().name()));
+
+        TableColumn<NativeLibraryEntry, String> baseCol = new TableColumn<>();
+        baseCol.textProperty().bind(i18n.text("nativeLibraries.column.basePath"));
+        baseCol.setPrefWidth(300);
+        baseCol.setCellValueFactory(cell -> new ReadOnlyStringWrapper(cell.getValue().basePath()));
+
+        TableColumn<NativeLibraryEntry, String> absCol = new TableColumn<>();
+        absCol.textProperty().bind(i18n.text("nativeLibraries.column.absolutePath"));
+        absCol.setPrefWidth(400);
+        absCol.setCellValueFactory(cell -> new ReadOnlyStringWrapper(cell.getValue().absolutePath()));
+
+        nativeLibrariesTable.getColumns().setAll(List.of(nameCol, baseCol, absCol));
+    }
+
+    private void configureThreadDumpsTable() {
+        threadDumpsTable.setPlaceholder(new Label(i18n.get("threadDumps.empty")));
+
+        TableColumn<ThreadDumpEntry, String> timeCol = new TableColumn<>();
+        timeCol.textProperty().bind(i18n.text("threadDumps.column.time"));
+        timeCol.setPrefWidth(200);
+        timeCol.setCellValueFactory(cell -> new ReadOnlyStringWrapper(
+                formatEventTimeForDisplay(cell.getValue().startTime(), ZoneId.systemDefault())));
+
+        threadDumpsTable.getColumns().setAll(List.of(timeCol));
+        threadDumpsTable.getSelectionModel().selectedItemProperty().addListener(
+                (obs, oldVal, newVal) -> threadDumpTextArea.setText(newVal != null ? newVal.dumpText() : ""));
+    }
+
     private void bindProfiling(ProfilingViewModel nextViewModel) {
         profilingTable.setItems(FXCollections.emptyObservableList());
         profilingCallersTree.setRoot(new TreeItem<>());
@@ -999,6 +1148,46 @@ public class AppShellController {
         locksByClassTable.setItems(nextViewModel.classHistogramProperty());
         locksByAddressTable.setItems(nextViewModel.addressHistogramProperty());
         locksByThreadTable.setItems(nextViewModel.threadHistogramProperty());
+    }
+
+    private void bindThreadHistogram(JavaAppOverviewViewModel nextViewModel) {
+        threadHistogramChart.setData(null);
+        threadHistogramTable.setItems(FXCollections.emptyObservableList());
+        javaAppOverviewViewModel = nextViewModel;
+        if (nextViewModel == null) {
+            return;
+        }
+        threadHistogramTable.setItems(nextViewModel.histogramRowsProperty());
+        nextViewModel.chartProperty().addListener((obs, old, val) -> threadHistogramChart.setData(val));
+        threadHistogramChart.setData(nextViewModel.chartProperty().get());
+    }
+
+    private void bindSecurity(SecurityViewModel nextViewModel) {
+        securityTable.setItems(FXCollections.emptyObservableList());
+        securityViewModel = nextViewModel;
+        if (nextViewModel == null) {
+            return;
+        }
+        securityTable.setItems(nextViewModel.certificatesProperty());
+    }
+
+    private void bindNativeLibraries(NativeLibraryViewModel nextViewModel) {
+        nativeLibrariesTable.setItems(FXCollections.emptyObservableList());
+        nativeLibraryViewModel = nextViewModel;
+        if (nextViewModel == null) {
+            return;
+        }
+        nativeLibrariesTable.setItems(nextViewModel.librariesProperty());
+    }
+
+    private void bindThreadDumps(ThreadDumpViewModel nextViewModel) {
+        threadDumpsTable.setItems(FXCollections.emptyObservableList());
+        threadDumpTextArea.setText("");
+        threadDumpViewModel = nextViewModel;
+        if (nextViewModel == null) {
+            return;
+        }
+        threadDumpsTable.setItems(nextViewModel.dumpsProperty());
     }
 
     private void configureHeapTable() {
@@ -1259,6 +1448,10 @@ public class AppShellController {
         locksByClassTab.textProperty().bind(i18n.text("locks.tab.byClass"));
         locksByAddressTab.textProperty().bind(i18n.text("locks.tab.byAddress"));
         locksByThreadTab.textProperty().bind(i18n.text("locks.tab.byThread"));
+        threadHistogramTitleLabel.textProperty().bind(i18n.text("threadHistogram.title"));
+        securityTitleLabel.textProperty().bind(i18n.text("security.title"));
+        nativeLibrariesTitleLabel.textProperty().bind(i18n.text("nativeLibraries.title"));
+        threadDumpsTitleLabel.textProperty().bind(i18n.text("threadDumps.title"));
         heapTitleLabel.textProperty().bind(i18n.text("heap.title"));
         leaksTitleLabel.textProperty().bind(i18n.text("leaks.title"));
         tlabTitleLabel.textProperty().bind(i18n.text("tlab.title"));
@@ -1462,6 +1655,10 @@ public class AppShellController {
         bindFileIO(workspace == null ? null : workspace.fileIOViewModel());
         bindSocketIO(workspace == null ? null : workspace.socketIOViewModel());
         bindLocks(workspace == null ? null : workspace.lockViewModel());
+        bindThreadHistogram(workspace == null ? null : workspace.javaAppOverviewViewModel());
+        bindSecurity(workspace == null ? null : workspace.securityViewModel());
+        bindNativeLibraries(workspace == null ? null : workspace.nativeLibraryViewModel());
+        bindThreadDumps(workspace == null ? null : workspace.threadDumpViewModel());
         bindHeap(workspace == null ? null : workspace.heapViewModel());
         bindLeaks(workspace == null ? null : workspace.leakSuspectsViewModel());
         bindTlab(workspace == null ? null : workspace.tlabViewModel());
@@ -2421,6 +2618,10 @@ public class AppShellController {
         attachExportMenu(locksByClassTable);
         attachExportMenu(locksByAddressTable);
         attachExportMenu(locksByThreadTable);
+        attachExportMenu(threadHistogramTable);
+        attachExportMenu(securityTable);
+        attachExportMenu(nativeLibrariesTable);
+        attachExportMenu(threadDumpsTable);
         attachExportMenu(heapTable);
         attachExportMenu(leaksTable);
         attachExportMenu(tlabTable);

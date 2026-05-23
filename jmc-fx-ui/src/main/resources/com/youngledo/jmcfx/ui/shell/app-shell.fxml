@@ -220,6 +220,26 @@
                     </tabs>
                 </TabPane>
             </VBox>
+            <VBox fx:id="threadHistogramPane" spacing="8" visible="false" managed="false">
+                <Label fx:id="threadHistogramTitleLabel" styleClass="view-title"/>
+                <VBox fx:id="threadHistogramChartContainer" prefHeight="200"/>
+                <TableView fx:id="threadHistogramTable" styleClass="dense-table" VBox.vgrow="ALWAYS"/>
+            </VBox>
+            <VBox fx:id="securityPane" spacing="8" visible="false" managed="false">
+                <Label fx:id="securityTitleLabel" styleClass="view-title"/>
+                <TableView fx:id="securityTable" styleClass="dense-table" VBox.vgrow="ALWAYS"/>
+            </VBox>
+            <VBox fx:id="nativeLibrariesPane" spacing="8" visible="false" managed="false">
+                <Label fx:id="nativeLibrariesTitleLabel" styleClass="view-title"/>
+                <TableView fx:id="nativeLibrariesTable" styleClass="dense-table" VBox.vgrow="ALWAYS"/>
+            </VBox>
+            <VBox fx:id="threadDumpsPane" spacing="8" visible="false" managed="false">
+                <Label fx:id="threadDumpsTitleLabel" styleClass="view-title"/>
+                <SplitPane VBox.vgrow="ALWAYS" DividerPositions="0.4">
+                    <TableView fx:id="threadDumpsTable" styleClass="dense-table"/>
+                    <TextArea fx:id="threadDumpTextArea" editable="false" styleClass="dump-text-area"/>
+                </SplitPane>
+            </VBox>
             <VBox fx:id="heapPane" spacing="8" visible="false" managed="false">
                 <Label fx:id="heapTitleLabel" styleClass="view-title"/>
                 <SplitPane VBox.vgrow="ALWAYS" DividerPositions="0.6">

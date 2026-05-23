@@ -45,6 +45,10 @@ final class AppNavTree extends TreeView<AppNavItem> {
         TreeItem<AppNavItem> fileio = page("fileio", "nav.fileio", Material2AL.FOLDER, true);
         TreeItem<AppNavItem> socketio = page("socketio", "nav.socketio", Material2MZ.NETWORK_CHECK, true);
         TreeItem<AppNavItem> locks = page("locks", "nav.locks", Material2AL.LOCK, true);
+        TreeItem<AppNavItem> threadHistogram = page("threadHistogram", "nav.threadHistogram", Material2AL.LIST, true);
+        TreeItem<AppNavItem> security = page("security", "nav.security", Material2MZ.SECURITY, true);
+        TreeItem<AppNavItem> nativeLibraries = page("nativeLibraries", "nav.nativeLibraries", Material2MZ.STORAGE, true);
+        TreeItem<AppNavItem> threadDumps = page("threadDumps", "nav.threadDumps", Material2MZ.VIEW_LIST, true);
         TreeItem<AppNavItem> heap = page("heap", "nav.heap", Material2MZ.MEMORY, true);
         TreeItem<AppNavItem> leaks = page("leaks", "nav.leaks", Material2AL.BUG_REPORT, true);
         TreeItem<AppNavItem> tlab = page("tlab", "nav.tlab", Material2MZ.STORAGE, true);
@@ -66,7 +70,8 @@ final class AppNavTree extends TreeView<AppNavItem> {
 
         workspace.getChildren().setAll(List.of(home, jvms));
         recording.getChildren().setAll(List.of(analysis, overview, events));
-        javaApp.getChildren().setAll(List.of(profiling, exceptions, threads, fileio, socketio, locks));
+        javaApp.getChildren().setAll(List.of(profiling, exceptions, threads, fileio, socketio, locks,
+                threadHistogram, security, nativeLibraries, threadDumps));
         memoryAnalysis.getChildren().setAll(List.of(heap, leaks, tlab));
         environment.getChildren().setAll(List.of(processPage, envVarsPage, sysPropsPage,
                 recordingInfoPage, agentsPage, constantPoolsPage));
@@ -96,6 +101,10 @@ final class AppNavTree extends TreeView<AppNavItem> {
         pageItems.put("fileio", fileio);
         pageItems.put("socketio", socketio);
         pageItems.put("locks", locks);
+        pageItems.put("threadHistogram", threadHistogram);
+        pageItems.put("security", security);
+        pageItems.put("nativeLibraries", nativeLibraries);
+        pageItems.put("threadDumps", threadDumps);
         pageItems.put("heap", heap);
         pageItems.put("leaks", leaks);
         pageItems.put("tlab", tlab);
