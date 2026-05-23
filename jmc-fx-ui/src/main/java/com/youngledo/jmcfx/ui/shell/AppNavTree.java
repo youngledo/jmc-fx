@@ -30,6 +30,7 @@ final class AppNavTree extends TreeView<AppNavItem> {
         TreeItem<AppNavItem> recording = group("nav.group.recording", Material2AL.ANALYTICS);
         TreeItem<AppNavItem> javaApp = group("nav.group.javaApplication", Material2AL.INSIGHTS);
         TreeItem<AppNavItem> memoryAnalysis = group("nav.group.memoryAnalysis", Material2MZ.MEMORY);
+        TreeItem<AppNavItem> jvmInternals = group("nav.group.jvmInternals", Material2MZ.MEMORY);
         TreeItem<AppNavItem> environment = group("nav.group.environment", Material2MZ.PUBLIC);
         TreeItem<AppNavItem> application = group("nav.group.application", Material2MZ.SETTINGS);
 
@@ -53,6 +54,14 @@ final class AppNavTree extends TreeView<AppNavItem> {
         TreeItem<AppNavItem> recordingInfoPage = page("recordingInfo", "nav.recordingInfo", Material2MZ.SAVE, true);
         TreeItem<AppNavItem> agentsPage = page("agents", "nav.agents", Material2MZ.SECURITY, true);
         TreeItem<AppNavItem> constantPoolsPage = page("constantPools", "nav.constantPools", Material2MZ.VIEW_LIST, true);
+        TreeItem<AppNavItem> jvmInfoPage = page("jvmInfo", "nav.jvmInfo", Material2MZ.VIEW_LIST, true);
+        TreeItem<AppNavItem> gcConfigPage = page("gcConfig", "nav.gcConfig", Material2MZ.SETTINGS, true);
+        TreeItem<AppNavItem> gcSummaryPage = page("gcSummary", "nav.gcSummary", Material2AL.LIST, true);
+        TreeItem<AppNavItem> gcDetailsPage = page("gcDetails", "nav.gcDetails", Material2AL.BUG_REPORT, true);
+        TreeItem<AppNavItem> compilationsPage = page("compilations", "nav.compilations", Material2MZ.PUBLIC, true);
+        TreeItem<AppNavItem> codeCachePage = page("codeCache", "nav.codeCache", Material2MZ.STORAGE, true);
+        TreeItem<AppNavItem> classLoadingPage = page("classLoading", "nav.classLoading", Material2MZ.SAVE, true);
+        TreeItem<AppNavItem> vmOperationsPage = page("vmOperations", "nav.vmOperations", Material2MZ.SECURITY, true);
         TreeItem<AppNavItem> settings = page("settings", "settings.title", Material2MZ.SETTINGS, false);
 
         workspace.getChildren().setAll(List.of(home, jvms));
@@ -61,12 +70,15 @@ final class AppNavTree extends TreeView<AppNavItem> {
         memoryAnalysis.getChildren().setAll(List.of(heap, leaks, tlab));
         environment.getChildren().setAll(List.of(processPage, envVarsPage, sysPropsPage,
                 recordingInfoPage, agentsPage, constantPoolsPage));
+        jvmInternals.getChildren().setAll(List.of(jvmInfoPage, gcConfigPage, gcSummaryPage, gcDetailsPage,
+                compilationsPage, codeCachePage, classLoadingPage, vmOperationsPage));
         application.getChildren().setAll(List.of(settings));
-        rootItem.getChildren().setAll(List.of(workspace, recording, javaApp, memoryAnalysis, environment, application));
+        rootItem.getChildren().setAll(List.of(workspace, recording, javaApp, jvmInternals, memoryAnalysis, environment, application));
         rootItem.setExpanded(true);
         workspace.setExpanded(true);
         recording.setExpanded(true);
         javaApp.setExpanded(true);
+        jvmInternals.setExpanded(true);
         memoryAnalysis.setExpanded(true);
         environment.setExpanded(true);
         application.setExpanded(true);
@@ -93,6 +105,14 @@ final class AppNavTree extends TreeView<AppNavItem> {
         pageItems.put("recordingInfo", recordingInfoPage);
         pageItems.put("agents", agentsPage);
         pageItems.put("constantPools", constantPoolsPage);
+        pageItems.put("jvmInfo", jvmInfoPage);
+        pageItems.put("gcConfig", gcConfigPage);
+        pageItems.put("gcSummary", gcSummaryPage);
+        pageItems.put("gcDetails", gcDetailsPage);
+        pageItems.put("compilations", compilationsPage);
+        pageItems.put("codeCache", codeCachePage);
+        pageItems.put("classLoading", classLoadingPage);
+        pageItems.put("vmOperations", vmOperationsPage);
 
         getStyleClass().add("app-nav-tree");
         setShowRoot(false);
