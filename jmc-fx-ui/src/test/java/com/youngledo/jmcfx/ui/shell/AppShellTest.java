@@ -230,7 +230,9 @@ class AppShellTest {
                 null, null, null,
                 null, null, null,
                 null, null, null,
-                null, null, null);
+                null, null, null,
+                null, null, null,
+                null);
 
         assertEquals("first-recording.jfr", AppShellController.tabTitleFor(workspace));
     }

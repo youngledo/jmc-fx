@@ -22,6 +22,10 @@ import com.youngledo.jmcfx.ui.jvm.GcConfigViewModel;
 import com.youngledo.jmcfx.ui.jvm.GcDetailsViewModel;
 import com.youngledo.jmcfx.ui.jvm.GcSummaryViewModel;
 import com.youngledo.jmcfx.ui.jvm.JvmInfoViewModel;
+import com.youngledo.jmcfx.ui.javaapp.JavaAppOverviewViewModel;
+import com.youngledo.jmcfx.ui.javaapp.NativeLibraryViewModel;
+import com.youngledo.jmcfx.ui.javaapp.SecurityViewModel;
+import com.youngledo.jmcfx.ui.javaapp.ThreadDumpViewModel;
 import com.youngledo.jmcfx.ui.jvm.VmOperationsViewModel;
 import com.youngledo.jmcfx.ui.tlab.TlabViewModel;
 import com.youngledo.jmcfx.ui.threads.ThreadViewModel;
@@ -56,6 +60,10 @@ public final class RecordingWorkspace {
     private final ClassLoadingViewModel classLoadingViewModel;
     private final VmOperationsViewModel vmOperationsViewModel;
     private final EnvironmentViewModel environmentViewModel;
+    private final JavaAppOverviewViewModel javaAppOverviewViewModel;
+    private final SecurityViewModel securityViewModel;
+    private final NativeLibraryViewModel nativeLibraryViewModel;
+    private final ThreadDumpViewModel threadDumpViewModel;
 
     public RecordingWorkspace(RecordingSummary recording, OverviewViewModel overviewViewModel,
             EventBrowserViewModel eventBrowserViewModel, RuleResultsViewModel ruleResultsViewModel,
@@ -72,7 +80,11 @@ public final class RecordingWorkspace {
             CodeCacheViewModel codeCacheViewModel,
             ClassLoadingViewModel classLoadingViewModel,
             VmOperationsViewModel vmOperationsViewModel,
-            EnvironmentViewModel environmentViewModel) {
+            EnvironmentViewModel environmentViewModel,
+            JavaAppOverviewViewModel javaAppOverviewViewModel,
+            SecurityViewModel securityViewModel,
+            NativeLibraryViewModel nativeLibraryViewModel,
+            ThreadDumpViewModel threadDumpViewModel) {
         this.recording = Objects.requireNonNull(recording, "recording");
         this.overviewViewModel = Objects.requireNonNull(overviewViewModel, "overviewViewModel");
         this.eventBrowserViewModel = Objects.requireNonNull(eventBrowserViewModel, "eventBrowserViewModel");
@@ -95,6 +107,10 @@ public final class RecordingWorkspace {
         this.classLoadingViewModel = classLoadingViewModel;
         this.vmOperationsViewModel = vmOperationsViewModel;
         this.environmentViewModel = environmentViewModel;
+        this.javaAppOverviewViewModel = javaAppOverviewViewModel;
+        this.securityViewModel = securityViewModel;
+        this.nativeLibraryViewModel = nativeLibraryViewModel;
+        this.threadDumpViewModel = threadDumpViewModel;
     }
 
     public String id() {
@@ -191,6 +207,22 @@ public final class RecordingWorkspace {
 
     public EnvironmentViewModel environmentViewModel() {
         return environmentViewModel;
+    }
+
+    public JavaAppOverviewViewModel javaAppOverviewViewModel() {
+        return javaAppOverviewViewModel;
+    }
+
+    public SecurityViewModel securityViewModel() {
+        return securityViewModel;
+    }
+
+    public NativeLibraryViewModel nativeLibraryViewModel() {
+        return nativeLibraryViewModel;
+    }
+
+    public ThreadDumpViewModel threadDumpViewModel() {
+        return threadDumpViewModel;
     }
 
     public void close() {
