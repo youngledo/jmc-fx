@@ -1072,6 +1072,7 @@ public class AppShellController {
 
     private void bindHeap(HeapViewModel nextViewModel) {
         heapTable.setItems(FXCollections.emptyObservableList());
+        heapTimelineLabel.textProperty().unbind();
         heapTimelineLabel.setText("");
         heapViewModel = nextViewModel;
         if (nextViewModel == null) {
@@ -1095,6 +1096,7 @@ public class AppShellController {
 
     private void bindTlab(TlabViewModel nextViewModel) {
         tlabTable.setItems(FXCollections.emptyObservableList());
+        tlabTimelineLabel.textProperty().unbind();
         tlabTimelineLabel.setText("");
         tlabViewModel = nextViewModel;
         if (nextViewModel == null) {
