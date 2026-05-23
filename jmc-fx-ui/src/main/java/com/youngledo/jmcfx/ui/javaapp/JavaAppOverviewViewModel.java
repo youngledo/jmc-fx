@@ -6,6 +6,7 @@ import com.youngledo.jmcfx.domain.model.ChartDefinition;
 import com.youngledo.jmcfx.domain.model.RecordingSummary;
 import com.youngledo.jmcfx.domain.model.ThreadHistogramRow;
 import com.youngledo.jmcfx.domain.service.JavaAppService;
+import com.youngledo.jmcfx.ui.util.FxDispatch;
 
 import javafx.beans.property.ObjectProperty;
 import javafx.beans.property.SimpleObjectProperty;
@@ -44,8 +45,11 @@ public class JavaAppOverviewViewModel {
     /// @param recording the flight recording to analyze
     public void load(RecordingSummary recording) {
         List<ThreadHistogramRow> rows = javaAppService.loadThreadHistogram(recording);
-        histogramRows.setAll(rows);
-        selectedRow.set(null);
-        chart.set(javaAppService.loadOverviewChart(recording));
+        ChartDefinition chartDefinition = javaAppService.loadOverviewChart(recording);
+        FxDispatch.run(() -> {
+            histogramRows.setAll(rows);
+            selectedRow.set(null);
+            chart.set(chartDefinition);
+        });
     }
 }

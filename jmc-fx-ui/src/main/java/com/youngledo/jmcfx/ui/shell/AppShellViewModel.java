@@ -54,7 +54,11 @@ public class AppShellViewModel {
     private static final String SETTINGS_SECTION = "settings";
     private static final String JVMS_SECTION = "jvms";
     private static final String DEFAULT_RECORDING_SECTION = "analysis";
-    private static final Set<String> RECORDING_SECTIONS = Set.of("analysis", "overview", "events", "profiling", "exceptions", "threads", "fileio", "socketio", "locks", "heap", "leaks", "tlab", "jvmInfo", "gcConfig", "gcSummary", "gcDetails", "compilations", "codeCache", "classLoading", "vmOperations", "processes", "envVars", "sysProps", "recordingInfo", "agents", "constantPools");
+    private static final Set<String> RECORDING_SECTIONS = Set.of("analysis", "overview", "events", "profiling",
+            "exceptions", "threads", "fileio", "socketio", "locks", "threadHistogram", "security",
+            "nativeLibraries", "threadDumps", "heap", "leaks", "tlab", "jvmInfo", "gcConfig", "gcSummary",
+            "gcDetails", "compilations", "codeCache", "classLoading", "vmOperations", "processes", "envVars",
+            "sysProps", "recordingInfo", "agents", "constantPools");
 
     private final ObservableList<RecordingWorkspace> recordingWorkspaces = FXCollections.observableArrayList();
     private final ObservableList<RecordingWorkspace> readOnlyRecordingWorkspaces =

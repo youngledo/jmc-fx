@@ -6,6 +6,7 @@ import com.youngledo.jmcfx.domain.model.LockGrouping;
 import com.youngledo.jmcfx.domain.model.LockHistogram;
 import com.youngledo.jmcfx.domain.model.RecordingSummary;
 import com.youngledo.jmcfx.domain.service.LockService;
+import com.youngledo.jmcfx.ui.util.FxDispatch;
 
 import javafx.beans.property.ObjectProperty;
 import javafx.beans.property.SimpleObjectProperty;
@@ -59,8 +60,13 @@ public class LockViewModel {
         if (currentRecording == null) {
             return;
         }
-        classHistogram.setAll(lockService.loadLockHistogram(currentRecording, LockGrouping.BY_CLASS));
-        addressHistogram.setAll(lockService.loadLockHistogram(currentRecording, LockGrouping.BY_ADDRESS));
-        threadHistogram.setAll(lockService.loadLockHistogram(currentRecording, LockGrouping.BY_THREAD));
+        List<LockHistogram> byClass = lockService.loadLockHistogram(currentRecording, LockGrouping.BY_CLASS);
+        List<LockHistogram> byAddress = lockService.loadLockHistogram(currentRecording, LockGrouping.BY_ADDRESS);
+        List<LockHistogram> byThread = lockService.loadLockHistogram(currentRecording, LockGrouping.BY_THREAD);
+        FxDispatch.run(() -> {
+            classHistogram.setAll(byClass);
+            addressHistogram.setAll(byAddress);
+            threadHistogram.setAll(byThread);
+        });
     }
 }

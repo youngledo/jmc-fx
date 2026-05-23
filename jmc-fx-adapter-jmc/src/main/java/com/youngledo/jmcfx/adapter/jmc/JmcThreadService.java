@@ -1,6 +1,5 @@
 package com.youngledo.jmcfx.adapter.jmc;
 
-import java.io.IOException;
 import java.util.ArrayList;
 import java.util.Comparator;
 import java.util.HashMap;
@@ -14,9 +13,7 @@ import org.openjdk.jmc.common.item.IItemIterable;
 import org.openjdk.jmc.common.item.IMemberAccessor;
 import org.openjdk.jmc.common.unit.IQuantity;
 import org.openjdk.jmc.common.unit.UnitLookup;
-import org.openjdk.jmc.flightrecorder.CouldNotLoadRecordingException;
 import org.openjdk.jmc.flightrecorder.JfrAttributes;
-import org.openjdk.jmc.flightrecorder.JfrLoaderToolkit;
 import org.openjdk.jmc.flightrecorder.jdk.JdkAttributes;
 import org.openjdk.jmc.flightrecorder.jdk.JdkFilters;
 import org.openjdk.jmc.flightrecorder.jdk.JdkTypeIDs;
@@ -167,12 +164,7 @@ public class JmcThreadService implements ThreadService {
 	}
 
 	private IItemCollection loadEvents(RecordingSummary recording) {
-		try {
-			return JfrLoaderToolkit.loadEvents(recording.path().toFile());
-		} catch (IOException | CouldNotLoadRecordingException e) {
-			throw new JmcFxException(
-					"Unable to load recording for thread analysis: " + recording.path(), e);
-		}
+		return JmcRecordingDataCache.SHARED.events(recording);
 	}
 
 	private record ThreadInfo(String name, long id, String group) {

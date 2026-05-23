@@ -8,3 +8,4 @@ replay_pid*
 .superpowers/
 *.jfr
 docs/superpowers
+.claude/worktrees

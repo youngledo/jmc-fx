@@ -1,6 +1,8 @@
 package com.youngledo.jmcfx.ui.environment;
 
+import java.util.LinkedHashMap;
 import java.util.List;
+import java.util.function.Function;
 
 import com.youngledo.jmcfx.domain.model.ActiveRecordingInfo;
 import com.youngledo.jmcfx.domain.model.ActiveSetting;
@@ -11,6 +13,7 @@ import com.youngledo.jmcfx.domain.model.ProcessInfo;
 import com.youngledo.jmcfx.domain.model.RecordingSummary;
 import com.youngledo.jmcfx.domain.model.SystemProperty;
 import com.youngledo.jmcfx.domain.service.EnvironmentService;
+import com.youngledo.jmcfx.ui.util.FxDispatch;
 
 import javafx.beans.property.ObjectProperty;
 import javafx.beans.property.SimpleObjectProperty;
@@ -104,20 +107,39 @@ public class EnvironmentViewModel {
 
     public void load(RecordingSummary recording) {
         currentRecording = recording;
-        processes.setAll(environmentService.loadProcesses(recording));
-        List<EnvironmentVariable> envVars = environmentService.loadEnvironmentVariables(recording);
-        environmentVariables.setAll(envVars);
-        filteredEnvironmentVariables.setAll(envVars);
-        List<SystemProperty> sysProps = environmentService.loadSystemProperties(recording);
-        systemProperties.setAll(sysProps);
-        filteredSystemProperties.setAll(sysProps);
-        activeRecordings.setAll(environmentService.loadActiveRecordings(recording));
-        activeSettings.setAll(environmentService.loadActiveSettings(recording));
-        agents.setAll(environmentService.loadAgents(recording));
-        constantPools.setAll(environmentService.loadConstantPools(recording));
-        selectedRecording.set(null);
-        environmentSearchFilter.set("");
-        systemPropertySearchFilter.set("");
+        List<ProcessInfo> processData = environmentService.loadProcesses(recording);
+        List<EnvironmentVariable> envVars = uniqueBy(environmentService.loadEnvironmentVariables(recording),
+                variable -> variable.key() + "\u0000" + variable.value());
+        List<SystemProperty> sysProps = uniqueBy(environmentService.loadSystemProperties(recording),
+                property -> property.key() + "\u0000" + property.value());
+        List<ActiveRecordingInfo> activeRecordingData = uniqueBy(environmentService.loadActiveRecordings(recording),
+                activeRecording -> activeRecording.id() + "\u0000" + activeRecording.name() + "\u0000"
+                        + activeRecording.destination() + "\u0000" + activeRecording.startTime());
+        List<ActiveSetting> activeSettingData = environmentService.loadActiveSettings(recording);
+        List<AgentInfo> agentData = environmentService.loadAgents(recording);
+        List<ConstantPoolType> constantPoolData = environmentService.loadConstantPools(recording);
+        FxDispatch.run(() -> {
+            processes.setAll(processData);
+            environmentVariables.setAll(envVars);
+            filteredEnvironmentVariables.setAll(envVars);
+            systemProperties.setAll(sysProps);
+            filteredSystemProperties.setAll(sysProps);
+            activeRecordings.setAll(activeRecordingData);
+            activeSettings.setAll(activeSettingData);
+            agents.setAll(agentData);
+            constantPools.setAll(constantPoolData);
+            selectedRecording.set(null);
+            environmentSearchFilter.set("");
+            systemPropertySearchFilter.set("");
+        });
+    }
+
+    private static <T> List<T> uniqueBy(List<T> rows, Function<T, String> keyFactory) {
+        LinkedHashMap<String, T> uniqueRows = new LinkedHashMap<>();
+        for (T row : rows) {
+            uniqueRows.putIfAbsent(keyFactory.apply(row), row);
+        }
+        return List.copyOf(uniqueRows.values());
     }
 
     private void applyEnvironmentFilter() {

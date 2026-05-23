@@ -1,6 +1,5 @@
 package com.youngledo.jmcfx.adapter.jmc;
 
-import java.io.IOException;
 import java.util.ArrayList;
 import java.util.Collection;
 import java.util.List;
@@ -11,8 +10,6 @@ import java.util.regex.Pattern;
 import org.openjdk.jmc.common.item.IItemCollection;
 import org.openjdk.jmc.common.util.IPreferenceValueProvider;
 import org.openjdk.jmc.common.util.TypedPreference;
-import org.openjdk.jmc.flightrecorder.CouldNotLoadRecordingException;
-import org.openjdk.jmc.flightrecorder.JfrLoaderToolkit;
 import org.openjdk.jmc.flightrecorder.rules.IResult;
 import org.openjdk.jmc.flightrecorder.rules.IRule;
 import org.openjdk.jmc.flightrecorder.rules.ResultToolkit;
@@ -166,12 +163,7 @@ public class JmcRuleAnalysisService implements RuleAnalysisService {
 	}
 
 	private IItemCollection loadEvents(RecordingSummary recording) {
-		try {
-			return JfrLoaderToolkit.loadEvents(recording.path().toFile());
-		} catch (IOException | CouldNotLoadRecordingException exception) {
-			throw new JmcFxException(
-					"Unable to load recording for analysis: " + recording.path(), exception);
-		}
+		return JmcRecordingDataCache.SHARED.events(recording);
 	}
 
 	private static final class DefaultPreferenceProvider implements IPreferenceValueProvider {

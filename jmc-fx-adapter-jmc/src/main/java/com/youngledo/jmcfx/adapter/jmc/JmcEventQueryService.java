@@ -1,7 +1,5 @@
 package com.youngledo.jmcfx.adapter.jmc;
 
-import java.io.IOException;
-import java.io.InputStream;
 import java.time.Instant;
 import java.time.ZoneId;
 import java.time.format.DateTimeFormatter;
@@ -36,11 +34,8 @@ import org.openjdk.jmc.common.item.IType;
 import org.openjdk.jmc.common.item.ItemFilters;
 import org.openjdk.jmc.common.unit.IQuantity;
 import org.openjdk.jmc.common.unit.UnitLookup;
-import org.openjdk.jmc.flightrecorder.CouldNotLoadRecordingException;
 import org.openjdk.jmc.flightrecorder.JfrAttributes;
-import org.openjdk.jmc.flightrecorder.JfrLoaderToolkit;
 import org.openjdk.jmc.flightrecorder.internal.EventArrays;
-import org.openjdk.jmc.flightrecorder.internal.FlightRecordingLoader;
 import org.openjdk.jmc.flightrecorder.jdk.JdkAttributes;
 
 import com.youngledo.jmcfx.domain.model.EventDetails;
@@ -566,12 +561,8 @@ public class JmcEventQueryService implements EventQueryService {
     }
 
     private RecordingEvents load(RecordingSummary recording) {
-        try (InputStream input = java.nio.file.Files.newInputStream(recording.path())) {
-            EventArrays eventArrays = FlightRecordingLoader.loadStream(input, false, true);
-            return new RecordingEvents(JfrLoaderToolkit.loadEvents(recording.path().toFile()), eventArrays);
-        } catch (IOException | CouldNotLoadRecordingException exception) {
-            throw new JmcFxException("Unable to query recording events: " + recording.path(), exception);
-        }
+        JmcRecordingDataCache.RecordingData data = JmcRecordingDataCache.SHARED.recording(recording);
+        return new RecordingEvents(data.events(), data.eventArrays());
     }
 
     private long totalCount(IItemCollection events) {

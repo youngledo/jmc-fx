@@ -15,15 +15,15 @@ class I18nBundleTest {
 
     @Test
     void chineseBundleHasSameKeysAsEnglishFallback() {
-        ResourceBundle english = ResourceBundle.getBundle(BUNDLE_BASE_NAME, Locale.ENGLISH);
-        ResourceBundle chinese = ResourceBundle.getBundle(BUNDLE_BASE_NAME, Locale.SIMPLIFIED_CHINESE);
+        ResourceBundle english = bundle(Locale.ENGLISH);
+        ResourceBundle chinese = bundle(Locale.SIMPLIFIED_CHINESE);
 
         assertEquals(english.keySet(), chinese.keySet());
     }
 
     @Test
     void bundleContainsCurrentShellKeys() {
-        ResourceBundle english = ResourceBundle.getBundle(BUNDLE_BASE_NAME, Locale.ENGLISH);
+        ResourceBundle english = bundle(Locale.ENGLISH);
 
         Set<String> requiredKeys = Set.of(
                 "app.title",
@@ -41,6 +41,13 @@ class I18nBundleTest {
                 "events.details.thread",
                 "events.details.stackTrace",
                 "analysis.title",
+                "nav.heap",
+                "locks.grouping.byClass",
+                "locks.grouping.byAddress",
+                "locks.grouping.byThread",
+                "threadDumps.empty",
+                "tlab.column.insideAvgSize",
+                "tlab.column.outsideAvgSize",
                 "jvms.title",
                 "settings.title",
                 "settings.language");
@@ -48,5 +55,21 @@ class I18nBundleTest {
         for (String key : requiredKeys) {
             assertTrue(english.containsKey(key), "Missing key: " + key);
         }
+    }
+
+    @Test
+    void englishBundleKeepsMemoryAndLockLabelsReadable() {
+        ResourceBundle english = bundle(Locale.ENGLISH);
+
+        assertEquals("Heap Memory", english.getString("nav.heap"));
+        assertEquals("No thread dump events found.", english.getString("threadDumps.empty"));
+        assertEquals("By Class", english.getString("locks.grouping.byClass"));
+        assertEquals("By Address", english.getString("locks.grouping.byAddress"));
+        assertEquals("By Thread", english.getString("locks.grouping.byThread"));
+    }
+
+    private static ResourceBundle bundle(Locale locale) {
+        return ResourceBundle.getBundle(BUNDLE_BASE_NAME, locale,
+                ResourceBundle.Control.getNoFallbackControl(ResourceBundle.Control.FORMAT_PROPERTIES));
     }
 }

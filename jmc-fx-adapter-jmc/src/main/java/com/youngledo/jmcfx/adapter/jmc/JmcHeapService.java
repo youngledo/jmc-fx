@@ -37,7 +37,7 @@ public class JmcHeapService implements HeapService {
         IItemCollection events = loadEvents(recording);
         IItemCollection objectCounts = events.apply(JdkFilters.OBJECT_COUNT);
         if (!objectCounts.hasItems()) {
-            return List.of();
+            return loadHeapSummaryRows(events);
         }
 
         Map<String, ClassHistogramAccumulator> buckets = new HashMap<>();
@@ -69,6 +69,46 @@ public class JmcHeapService implements HeapService {
         }
         results.sort(Comparator.comparingLong(HeapClassHistogram::instances).reversed());
         return List.copyOf(results);
+    }
+
+    private List<HeapClassHistogram> loadHeapSummaryRows(IItemCollection events) {
+        IItemCollection heapSummaries = events.apply(JdkFilters.HEAP_SUMMARY);
+        if (!heapSummaries.hasItems()) {
+            return List.of();
+        }
+
+        HeapSummarySnapshot latest = null;
+        for (IItemIterable itemIter : heapSummaries) {
+            @SuppressWarnings("unchecked")
+            IMemberAccessor<IQuantity, IItem> startTimeAccessor =
+                    (IMemberAccessor<IQuantity, IItem>) JfrAttributes.START_TIME.getAccessor(itemIter.getType());
+            IMemberAccessor<IQuantity, IItem> heapUsedAccessor =
+                    getAccessor(itemIter, JdkAttributes.HEAP_USED);
+            IMemberAccessor<IQuantity, IItem> heapTotalAccessor =
+                    getAccessor(itemIter, JdkAttributes.HEAP_TOTAL);
+            for (IItem item : itemIter) {
+                long time = readEpochMillis(startTimeAccessor, item);
+                long used = readBytes(heapUsedAccessor, item);
+                long total = readBytes(heapTotalAccessor, item);
+                if (latest == null || time >= latest.epochMillis) {
+                    latest = new HeapSummarySnapshot(time, used, total);
+                }
+            }
+        }
+
+        if (latest == null) {
+            return List.of();
+        }
+
+        List<HeapClassHistogram> rows = new ArrayList<>();
+        if (latest.usedBytes > 0) {
+            double pct = latest.totalBytes > 0 ? (latest.usedBytes * 100.0) / latest.totalBytes : 0;
+            rows.add(new HeapClassHistogram("Heap Used", 0, latest.usedBytes, 0, pct));
+        }
+        if (latest.totalBytes > 0) {
+            rows.add(new HeapClassHistogram("Heap Total", 0, latest.totalBytes, 0, 100.0));
+        }
+        return List.copyOf(rows);
     }
 
     @Override
@@ -132,11 +172,23 @@ public class JmcHeapService implements HeapService {
     }
 
     private IItemCollection loadEvents(RecordingSummary recording) {
-        try {
-            return JfrLoaderToolkit.loadEvents(recording.path().toFile());
-        } catch (IOException | CouldNotLoadRecordingException e) {
-            throw new JmcFxException("Unable to load recording for heap analysis: " + recording.path(), e);
+		return JmcRecordingDataCache.SHARED.events(recording);
+	}
+
+    private static long readBytes(IMemberAccessor<IQuantity, IItem> accessor, IItem item) {
+        if (accessor == null) {
+            return 0;
         }
+        IQuantity quantity = accessor.getMember(item);
+        return quantity == null ? 0 : quantity.clampedLongValueIn(UnitLookup.BYTE);
+    }
+
+    private static long readEpochMillis(IMemberAccessor<IQuantity, IItem> accessor, IItem item) {
+        if (accessor == null) {
+            return 0;
+        }
+        IQuantity quantity = accessor.getMember(item);
+        return quantity == null ? 0 : quantity.clampedLongValueIn(UnitLookup.EPOCH_MS);
     }
 
     private static final class ClassHistogramAccumulator {
@@ -150,5 +202,8 @@ public class JmcHeapService implements HeapService {
         void add(long count) {
             instances += count;
         }
+    }
+
+    private record HeapSummarySnapshot(long epochMillis, long usedBytes, long totalBytes) {
     }
 }

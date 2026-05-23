@@ -1,12 +1,24 @@
 package com.youngledo.jmcfx.ui.util;
 
+import java.text.NumberFormat;
+import java.time.Instant;
+import java.time.ZoneId;
+import java.time.format.DateTimeFormatter;
+import java.util.Locale;
+
 public final class DisplayFormats {
 
     private static final long SECOND_MS = 1000;
     private static final long MINUTE_MS = 60 * SECOND_MS;
     private static final long HOUR_MS = 60 * MINUTE_MS;
+    private static final DateTimeFormatter TIMESTAMP_FORMATTER =
+            DateTimeFormatter.ofPattern("yyyy-MM-dd HH:mm:ss.SSS", Locale.US);
 
     private DisplayFormats() {
+    }
+
+    public static String formatInteger(long value) {
+        return NumberFormat.getIntegerInstance(Locale.US).format(value);
     }
 
     public static String formatFileSize(long bytes) {
@@ -44,5 +56,38 @@ public final class DisplayFormats {
         return remainingMinutes == 0
                 ? hours + " h"
                 : hours + " h " + remainingMinutes + " min";
+    }
+
+    public static String formatDurationMillis(double millis) {
+        return String.format(Locale.US, "%.2f ms", millis);
+    }
+
+    public static String formatMicros(long micros) {
+        if (micros <= 0) {
+            return "0 us";
+        }
+        if (micros < 1000) {
+            return formatInteger(micros) + " us";
+        }
+        if (micros < 1_000_000) {
+            return String.format(Locale.US, "%.1f ms", micros / 1000.0);
+        }
+        return String.format(Locale.US, "%.1f s", micros / 1_000_000.0);
+    }
+
+    public static String formatPercent(double percent) {
+        return String.format(Locale.US, "%.1f%%", percent);
+    }
+
+    public static String formatBoolean(boolean value) {
+        return value ? "Yes" : "No";
+    }
+
+    public static String formatTimestamp(Instant instant, ZoneId zoneId) {
+        if (instant == null) {
+            return "";
+        }
+        ZoneId displayZone = zoneId == null ? ZoneId.systemDefault() : zoneId;
+        return TIMESTAMP_FORMATTER.withZone(displayZone).format(instant);
     }
 }

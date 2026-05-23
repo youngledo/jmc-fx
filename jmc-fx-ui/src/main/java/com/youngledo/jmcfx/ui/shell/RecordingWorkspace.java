@@ -2,6 +2,8 @@ package com.youngledo.jmcfx.ui.shell;
 
 import java.util.UUID;
 import java.util.Objects;
+import java.util.HashSet;
+import java.util.Set;
 
 import com.youngledo.jmcfx.domain.model.RecordingSummary;
 import com.youngledo.jmcfx.ui.events.EventBrowserViewModel;
@@ -39,6 +41,7 @@ public final class RecordingWorkspace {
     private final String id = UUID.randomUUID().toString();
     private final RecordingSummary recording;
     private final StringProperty selectedSection = new SimpleStringProperty("analysis");
+    private final Set<String> loadedSections = new HashSet<>();
     private final OverviewViewModel overviewViewModel;
     private final EventBrowserViewModel eventBrowserViewModel;
     private final RuleResultsViewModel ruleResultsViewModel;
@@ -123,6 +126,18 @@ public final class RecordingWorkspace {
 
     public StringProperty selectedSectionProperty() {
         return selectedSection;
+    }
+
+    public boolean isSectionLoaded(String sectionId) {
+        return loadedSections.contains(sectionId);
+    }
+
+    public void markSectionLoaded(String sectionId) {
+        loadedSections.add(sectionId);
+    }
+
+    public boolean markSectionLoading(String sectionId) {
+        return loadedSections.add(sectionId);
     }
 
     public OverviewViewModel overviewViewModel() {

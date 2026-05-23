@@ -36,8 +36,8 @@
                     <Label fx:id="homeTitleLabel" styleClass="welcome-title"/>
                     <Label fx:id="homeSubtitleLabel" styleClass="welcome-subtitle" wrapText="true"/>
                     <HBox styleClass="home-actions" spacing="8">
-                        <Button fx:id="homeOpenRecordingButton" styleClass="toolbar-primary"/>
-                        <Button fx:id="homeConnectJvmButton" styleClass="toolbar-secondary" disable="true"/>
+                        <Button fx:id="homeOpenRecordingButton"/>
+                        <Button fx:id="homeConnectJvmButton" disable="true"/>
                     </HBox>
                 </VBox>
                 <HBox styleClass="workflow-tiles" spacing="12">

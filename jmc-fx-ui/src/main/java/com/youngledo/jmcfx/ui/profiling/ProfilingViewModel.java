@@ -6,6 +6,7 @@ import com.youngledo.jmcfx.domain.model.HotMethod;
 import com.youngledo.jmcfx.domain.model.RecordingSummary;
 import com.youngledo.jmcfx.domain.model.StackTreeNode;
 import com.youngledo.jmcfx.domain.service.ProfilingService;
+import com.youngledo.jmcfx.ui.util.FxDispatch;
 
 import javafx.beans.property.ObjectProperty;
 import javafx.beans.property.SimpleObjectProperty;
@@ -47,17 +48,23 @@ public class ProfilingViewModel {
     public void load(RecordingSummary recording) {
         currentRecording = recording;
         List<HotMethod> methods = profilingService.loadHotMethods(recording);
-        hotMethods.setAll(methods);
-        selectedMethod.set(null);
-        callersTree.set(StackTreeNode.EMPTY);
-        calleesTree.set(StackTreeNode.EMPTY);
+        FxDispatch.run(() -> {
+            hotMethods.setAll(methods);
+            selectedMethod.set(null);
+            callersTree.set(StackTreeNode.EMPTY);
+            calleesTree.set(StackTreeNode.EMPTY);
+        });
     }
 
     public void selectMethod(String method) {
         if (currentRecording == null || method == null) {
             return;
         }
-        callersTree.set(profilingService.loadStackTraceTree(currentRecording, method, true));
-        calleesTree.set(profilingService.loadStackTraceTree(currentRecording, method, false));
+        StackTreeNode callers = profilingService.loadStackTraceTree(currentRecording, method, true);
+        StackTreeNode callees = profilingService.loadStackTraceTree(currentRecording, method, false);
+        FxDispatch.run(() -> {
+            callersTree.set(callers);
+            calleesTree.set(callees);
+        });
     }
 }

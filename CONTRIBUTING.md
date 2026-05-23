@@ -32,10 +32,11 @@ Do not use Maven 3 `<modules>` in this repository.
 
 ## UI Design Workflow
 
-Use the project UI information architecture in `docs/superpowers/specs/` and
-the UI rules in `AGENTS.md` as the default source of truth for normal JavaFX UI
-work. These rules cover the v1 enterprise desktop shell, AtlantaFX theme usage,
-navigation structure, detail panels, status regions, dense technical tables,
+Use the project UI guidelines in `docs/ui-guidelines.md`, the project UI
+information architecture in `docs/superpowers/specs/`, and the hard UI rules in
+`AGENTS.md` as the default source of truth for normal JavaFX UI work. These
+rules cover the v1 enterprise desktop shell, AtlantaFX theme usage, navigation
+structure, detail panels, status regions, dense technical tables,
 controller/view model boundaries, and long-running task behavior.
 
 Do not invoke `ui-ux-pro-max` mechanically for every UI change. Invoke it when a

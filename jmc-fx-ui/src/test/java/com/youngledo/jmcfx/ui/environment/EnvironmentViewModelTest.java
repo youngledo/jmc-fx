@@ -96,6 +96,26 @@ class EnvironmentViewModelTest {
     }
 
     @Test
+    void loadCollapsesDuplicateMetadataRows() {
+        FakeEnvironmentService service = new FakeEnvironmentService();
+        service.addEnvVar(new EnvironmentVariable("JAVA_HOME", "/usr/lib/jvm/java-25"));
+        service.addEnvVar(new EnvironmentVariable("JAVA_HOME", "/usr/lib/jvm/java-25"));
+        service.addSysProp(new SystemProperty("java.version", "25"));
+        service.addSysProp(new SystemProperty("java.version", "25"));
+        service.addRecording(new ActiveRecordingInfo("1", "recording", "", 0, 0, "", "", 100));
+        service.addRecording(new ActiveRecordingInfo("1", "recording", "", 0, 0, "", "", 100));
+
+        EnvironmentViewModel vm = new EnvironmentViewModel(service);
+        vm.load(testRecording());
+
+        assertEquals(1, vm.environmentVariablesProperty().size());
+        assertEquals(1, vm.filteredEnvironmentVariablesProperty().size());
+        assertEquals(1, vm.systemPropertiesProperty().size());
+        assertEquals(1, vm.filteredSystemPropertiesProperty().size());
+        assertEquals(1, vm.activeRecordingsProperty().size());
+    }
+
+    @Test
     void loadPopulatesActiveSettings() {
         FakeEnvironmentService service = new FakeEnvironmentService();
         service.addSetting(new ActiveSetting("jdk.ExecutionSample", "enabled", "true"));

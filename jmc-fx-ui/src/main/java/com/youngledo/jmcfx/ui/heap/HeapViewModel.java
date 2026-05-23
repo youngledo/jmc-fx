@@ -6,6 +6,7 @@ import com.youngledo.jmcfx.domain.model.ChartDefinition;
 import com.youngledo.jmcfx.domain.model.HeapClassHistogram;
 import com.youngledo.jmcfx.domain.model.RecordingSummary;
 import com.youngledo.jmcfx.domain.service.HeapService;
+import com.youngledo.jmcfx.ui.util.FxDispatch;
 
 import javafx.beans.property.ObjectProperty;
 import javafx.beans.property.SimpleObjectProperty;
@@ -37,8 +38,11 @@ public class HeapViewModel {
 
     public void load(RecordingSummary recording) {
         List<HeapClassHistogram> data = heapService.loadHeapClassHistogram(recording);
-        histogram.setAll(data);
-        timeline.set(heapService.loadHeapUsageTimeline(recording));
-        selectedRow.set(null);
+        ChartDefinition chart = heapService.loadHeapUsageTimeline(recording);
+        FxDispatch.run(() -> {
+            histogram.setAll(data);
+            timeline.set(chart);
+            selectedRow.set(null);
+        });
     }
 }

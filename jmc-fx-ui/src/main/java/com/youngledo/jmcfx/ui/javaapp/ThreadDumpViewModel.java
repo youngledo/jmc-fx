@@ -5,6 +5,7 @@ import java.util.List;
 import com.youngledo.jmcfx.domain.model.RecordingSummary;
 import com.youngledo.jmcfx.domain.model.ThreadDumpEntry;
 import com.youngledo.jmcfx.domain.service.JavaAppService;
+import com.youngledo.jmcfx.ui.util.FxDispatch;
 
 import javafx.beans.property.ObjectProperty;
 import javafx.beans.property.SimpleObjectProperty;
@@ -48,8 +49,10 @@ public class ThreadDumpViewModel {
     /// @param recording the flight recording to analyze
     public void load(RecordingSummary recording) {
         List<ThreadDumpEntry> entries = javaAppService.loadThreadDumps(recording);
-        dumps.setAll(entries);
-        selectedDump.set(null);
-        dumpText.set("");
+        FxDispatch.run(() -> {
+            dumps.setAll(entries);
+            selectedDump.set(null);
+            dumpText.set("");
+        });
     }
 }

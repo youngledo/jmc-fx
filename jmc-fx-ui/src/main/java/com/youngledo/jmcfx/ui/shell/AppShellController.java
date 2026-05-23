@@ -4,6 +4,7 @@ import java.time.ZoneId;
 import java.time.format.DateTimeFormatter;
 import java.util.List;
 import java.util.StringJoiner;
+import java.nio.file.Path;
 
 import com.youngledo.jmcfx.domain.model.ChartDefinition;
 import com.youngledo.jmcfx.domain.model.ActiveRecordingInfo;
@@ -134,6 +135,7 @@ import javafx.scene.control.RadioButton;
 import javafx.scene.control.ProgressBar;
 import javafx.scene.control.SplitPane;
 import javafx.scene.control.Tab;
+import javafx.scene.control.TableCell;
 import javafx.scene.control.TableColumn;
 import javafx.scene.control.TableView;
 import javafx.scene.control.TabPane;
@@ -179,6 +181,7 @@ public class AppShellController {
     private final EnvironmentService environmentService;
     private final JavaAppService javaAppService;
     private final I18n i18n;
+    private final RecordingOpenExecutor recordingOpenExecutor;
     private final ListChangeListener<EventTypeNode> eventTypeTreeListener = change -> rebuildEventTypeTree();
     private final ListChangeListener<EventColumn> eventColumnsListener = change -> rebuildEventColumns();
     private final ListChangeListener<EventFieldDescriptor> fieldDescriptorsListener = change -> rebuildColumnsMenu();
@@ -205,6 +208,8 @@ public class AppShellController {
     private ThreadDumpViewModel threadDumpViewModel;
     private boolean eventTypesDividerInitialized;
     private boolean updatingRecordingTabs;
+    private boolean recordingOpening;
+    private RecordingWorkspace loadedWorkspace;
 
     @FXML private BorderPane root;
     @FXML private Button homeOpenRecordingButton;
@@ -302,14 +307,14 @@ public class AppShellController {
     @FXML private Button exceptionsGroupByClassAndMessage;
     @FXML private TableView<ExceptionSummary> exceptionsTable;
     @FXML private VBox exceptionsTimelineContainer;
-    private final TimelineChart exceptionsTimelineChart = new TimelineChart();
+    private TimelineChart exceptionsTimelineChart;
     @FXML private Label threadsTitleLabel;
     @FXML private TableView<ThreadSummary> threadsTable;
     @FXML private Label fileioTitleLabel;
     @FXML private TabPane fileioTabPane;
     @FXML private Tab fileioTimelineTab;
     @FXML private VBox fileioTimelineContainer;
-    private final TimelineChart fileioTimelineChart = new TimelineChart();
+    private TimelineChart fileioTimelineChart;
     @FXML private Tab fileioDurationTab;
     @FXML private TableView<FileIOHistogram> fileioHistogramTable;
     @FXML private Tab fileioEventLogTab;
@@ -322,7 +327,7 @@ public class AppShellController {
     @FXML private TabPane socketioTabPane;
     @FXML private Tab socketioTimelineTab;
     @FXML private VBox socketioTimelineContainer;
-    private final TimelineChart socketioTimelineChart = new TimelineChart();
+    private TimelineChart socketioTimelineChart;
     @FXML private Tab socketioDurationTab;
     @FXML private TableView<SocketIOHistogram> socketioHistogramTable;
     @FXML private Tab socketioEventLogTab;
@@ -341,7 +346,7 @@ public class AppShellController {
     @FXML private TableView<LockHistogram> locksByThreadTable;
     @FXML private Label threadHistogramTitleLabel;
     @FXML private VBox threadHistogramChartContainer;
-    private final TimelineChart threadHistogramChart = new TimelineChart();
+    private TimelineChart threadHistogramChart;
     @FXML private TableView<ThreadHistogramRow> threadHistogramTable;
     @FXML private Label securityTitleLabel;
     @FXML private TableView<X509CertificateEntry> securityTable;
@@ -353,14 +358,14 @@ public class AppShellController {
     @FXML private Label heapTitleLabel;
     @FXML private TableView<HeapClassHistogram> heapTable;
     @FXML private VBox heapTimelineContainer;
-    private final TimelineChart heapTimelineChart = new TimelineChart();
+    private TimelineChart heapTimelineChart;
     @FXML private Label leaksTitleLabel;
     @FXML private TableView<LeakCandidate> leaksTable;
     @FXML private TreeView<LeakReferenceNode> leaksReferenceTree;
     @FXML private Label tlabTitleLabel;
     @FXML private TableView<TlabAllocation> tlabTable;
     @FXML private VBox tlabTimelineContainer;
-    private final TimelineChart tlabTimelineChart = new TimelineChart();
+    private TimelineChart tlabTimelineChart;
     @FXML private TableView<JvmFlag> jvmFlagsTable;
     @FXML private TableView<JvmFlagChange> jvmFlagChangesTable;
     @FXML private TableView<GcSummary> gcSummaryTable;
@@ -368,24 +373,24 @@ public class AppShellController {
     @FXML private TableView<GcReferenceStat> gcReferenceStatsTable;
     @FXML private TableView<GcHeapSummary> gcHeapSummaryTable;
     @FXML private VBox gcHeapChartContainer;
-    private final TimelineChart gcHeapChart = new TimelineChart();
+    private TimelineChart gcHeapChart;
     @FXML private VBox gcMetaspaceChartContainer;
-    private final TimelineChart gcMetaspaceChart = new TimelineChart();
+    private TimelineChart gcMetaspaceChart;
     @FXML private VBox gcPauseChartContainer;
-    private final TimelineChart gcPauseChart = new TimelineChart();
+    private TimelineChart gcPauseChart;
     @FXML private TableView<CompilationEvent> compilationsTable;
     @FXML private VBox compilationDurationChartContainer;
-    private final TimelineChart compilationDurationChart = new TimelineChart();
+    private TimelineChart compilationDurationChart;
     @FXML private TableView<CompilationEvent> compilationFailuresTable;
     @FXML private TableView<CodeCacheSweep> codeCacheSweepsTable;
     @FXML private VBox codeCacheEntriesChartContainer;
-    private final TimelineChart codeCacheEntriesChart = new TimelineChart();
+    private TimelineChart codeCacheEntriesChart;
     @FXML private VBox codeCacheSweepChartContainer;
-    private final TimelineChart codeCacheSweepChart = new TimelineChart();
+    private TimelineChart codeCacheSweepChart;
     @FXML private TableView<CodeCacheStats> codeCacheStatsTable;
     @FXML private TableView<ClassloaderSummary> classLoadingHistogramTable;
     @FXML private VBox classLoadingChartContainer;
-    private final TimelineChart classLoadingChart = new TimelineChart();
+    private TimelineChart classLoadingChart;
     @FXML private TableView<ClassloadEvent> classLoadingEventsTable;
     @FXML private TableView<ClassloaderStatistics> classLoadingStatsTable;
     @FXML private TableView<VmOperationSummary> vmOperationSummaryTable;
@@ -449,6 +454,25 @@ public class AppShellController {
             EnvironmentService environmentService,
             JavaAppService javaAppService,
             I18n i18n) {
+        this(viewModel, recordingRepository, eventQueryService, ruleAnalysisService,
+                profilingService, exceptionService, threadService,
+                fileIOService, socketIOService, lockService,
+                heapService, leakSuspectsService, tlabService,
+                jvmInternalsService, environmentService, javaAppService, i18n,
+                new VirtualThreadRecordingOpenExecutor());
+    }
+
+    AppShellController(AppShellViewModel viewModel, RecordingRepository recordingRepository,
+            EventQueryService eventQueryService, RuleAnalysisService ruleAnalysisService,
+            ProfilingService profilingService, ExceptionService exceptionService,
+            ThreadService threadService, FileIOService fileIOService,
+            SocketIOService socketIOService, LockService lockService,
+            HeapService heapService, LeakSuspectsService leakSuspectsService,
+            TlabService tlabService, JvmInternalsService jvmInternalsService,
+            EnvironmentService environmentService,
+            JavaAppService javaAppService,
+            I18n i18n,
+            RecordingOpenExecutor recordingOpenExecutor) {
         this.viewModel = viewModel;
         this.recordingRepository = recordingRepository;
         this.eventQueryService = eventQueryService;
@@ -466,6 +490,7 @@ public class AppShellController {
         this.environmentService = environmentService;
         this.javaAppService = javaAppService;
         this.i18n = i18n;
+        this.recordingOpenExecutor = recordingOpenExecutor;
     }
 
     I18n i18n() {
@@ -481,6 +506,8 @@ public class AppShellController {
         sidebar.bind(viewModel);
         sidebar.setNavigationHandler(viewModel::showSection);
         sidebar.setI18n(i18n);
+        viewModel.selectedSectionProperty()
+                .addListener((observable, oldValue, newValue) -> loadSelectedWorkspaceSection());
         bindLocalizedText();
         configureActionIcons();
         configureLanguageSelector();
@@ -552,19 +579,7 @@ public class AppShellController {
         constantPoolsPane.managedProperty().bind(constantPoolsPane.visibleProperty());
         settingsPane.visibleProperty().bind(viewModel.selectedSectionProperty().isEqualTo("settings"));
         settingsPane.managedProperty().bind(settingsPane.visibleProperty());
-        exceptionsTimelineContainer.getChildren().add(exceptionsTimelineChart);
-        fileioTimelineContainer.getChildren().add(fileioTimelineChart);
-        socketioTimelineContainer.getChildren().add(socketioTimelineChart);
-        heapTimelineContainer.getChildren().add(heapTimelineChart);
-        tlabTimelineContainer.getChildren().add(tlabTimelineChart);
-        threadHistogramChartContainer.getChildren().add(threadHistogramChart);
-        gcHeapChartContainer.getChildren().add(gcHeapChart);
-        gcMetaspaceChartContainer.getChildren().add(gcMetaspaceChart);
-        gcPauseChartContainer.getChildren().add(gcPauseChart);
-        compilationDurationChartContainer.getChildren().add(compilationDurationChart);
-        codeCacheEntriesChartContainer.getChildren().add(codeCacheEntriesChart);
-        codeCacheSweepChartContainer.getChildren().add(codeCacheSweepChart);
-        classLoadingChartContainer.getChildren().add(classLoadingChart);
+        initializeCharts();
         bindOverview(null);
         bindEvents();
         configureAnalysisTable();
@@ -627,10 +642,54 @@ public class AppShellController {
         overviewJvmStatusLabel.setText(i18n.get("overview.jvmUnavailable"));
     }
 
+    private void initializeCharts() {
+        exceptionsTimelineChart = addChart(exceptionsTimelineContainer);
+        fileioTimelineChart = addChart(fileioTimelineContainer);
+        socketioTimelineChart = addChart(socketioTimelineContainer);
+        heapTimelineChart = addChart(heapTimelineContainer);
+        tlabTimelineChart = addChart(tlabTimelineContainer);
+        threadHistogramChart = addChart(threadHistogramChartContainer);
+        gcHeapChart = addChart(gcHeapChartContainer);
+        gcMetaspaceChart = addChart(gcMetaspaceChartContainer);
+        gcPauseChart = addChart(gcPauseChartContainer);
+        compilationDurationChart = addChart(compilationDurationChartContainer);
+        codeCacheEntriesChart = addChart(codeCacheEntriesChartContainer);
+        codeCacheSweepChart = addChart(codeCacheSweepChartContainer);
+        classLoadingChart = addChart(classLoadingChartContainer);
+    }
+
+    private TimelineChart addChart(VBox container) {
+        TimelineChart chart = new TimelineChart();
+        container.getChildren().add(chart);
+        return chart;
+    }
+
+    private static <T> void useFormattedIntegerCells(TableColumn<T, Number> column) {
+        column.setCellFactory(ignored -> new TableCell<>() {
+            @Override
+            protected void updateItem(Number item, boolean empty) {
+                super.updateItem(item, empty);
+                setText(empty || item == null ? null : DisplayFormats.formatInteger(item.longValue()));
+            }
+        });
+    }
+
+    private Label localizedTablePlaceholder(String key) {
+        Label label = new Label();
+        label.textProperty().bind(i18n.text(key));
+        return label;
+    }
+
+    private <T> TableColumn<T, String> localizedColumn(String key) {
+        TableColumn<T, String> column = new TableColumn<>();
+        column.textProperty().bind(i18n.text(key));
+        return column;
+    }
+
     private RuleResultsViewModel analysisViewModel;
 
     private void configureAnalysisTable() {
-        analysisTable.setPlaceholder(new Label(i18n.get("analysis.empty")));
+        analysisTable.setPlaceholder(localizedTablePlaceholder("analysis.empty"));
 
         TableColumn<RuleResult, Severity> severityCol = new TableColumn<>();
         severityCol.textProperty().bind(i18n.text("analysis.column.severity"));
@@ -640,13 +699,14 @@ public class AppShellController {
 
         TableColumn<RuleResult, String> nameCol = new TableColumn<>();
         nameCol.textProperty().bind(i18n.text("analysis.column.name"));
-        nameCol.setPrefWidth(300);
+        nameCol.setPrefWidth(360);
         nameCol.setCellValueFactory(cell -> new ReadOnlyStringWrapper(cell.getValue().name()));
 
         TableColumn<RuleResult, Number> scoreCol = new TableColumn<>();
         scoreCol.textProperty().bind(i18n.text("analysis.column.score"));
         scoreCol.setPrefWidth(60);
         scoreCol.setCellValueFactory(cell -> new javafx.beans.property.SimpleIntegerProperty(cell.getValue().score()));
+        useFormattedIntegerCells(scoreCol);
 
         TableColumn<RuleResult, String> summaryCol = new TableColumn<>();
         summaryCol.textProperty().bind(i18n.text("analysis.column.summary"));
@@ -682,11 +742,11 @@ public class AppShellController {
     }
 
     private void configureProfilingTable() {
-        profilingTable.setPlaceholder(new Label(i18n.get("profiling.empty")));
+        profilingTable.setPlaceholder(localizedTablePlaceholder("profiling.empty"));
 
         TableColumn<HotMethod, String> methodCol = new TableColumn<>();
         methodCol.textProperty().bind(i18n.text("profiling.column.method"));
-        methodCol.setPrefWidth(500);
+        methodCol.setPrefWidth(620);
         methodCol.setCellValueFactory(cell -> new ReadOnlyStringWrapper(cell.getValue().method()));
 
         TableColumn<HotMethod, String> frameTypeCol = new TableColumn<>();
@@ -698,12 +758,13 @@ public class AppShellController {
         countCol.textProperty().bind(i18n.text("profiling.column.count"));
         countCol.setPrefWidth(80);
         countCol.setCellValueFactory(cell -> new javafx.beans.property.SimpleIntegerProperty(cell.getValue().count()));
+        useFormattedIntegerCells(countCol);
 
         TableColumn<HotMethod, String> pctCol = new TableColumn<>();
         pctCol.textProperty().bind(i18n.text("profiling.column.percentage"));
         pctCol.setPrefWidth(80);
         pctCol.setCellValueFactory(cell -> new ReadOnlyStringWrapper(
-                String.format("%.1f%%", cell.getValue().percentage())));
+                DisplayFormats.formatPercent(cell.getValue().percentage())));
 
         profilingTable.getColumns().setAll(List.of(methodCol, frameTypeCol, countCol, pctCol));
         profilingTable.getSelectionModel().selectedItemProperty()
@@ -728,23 +789,24 @@ public class AppShellController {
     }
 
     private void configureExceptionTable() {
-        exceptionsTable.setPlaceholder(new Label(i18n.get("exceptions.empty")));
+        exceptionsTable.setPlaceholder(localizedTablePlaceholder("exceptions.empty"));
 
         TableColumn<ExceptionSummary, String> keyCol = new TableColumn<>();
         keyCol.textProperty().bind(i18n.text("exceptions.column.key"));
-        keyCol.setPrefWidth(500);
+        keyCol.setPrefWidth(620);
         keyCol.setCellValueFactory(cell -> new ReadOnlyStringWrapper(cell.getValue().key()));
 
         TableColumn<ExceptionSummary, Number> countCol = new TableColumn<>();
         countCol.textProperty().bind(i18n.text("exceptions.column.count"));
         countCol.setPrefWidth(80);
         countCol.setCellValueFactory(cell -> new javafx.beans.property.SimpleIntegerProperty(cell.getValue().count()));
+        useFormattedIntegerCells(countCol);
 
         TableColumn<ExceptionSummary, String> pctCol = new TableColumn<>();
         pctCol.textProperty().bind(i18n.text("exceptions.column.percentage"));
         pctCol.setPrefWidth(80);
         pctCol.setCellValueFactory(cell -> new ReadOnlyStringWrapper(
-                String.format("%.1f%%", cell.getValue().percentage())));
+                DisplayFormats.formatPercent(cell.getValue().percentage())));
 
         exceptionsTable.getColumns().setAll(List.of(keyCol, countCol, pctCol));
 
@@ -754,64 +816,70 @@ public class AppShellController {
     }
 
     private void configureThreadTable() {
-        threadsTable.setPlaceholder(new Label(i18n.get("threads.empty")));
+        threadsTable.setPlaceholder(localizedTablePlaceholder("threads.empty"));
 
         TableColumn<ThreadSummary, String> nameCol = new TableColumn<>();
         nameCol.textProperty().bind(i18n.text("threads.column.name"));
-        nameCol.setPrefWidth(400);
+        nameCol.setPrefWidth(520);
         nameCol.setCellValueFactory(cell -> new ReadOnlyStringWrapper(cell.getValue().threadName()));
 
         TableColumn<ThreadSummary, Number> samplesCol = new TableColumn<>();
         samplesCol.textProperty().bind(i18n.text("threads.column.samples"));
         samplesCol.setPrefWidth(100);
         samplesCol.setCellValueFactory(cell -> new javafx.beans.property.SimpleIntegerProperty(cell.getValue().sampleCount()));
+        useFormattedIntegerCells(samplesCol);
 
-        TableColumn<ThreadSummary, Number> blockedCol = new TableColumn<>();
+        TableColumn<ThreadSummary, String> blockedCol = new TableColumn<>();
         blockedCol.textProperty().bind(i18n.text("threads.column.blockedMs"));
         blockedCol.setPrefWidth(120);
-        blockedCol.setCellValueFactory(cell -> new javafx.beans.property.SimpleLongProperty(cell.getValue().blockedDurationMillis()));
+        blockedCol.setCellValueFactory(cell -> new ReadOnlyStringWrapper(
+                DisplayFormats.formatDuration(cell.getValue().blockedDurationMillis())));
 
         threadsTable.getColumns().setAll(List.of(nameCol, samplesCol, blockedCol));
     }
 
     private void configureFileIOTable() {
-        fileioHistogramTable.setPlaceholder(new Label(i18n.get("fileio.empty")));
+        fileioHistogramTable.setPlaceholder(localizedTablePlaceholder("fileio.empty"));
 
         TableColumn<FileIOHistogram, String> pathCol = new TableColumn<>();
         pathCol.textProperty().bind(i18n.text("fileio.column.path"));
-        pathCol.setPrefWidth(400);
+        pathCol.setPrefWidth(560);
         pathCol.setCellValueFactory(cell -> new ReadOnlyStringWrapper(cell.getValue().path()));
 
         TableColumn<FileIOHistogram, Number> readCountCol = new TableColumn<>();
         readCountCol.textProperty().bind(i18n.text("fileio.column.readCount"));
         readCountCol.setPrefWidth(80);
         readCountCol.setCellValueFactory(cell -> new javafx.beans.property.SimpleLongProperty(cell.getValue().readCount()));
+        useFormattedIntegerCells(readCountCol);
 
         TableColumn<FileIOHistogram, Number> writeCountCol = new TableColumn<>();
         writeCountCol.textProperty().bind(i18n.text("fileio.column.writeCount"));
         writeCountCol.setPrefWidth(80);
         writeCountCol.setCellValueFactory(cell -> new javafx.beans.property.SimpleLongProperty(cell.getValue().writeCount()));
+        useFormattedIntegerCells(writeCountCol);
 
-        TableColumn<FileIOHistogram, Number> readSizeCol = new TableColumn<>();
+        TableColumn<FileIOHistogram, String> readSizeCol = new TableColumn<>();
         readSizeCol.textProperty().bind(i18n.text("fileio.column.readSize"));
         readSizeCol.setPrefWidth(100);
-        readSizeCol.setCellValueFactory(cell -> new javafx.beans.property.SimpleLongProperty(cell.getValue().readSize()));
+        readSizeCol.setCellValueFactory(cell -> new ReadOnlyStringWrapper(
+                DisplayFormats.formatFileSize(cell.getValue().readSize())));
 
-        TableColumn<FileIOHistogram, Number> writeSizeCol = new TableColumn<>();
+        TableColumn<FileIOHistogram, String> writeSizeCol = new TableColumn<>();
         writeSizeCol.textProperty().bind(i18n.text("fileio.column.writeSize"));
         writeSizeCol.setPrefWidth(100);
-        writeSizeCol.setCellValueFactory(cell -> new javafx.beans.property.SimpleLongProperty(cell.getValue().writeSize()));
+        writeSizeCol.setCellValueFactory(cell -> new ReadOnlyStringWrapper(
+                DisplayFormats.formatFileSize(cell.getValue().writeSize())));
 
         TableColumn<FileIOHistogram, String> avgDurationCol = new TableColumn<>();
         avgDurationCol.textProperty().bind(i18n.text("fileio.column.avgDuration"));
         avgDurationCol.setPrefWidth(100);
         avgDurationCol.setCellValueFactory(cell -> new ReadOnlyStringWrapper(
-                String.format("%.2f ms", cell.getValue().avgDuration())));
+                DisplayFormats.formatDurationMillis(cell.getValue().avgDuration())));
 
         fileioHistogramTable.getColumns().setAll(List.of(pathCol, readCountCol, writeCountCol,
                 readSizeCol, writeSizeCol, avgDurationCol));
 
-        fileioEventTable.setPlaceholder(new Label(i18n.get("fileio.events.empty")));
+        fileioEventTable.setPlaceholder(localizedTablePlaceholder("fileio.events.empty"));
 
         TableColumn<FileIOEvent, String> eventTypeCol = new TableColumn<>();
         eventTypeCol.textProperty().bind(i18n.text("fileio.events.column.eventType"));
@@ -820,23 +888,24 @@ public class AppShellController {
 
         TableColumn<FileIOEvent, String> eventPathCol = new TableColumn<>();
         eventPathCol.textProperty().bind(i18n.text("fileio.events.column.path"));
-        eventPathCol.setPrefWidth(400);
+        eventPathCol.setPrefWidth(560);
         eventPathCol.setCellValueFactory(cell -> new ReadOnlyStringWrapper(cell.getValue().path()));
 
-        TableColumn<FileIOEvent, Number> eventBytesCol = new TableColumn<>();
+        TableColumn<FileIOEvent, String> eventBytesCol = new TableColumn<>();
         eventBytesCol.textProperty().bind(i18n.text("fileio.events.column.bytes"));
         eventBytesCol.setPrefWidth(100);
-        eventBytesCol.setCellValueFactory(cell -> new javafx.beans.property.SimpleLongProperty(cell.getValue().bytes()));
+        eventBytesCol.setCellValueFactory(cell -> new ReadOnlyStringWrapper(
+                DisplayFormats.formatFileSize(cell.getValue().bytes())));
 
         TableColumn<FileIOEvent, String> eventDurationCol = new TableColumn<>();
         eventDurationCol.textProperty().bind(i18n.text("fileio.events.column.duration"));
         eventDurationCol.setPrefWidth(100);
         eventDurationCol.setCellValueFactory(cell -> new ReadOnlyStringWrapper(
-                String.format("%.2f ms", cell.getValue().durationMillis())));
+                DisplayFormats.formatDurationMillis(cell.getValue().durationMillis())));
 
         TableColumn<FileIOEvent, String> eventThreadCol = new TableColumn<>();
         eventThreadCol.textProperty().bind(i18n.text("fileio.events.column.thread"));
-        eventThreadCol.setPrefWidth(200);
+        eventThreadCol.setPrefWidth(260);
         eventThreadCol.setCellValueFactory(cell -> new ReadOnlyStringWrapper(cell.getValue().threadName()));
 
         fileioEventTable.getColumns().setAll(List.of(eventTypeCol, eventPathCol, eventBytesCol,
@@ -844,38 +913,42 @@ public class AppShellController {
     }
 
     private void configureSocketIOTable() {
-        socketioHistogramTable.setPlaceholder(new Label(i18n.get("socketio.empty")));
+        socketioHistogramTable.setPlaceholder(localizedTablePlaceholder("socketio.empty"));
 
         TableColumn<SocketIOHistogram, String> keyCol = new TableColumn<>();
         keyCol.textProperty().bind(i18n.text("socketio.column.key"));
-        keyCol.setPrefWidth(300);
+        keyCol.setPrefWidth(420);
         keyCol.setCellValueFactory(cell -> new ReadOnlyStringWrapper(cell.getValue().key()));
 
         TableColumn<SocketIOHistogram, Number> sockReadCountCol = new TableColumn<>();
         sockReadCountCol.textProperty().bind(i18n.text("socketio.column.readCount"));
         sockReadCountCol.setPrefWidth(80);
         sockReadCountCol.setCellValueFactory(cell -> new javafx.beans.property.SimpleLongProperty(cell.getValue().readCount()));
+        useFormattedIntegerCells(sockReadCountCol);
 
         TableColumn<SocketIOHistogram, Number> sockWriteCountCol = new TableColumn<>();
         sockWriteCountCol.textProperty().bind(i18n.text("socketio.column.writeCount"));
         sockWriteCountCol.setPrefWidth(80);
         sockWriteCountCol.setCellValueFactory(cell -> new javafx.beans.property.SimpleLongProperty(cell.getValue().writeCount()));
+        useFormattedIntegerCells(sockWriteCountCol);
 
-        TableColumn<SocketIOHistogram, Number> sockReadSizeCol = new TableColumn<>();
+        TableColumn<SocketIOHistogram, String> sockReadSizeCol = new TableColumn<>();
         sockReadSizeCol.textProperty().bind(i18n.text("socketio.column.readSize"));
         sockReadSizeCol.setPrefWidth(100);
-        sockReadSizeCol.setCellValueFactory(cell -> new javafx.beans.property.SimpleLongProperty(cell.getValue().readSize()));
+        sockReadSizeCol.setCellValueFactory(cell -> new ReadOnlyStringWrapper(
+                DisplayFormats.formatFileSize(cell.getValue().readSize())));
 
-        TableColumn<SocketIOHistogram, Number> sockWriteSizeCol = new TableColumn<>();
+        TableColumn<SocketIOHistogram, String> sockWriteSizeCol = new TableColumn<>();
         sockWriteSizeCol.textProperty().bind(i18n.text("socketio.column.writeSize"));
         sockWriteSizeCol.setPrefWidth(100);
-        sockWriteSizeCol.setCellValueFactory(cell -> new javafx.beans.property.SimpleLongProperty(cell.getValue().writeSize()));
+        sockWriteSizeCol.setCellValueFactory(cell -> new ReadOnlyStringWrapper(
+                DisplayFormats.formatFileSize(cell.getValue().writeSize())));
 
         TableColumn<SocketIOHistogram, String> sockAvgDurationCol = new TableColumn<>();
         sockAvgDurationCol.textProperty().bind(i18n.text("socketio.column.avgDuration"));
         sockAvgDurationCol.setPrefWidth(100);
         sockAvgDurationCol.setCellValueFactory(cell -> new ReadOnlyStringWrapper(
-                String.format("%.2f ms", cell.getValue().avgDuration())));
+                DisplayFormats.formatDurationMillis(cell.getValue().avgDuration())));
 
         socketioHistogramTable.getColumns().setAll(List.of(keyCol, sockReadCountCol, sockWriteCountCol,
                 sockReadSizeCol, sockWriteSizeCol, sockAvgDurationCol));
@@ -884,7 +957,7 @@ public class AppShellController {
         socketioGroupByHost.setOnAction(event -> setSocketIOGrouping(SocketIOGrouping.BY_HOST));
         socketioGroupByPort.setOnAction(event -> setSocketIOGrouping(SocketIOGrouping.BY_PORT));
 
-        socketioEventTable.setPlaceholder(new Label(i18n.get("socketio.events.empty")));
+        socketioEventTable.setPlaceholder(localizedTablePlaceholder("socketio.events.empty"));
 
         TableColumn<SocketIOEvent, String> sockEventTypeCol = new TableColumn<>();
         sockEventTypeCol.textProperty().bind(i18n.text("socketio.events.column.eventType"));
@@ -893,28 +966,30 @@ public class AppShellController {
 
         TableColumn<SocketIOEvent, String> sockHostCol = new TableColumn<>();
         sockHostCol.textProperty().bind(i18n.text("socketio.events.column.host"));
-        sockHostCol.setPrefWidth(200);
+        sockHostCol.setPrefWidth(280);
         sockHostCol.setCellValueFactory(cell -> new ReadOnlyStringWrapper(cell.getValue().host()));
 
         TableColumn<SocketIOEvent, Number> sockPortCol = new TableColumn<>();
         sockPortCol.textProperty().bind(i18n.text("socketio.events.column.port"));
         sockPortCol.setPrefWidth(80);
         sockPortCol.setCellValueFactory(cell -> new javafx.beans.property.SimpleLongProperty(cell.getValue().port()));
+        useFormattedIntegerCells(sockPortCol);
 
-        TableColumn<SocketIOEvent, Number> sockBytesCol = new TableColumn<>();
+        TableColumn<SocketIOEvent, String> sockBytesCol = new TableColumn<>();
         sockBytesCol.textProperty().bind(i18n.text("socketio.events.column.bytes"));
         sockBytesCol.setPrefWidth(100);
-        sockBytesCol.setCellValueFactory(cell -> new javafx.beans.property.SimpleLongProperty(cell.getValue().bytes()));
+        sockBytesCol.setCellValueFactory(cell -> new ReadOnlyStringWrapper(
+                DisplayFormats.formatFileSize(cell.getValue().bytes())));
 
         TableColumn<SocketIOEvent, String> sockDurationCol = new TableColumn<>();
         sockDurationCol.textProperty().bind(i18n.text("socketio.events.column.duration"));
         sockDurationCol.setPrefWidth(100);
         sockDurationCol.setCellValueFactory(cell -> new ReadOnlyStringWrapper(
-                String.format("%.2f ms", cell.getValue().durationMillis())));
+                DisplayFormats.formatDurationMillis(cell.getValue().durationMillis())));
 
         TableColumn<SocketIOEvent, String> sockThreadCol = new TableColumn<>();
         sockThreadCol.textProperty().bind(i18n.text("socketio.events.column.thread"));
-        sockThreadCol.setPrefWidth(200);
+        sockThreadCol.setPrefWidth(260);
         sockThreadCol.setCellValueFactory(cell -> new ReadOnlyStringWrapper(cell.getValue().threadName()));
 
         socketioEventTable.getColumns().setAll(List.of(sockEventTypeCol, sockHostCol, sockPortCol,
@@ -944,17 +1019,18 @@ public class AppShellController {
     }
 
     private void configureSingleLockTable(TableView<LockHistogram> table, String emptyKey) {
-        table.setPlaceholder(new Label(i18n.get(emptyKey)));
+        table.setPlaceholder(localizedTablePlaceholder(emptyKey));
 
         TableColumn<LockHistogram, String> keyCol = new TableColumn<>();
         keyCol.textProperty().bind(i18n.text("locks.column.key"));
-        keyCol.setPrefWidth(400);
+        keyCol.setPrefWidth(520);
         keyCol.setCellValueFactory(cell -> new ReadOnlyStringWrapper(cell.getValue().key()));
 
         TableColumn<LockHistogram, Number> countCol = new TableColumn<>();
         countCol.textProperty().bind(i18n.text("locks.column.count"));
         countCol.setPrefWidth(80);
         countCol.setCellValueFactory(cell -> new javafx.beans.property.SimpleLongProperty(cell.getValue().count()));
+        useFormattedIntegerCells(countCol);
 
         TableColumn<LockHistogram, String> totalDurCol = new TableColumn<>();
         totalDurCol.textProperty().bind(i18n.text("locks.column.totalDuration"));
@@ -972,23 +1048,24 @@ public class AppShellController {
         avgDurCol.textProperty().bind(i18n.text("locks.column.avgDuration"));
         avgDurCol.setPrefWidth(120);
         avgDurCol.setCellValueFactory(cell -> new ReadOnlyStringWrapper(
-                String.format("%.2f ms", cell.getValue().avgDuration())));
+                DisplayFormats.formatDurationMillis(cell.getValue().avgDuration())));
 
         table.getColumns().setAll(List.of(keyCol, countCol, totalDurCol, maxDurCol, avgDurCol));
     }
 
     private void configureThreadHistogramTable() {
-        threadHistogramTable.setPlaceholder(new Label(i18n.get("threadHistogram.empty")));
+        threadHistogramTable.setPlaceholder(localizedTablePlaceholder("threadHistogram.empty"));
 
         TableColumn<ThreadHistogramRow, String> threadCol = new TableColumn<>();
         threadCol.textProperty().bind(i18n.text("threadHistogram.column.threadName"));
-        threadCol.setPrefWidth(250);
+        threadCol.setPrefWidth(360);
         threadCol.setCellValueFactory(cell -> new ReadOnlyStringWrapper(cell.getValue().threadName()));
 
         TableColumn<ThreadHistogramRow, Number> profilingCol = new TableColumn<>();
         profilingCol.textProperty().bind(i18n.text("threadHistogram.column.profilingCount"));
         profilingCol.setPrefWidth(100);
         profilingCol.setCellValueFactory(cell -> new javafx.beans.property.SimpleIntegerProperty(cell.getValue().profilingCount()));
+        useFormattedIntegerCells(profilingCol);
 
         TableColumn<ThreadHistogramRow, String> ioCol = new TableColumn<>();
         ioCol.textProperty().bind(i18n.text("threadHistogram.column.ioDurationMs"));
@@ -1012,12 +1089,13 @@ public class AppShellController {
         excCol.textProperty().bind(i18n.text("threadHistogram.column.exceptionCount"));
         excCol.setPrefWidth(80);
         excCol.setCellValueFactory(cell -> new javafx.beans.property.SimpleIntegerProperty(cell.getValue().exceptionCount()));
+        useFormattedIntegerCells(excCol);
 
         threadHistogramTable.getColumns().setAll(List.of(threadCol, profilingCol, ioCol, blockedCol, allocCol, excCol));
     }
 
     private void configureSecurityTable() {
-        securityTable.setPlaceholder(new Label(i18n.get("security.empty")));
+        securityTable.setPlaceholder(localizedTablePlaceholder("security.empty"));
 
         TableColumn<X509CertificateEntry, String> algoCol = new TableColumn<>();
         algoCol.textProperty().bind(i18n.text("security.column.algorithm"));
@@ -1026,12 +1104,12 @@ public class AppShellController {
 
         TableColumn<X509CertificateEntry, String> subjectCol = new TableColumn<>();
         subjectCol.textProperty().bind(i18n.text("security.column.subject"));
-        subjectCol.setPrefWidth(300);
+        subjectCol.setPrefWidth(420);
         subjectCol.setCellValueFactory(cell -> new ReadOnlyStringWrapper(cell.getValue().subject()));
 
         TableColumn<X509CertificateEntry, String> issuerCol = new TableColumn<>();
         issuerCol.textProperty().bind(i18n.text("security.column.issuer"));
-        issuerCol.setPrefWidth(300);
+        issuerCol.setPrefWidth(420);
         issuerCol.setCellValueFactory(cell -> new ReadOnlyStringWrapper(cell.getValue().issuer()));
 
         TableColumn<X509CertificateEntry, String> serialCol = new TableColumn<>();
@@ -1055,12 +1133,13 @@ public class AppShellController {
         keyLenCol.textProperty().bind(i18n.text("security.column.keyLength"));
         keyLenCol.setPrefWidth(80);
         keyLenCol.setCellValueFactory(cell -> new javafx.beans.property.SimpleIntegerProperty(cell.getValue().keyLength()));
+        useFormattedIntegerCells(keyLenCol);
 
         securityTable.getColumns().setAll(List.of(algoCol, subjectCol, issuerCol, serialCol, validFromCol, validToCol, keyLenCol));
     }
 
     private void configureNativeLibrariesTable() {
-        nativeLibrariesTable.setPlaceholder(new Label(i18n.get("nativeLibraries.empty")));
+        nativeLibrariesTable.setPlaceholder(localizedTablePlaceholder("nativeLibraries.empty"));
 
         TableColumn<NativeLibraryEntry, String> nameCol = new TableColumn<>();
         nameCol.textProperty().bind(i18n.text("nativeLibraries.column.name"));
@@ -1069,19 +1148,19 @@ public class AppShellController {
 
         TableColumn<NativeLibraryEntry, String> baseCol = new TableColumn<>();
         baseCol.textProperty().bind(i18n.text("nativeLibraries.column.basePath"));
-        baseCol.setPrefWidth(300);
+        baseCol.setPrefWidth(420);
         baseCol.setCellValueFactory(cell -> new ReadOnlyStringWrapper(cell.getValue().basePath()));
 
         TableColumn<NativeLibraryEntry, String> absCol = new TableColumn<>();
         absCol.textProperty().bind(i18n.text("nativeLibraries.column.absolutePath"));
-        absCol.setPrefWidth(400);
+        absCol.setPrefWidth(560);
         absCol.setCellValueFactory(cell -> new ReadOnlyStringWrapper(cell.getValue().absolutePath()));
 
         nativeLibrariesTable.getColumns().setAll(List.of(nameCol, baseCol, absCol));
     }
 
     private void configureThreadDumpsTable() {
-        threadDumpsTable.setPlaceholder(new Label(i18n.get("threadDumps.empty")));
+        threadDumpsTable.setPlaceholder(localizedTablePlaceholder("threadDumps.empty"));
 
         TableColumn<ThreadDumpEntry, String> timeCol = new TableColumn<>();
         timeCol.textProperty().bind(i18n.text("threadDumps.column.time"));
@@ -1212,7 +1291,7 @@ public class AppShellController {
     }
 
     private void configureHeapTable() {
-        heapTable.setPlaceholder(new Label(i18n.get("heap.empty")));
+        heapTable.setPlaceholder(localizedTablePlaceholder("heap.empty"));
 
         TableColumn<HeapClassHistogram, String> classNameCol = new TableColumn<>();
         classNameCol.textProperty().bind(i18n.text("heap.column.className"));
@@ -1223,23 +1302,25 @@ public class AppShellController {
         instancesCol.textProperty().bind(i18n.text("heap.column.instances"));
         instancesCol.setPrefWidth(100);
         instancesCol.setCellValueFactory(cell -> new javafx.beans.property.SimpleLongProperty(cell.getValue().instances()));
+        useFormattedIntegerCells(instancesCol);
 
-        TableColumn<HeapClassHistogram, Number> sizeCol = new TableColumn<>();
+        TableColumn<HeapClassHistogram, String> sizeCol = new TableColumn<>();
         sizeCol.textProperty().bind(i18n.text("heap.column.size"));
         sizeCol.setPrefWidth(100);
-        sizeCol.setCellValueFactory(cell -> new javafx.beans.property.SimpleLongProperty(cell.getValue().size()));
+        sizeCol.setCellValueFactory(cell -> new ReadOnlyStringWrapper(
+                DisplayFormats.formatFileSize(cell.getValue().size())));
 
         TableColumn<HeapClassHistogram, String> pctCol = new TableColumn<>();
         pctCol.textProperty().bind(i18n.text("heap.column.allocationPct"));
         pctCol.setPrefWidth(120);
         pctCol.setCellValueFactory(cell -> new ReadOnlyStringWrapper(
-                String.format("%.1f%%", cell.getValue().allocationPct())));
+                DisplayFormats.formatPercent(cell.getValue().allocationPct())));
 
         heapTable.getColumns().setAll(List.of(classNameCol, instancesCol, sizeCol, pctCol));
     }
 
     private void configureLeaksTable() {
-        leaksTable.setPlaceholder(new Label(i18n.get("leaks.empty")));
+        leaksTable.setPlaceholder(localizedTablePlaceholder("leaks.empty"));
 
         TableColumn<LeakCandidate, String> objectCol = new TableColumn<>();
         objectCol.textProperty().bind(i18n.text("leaks.column.object"));
@@ -1250,6 +1331,7 @@ public class AppShellController {
         countCol.textProperty().bind(i18n.text("leaks.column.count"));
         countCol.setPrefWidth(80);
         countCol.setCellValueFactory(cell -> new javafx.beans.property.SimpleIntegerProperty(cell.getValue().count()));
+        useFormattedIntegerCells(countCol);
 
         TableColumn<LeakCandidate, String> descCol = new TableColumn<>();
         descCol.textProperty().bind(i18n.text("leaks.column.description"));
@@ -1265,7 +1347,7 @@ public class AppShellController {
         relevanceCol.textProperty().bind(i18n.text("leaks.column.relevance"));
         relevanceCol.setPrefWidth(120);
         relevanceCol.setCellValueFactory(cell -> new ReadOnlyStringWrapper(
-                String.format("%.1f%%", cell.getValue().relevance())));
+                DisplayFormats.formatPercent(cell.getValue().relevance())));
 
         leaksTable.getColumns().setAll(List.of(objectCol, countCol, descCol, addressCol, relevanceCol));
         leaksTable.getSelectionModel().selectedItemProperty()
@@ -1287,7 +1369,7 @@ public class AppShellController {
     }
 
     private void configureTlabTable() {
-        tlabTable.setPlaceholder(new Label(i18n.get("tlab.empty")));
+        tlabTable.setPlaceholder(localizedTablePlaceholder("tlab.empty"));
 
         TableColumn<TlabAllocation, String> threadCol = new TableColumn<>();
         threadCol.textProperty().bind(i18n.text("tlab.column.thread"));
@@ -1298,23 +1380,40 @@ public class AppShellController {
         insideCountCol.textProperty().bind(i18n.text("tlab.column.insideCount"));
         insideCountCol.setPrefWidth(100);
         insideCountCol.setCellValueFactory(cell -> new javafx.beans.property.SimpleLongProperty(cell.getValue().insideCount()));
+        useFormattedIntegerCells(insideCountCol);
 
         TableColumn<TlabAllocation, Number> outsideCountCol = new TableColumn<>();
         outsideCountCol.textProperty().bind(i18n.text("tlab.column.outsideCount"));
         outsideCountCol.setPrefWidth(100);
         outsideCountCol.setCellValueFactory(cell -> new javafx.beans.property.SimpleLongProperty(cell.getValue().outsideCount()));
+        useFormattedIntegerCells(outsideCountCol);
 
-        TableColumn<TlabAllocation, Number> insideTotalCol = new TableColumn<>();
+        TableColumn<TlabAllocation, String> insideAvgCol = new TableColumn<>();
+        insideAvgCol.textProperty().bind(i18n.text("tlab.column.insideAvgSize"));
+        insideAvgCol.setPrefWidth(120);
+        insideAvgCol.setCellValueFactory(cell -> new ReadOnlyStringWrapper(
+                DisplayFormats.formatFileSize(Math.round(cell.getValue().insideAvgSize()))));
+
+        TableColumn<TlabAllocation, String> outsideAvgCol = new TableColumn<>();
+        outsideAvgCol.textProperty().bind(i18n.text("tlab.column.outsideAvgSize"));
+        outsideAvgCol.setPrefWidth(120);
+        outsideAvgCol.setCellValueFactory(cell -> new ReadOnlyStringWrapper(
+                DisplayFormats.formatFileSize(Math.round(cell.getValue().outsideAvgSize()))));
+
+        TableColumn<TlabAllocation, String> insideTotalCol = new TableColumn<>();
         insideTotalCol.textProperty().bind(i18n.text("tlab.column.insideTotalSize"));
         insideTotalCol.setPrefWidth(120);
-        insideTotalCol.setCellValueFactory(cell -> new javafx.beans.property.SimpleLongProperty(cell.getValue().insideTotalSize()));
+        insideTotalCol.setCellValueFactory(cell -> new ReadOnlyStringWrapper(
+                DisplayFormats.formatFileSize(cell.getValue().insideTotalSize())));
 
-        TableColumn<TlabAllocation, Number> outsideTotalCol = new TableColumn<>();
+        TableColumn<TlabAllocation, String> outsideTotalCol = new TableColumn<>();
         outsideTotalCol.textProperty().bind(i18n.text("tlab.column.outsideTotalSize"));
         outsideTotalCol.setPrefWidth(120);
-        outsideTotalCol.setCellValueFactory(cell -> new javafx.beans.property.SimpleLongProperty(cell.getValue().outsideTotalSize()));
+        outsideTotalCol.setCellValueFactory(cell -> new ReadOnlyStringWrapper(
+                DisplayFormats.formatFileSize(cell.getValue().outsideTotalSize())));
 
-        tlabTable.getColumns().setAll(List.of(threadCol, insideCountCol, outsideCountCol, insideTotalCol, outsideTotalCol));
+        tlabTable.getColumns().setAll(List.of(threadCol, insideCountCol, outsideCountCol, insideAvgCol,
+                outsideAvgCol, insideTotalCol, outsideTotalCol));
     }
 
     private void bindHeap(HeapViewModel nextViewModel) {
@@ -1592,15 +1691,26 @@ public class AppShellController {
         };
     }
 
+    static boolean shouldDisableOpenRecordingButton(boolean opening) {
+        return opening;
+    }
+
+    static String openingRecordingStatus(I18n i18n, Path path) {
+        return i18n.format("status.openingRecording", path.getFileName());
+    }
+
     public BorderPane root() {
         return root;
     }
 
     public void close() {
         List.copyOf(viewModel.recordingWorkspacesProperty()).forEach(viewModel::closeWorkspace);
+        recordingOpenExecutor.close();
     }
 
     private void configureActionIcons() {
+        homeOpenRecordingButton.getStyleClass().add("toolbar-primary");
+        homeConnectJvmButton.getStyleClass().add("toolbar-secondary");
         configureActionButton(homeOpenRecordingButton, Material2AL.FOLDER_OPEN, i18n.get("home.openRecording"));
     }
 
@@ -1666,6 +1776,7 @@ public class AppShellController {
     }
 
     private void showWorkspace(RecordingWorkspace workspace) {
+        loadedWorkspace = null;
         selectRecordingTab(workspace);
         bindOverview(workspace == null ? null : workspace.overviewViewModel());
         bindEventBrowser(workspace == null ? null : workspace.eventBrowserViewModel());
@@ -1692,6 +1803,8 @@ public class AppShellController {
         bindClassLoading(workspace == null ? null : workspace.classLoadingViewModel());
         bindVmOperations(workspace == null ? null : workspace.vmOperationsViewModel());
         bindEnvironment(workspace == null ? null : workspace.environmentViewModel());
+        loadedWorkspace = workspace;
+        loadSelectedWorkspaceSection();
     }
 
     private void bindOverview(OverviewViewModel nextViewModel) {
@@ -1788,6 +1901,13 @@ public class AppShellController {
     }
 
     private void openRecording() {
+        if (recordingOpening) {
+            return;
+        }
+        Platform.runLater(this::showOpenRecordingChooser);
+    }
+
+    private void showOpenRecordingChooser() {
         FileChooser chooser = new FileChooser();
         chooser.setTitle(openRecordingChooserTitle(i18n));
         chooser.getExtensionFilters().add(
@@ -1796,7 +1916,26 @@ public class AppShellController {
         if (file == null) {
             return;
         }
-        RecordingSummary recording = recordingRepository.open(file.toPath());
+        openRecordingInBackground(file.toPath());
+    }
+
+    private void openRecordingInBackground(Path path) {
+        setRecordingOpening(true);
+        setBackgroundWorkVisible(true);
+        viewModel.showStatus(openingRecordingStatus(i18n, path));
+        viewModel.showTaskSummary(i18n.get("taskSummary.openingRecording"));
+        recordingOpenExecutor.execute(() -> {
+            try {
+                PreparedRecordingWorkspace preparedWorkspace = prepareRecordingWorkspace(path);
+                onFxThread(() -> attachPreparedRecordingWorkspace(preparedWorkspace));
+            } catch (RuntimeException exception) {
+                onFxThread(() -> showOpenRecordingFailure(exception));
+            }
+        });
+    }
+
+    PreparedRecordingWorkspace prepareRecordingWorkspace(Path path) {
+        RecordingSummary recording = recordingRepository.open(path);
         OverviewViewModel overview = new OverviewViewModel();
         EventBrowserViewModel events = new EventBrowserViewModel(eventQueryService,
                 new VirtualThreadEventBrowserExecutor(), i18n);
@@ -1824,84 +1963,309 @@ public class AppShellController {
         SecurityViewModel security = javaAppService != null ? new SecurityViewModel(javaAppService) : null;
         NativeLibraryViewModel nativeLibraries = javaAppService != null ? new NativeLibraryViewModel(javaAppService) : null;
         ThreadDumpViewModel threadDumps = javaAppService != null ? new ThreadDumpViewModel(javaAppService) : null;
-        viewModel.openRecording(recording, overview, events, analysis, profiling, exceptions, threads,
-                fileio, socketio, locks, heap, leakSuspects, tlab,
-                jvmInfo, gcConfig, gcSummary, gcDetails, compilationsVm, codeCache, classLoading, vmOperations,
-                environment, javaAppOverview, security, nativeLibraries, threadDumps);
-        overview.showRecording(recording, i18n.format("overview.details.format",
-                recording.path(),
-                formatEventTime(recording.startTime()),
-                formatEventTime(recording.endTime()),
-                DisplayFormats.formatDuration(recording.durationMillis()),
-                DisplayFormats.formatFileSize(recording.sizeBytes())));
-        events.loadRecording(recording);
-        analysis.analyze(recording);
-        if (profiling != null) {
-            profiling.load(recording);
+        return new PreparedRecordingWorkspace(recording, overview, events, analysis, profiling, exceptions, threads,
+                fileio, socketio, locks, heap, leakSuspects, tlab, jvmInfo, gcConfig, gcSummary, gcDetails,
+                compilationsVm, codeCache, classLoading, vmOperations, environment, javaAppOverview, security,
+                nativeLibraries, threadDumps);
+    }
+
+    private void attachPreparedRecordingWorkspace(PreparedRecordingWorkspace prepared) {
+        prepared.overview().showRecording(prepared.recording(), i18n.format("overview.details.format",
+                prepared.recording().path(),
+                formatEventTime(prepared.recording().startTime()),
+                formatEventTime(prepared.recording().endTime()),
+                DisplayFormats.formatDuration(prepared.recording().durationMillis()),
+                DisplayFormats.formatFileSize(prepared.recording().sizeBytes())));
+        viewModel.openRecording(prepared.recording(), prepared.overview(), prepared.events(), prepared.analysis(),
+                prepared.profiling(), prepared.exceptions(), prepared.threads(), prepared.fileio(),
+                prepared.socketio(), prepared.locks(), prepared.heap(), prepared.leakSuspects(), prepared.tlab(),
+                prepared.jvmInfo(), prepared.gcConfig(), prepared.gcSummary(), prepared.gcDetails(),
+                prepared.compilations(), prepared.codeCache(), prepared.classLoading(), prepared.vmOperations(),
+                prepared.environment(), prepared.javaAppOverview(), prepared.security(), prepared.nativeLibraries(),
+                prepared.threadDumps());
+        viewModel.showStatus(i18n.format("status.openedRecording", prepared.recording().name()));
+        setRecordingOpening(false);
+    }
+
+    private void showOpenRecordingFailure(RuntimeException exception) {
+        String message = exception.getMessage() == null ? exception.getClass().getSimpleName() : exception.getMessage();
+        viewModel.showStatus(i18n.format("status.openRecordingFailed", message));
+        viewModel.showTaskSummary("");
+        setBackgroundWorkVisible(false);
+        setRecordingOpening(false);
+    }
+
+    private void setRecordingOpening(boolean opening) {
+        recordingOpening = opening;
+        if (homeOpenRecordingButton != null) {
+            homeOpenRecordingButton.setDisable(shouldDisableOpenRecordingButton(opening));
         }
-        if (exceptions != null) {
-            exceptions.load(recording);
+    }
+
+    private void setBackgroundWorkVisible(boolean visible) {
+        if (progressBar == null) {
+            return;
         }
-        if (threads != null) {
-            threads.load(recording);
+        progressBar.setProgress(visible ? ProgressBar.INDETERMINATE_PROGRESS : 0);
+        progressBar.setVisible(visible);
+        progressBar.setManaged(visible);
+    }
+
+    private void onFxThread(Runnable runnable) {
+        try {
+            if (Platform.isFxApplicationThread()) {
+                runnable.run();
+            } else {
+                Platform.runLater(runnable);
+            }
+        } catch (IllegalStateException exception) {
+            runnable.run();
         }
-        if (fileio != null) {
-            fileio.load(recording);
+    }
+
+    private void loadSelectedWorkspaceSection() {
+        RecordingWorkspace workspace = loadedWorkspace;
+        if (workspace == null) {
+            return;
         }
-        if (socketio != null) {
-            socketio.load(recording);
+        loadWorkspaceSection(workspace, viewModel.selectedSectionProperty().get());
+    }
+
+    void preloadRecordingWorkspace(RecordingWorkspace workspace) {
+        setBackgroundWorkVisible(false);
+    }
+
+    static List<String> preloadedWorkspaceSections() {
+        return List.of();
+    }
+
+    void loadWorkspaceSection(RecordingWorkspace workspace, String sectionId) {
+        String canonicalSectionId = canonicalLoadSectionId(sectionId);
+        if (workspace == null || canonicalSectionId == null || !workspace.markSectionLoading(canonicalSectionId)) {
+            return;
         }
-        if (locks != null) {
-            locks.load(recording);
+        setBackgroundWorkVisible(true);
+        viewModel.showTaskSummary(i18n.format("taskSummary.preparingSection", displayNameForSection(sectionId)));
+        recordingOpenExecutor.execute(() -> {
+            try {
+                loadWorkspaceSectionNow(workspace, canonicalSectionId);
+                onFxThread(() -> viewModel.showTaskSummary(i18n.get("taskSummary.recordingReady")));
+                onFxThread(() -> setBackgroundWorkVisible(false));
+            } catch (RuntimeException exception) {
+                onFxThread(() -> viewModel.showTaskSummary(i18n.format("taskSummary.sectionFailed",
+                        displayNameForSection(sectionId))));
+                onFxThread(() -> setBackgroundWorkVisible(false));
+            }
+        });
+    }
+
+    private String canonicalLoadSectionId(String sectionId) {
+        return switch (sectionId) {
+            case null -> null;
+            case "home", "overview", "jvms", "settings" -> null;
+            case "envVars", "sysProps", "recordingInfo", "agents", "constantPools" -> "processes";
+            default -> sectionId;
+        };
+    }
+
+    private void loadWorkspaceSectionNow(RecordingWorkspace workspace, String sectionId) {
+        RecordingSummary recording = workspace.recording();
+        switch (sectionId) {
+            case "analysis" -> workspace.ruleResultsViewModel().analyze(recording);
+            case "events" -> workspace.eventBrowserViewModel().loadRecording(recording);
+            case "profiling" -> loadIfPresent(workspace.profilingViewModel(), recording);
+            case "exceptions" -> loadIfPresent(workspace.exceptionViewModel(), recording);
+            case "threads" -> loadIfPresent(workspace.threadViewModel(), recording);
+            case "fileio" -> loadIfPresent(workspace.fileIOViewModel(), recording);
+            case "socketio" -> loadIfPresent(workspace.socketIOViewModel(), recording);
+            case "locks" -> loadIfPresent(workspace.lockViewModel(), recording);
+            case "threadHistogram" -> loadIfPresent(workspace.javaAppOverviewViewModel(), recording);
+            case "security" -> loadIfPresent(workspace.securityViewModel(), recording);
+            case "nativeLibraries" -> loadIfPresent(workspace.nativeLibraryViewModel(), recording);
+            case "threadDumps" -> loadIfPresent(workspace.threadDumpViewModel(), recording);
+            case "heap" -> loadIfPresent(workspace.heapViewModel(), recording);
+            case "leaks" -> loadIfPresent(workspace.leakSuspectsViewModel(), recording);
+            case "tlab" -> loadIfPresent(workspace.tlabViewModel(), recording);
+            case "jvmInfo" -> loadIfPresent(workspace.jvmInfoViewModel(), recording);
+            case "gcConfig" -> loadIfPresent(workspace.gcConfigViewModel(), recording);
+            case "gcSummary" -> loadIfPresent(workspace.gcSummaryViewModel(), recording);
+            case "gcDetails" -> loadIfPresent(workspace.gcDetailsViewModel(), recording);
+            case "compilations" -> loadIfPresent(workspace.compilationsViewModel(), recording);
+            case "codeCache" -> loadIfPresent(workspace.codeCacheViewModel(), recording);
+            case "classLoading" -> loadIfPresent(workspace.classLoadingViewModel(), recording);
+            case "vmOperations" -> loadIfPresent(workspace.vmOperationsViewModel(), recording);
+            case "processes", "envVars", "sysProps", "recordingInfo", "agents", "constantPools" ->
+                    loadIfPresent(workspace.environmentViewModel(), recording);
+            default -> {
+            }
         }
-        if (heap != null) {
-            heap.load(recording);
+    }
+
+    private String displayNameForSection(String sectionId) {
+        String key = "nav." + sectionId;
+        String value = i18n.get(key);
+        return value.equals(key) ? sectionId : value;
+    }
+
+    private void loadIfPresent(ProfilingViewModel viewModel, RecordingSummary recording) {
+        if (viewModel != null) {
+            viewModel.load(recording);
         }
-        if (leakSuspects != null) {
-            leakSuspects.load(recording);
+    }
+
+    private void loadIfPresent(ExceptionViewModel viewModel, RecordingSummary recording) {
+        if (viewModel != null) {
+            viewModel.load(recording);
         }
-        if (tlab != null) {
-            tlab.load(recording);
+    }
+
+    private void loadIfPresent(ThreadViewModel viewModel, RecordingSummary recording) {
+        if (viewModel != null) {
+            viewModel.load(recording);
         }
-        if (jvmInfo != null) {
-            jvmInfo.load(recording);
+    }
+
+    private void loadIfPresent(FileIOViewModel viewModel, RecordingSummary recording) {
+        if (viewModel != null) {
+            viewModel.load(recording);
         }
-        if (gcConfig != null) {
-            gcConfig.load(recording);
+    }
+
+    private void loadIfPresent(SocketIOViewModel viewModel, RecordingSummary recording) {
+        if (viewModel != null) {
+            viewModel.load(recording);
         }
-        if (gcSummary != null) {
-            gcSummary.load(recording);
+    }
+
+    private void loadIfPresent(LockViewModel viewModel, RecordingSummary recording) {
+        if (viewModel != null) {
+            viewModel.load(recording);
         }
-        if (gcDetails != null) {
-            gcDetails.load(recording);
+    }
+
+    private void loadIfPresent(JavaAppOverviewViewModel viewModel, RecordingSummary recording) {
+        if (viewModel != null) {
+            viewModel.load(recording);
         }
-        if (compilationsVm != null) {
-            compilationsVm.load(recording);
+    }
+
+    private void loadIfPresent(SecurityViewModel viewModel, RecordingSummary recording) {
+        if (viewModel != null) {
+            viewModel.load(recording);
         }
-        if (codeCache != null) {
-            codeCache.load(recording);
+    }
+
+    private void loadIfPresent(NativeLibraryViewModel viewModel, RecordingSummary recording) {
+        if (viewModel != null) {
+            viewModel.load(recording);
         }
-        if (classLoading != null) {
-            classLoading.load(recording);
+    }
+
+    private void loadIfPresent(ThreadDumpViewModel viewModel, RecordingSummary recording) {
+        if (viewModel != null) {
+            viewModel.load(recording);
         }
-        if (vmOperations != null) {
-            vmOperations.load(recording);
+    }
+
+    private void loadIfPresent(HeapViewModel viewModel, RecordingSummary recording) {
+        if (viewModel != null) {
+            viewModel.load(recording);
         }
-        if (environment != null) {
-            environment.load(recording);
+    }
+
+    private void loadIfPresent(LeakSuspectsViewModel viewModel, RecordingSummary recording) {
+        if (viewModel != null) {
+            viewModel.load(recording);
         }
-        if (javaAppOverview != null) {
-            javaAppOverview.load(recording);
+    }
+
+    private void loadIfPresent(TlabViewModel viewModel, RecordingSummary recording) {
+        if (viewModel != null) {
+            viewModel.load(recording);
         }
-        if (security != null) {
-            security.load(recording);
+    }
+
+    private void loadIfPresent(JvmInfoViewModel viewModel, RecordingSummary recording) {
+        if (viewModel != null) {
+            viewModel.load(recording);
         }
-        if (nativeLibraries != null) {
-            nativeLibraries.load(recording);
+    }
+
+    private void loadIfPresent(GcConfigViewModel viewModel, RecordingSummary recording) {
+        if (viewModel != null) {
+            viewModel.load(recording);
         }
-        if (threadDumps != null) {
-            threadDumps.load(recording);
+    }
+
+    private void loadIfPresent(GcSummaryViewModel viewModel, RecordingSummary recording) {
+        if (viewModel != null) {
+            viewModel.load(recording);
         }
+    }
+
+    private void loadIfPresent(GcDetailsViewModel viewModel, RecordingSummary recording) {
+        if (viewModel != null) {
+            viewModel.load(recording);
+        }
+    }
+
+    private void loadIfPresent(CompilationsViewModel viewModel, RecordingSummary recording) {
+        if (viewModel != null) {
+            viewModel.load(recording);
+        }
+    }
+
+    private void loadIfPresent(CodeCacheViewModel viewModel, RecordingSummary recording) {
+        if (viewModel != null) {
+            viewModel.load(recording);
+        }
+    }
+
+    private void loadIfPresent(ClassLoadingViewModel viewModel, RecordingSummary recording) {
+        if (viewModel != null) {
+            viewModel.load(recording);
+        }
+    }
+
+    private void loadIfPresent(VmOperationsViewModel viewModel, RecordingSummary recording) {
+        if (viewModel != null) {
+            viewModel.load(recording);
+        }
+    }
+
+    private void loadIfPresent(EnvironmentViewModel viewModel, RecordingSummary recording) {
+        if (viewModel != null) {
+            viewModel.load(recording);
+        }
+    }
+
+    record PreparedRecordingWorkspace(
+            RecordingSummary recording,
+            OverviewViewModel overview,
+            EventBrowserViewModel events,
+            RuleResultsViewModel analysis,
+            ProfilingViewModel profiling,
+            ExceptionViewModel exceptions,
+            ThreadViewModel threads,
+            FileIOViewModel fileio,
+            SocketIOViewModel socketio,
+            LockViewModel locks,
+            HeapViewModel heap,
+            LeakSuspectsViewModel leakSuspects,
+            TlabViewModel tlab,
+            JvmInfoViewModel jvmInfo,
+            GcConfigViewModel gcConfig,
+            GcSummaryViewModel gcSummary,
+            GcDetailsViewModel gcDetails,
+            CompilationsViewModel compilations,
+            CodeCacheViewModel codeCache,
+            ClassLoadingViewModel classLoading,
+            VmOperationsViewModel vmOperations,
+            EnvironmentViewModel environment,
+            JavaAppOverviewViewModel javaAppOverview,
+            SecurityViewModel security,
+            NativeLibraryViewModel nativeLibraries,
+            ThreadDumpViewModel threadDumps) {
     }
 
     private void rebuildEventTypeTree() {
@@ -2152,221 +2516,340 @@ public class AppShellController {
     // --- JVM Internals: configure methods ---
 
     private void configureJvmFlagsTable() {
-        TableColumn<JvmFlag, String> nameCol = new TableColumn<>("Flag");
+        TableColumn<JvmFlag, String> nameCol = localizedColumn("jvmInfo.column.flag");
+        nameCol.setPrefWidth(260);
         nameCol.setCellValueFactory(data -> new ReadOnlyStringWrapper(data.getValue().name()));
-        TableColumn<JvmFlag, String> valueCol = new TableColumn<>("Value");
+        TableColumn<JvmFlag, String> valueCol = localizedColumn("jvmInfo.column.value");
+        valueCol.setPrefWidth(320);
         valueCol.setCellValueFactory(data -> new ReadOnlyStringWrapper(data.getValue().value()));
-        TableColumn<JvmFlag, String> originCol = new TableColumn<>("Origin");
+        TableColumn<JvmFlag, String> originCol = localizedColumn("jvmInfo.column.origin");
+        originCol.setPrefWidth(160);
         originCol.setCellValueFactory(data -> new ReadOnlyStringWrapper(data.getValue().origin()));
         jvmFlagsTable.getColumns().setAll(List.of(nameCol, valueCol, originCol));
     }
 
     private void configureJvmFlagChangesTable() {
-        TableColumn<JvmFlagChange, String> timeCol = new TableColumn<>("Time");
+        TableColumn<JvmFlagChange, String> timeCol = localizedColumn("jvmInfo.column.time");
+        timeCol.setPrefWidth(220);
         timeCol.setCellValueFactory(data -> new ReadOnlyStringWrapper(
-                data.getValue().startTime() != null ? data.getValue().startTime().toString() : ""));
-        TableColumn<JvmFlagChange, String> flagCol = new TableColumn<>("Flag");
+                DisplayFormats.formatTimestamp(data.getValue().startTime(), ZoneId.systemDefault())));
+        TableColumn<JvmFlagChange, String> flagCol = localizedColumn("jvmInfo.column.flag");
+        flagCol.setPrefWidth(240);
         flagCol.setCellValueFactory(data -> new ReadOnlyStringWrapper(data.getValue().flagName()));
-        TableColumn<JvmFlagChange, String> oldCol = new TableColumn<>("Old Value");
+        TableColumn<JvmFlagChange, String> oldCol = localizedColumn("jvmInfo.column.oldValue");
+        oldCol.setPrefWidth(240);
         oldCol.setCellValueFactory(data -> new ReadOnlyStringWrapper(data.getValue().oldValue()));
-        TableColumn<JvmFlagChange, String> newCol = new TableColumn<>("New Value");
+        TableColumn<JvmFlagChange, String> newCol = localizedColumn("jvmInfo.column.newValue");
+        newCol.setPrefWidth(240);
         newCol.setCellValueFactory(data -> new ReadOnlyStringWrapper(data.getValue().newValue()));
-        TableColumn<JvmFlagChange, String> originCol = new TableColumn<>("Origin");
+        TableColumn<JvmFlagChange, String> originCol = localizedColumn("jvmInfo.column.origin");
+        originCol.setPrefWidth(160);
         originCol.setCellValueFactory(data -> new ReadOnlyStringWrapper(data.getValue().origin()));
         jvmFlagChangesTable.getColumns().setAll(List.of(timeCol, flagCol, oldCol, newCol, originCol));
     }
 
     private void configureGcSummaryTable() {
-        TableColumn<GcSummary, String> genCol = new TableColumn<>("Generation");
+        TableColumn<GcSummary, String> genCol = localizedColumn("gcSummary.column.generation");
+        genCol.setPrefWidth(180);
         genCol.setCellValueFactory(data -> new ReadOnlyStringWrapper(data.getValue().generation()));
-        TableColumn<GcSummary, String> countCol = new TableColumn<>("Count");
-        countCol.setCellValueFactory(data -> new ReadOnlyStringWrapper(String.valueOf(data.getValue().collectionCount())));
-        TableColumn<GcSummary, String> totalCol = new TableColumn<>("Total (ms)");
-        totalCol.setCellValueFactory(data -> new ReadOnlyStringWrapper(String.valueOf(data.getValue().totalDurationMillis())));
-        TableColumn<GcSummary, String> avgCol = new TableColumn<>("Avg (ms)");
-        avgCol.setCellValueFactory(data -> new ReadOnlyStringWrapper(String.format("%.2f", data.getValue().avgDurationMillis())));
-        TableColumn<GcSummary, String> maxCol = new TableColumn<>("Max (ms)");
-        maxCol.setCellValueFactory(data -> new ReadOnlyStringWrapper(String.valueOf(data.getValue().maxDurationMillis())));
+        TableColumn<GcSummary, String> countCol = localizedColumn("common.column.count");
+        countCol.setPrefWidth(90);
+        countCol.setCellValueFactory(data -> new ReadOnlyStringWrapper(
+                DisplayFormats.formatInteger(data.getValue().collectionCount())));
+        TableColumn<GcSummary, String> totalCol = localizedColumn("gcSummary.column.total");
+        totalCol.setPrefWidth(120);
+        totalCol.setCellValueFactory(data -> new ReadOnlyStringWrapper(
+                DisplayFormats.formatDuration(data.getValue().totalDurationMillis())));
+        TableColumn<GcSummary, String> avgCol = localizedColumn("gcSummary.column.average");
+        avgCol.setPrefWidth(120);
+        avgCol.setCellValueFactory(data -> new ReadOnlyStringWrapper(
+                DisplayFormats.formatDurationMillis(data.getValue().avgDurationMillis())));
+        TableColumn<GcSummary, String> maxCol = localizedColumn("gcSummary.column.max");
+        maxCol.setPrefWidth(120);
+        maxCol.setCellValueFactory(data -> new ReadOnlyStringWrapper(
+                DisplayFormats.formatDuration(data.getValue().maxDurationMillis())));
         gcSummaryTable.getColumns().setAll(List.of(genCol, countCol, totalCol, avgCol, maxCol));
     }
 
     private void configureGcEventsTable() {
-        TableColumn<GcEvent, String> idCol = new TableColumn<>("GC ID");
-        idCol.setCellValueFactory(data -> new ReadOnlyStringWrapper(String.valueOf(data.getValue().gcId())));
-        TableColumn<GcEvent, String> nameCol = new TableColumn<>("Name");
+        TableColumn<GcEvent, String> idCol = localizedColumn("gc.column.id");
+        idCol.setPrefWidth(80);
+        idCol.setCellValueFactory(data -> new ReadOnlyStringWrapper(
+                DisplayFormats.formatInteger(data.getValue().gcId())));
+        TableColumn<GcEvent, String> nameCol = localizedColumn("common.column.name");
+        nameCol.setPrefWidth(220);
         nameCol.setCellValueFactory(data -> new ReadOnlyStringWrapper(data.getValue().name()));
-        TableColumn<GcEvent, String> causeCol = new TableColumn<>("Cause");
+        TableColumn<GcEvent, String> causeCol = localizedColumn("gcDetails.column.cause");
+        causeCol.setPrefWidth(260);
         causeCol.setCellValueFactory(data -> new ReadOnlyStringWrapper(data.getValue().cause()));
-        TableColumn<GcEvent, String> pauseCol = new TableColumn<>("Longest Pause");
-        pauseCol.setCellValueFactory(data -> new ReadOnlyStringWrapper(String.valueOf(data.getValue().longestPauseMicros())));
-        TableColumn<GcEvent, String> totalPauseCol = new TableColumn<>("Total Pause");
-        totalPauseCol.setCellValueFactory(data -> new ReadOnlyStringWrapper(String.valueOf(data.getValue().totalPauseMicros())));
-        TableColumn<GcEvent, String> timeCol = new TableColumn<>("Time");
+        TableColumn<GcEvent, String> pauseCol = localizedColumn("gcDetails.column.longestPause");
+        pauseCol.setPrefWidth(130);
+        pauseCol.setCellValueFactory(data -> new ReadOnlyStringWrapper(
+                DisplayFormats.formatMicros(data.getValue().longestPauseMicros())));
+        TableColumn<GcEvent, String> totalPauseCol = localizedColumn("gcDetails.column.totalPause");
+        totalPauseCol.setPrefWidth(120);
+        totalPauseCol.setCellValueFactory(data -> new ReadOnlyStringWrapper(
+                DisplayFormats.formatMicros(data.getValue().totalPauseMicros())));
+        TableColumn<GcEvent, String> timeCol = localizedColumn("common.column.time");
+        timeCol.setPrefWidth(220);
         timeCol.setCellValueFactory(data -> new ReadOnlyStringWrapper(
-                data.getValue().startTime() != null ? data.getValue().startTime().toString() : ""));
+                DisplayFormats.formatTimestamp(data.getValue().startTime(), ZoneId.systemDefault())));
         gcEventsTable.getColumns().setAll(List.of(idCol, nameCol, causeCol, pauseCol, totalPauseCol, timeCol));
     }
 
     private void configureGcReferenceStatsTable() {
-        TableColumn<GcReferenceStat, String> idCol = new TableColumn<>("GC ID");
-        idCol.setCellValueFactory(data -> new ReadOnlyStringWrapper(String.valueOf(data.getValue().gcId())));
-        TableColumn<GcReferenceStat, String> typeCol = new TableColumn<>("Reference Type");
+        TableColumn<GcReferenceStat, String> idCol = localizedColumn("gc.column.id");
+        idCol.setPrefWidth(80);
+        idCol.setCellValueFactory(data -> new ReadOnlyStringWrapper(
+                DisplayFormats.formatInteger(data.getValue().gcId())));
+        TableColumn<GcReferenceStat, String> typeCol = localizedColumn("gcDetails.column.referenceType");
+        typeCol.setPrefWidth(220);
         typeCol.setCellValueFactory(data -> new ReadOnlyStringWrapper(data.getValue().referenceType()));
-        TableColumn<GcReferenceStat, String> countCol = new TableColumn<>("Count");
-        countCol.setCellValueFactory(data -> new ReadOnlyStringWrapper(String.valueOf(data.getValue().count())));
+        TableColumn<GcReferenceStat, String> countCol = localizedColumn("common.column.count");
+        countCol.setPrefWidth(100);
+        countCol.setCellValueFactory(data -> new ReadOnlyStringWrapper(
+                DisplayFormats.formatInteger(data.getValue().count())));
         gcReferenceStatsTable.getColumns().setAll(List.of(idCol, typeCol, countCol));
     }
 
     private void configureGcHeapSummaryTable() {
-        TableColumn<GcHeapSummary, String> idCol = new TableColumn<>("GC ID");
-        idCol.setCellValueFactory(data -> new ReadOnlyStringWrapper(String.valueOf(data.getValue().gcId())));
-        TableColumn<GcHeapSummary, String> whenCol = new TableColumn<>("When");
+        TableColumn<GcHeapSummary, String> idCol = localizedColumn("gc.column.id");
+        idCol.setPrefWidth(80);
+        idCol.setCellValueFactory(data -> new ReadOnlyStringWrapper(
+                DisplayFormats.formatInteger(data.getValue().gcId())));
+        TableColumn<GcHeapSummary, String> whenCol = localizedColumn("gcDetails.column.when");
+        whenCol.setPrefWidth(120);
         whenCol.setCellValueFactory(data -> new ReadOnlyStringWrapper(data.getValue().when()));
-        TableColumn<GcHeapSummary, String> usedCol = new TableColumn<>("Heap Used");
-        usedCol.setCellValueFactory(data -> new ReadOnlyStringWrapper(String.valueOf(data.getValue().heapUsed())));
-        TableColumn<GcHeapSummary, String> committedCol = new TableColumn<>("Heap Committed");
-        committedCol.setCellValueFactory(data -> new ReadOnlyStringWrapper(String.valueOf(data.getValue().heapCommitted())));
-        TableColumn<GcHeapSummary, String> metaUsedCol = new TableColumn<>("Metaspace Used");
-        metaUsedCol.setCellValueFactory(data -> new ReadOnlyStringWrapper(String.valueOf(data.getValue().metaspaceUsed())));
-        TableColumn<GcHeapSummary, String> metaCommittedCol = new TableColumn<>("Metaspace Committed");
-        metaCommittedCol.setCellValueFactory(data -> new ReadOnlyStringWrapper(String.valueOf(data.getValue().metaspaceCommitted())));
+        TableColumn<GcHeapSummary, String> usedCol = localizedColumn("gcDetails.column.heapUsed");
+        usedCol.setPrefWidth(130);
+        usedCol.setCellValueFactory(data -> new ReadOnlyStringWrapper(
+                DisplayFormats.formatFileSize(data.getValue().heapUsed())));
+        TableColumn<GcHeapSummary, String> committedCol = localizedColumn("gcDetails.column.heapCommitted");
+        committedCol.setPrefWidth(150);
+        committedCol.setCellValueFactory(data -> new ReadOnlyStringWrapper(
+                DisplayFormats.formatFileSize(data.getValue().heapCommitted())));
+        TableColumn<GcHeapSummary, String> metaUsedCol = localizedColumn("gcDetails.column.metaspaceUsed");
+        metaUsedCol.setPrefWidth(150);
+        metaUsedCol.setCellValueFactory(data -> new ReadOnlyStringWrapper(
+                DisplayFormats.formatFileSize(data.getValue().metaspaceUsed())));
+        TableColumn<GcHeapSummary, String> metaCommittedCol = localizedColumn("gcDetails.column.metaspaceCommitted");
+        metaCommittedCol.setPrefWidth(180);
+        metaCommittedCol.setCellValueFactory(data -> new ReadOnlyStringWrapper(
+                DisplayFormats.formatFileSize(data.getValue().metaspaceCommitted())));
         gcHeapSummaryTable.getColumns().setAll(List.of(idCol, whenCol, usedCol, committedCol, metaUsedCol, metaCommittedCol));
     }
 
     private void configureCompilationsTable() {
-        TableColumn<CompilationEvent, String> idCol = new TableColumn<>("ID");
-        idCol.setCellValueFactory(data -> new ReadOnlyStringWrapper(String.valueOf(data.getValue().compilationId())));
-        TableColumn<CompilationEvent, String> methodCol = new TableColumn<>("Method");
+        TableColumn<CompilationEvent, String> idCol = localizedColumn("common.column.id");
+        idCol.setPrefWidth(80);
+        idCol.setCellValueFactory(data -> new ReadOnlyStringWrapper(
+                DisplayFormats.formatInteger(data.getValue().compilationId())));
+        TableColumn<CompilationEvent, String> methodCol = localizedColumn("compilations.column.method");
+        methodCol.setPrefWidth(620);
         methodCol.setCellValueFactory(data -> new ReadOnlyStringWrapper(data.getValue().method()));
-        TableColumn<CompilationEvent, String> okCol = new TableColumn<>("Succeeded");
-        okCol.setCellValueFactory(data -> new ReadOnlyStringWrapper(String.valueOf(data.getValue().succeeded())));
-        TableColumn<CompilationEvent, String> durCol = new TableColumn<>("Duration");
-        durCol.setCellValueFactory(data -> new ReadOnlyStringWrapper(String.valueOf(data.getValue().durationMicros())));
-        TableColumn<CompilationEvent, String> sizeCol = new TableColumn<>("Code Size");
-        sizeCol.setCellValueFactory(data -> new ReadOnlyStringWrapper(String.valueOf(data.getValue().codeSize())));
-        TableColumn<CompilationEvent, String> inlineCol = new TableColumn<>("Inlined");
-        inlineCol.setCellValueFactory(data -> new ReadOnlyStringWrapper(String.valueOf(data.getValue().inlinedBytes())));
-        TableColumn<CompilationEvent, String> timeCol = new TableColumn<>("Time");
+        TableColumn<CompilationEvent, String> okCol = localizedColumn("compilations.column.succeeded");
+        okCol.setPrefWidth(100);
+        okCol.setCellValueFactory(data -> new ReadOnlyStringWrapper(
+                DisplayFormats.formatBoolean(data.getValue().succeeded())));
+        TableColumn<CompilationEvent, String> durCol = localizedColumn("common.column.duration");
+        durCol.setPrefWidth(120);
+        durCol.setCellValueFactory(data -> new ReadOnlyStringWrapper(
+                DisplayFormats.formatMicros(data.getValue().durationMicros())));
+        TableColumn<CompilationEvent, String> sizeCol = localizedColumn("compilations.column.codeSize");
+        sizeCol.setPrefWidth(110);
+        sizeCol.setCellValueFactory(data -> new ReadOnlyStringWrapper(
+                DisplayFormats.formatFileSize(data.getValue().codeSize())));
+        TableColumn<CompilationEvent, String> inlineCol = localizedColumn("compilations.column.inlined");
+        inlineCol.setPrefWidth(100);
+        inlineCol.setCellValueFactory(data -> new ReadOnlyStringWrapper(
+                DisplayFormats.formatFileSize(data.getValue().inlinedBytes())));
+        TableColumn<CompilationEvent, String> timeCol = localizedColumn("common.column.time");
+        timeCol.setPrefWidth(220);
         timeCol.setCellValueFactory(data -> new ReadOnlyStringWrapper(
-                data.getValue().startTime() != null ? data.getValue().startTime().toString() : ""));
+                DisplayFormats.formatTimestamp(data.getValue().startTime(), ZoneId.systemDefault())));
         compilationsTable.getColumns().setAll(List.of(idCol, methodCol, okCol, durCol, sizeCol, inlineCol, timeCol));
     }
 
     private void configureCompilationFailuresTable() {
-        TableColumn<CompilationEvent, String> idCol = new TableColumn<>("ID");
-        idCol.setCellValueFactory(data -> new ReadOnlyStringWrapper(String.valueOf(data.getValue().compilationId())));
-        TableColumn<CompilationEvent, String> methodCol = new TableColumn<>("Method");
+        TableColumn<CompilationEvent, String> idCol = localizedColumn("common.column.id");
+        idCol.setPrefWidth(80);
+        idCol.setCellValueFactory(data -> new ReadOnlyStringWrapper(
+                DisplayFormats.formatInteger(data.getValue().compilationId())));
+        TableColumn<CompilationEvent, String> methodCol = localizedColumn("compilations.column.method");
+        methodCol.setPrefWidth(620);
         methodCol.setCellValueFactory(data -> new ReadOnlyStringWrapper(data.getValue().method()));
-        TableColumn<CompilationEvent, String> durCol = new TableColumn<>("Duration");
-        durCol.setCellValueFactory(data -> new ReadOnlyStringWrapper(String.valueOf(data.getValue().durationMicros())));
-        TableColumn<CompilationEvent, String> timeCol = new TableColumn<>("Time");
+        TableColumn<CompilationEvent, String> durCol = localizedColumn("common.column.duration");
+        durCol.setPrefWidth(120);
+        durCol.setCellValueFactory(data -> new ReadOnlyStringWrapper(
+                DisplayFormats.formatMicros(data.getValue().durationMicros())));
+        TableColumn<CompilationEvent, String> timeCol = localizedColumn("common.column.time");
+        timeCol.setPrefWidth(220);
         timeCol.setCellValueFactory(data -> new ReadOnlyStringWrapper(
-                data.getValue().startTime() != null ? data.getValue().startTime().toString() : ""));
+                DisplayFormats.formatTimestamp(data.getValue().startTime(), ZoneId.systemDefault())));
         compilationFailuresTable.getColumns().setAll(List.of(idCol, methodCol, durCol, timeCol));
     }
 
     private void configureCodeCacheSweepsTable() {
-        TableColumn<CodeCacheSweep, String> timeCol = new TableColumn<>("Time");
+        TableColumn<CodeCacheSweep, String> timeCol = localizedColumn("common.column.time");
+        timeCol.setPrefWidth(220);
         timeCol.setCellValueFactory(data -> new ReadOnlyStringWrapper(
-                data.getValue().startTime() != null ? data.getValue().startTime().toString() : ""));
-        TableColumn<CodeCacheSweep, String> idxCol = new TableColumn<>("Index");
-        idxCol.setCellValueFactory(data -> new ReadOnlyStringWrapper(String.valueOf(data.getValue().sweepIndex())));
-        TableColumn<CodeCacheSweep, String> durCol = new TableColumn<>("Duration");
-        durCol.setCellValueFactory(data -> new ReadOnlyStringWrapper(String.valueOf(data.getValue().durationMicros())));
-        TableColumn<CodeCacheSweep, String> flushedCol = new TableColumn<>("Flushed");
-        flushedCol.setCellValueFactory(data -> new ReadOnlyStringWrapper(String.valueOf(data.getValue().flushed())));
-        TableColumn<CodeCacheSweep, String> sweptCol = new TableColumn<>("Swept");
-        sweptCol.setCellValueFactory(data -> new ReadOnlyStringWrapper(String.valueOf(data.getValue().swept())));
-        TableColumn<CodeCacheSweep, String> countCol = new TableColumn<>("Swept Count");
-        countCol.setCellValueFactory(data -> new ReadOnlyStringWrapper(String.valueOf(data.getValue().sweptCount())));
+                DisplayFormats.formatTimestamp(data.getValue().startTime(), ZoneId.systemDefault())));
+        TableColumn<CodeCacheSweep, String> idxCol = localizedColumn("codeCache.column.index");
+        idxCol.setPrefWidth(80);
+        idxCol.setCellValueFactory(data -> new ReadOnlyStringWrapper(
+                DisplayFormats.formatInteger(data.getValue().sweepIndex())));
+        TableColumn<CodeCacheSweep, String> durCol = localizedColumn("common.column.duration");
+        durCol.setPrefWidth(120);
+        durCol.setCellValueFactory(data -> new ReadOnlyStringWrapper(
+                DisplayFormats.formatMicros(data.getValue().durationMicros())));
+        TableColumn<CodeCacheSweep, String> flushedCol = localizedColumn("codeCache.column.flushed");
+        flushedCol.setPrefWidth(100);
+        flushedCol.setCellValueFactory(data -> new ReadOnlyStringWrapper(
+                DisplayFormats.formatInteger(data.getValue().flushed())));
+        TableColumn<CodeCacheSweep, String> sweptCol = localizedColumn("codeCache.column.swept");
+        sweptCol.setPrefWidth(100);
+        sweptCol.setCellValueFactory(data -> new ReadOnlyStringWrapper(
+                DisplayFormats.formatInteger(data.getValue().swept())));
+        TableColumn<CodeCacheSweep, String> countCol = localizedColumn("codeCache.column.sweptCount");
+        countCol.setPrefWidth(120);
+        countCol.setCellValueFactory(data -> new ReadOnlyStringWrapper(
+                DisplayFormats.formatInteger(data.getValue().sweptCount())));
         codeCacheSweepsTable.getColumns().setAll(List.of(timeCol, idxCol, durCol, flushedCol, sweptCol, countCol));
     }
 
     private void configureCodeCacheStatsTable() {
-        TableColumn<CodeCacheStats, String> timeCol = new TableColumn<>("Time");
+        TableColumn<CodeCacheStats, String> timeCol = localizedColumn("common.column.time");
+        timeCol.setPrefWidth(220);
         timeCol.setCellValueFactory(data -> new ReadOnlyStringWrapper(
-                data.getValue().startTime() != null ? data.getValue().startTime().toString() : ""));
-        TableColumn<CodeCacheStats, String> heapCol = new TableColumn<>("Code Heap");
+                DisplayFormats.formatTimestamp(data.getValue().startTime(), ZoneId.systemDefault())));
+        TableColumn<CodeCacheStats, String> heapCol = localizedColumn("codeCache.column.codeHeap");
+        heapCol.setPrefWidth(220);
         heapCol.setCellValueFactory(data -> new ReadOnlyStringWrapper(data.getValue().codeHeap()));
-        TableColumn<CodeCacheStats, String> entriesCol = new TableColumn<>("Entries");
-        entriesCol.setCellValueFactory(data -> new ReadOnlyStringWrapper(String.valueOf(data.getValue().entries())));
-        TableColumn<CodeCacheStats, String> methodsCol = new TableColumn<>("Methods");
-        methodsCol.setCellValueFactory(data -> new ReadOnlyStringWrapper(String.valueOf(data.getValue().methods())));
-        TableColumn<CodeCacheStats, String> adaptersCol = new TableColumn<>("Adapters");
-        adaptersCol.setCellValueFactory(data -> new ReadOnlyStringWrapper(String.valueOf(data.getValue().adapters())));
-        TableColumn<CodeCacheStats, String> unallocCol = new TableColumn<>("Unallocated");
-        unallocCol.setCellValueFactory(data -> new ReadOnlyStringWrapper(String.valueOf(data.getValue().unallocated())));
+        TableColumn<CodeCacheStats, String> entriesCol = localizedColumn("codeCache.column.entries");
+        entriesCol.setPrefWidth(100);
+        entriesCol.setCellValueFactory(data -> new ReadOnlyStringWrapper(
+                DisplayFormats.formatInteger(data.getValue().entries())));
+        TableColumn<CodeCacheStats, String> methodsCol = localizedColumn("codeCache.column.methods");
+        methodsCol.setPrefWidth(100);
+        methodsCol.setCellValueFactory(data -> new ReadOnlyStringWrapper(
+                DisplayFormats.formatInteger(data.getValue().methods())));
+        TableColumn<CodeCacheStats, String> adaptersCol = localizedColumn("codeCache.column.adapters");
+        adaptersCol.setPrefWidth(100);
+        adaptersCol.setCellValueFactory(data -> new ReadOnlyStringWrapper(
+                DisplayFormats.formatInteger(data.getValue().adapters())));
+        TableColumn<CodeCacheStats, String> unallocCol = localizedColumn("codeCache.column.unallocated");
+        unallocCol.setPrefWidth(130);
+        unallocCol.setCellValueFactory(data -> new ReadOnlyStringWrapper(
+                DisplayFormats.formatFileSize(data.getValue().unallocated())));
         codeCacheStatsTable.getColumns().setAll(List.of(timeCol, heapCol, entriesCol, methodsCol, adaptersCol, unallocCol));
     }
 
     private void configureClassLoadingHistogramTable() {
-        TableColumn<ClassloaderSummary, String> loaderCol = new TableColumn<>("Classloader");
+        TableColumn<ClassloaderSummary, String> loaderCol = localizedColumn("classLoading.column.classloader");
+        loaderCol.setPrefWidth(520);
         loaderCol.setCellValueFactory(data -> new ReadOnlyStringWrapper(data.getValue().classloader()));
-        TableColumn<ClassloaderSummary, String> loadedCol = new TableColumn<>("Loaded");
-        loadedCol.setCellValueFactory(data -> new ReadOnlyStringWrapper(String.valueOf(data.getValue().loadedCount())));
-        TableColumn<ClassloaderSummary, String> unloadedCol = new TableColumn<>("Unloaded");
-        unloadedCol.setCellValueFactory(data -> new ReadOnlyStringWrapper(String.valueOf(data.getValue().unloadedCount())));
+        TableColumn<ClassloaderSummary, String> loadedCol = localizedColumn("classLoading.column.loaded");
+        loadedCol.setPrefWidth(100);
+        loadedCol.setCellValueFactory(data -> new ReadOnlyStringWrapper(
+                DisplayFormats.formatInteger(data.getValue().loadedCount())));
+        TableColumn<ClassloaderSummary, String> unloadedCol = localizedColumn("classLoading.column.unloaded");
+        unloadedCol.setPrefWidth(100);
+        unloadedCol.setCellValueFactory(data -> new ReadOnlyStringWrapper(
+                DisplayFormats.formatInteger(data.getValue().unloadedCount())));
         classLoadingHistogramTable.getColumns().setAll(List.of(loaderCol, loadedCol, unloadedCol));
     }
 
     private void configureClassLoadingEventsTable() {
-        TableColumn<ClassloadEvent, String> typeCol = new TableColumn<>("Event");
+        TableColumn<ClassloadEvent, String> typeCol = localizedColumn("common.column.event");
+        typeCol.setPrefWidth(160);
         typeCol.setCellValueFactory(data -> new ReadOnlyStringWrapper(data.getValue().eventType()));
-        TableColumn<ClassloadEvent, String> timeCol = new TableColumn<>("Time");
+        TableColumn<ClassloadEvent, String> timeCol = localizedColumn("common.column.time");
+        timeCol.setPrefWidth(220);
         timeCol.setCellValueFactory(data -> new ReadOnlyStringWrapper(
-                data.getValue().startTime() != null ? data.getValue().startTime().toString() : ""));
-        TableColumn<ClassloadEvent, String> classCol = new TableColumn<>("Class");
+                DisplayFormats.formatTimestamp(data.getValue().startTime(), ZoneId.systemDefault())));
+        TableColumn<ClassloadEvent, String> classCol = localizedColumn("classLoading.column.class");
+        classCol.setPrefWidth(360);
         classCol.setCellValueFactory(data -> new ReadOnlyStringWrapper(data.getValue().loadedClass()));
-        TableColumn<ClassloadEvent, String> defLoaderCol = new TableColumn<>("Defining Loader");
+        TableColumn<ClassloadEvent, String> defLoaderCol = localizedColumn("classLoading.column.definingLoader");
+        defLoaderCol.setPrefWidth(320);
         defLoaderCol.setCellValueFactory(data -> new ReadOnlyStringWrapper(data.getValue().definingClassloader()));
-        TableColumn<ClassloadEvent, String> initLoaderCol = new TableColumn<>("Initiating Loader");
+        TableColumn<ClassloadEvent, String> initLoaderCol = localizedColumn("classLoading.column.initiatingLoader");
+        initLoaderCol.setPrefWidth(320);
         initLoaderCol.setCellValueFactory(data -> new ReadOnlyStringWrapper(data.getValue().initiatingClassloader()));
-        TableColumn<ClassloadEvent, String> durCol = new TableColumn<>("Duration");
-        durCol.setCellValueFactory(data -> new ReadOnlyStringWrapper(String.valueOf(data.getValue().durationMicros())));
+        TableColumn<ClassloadEvent, String> durCol = localizedColumn("common.column.duration");
+        durCol.setPrefWidth(120);
+        durCol.setCellValueFactory(data -> new ReadOnlyStringWrapper(
+                DisplayFormats.formatMicros(data.getValue().durationMicros())));
         classLoadingEventsTable.getColumns().setAll(List.of(typeCol, timeCol, classCol, defLoaderCol, initLoaderCol, durCol));
     }
 
     private void configureClassLoadingStatsTable() {
-        TableColumn<ClassloaderStatistics, String> loaderCol = new TableColumn<>("Classloader");
+        TableColumn<ClassloaderStatistics, String> loaderCol = localizedColumn("classLoading.column.classloader");
+        loaderCol.setPrefWidth(420);
         loaderCol.setCellValueFactory(data -> new ReadOnlyStringWrapper(data.getValue().classloader()));
-        TableColumn<ClassloaderStatistics, String> parentCol = new TableColumn<>("Parent");
+        TableColumn<ClassloaderStatistics, String> parentCol = localizedColumn("classLoading.column.parent");
+        parentCol.setPrefWidth(420);
         parentCol.setCellValueFactory(data -> new ReadOnlyStringWrapper(data.getValue().parentClassloader()));
-        TableColumn<ClassloaderStatistics, String> countCol = new TableColumn<>("Loaded Classes");
-        countCol.setCellValueFactory(data -> new ReadOnlyStringWrapper(String.valueOf(data.getValue().loadedClassCount())));
-        TableColumn<ClassloaderStatistics, String> chunkCol = new TableColumn<>("Chunk Size");
-        chunkCol.setCellValueFactory(data -> new ReadOnlyStringWrapper(String.valueOf(data.getValue().anonymousBlockChunkSize())));
-        TableColumn<ClassloaderStatistics, String> blockCol = new TableColumn<>("Block Size");
-        blockCol.setCellValueFactory(data -> new ReadOnlyStringWrapper(String.valueOf(data.getValue().anonymousBlockSize())));
-        TableColumn<ClassloaderStatistics, String> anonCol = new TableColumn<>("Anonymous Classes");
-        anonCol.setCellValueFactory(data -> new ReadOnlyStringWrapper(String.valueOf(data.getValue().anonymousClassCount())));
+        TableColumn<ClassloaderStatistics, String> countCol = localizedColumn("classLoading.column.loadedClasses");
+        countCol.setPrefWidth(130);
+        countCol.setCellValueFactory(data -> new ReadOnlyStringWrapper(
+                DisplayFormats.formatInteger(data.getValue().loadedClassCount())));
+        TableColumn<ClassloaderStatistics, String> chunkCol = localizedColumn("classLoading.column.chunkSize");
+        chunkCol.setPrefWidth(120);
+        chunkCol.setCellValueFactory(data -> new ReadOnlyStringWrapper(
+                DisplayFormats.formatFileSize(data.getValue().anonymousBlockChunkSize())));
+        TableColumn<ClassloaderStatistics, String> blockCol = localizedColumn("classLoading.column.blockSize");
+        blockCol.setPrefWidth(120);
+        blockCol.setCellValueFactory(data -> new ReadOnlyStringWrapper(
+                DisplayFormats.formatFileSize(data.getValue().anonymousBlockSize())));
+        TableColumn<ClassloaderStatistics, String> anonCol = localizedColumn("classLoading.column.anonymousClasses");
+        anonCol.setPrefWidth(150);
+        anonCol.setCellValueFactory(data -> new ReadOnlyStringWrapper(
+                DisplayFormats.formatInteger(data.getValue().anonymousClassCount())));
         classLoadingStatsTable.getColumns().setAll(List.of(loaderCol, parentCol, countCol, chunkCol, blockCol, anonCol));
     }
 
     private void configureVmOperationSummaryTable() {
-        TableColumn<VmOperationSummary, String> opCol = new TableColumn<>("Operation");
+        TableColumn<VmOperationSummary, String> opCol = localizedColumn("vmOperations.column.operation");
+        opCol.setPrefWidth(360);
         opCol.setCellValueFactory(data -> new ReadOnlyStringWrapper(data.getValue().operation()));
-        TableColumn<VmOperationSummary, String> countCol = new TableColumn<>("Count");
-        countCol.setCellValueFactory(data -> new ReadOnlyStringWrapper(String.valueOf(data.getValue().count())));
-        TableColumn<VmOperationSummary, String> totalCol = new TableColumn<>("Total Duration");
-        totalCol.setCellValueFactory(data -> new ReadOnlyStringWrapper(String.valueOf(data.getValue().totalDurationMicros())));
-        TableColumn<VmOperationSummary, String> maxCol = new TableColumn<>("Max Duration");
-        maxCol.setCellValueFactory(data -> new ReadOnlyStringWrapper(String.valueOf(data.getValue().maxDurationMicros())));
+        TableColumn<VmOperationSummary, String> countCol = localizedColumn("common.column.count");
+        countCol.setPrefWidth(100);
+        countCol.setCellValueFactory(data -> new ReadOnlyStringWrapper(
+                DisplayFormats.formatInteger(data.getValue().count())));
+        TableColumn<VmOperationSummary, String> totalCol = localizedColumn("common.column.totalDuration");
+        totalCol.setPrefWidth(140);
+        totalCol.setCellValueFactory(data -> new ReadOnlyStringWrapper(
+                DisplayFormats.formatMicros(data.getValue().totalDurationMicros())));
+        TableColumn<VmOperationSummary, String> maxCol = localizedColumn("common.column.maxDuration");
+        maxCol.setPrefWidth(140);
+        maxCol.setCellValueFactory(data -> new ReadOnlyStringWrapper(
+                DisplayFormats.formatMicros(data.getValue().maxDurationMicros())));
         vmOperationSummaryTable.getColumns().setAll(List.of(opCol, countCol, totalCol, maxCol));
     }
 
     private void configureVmOperationEventsTable() {
-        TableColumn<VmOperationEvent, String> timeCol = new TableColumn<>("Time");
+        TableColumn<VmOperationEvent, String> timeCol = localizedColumn("common.column.time");
+        timeCol.setPrefWidth(220);
         timeCol.setCellValueFactory(data -> new ReadOnlyStringWrapper(
-                data.getValue().startTime() != null ? data.getValue().startTime().toString() : ""));
-        TableColumn<VmOperationEvent, String> opCol = new TableColumn<>("Operation");
+                DisplayFormats.formatTimestamp(data.getValue().startTime(), ZoneId.systemDefault())));
+        TableColumn<VmOperationEvent, String> opCol = localizedColumn("vmOperations.column.operation");
+        opCol.setPrefWidth(320);
         opCol.setCellValueFactory(data -> new ReadOnlyStringWrapper(data.getValue().operation()));
-        TableColumn<VmOperationEvent, String> blockCol = new TableColumn<>("Blocking");
-        blockCol.setCellValueFactory(data -> new ReadOnlyStringWrapper(String.valueOf(data.getValue().blocking())));
-        TableColumn<VmOperationEvent, String> safeCol = new TableColumn<>("Safepoint");
-        safeCol.setCellValueFactory(data -> new ReadOnlyStringWrapper(String.valueOf(data.getValue().safepoint())));
-        TableColumn<VmOperationEvent, String> durCol = new TableColumn<>("Duration");
-        durCol.setCellValueFactory(data -> new ReadOnlyStringWrapper(String.valueOf(data.getValue().durationMicros())));
-        TableColumn<VmOperationEvent, String> threadCol = new TableColumn<>("Thread");
+        TableColumn<VmOperationEvent, String> blockCol = localizedColumn("vmOperations.column.blocking");
+        blockCol.setPrefWidth(100);
+        blockCol.setCellValueFactory(data -> new ReadOnlyStringWrapper(
+                DisplayFormats.formatBoolean(data.getValue().blocking())));
+        TableColumn<VmOperationEvent, String> safeCol = localizedColumn("vmOperations.column.safepoint");
+        safeCol.setPrefWidth(100);
+        safeCol.setCellValueFactory(data -> new ReadOnlyStringWrapper(
+                DisplayFormats.formatBoolean(data.getValue().safepoint())));
+        TableColumn<VmOperationEvent, String> durCol = localizedColumn("common.column.duration");
+        durCol.setPrefWidth(120);
+        durCol.setCellValueFactory(data -> new ReadOnlyStringWrapper(
+                DisplayFormats.formatMicros(data.getValue().durationMicros())));
+        TableColumn<VmOperationEvent, String> threadCol = localizedColumn("common.column.thread");
+        threadCol.setPrefWidth(260);
         threadCol.setCellValueFactory(data -> new ReadOnlyStringWrapper(data.getValue().threadName()));
         vmOperationEventsTable.getColumns().setAll(List.of(timeCol, opCol, blockCol, safeCol, durCol, threadCol));
     }
@@ -2489,7 +2972,7 @@ public class AppShellController {
     // --- Environment: configure methods ---
 
     private void configureProcessesTable() {
-        processesTable.setPlaceholder(new Label(i18n.get("processes.empty")));
+        processesTable.setPlaceholder(localizedTablePlaceholder("processes.empty"));
         TableColumn<ProcessInfo, String> pidCol = new TableColumn<>();
         pidCol.textProperty().bind(i18n.text("processes.column.pid"));
         pidCol.setPrefWidth(80);
@@ -2510,7 +2993,7 @@ public class AppShellController {
     }
 
     private void configureEnvVarsTable() {
-        envVarsTable.setPlaceholder(new Label(i18n.get("envVars.empty")));
+        envVarsTable.setPlaceholder(localizedTablePlaceholder("envVars.empty"));
         TableColumn<EnvironmentVariable, String> keyCol = new TableColumn<>();
         keyCol.textProperty().bind(i18n.text("envVars.column.key"));
         keyCol.setPrefWidth(300);
@@ -2528,7 +3011,7 @@ public class AppShellController {
     }
 
     private void configureSysPropsTable() {
-        sysPropsTable.setPlaceholder(new Label(i18n.get("sysProps.empty")));
+        sysPropsTable.setPlaceholder(localizedTablePlaceholder("sysProps.empty"));
         TableColumn<SystemProperty, String> keyCol = new TableColumn<>();
         keyCol.textProperty().bind(i18n.text("sysProps.column.key"));
         keyCol.setPrefWidth(350);
@@ -2546,18 +3029,18 @@ public class AppShellController {
     }
 
     private void configureRecordingsTable() {
-        recordingsTable.setPlaceholder(new Label(i18n.get("recordingInfo.empty")));
+        recordingsTable.setPlaceholder(localizedTablePlaceholder("recordingInfo.empty"));
         TableColumn<ActiveRecordingInfo, String> idCol = new TableColumn<>();
         idCol.textProperty().bind(i18n.text("recordingInfo.column.id"));
-        idCol.setPrefWidth(50);
+        idCol.setPrefWidth(80);
         idCol.setCellValueFactory(cell -> new ReadOnlyStringWrapper(cell.getValue().id()));
         TableColumn<ActiveRecordingInfo, String> nameCol = new TableColumn<>();
         nameCol.textProperty().bind(i18n.text("recordingInfo.column.name"));
-        nameCol.setPrefWidth(200);
+        nameCol.setPrefWidth(260);
         nameCol.setCellValueFactory(cell -> new ReadOnlyStringWrapper(cell.getValue().name()));
         TableColumn<ActiveRecordingInfo, String> destCol = new TableColumn<>();
         destCol.textProperty().bind(i18n.text("recordingInfo.column.destination"));
-        destCol.setPrefWidth(200);
+        destCol.setPrefWidth(360);
         destCol.setCellValueFactory(cell -> new ReadOnlyStringWrapper(cell.getValue().destination()));
         TableColumn<ActiveRecordingInfo, String> startCol = new TableColumn<>();
         startCol.textProperty().bind(i18n.text("recordingInfo.column.startTime"));
@@ -2565,16 +3048,17 @@ public class AppShellController {
         startCol.setCellValueFactory(cell -> new ReadOnlyStringWrapper(cell.getValue().startTime()));
         TableColumn<ActiveRecordingInfo, Number> countCol = new TableColumn<>();
         countCol.textProperty().bind(i18n.text("recordingInfo.column.eventCount"));
-        countCol.setPrefWidth(80);
+        countCol.setPrefWidth(120);
         countCol.setCellValueFactory(cell -> new javafx.beans.property.SimpleLongProperty(cell.getValue().eventCount()));
+        useFormattedIntegerCells(countCol);
         recordingsTable.getColumns().setAll(List.of(idCol, nameCol, destCol, startCol, countCol));
     }
 
     private void configureSettingsTable() {
-        settingsTable.setPlaceholder(new Label(i18n.get("recordingInfo.settings.empty")));
+        settingsTable.setPlaceholder(localizedTablePlaceholder("recordingInfo.settings.empty"));
         TableColumn<ActiveSetting, String> eventCol = new TableColumn<>();
         eventCol.textProperty().bind(i18n.text("recordingInfo.settings.column.eventId"));
-        eventCol.setPrefWidth(300);
+        eventCol.setPrefWidth(420);
         eventCol.setCellValueFactory(cell -> new ReadOnlyStringWrapper(cell.getValue().eventId()));
         TableColumn<ActiveSetting, String> nameCol = new TableColumn<>();
         nameCol.textProperty().bind(i18n.text("recordingInfo.settings.column.name"));
@@ -2582,20 +3066,20 @@ public class AppShellController {
         nameCol.setCellValueFactory(cell -> new ReadOnlyStringWrapper(cell.getValue().settingName()));
         TableColumn<ActiveSetting, String> valCol = new TableColumn<>();
         valCol.textProperty().bind(i18n.text("recordingInfo.settings.column.value"));
-        valCol.setPrefWidth(300);
+        valCol.setPrefWidth(360);
         valCol.setCellValueFactory(cell -> new ReadOnlyStringWrapper(cell.getValue().settingValue()));
         settingsTable.getColumns().setAll(List.of(eventCol, nameCol, valCol));
     }
 
     private void configureAgentsTable() {
-        agentsTable.setPlaceholder(new Label(i18n.get("agents.empty")));
+        agentsTable.setPlaceholder(localizedTablePlaceholder("agents.empty"));
         TableColumn<AgentInfo, String> nameCol = new TableColumn<>();
         nameCol.textProperty().bind(i18n.text("agents.column.name"));
-        nameCol.setPrefWidth(300);
+        nameCol.setPrefWidth(360);
         nameCol.setCellValueFactory(cell -> new ReadOnlyStringWrapper(cell.getValue().name()));
         TableColumn<AgentInfo, String> optCol = new TableColumn<>();
         optCol.textProperty().bind(i18n.text("agents.column.options"));
-        optCol.setPrefWidth(300);
+        optCol.setPrefWidth(420);
         optCol.setCellValueFactory(cell -> new ReadOnlyStringWrapper(cell.getValue().options()));
         TableColumn<AgentInfo, String> initCol = new TableColumn<>();
         initCol.textProperty().bind(i18n.text("agents.column.initTime"));
@@ -2603,25 +3087,27 @@ public class AppShellController {
         initCol.setCellValueFactory(cell -> new ReadOnlyStringWrapper(cell.getValue().initTime()));
         TableColumn<AgentInfo, String> dynCol = new TableColumn<>();
         dynCol.textProperty().bind(i18n.text("agents.column.dynamic"));
-        dynCol.setPrefWidth(70);
-        dynCol.setCellValueFactory(cell -> new ReadOnlyStringWrapper(String.valueOf(cell.getValue().dynamic())));
+        dynCol.setPrefWidth(90);
+        dynCol.setCellValueFactory(cell -> new ReadOnlyStringWrapper(
+                DisplayFormats.formatBoolean(cell.getValue().dynamic())));
         TableColumn<AgentInfo, String> kindCol = new TableColumn<>();
         kindCol.textProperty().bind(i18n.text("agents.column.kind"));
-        kindCol.setPrefWidth(80);
+        kindCol.setPrefWidth(120);
         kindCol.setCellValueFactory(cell -> new ReadOnlyStringWrapper(cell.getValue().kind()));
         agentsTable.getColumns().setAll(List.of(nameCol, optCol, initCol, dynCol, kindCol));
     }
 
     private void configureConstantPoolsTable() {
-        constantPoolsTable.setPlaceholder(new Label(i18n.get("constantPools.empty")));
+        constantPoolsTable.setPlaceholder(localizedTablePlaceholder("constantPools.empty"));
         TableColumn<ConstantPoolType, String> nameCol = new TableColumn<>();
         nameCol.textProperty().bind(i18n.text("constantPools.column.typeName"));
-        nameCol.setPrefWidth(500);
+        nameCol.setPrefWidth(620);
         nameCol.setCellValueFactory(cell -> new ReadOnlyStringWrapper(cell.getValue().typeName()));
         TableColumn<ConstantPoolType, Number> countCol = new TableColumn<>();
         countCol.textProperty().bind(i18n.text("constantPools.column.entryCount"));
-        countCol.setPrefWidth(100);
+        countCol.setPrefWidth(130);
         countCol.setCellValueFactory(cell -> new javafx.beans.property.SimpleIntegerProperty(cell.getValue().entryCount()));
+        useFormattedIntegerCells(countCol);
         constantPoolsTable.getColumns().setAll(List.of(nameCol, countCol));
     }
 

@@ -19,6 +19,7 @@ import com.youngledo.jmcfx.domain.model.RecordingSummary;
 import com.youngledo.jmcfx.domain.service.EventQueryService;
 import com.youngledo.jmcfx.domain.service.EventQuerySession;
 import com.youngledo.jmcfx.ui.i18n.I18n;
+import com.youngledo.jmcfx.ui.util.FxDispatch;
 
 import javafx.application.Platform;
 import javafx.beans.property.BooleanProperty;
@@ -135,11 +136,13 @@ public class EventBrowserViewModel implements AutoCloseable {
 
     public void loadRecording(RecordingSummary recording) {
         long sequence = requestSequence.incrementAndGet();
-        closeActiveSession();
-        loading.set(true);
-        resetEventState();
-        currentRecording.set(recording);
-        statusMessage.set(i18n.format("events.status.loading", recording.name()));
+        runOnFxThread(() -> {
+            closeActiveSession();
+            loading.set(true);
+            resetEventState();
+            currentRecording.set(recording);
+            statusMessage.set(i18n.format("events.status.loading", recording.name()));
+        });
         executeRequest(sequence, () -> {
             EventQuerySession session = eventQueryService.openSession(recording);
             List<EventTypeNode> loadedTree = session.loadEventTypeTree();
@@ -484,6 +487,14 @@ public class EventBrowserViewModel implements AutoCloseable {
         } catch (RuntimeException exception) {
             runnable.run();
         }
+    }
+
+    private void runOnFxThread(Runnable runnable) {
+        if (backgroundExecutor instanceof DirectEventBrowserExecutor) {
+            runnable.run();
+            return;
+        }
+        FxDispatch.run(runnable);
     }
 
 }

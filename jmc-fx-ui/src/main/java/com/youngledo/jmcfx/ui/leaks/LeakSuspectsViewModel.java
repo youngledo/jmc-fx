@@ -6,6 +6,7 @@ import com.youngledo.jmcfx.domain.model.LeakCandidate;
 import com.youngledo.jmcfx.domain.model.LeakReferenceNode;
 import com.youngledo.jmcfx.domain.model.RecordingSummary;
 import com.youngledo.jmcfx.domain.service.LeakSuspectsService;
+import com.youngledo.jmcfx.ui.util.FxDispatch;
 
 import javafx.beans.property.ObjectProperty;
 import javafx.beans.property.SimpleObjectProperty;
@@ -40,9 +41,11 @@ public class LeakSuspectsViewModel {
     public void load(RecordingSummary recording) {
         currentRecording = recording;
         List<LeakCandidate> data = leakSuspectsService.loadLeakCandidates(recording);
-        candidates.setAll(data);
-        selectedCandidate.set(null);
-        referenceTree.set(LeakReferenceNode.EMPTY);
+        FxDispatch.run(() -> {
+            candidates.setAll(data);
+            selectedCandidate.set(null);
+            referenceTree.set(LeakReferenceNode.EMPTY);
+        });
     }
 
     public void selectCandidate(int index) {
@@ -50,6 +53,6 @@ public class LeakSuspectsViewModel {
             return;
         }
         LeakReferenceNode tree = leakSuspectsService.loadLeakReferenceTree(currentRecording, index);
-        referenceTree.set(tree);
+        FxDispatch.run(() -> referenceTree.set(tree));
     }
 }

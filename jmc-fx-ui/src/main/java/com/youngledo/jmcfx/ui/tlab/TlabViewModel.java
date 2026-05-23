@@ -6,6 +6,7 @@ import com.youngledo.jmcfx.domain.model.ChartDefinition;
 import com.youngledo.jmcfx.domain.model.RecordingSummary;
 import com.youngledo.jmcfx.domain.model.TlabAllocation;
 import com.youngledo.jmcfx.domain.service.TlabService;
+import com.youngledo.jmcfx.ui.util.FxDispatch;
 
 import javafx.beans.property.ObjectProperty;
 import javafx.beans.property.SimpleObjectProperty;
@@ -37,8 +38,11 @@ public class TlabViewModel {
 
     public void load(RecordingSummary recording) {
         List<TlabAllocation> data = tlabService.loadTlabAllocations(recording);
-        allocations.setAll(data);
-        timeline.set(tlabService.loadTlabAllocationTimeline(recording));
-        selectedAllocation.set(null);
+        ChartDefinition chart = tlabService.loadTlabAllocationTimeline(recording);
+        FxDispatch.run(() -> {
+            allocations.setAll(data);
+            timeline.set(chart);
+            selectedAllocation.set(null);
+        });
     }
 }

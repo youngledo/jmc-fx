@@ -9,6 +9,7 @@ import com.youngledo.jmcfx.domain.model.KeyValueEntry;
 import com.youngledo.jmcfx.domain.model.KeyValueSection;
 import com.youngledo.jmcfx.domain.model.RecordingSummary;
 import com.youngledo.jmcfx.domain.service.JvmInternalsService;
+import com.youngledo.jmcfx.ui.util.DisplayFormats;
 
 import javafx.application.Platform;
 import javafx.collections.FXCollections;
@@ -38,7 +39,7 @@ public class JvmInfoViewModel {
                             new KeyValueEntry("JVM Name", info.jvmName()),
                             new KeyValueEntry("JVM Version", info.jvmVersion()),
                             new KeyValueEntry("JVM Arguments", info.jvmArguments()),
-                            new KeyValueEntry("PID", String.valueOf(info.pid())))));
+                            new KeyValueEntry("PID", DisplayFormats.formatInteger(info.pid())))));
             Platform.runLater(() -> {
                 infoSections.setAll(sections);
                 flags.setAll(flagList);

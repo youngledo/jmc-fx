@@ -1,5 +1,7 @@
 package com.youngledo.jmcfx.adapter.jmc;
 
+import java.nio.charset.StandardCharsets;
+import java.nio.file.Files;
 import java.nio.file.Path;
 import java.time.Instant;
 import java.util.List;
@@ -57,6 +59,24 @@ class JmcJvmInternalsServiceTest {
         RecordingSummary recording = createMinimalRecording(tempDir);
         GcHeapConfiguration config = service.loadGcHeapConfiguration(recording);
         assertNotNull(config);
+    }
+
+    @Test
+    void byteSizedJvmInternalsFieldsAreReadAsBytes() throws Exception {
+        String source = Files.readString(
+                Path.of("src/main/java/com/youngledo/jmcfx/adapter/jmc/JmcJvmInternalsService.java"),
+                StandardCharsets.UTF_8);
+
+        assertTrue(source.contains("readLongBytes(JdkAttributes.HEAP_MIN_SIZE, first)"));
+        assertTrue(source.contains("readLongBytes(JdkAttributes.HEAP_MAX_SIZE, first)"));
+        assertTrue(source.contains("readLongBytes(JdkAttributes.HEAP_INITIAL_SIZE, first)"));
+        assertTrue(source.contains("readLongBytes(JdkAttributes.HEAP_OBJECT_ALIGNMENT, first)"));
+        assertTrue(source.contains("readLong(JdkAttributes.HEAP_ADDRESS_SIZE, first)"));
+        assertFalse(source.contains("readLongBytes(JdkAttributes.HEAP_ADDRESS_SIZE, first)"));
+        assertTrue(source.contains("readLongBytes(JdkAttributes.COMPILER_CODE_SIZE, item)"));
+        assertTrue(source.contains("readLongBytes(JdkAttributes.COMPILER_INLINED_SIZE, item)"));
+        assertTrue(source.contains("readLongBytes(JdkAttributes.ANONYMOUS_CHUNK_SIZE, item)"));
+        assertTrue(source.contains("readLongBytes(JdkAttributes.ANONYMOUS_BLOCK_SIZE, item)"));
     }
 
     @Test

@@ -5,6 +5,7 @@ import java.util.List;
 import com.youngledo.jmcfx.domain.model.RecordingSummary;
 import com.youngledo.jmcfx.domain.model.X509CertificateEntry;
 import com.youngledo.jmcfx.domain.service.JavaAppService;
+import com.youngledo.jmcfx.ui.util.FxDispatch;
 
 import javafx.beans.property.ObjectProperty;
 import javafx.beans.property.SimpleObjectProperty;
@@ -37,7 +38,9 @@ public class SecurityViewModel {
     /// @param recording the flight recording to analyze
     public void load(RecordingSummary recording) {
         List<X509CertificateEntry> entries = javaAppService.loadCertificates(recording);
-        certificates.setAll(entries);
-        selectedCertificate.set(null);
+        FxDispatch.run(() -> {
+            certificates.setAll(entries);
+            selectedCertificate.set(null);
+        });
     }
 }

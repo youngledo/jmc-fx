@@ -146,10 +146,10 @@ public class JmcJvmInternalsService implements JvmInternalsService {
             return new GcHeapConfiguration(0, 0, 0, 0, 0, false, "");
         }
         return new GcHeapConfiguration(
-                readLong(JdkAttributes.HEAP_MIN_SIZE, first),
-                readLong(JdkAttributes.HEAP_MAX_SIZE, first),
-                readLong(JdkAttributes.HEAP_INITIAL_SIZE, first),
-                readLong(JdkAttributes.HEAP_OBJECT_ALIGNMENT, first),
+                readLongBytes(JdkAttributes.HEAP_MIN_SIZE, first),
+                readLongBytes(JdkAttributes.HEAP_MAX_SIZE, first),
+                readLongBytes(JdkAttributes.HEAP_INITIAL_SIZE, first),
+                readLongBytes(JdkAttributes.HEAP_OBJECT_ALIGNMENT, first),
                 readLong(JdkAttributes.HEAP_ADDRESS_SIZE, first),
                 readBoolean(JdkAttributes.HEAP_USE_COMPRESSED_OOPS, first),
                 readString(JdkAttributes.HEAP_COMPRESSED_OOPS_MODE, first));
@@ -287,8 +287,8 @@ public class JmcJvmInternalsService implements JvmInternalsService {
                             readString(JdkAttributes.COMPILER_METHOD_STRING, item),
                             readBoolean(JdkAttributes.COMPILER_COMPILATION_SUCCEEDED, item),
                             readDurationMicros(item),
-                            readLong(JdkAttributes.COMPILER_CODE_SIZE, item),
-                            readLong(JdkAttributes.COMPILER_INLINED_SIZE, item),
+                            readLongBytes(JdkAttributes.COMPILER_CODE_SIZE, item),
+                            readLongBytes(JdkAttributes.COMPILER_INLINED_SIZE, item),
                             readInstant(JfrAttributes.START_TIME, item)));
                 });
         return List.copyOf(result);
@@ -469,8 +469,8 @@ public class JmcJvmInternalsService implements JvmInternalsService {
                             readString(JdkAttributes.CLASSLOADER, item),
                             readString(JdkAttributes.PARENT_CLASSLOADER, item),
                             readLong(JdkAttributes.CLASSLOADER_LOADED_COUNT, item),
-                            readLong(JdkAttributes.ANONYMOUS_CHUNK_SIZE, item),
-                            readLong(JdkAttributes.ANONYMOUS_BLOCK_SIZE, item),
+                            readLongBytes(JdkAttributes.ANONYMOUS_CHUNK_SIZE, item),
+                            readLongBytes(JdkAttributes.ANONYMOUS_BLOCK_SIZE, item),
                             readLong(JdkAttributes.ANONYMOUS_CLASS_COUNT, item)));
                 });
         return List.copyOf(result);
@@ -541,12 +541,8 @@ public class JmcJvmInternalsService implements JvmInternalsService {
     // --- Internal helpers ---
 
     private IItemCollection loadEvents(RecordingSummary recording) {
-        try {
-            return JfrLoaderToolkit.loadEvents(recording.path().toFile());
-        } catch (IOException | CouldNotLoadRecordingException e) {
-            throw new JmcFxException("Unable to load recording for JVM internals: " + recording.path(), e);
-        }
-    }
+		return JmcRecordingDataCache.SHARED.events(recording);
+	}
 
     private IItem firstItem(IItemCollection events) {
         return events.stream()

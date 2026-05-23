@@ -5,6 +5,7 @@ import java.util.List;
 import com.youngledo.jmcfx.domain.model.NativeLibraryEntry;
 import com.youngledo.jmcfx.domain.model.RecordingSummary;
 import com.youngledo.jmcfx.domain.service.JavaAppService;
+import com.youngledo.jmcfx.ui.util.FxDispatch;
 
 import javafx.beans.property.ObjectProperty;
 import javafx.beans.property.SimpleObjectProperty;
@@ -37,7 +38,9 @@ public class NativeLibraryViewModel {
     /// @param recording the flight recording to analyze
     public void load(RecordingSummary recording) {
         List<NativeLibraryEntry> entries = javaAppService.loadNativeLibraries(recording);
-        libraries.setAll(entries);
-        selectedLibrary.set(null);
+        FxDispatch.run(() -> {
+            libraries.setAll(entries);
+            selectedLibrary.set(null);
+        });
     }
 }

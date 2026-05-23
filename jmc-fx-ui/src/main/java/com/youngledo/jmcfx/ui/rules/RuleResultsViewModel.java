@@ -7,6 +7,7 @@ import com.youngledo.jmcfx.domain.model.RecordingSummary;
 import com.youngledo.jmcfx.domain.model.RuleResult;
 import com.youngledo.jmcfx.domain.model.Severity;
 import com.youngledo.jmcfx.domain.service.RuleAnalysisService;
+import com.youngledo.jmcfx.ui.util.FxDispatch;
 
 import javafx.beans.property.ObjectProperty;
 import javafx.beans.property.SimpleObjectProperty;
@@ -44,9 +45,11 @@ public class RuleResultsViewModel {
 
     public void analyze(RecordingSummary recording) {
         List<RuleResult> analyzed = ruleAnalysisService.analyze(recording);
-        allResults.setAll(analyzed);
-        updateFilter();
-        selectedResult.set(results.isEmpty() ? null : results.getFirst());
+        FxDispatch.run(() -> {
+            allResults.setAll(analyzed);
+            updateFilter();
+            selectedResult.set(results.isEmpty() ? null : results.getFirst());
+        });
     }
 
     private void updateFilter() {

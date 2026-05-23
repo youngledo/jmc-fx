@@ -64,8 +64,10 @@ Rules:
 - Use `PrimerLight` as the default theme.
 - Prepare for `PrimerDark`, but do not make dark mode block v1.
 - Add application CSS after AtlantaFX.
+- Follow the project UI guidelines in `docs/ui-guidelines.md` for every UI change.
 - Prefer AtlantaFX style classes before custom CSS.
 - Do not fork or edit AtlantaFX source CSS.
+- Do not override AtlantaFX standard control states unless a maintainer approves a project-wide rule.
 - Use dense `TableView` layouts for large technical datasets.
 - Prefer context menus and detail panels over many inline row buttons.
 

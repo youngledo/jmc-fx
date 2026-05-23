@@ -148,12 +148,8 @@ public class JmcTlabService implements TlabService {
     }
 
     private IItemCollection loadEvents(RecordingSummary recording) {
-        try {
-            return JfrLoaderToolkit.loadEvents(recording.path().toFile());
-        } catch (IOException | CouldNotLoadRecordingException e) {
-            throw new JmcFxException("Unable to load recording for TLAB analysis: " + recording.path(), e);
-        }
-    }
+		return JmcRecordingDataCache.SHARED.events(recording);
+	}
 
     private static final class TlabAccumulator {
         final String threadName;

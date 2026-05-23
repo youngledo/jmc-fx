@@ -9,8 +9,10 @@ import java.io.InputStream;
 import java.nio.file.Path;
 import java.time.Instant;
 import java.time.ZoneId;
+import java.util.ArrayDeque;
 import java.util.List;
 import java.util.Map;
+import java.util.Queue;
 import java.util.concurrent.atomic.AtomicInteger;
 
 import javax.xml.parsers.DocumentBuilderFactory;
@@ -24,6 +26,7 @@ import org.xml.sax.SAXException;
 import com.youngledo.jmcfx.ui.util.DisplayFormats;
 import com.youngledo.jmcfx.domain.model.EventTypeSelection;
 import com.youngledo.jmcfx.domain.model.RecordingSummary;
+import com.youngledo.jmcfx.domain.service.RuleAnalysisService;
 import com.youngledo.jmcfx.ui.events.EventBrowserViewModel;
 import com.youngledo.jmcfx.ui.i18n.I18n;
 import com.youngledo.jmcfx.ui.i18n.LanguageMode;
@@ -109,7 +112,12 @@ class AppShellTest {
 
         assertEquals("analysisPane", elementByFxId(document, "analysisPane").getAttribute("fx:id"));
         assertEquals("homeOpenRecordingButton", elementByFxId(document, "homeOpenRecordingButton").getAttribute("fx:id"));
+        assertFalse(elementByFxId(document, "homeOpenRecordingButton").hasAttribute("styleClass"),
+                "Home action buttons should keep JavaFX's default button style class; add local hooks in controller");
+        assertFalse(elementByFxId(document, "homeConnectJvmButton").hasAttribute("styleClass"),
+                "Home action buttons should keep JavaFX's default button style class; add local hooks in controller");
         assertEquals("taskSummaryLabel", elementByFxId(document, "taskSummaryLabel").getAttribute("fx:id"));
+        assertEquals("tlabTimelineContainer", elementByFxId(document, "tlabTimelineContainer").getAttribute("fx:id"));
     }
 
     @Test
@@ -151,6 +159,63 @@ class AppShellTest {
     }
 
     @Test
+    void toolbarPrimaryDoesNotOverrideThemeButtonColors() throws Exception {
+        String css = appCss();
+        String toolbarPrimary = cssBlock(css, ".toolbar-primary");
+
+        assertFalse(toolbarPrimary.contains("-color-button-bg:"));
+        assertFalse(toolbarPrimary.contains("-color-button-bg-hover:"));
+        assertFalse(toolbarPrimary.contains("-color-button-bg-focused:"));
+        assertFalse(toolbarPrimary.contains("-color-button-bg-pressed:"));
+        assertFalse(toolbarPrimary.contains("-color-button-border:"));
+        assertFalse(toolbarPrimary.contains("-color-button-border-hover:"));
+        assertFalse(toolbarPrimary.contains("-color-button-border-focused:"));
+        assertFalse(toolbarPrimary.contains("-color-button-border-pressed:"));
+        assertFalse(css.contains(".toolbar-primary:disabled"));
+        assertFalse(toolbarPrimary.contains("-fx-opacity: 1.0"));
+    }
+
+    @Test
+    void appSpecificButtonHooksDoNotOverrideAtlantaFxButtonStateTokens() throws Exception {
+        String css = appCss();
+
+        for (String selector : List.of(".toolbar-primary", ".toolbar-secondary", ".sidebar-search")) {
+            String block = cssBlock(css, selector);
+            assertFalse(block.contains("-color-button-"),
+                    selector + " must not override AtlantaFX button state color tokens");
+        }
+    }
+
+    @Test
+    void homeHeroUsesDefaultBackgroundSoAtlantaFxButtonPressRemainsVisible() throws Exception {
+        String css = appCss();
+        String homeHero = cssBlock(css, ".home-hero");
+
+        assertTrue(homeHero.contains("-fx-background-color: -color-bg-default"),
+                "AtlantaFX buttons press to -color-bg-subtle, so the hero must not use the same fill");
+        assertFalse(css.contains(".home-actions .button {"),
+                "home action buttons should use AtlantaFX button styles instead of local pressed-state overrides");
+    }
+
+    @Test
+    void navSelectionDoesNotChangeTextWeightAndCauseLayoutJitter() throws Exception {
+        String css = appCss();
+        String selectedNavTitle = cssBlock(css, ".app-nav-tree-cell:selected > .nav-cell-container > .nav-title");
+
+        assertFalse(selectedNavTitle.contains("-fx-font-weight:"),
+                "selected navigation items should not change text weight because it relayouts TreeCells on click");
+    }
+
+    @Test
+    void openRecordingDialogIsDeferredUntilButtonActionCompletes() throws Exception {
+        String source = java.nio.file.Files.readString(
+                java.nio.file.Path.of("src/main/java/com/youngledo/jmcfx/ui/shell/AppShellController.java"));
+
+        assertTrue(source.contains("Platform.runLater(this::showOpenRecordingChooser)"),
+                "native file chooser should open after the button action finishes so pressed styling can clear");
+    }
+
+    @Test
     void eventTimeFormatterDoesNotShowZoneSuffix() {
         assertEquals("1970-01-01 08:00:00.000",
                 AppShellController.formatEventTimeForDisplay(Instant.EPOCH, ZoneId.of("Asia/Shanghai")));
@@ -168,6 +233,14 @@ class AppShellTest {
     }
 
     @Test
+    void integerFormatterUsesThousandsSeparator() {
+        assertEquals("0", DisplayFormats.formatInteger(0));
+        assertEquals("999", DisplayFormats.formatInteger(999));
+        assertEquals("1,000", DisplayFormats.formatInteger(1000));
+        assertEquals("1,234,567,890", DisplayFormats.formatInteger(1_234_567_890L));
+    }
+
+    @Test
     void durationFormatterShowsHumanReadableDurations() {
         assertEquals("0 ms", DisplayFormats.formatDuration(0));
         assertEquals("500 ms", DisplayFormats.formatDuration(500));
@@ -178,6 +251,33 @@ class AppShellTest {
         assertEquals("2 min 5 s", DisplayFormats.formatDuration(125000));
         assertEquals("1 h", DisplayFormats.formatDuration(3600000));
         assertEquals("1 h 30 min", DisplayFormats.formatDuration(5400000));
+    }
+
+    @Test
+    void microDurationFormatterShowsHumanReadableDurations() {
+        assertEquals("0 us", DisplayFormats.formatMicros(0));
+        assertEquals("500 us", DisplayFormats.formatMicros(500));
+        assertEquals("1.5 ms", DisplayFormats.formatMicros(1_500));
+        assertEquals("1.0 s", DisplayFormats.formatMicros(1_000_000));
+    }
+
+    @Test
+    void percentFormatterShowsOneDecimalPlace() {
+        assertEquals("0.0%", DisplayFormats.formatPercent(0));
+        assertEquals("12.3%", DisplayFormats.formatPercent(12.34));
+    }
+
+    @Test
+    void booleanFormatterUsesYesNoText() {
+        assertEquals("Yes", DisplayFormats.formatBoolean(true));
+        assertEquals("No", DisplayFormats.formatBoolean(false));
+    }
+
+    @Test
+    void timestampFormatterUsesApplicationTimeFormat() {
+        assertEquals("1970-01-01 08:00:00.000",
+                DisplayFormats.formatTimestamp(Instant.EPOCH, ZoneId.of("Asia/Shanghai")));
+        assertEquals("", DisplayFormats.formatTimestamp(null, ZoneId.of("Asia/Shanghai")));
     }
 
     @Test
@@ -253,6 +353,45 @@ class AppShellTest {
     }
 
     @Test
+    void tablePlaceholdersUseLocalizedBindings() throws Exception {
+        String source = java.nio.file.Files.readString(
+                java.nio.file.Path.of("src/main/java/com/youngledo/jmcfx/ui/shell/AppShellController.java"));
+
+        assertTrue(source.contains("localizedTablePlaceholder("));
+        assertFalse(source.contains("setPlaceholder(new Label(i18n.get("),
+                "table placeholders should update when the UI language changes");
+    }
+
+    @Test
+    void jvmInternalsTablesUseSharedDisplayFormats() throws Exception {
+        String source = java.nio.file.Files.readString(
+                java.nio.file.Path.of("src/main/java/com/youngledo/jmcfx/ui/shell/AppShellController.java"));
+        String jvmTables = source.substring(source.indexOf("private void configureGcSummaryTable()"),
+                source.indexOf("// --- JVM Internals: bind methods ---"));
+
+        assertFalse(jvmTables.contains("String.valueOf(data.getValue().durationMicros())"));
+        assertFalse(jvmTables.contains("String.valueOf(data.getValue().totalDurationMicros())"));
+        assertFalse(jvmTables.contains("String.valueOf(data.getValue().heapUsed())"));
+        assertFalse(jvmTables.contains("String.valueOf(data.getValue().loadedCount())"));
+        assertTrue(jvmTables.contains("DisplayFormats.formatMicros("));
+        assertTrue(jvmTables.contains("DisplayFormats.formatFileSize("));
+        assertTrue(jvmTables.contains("DisplayFormats.formatInteger("));
+        assertTrue(jvmTables.contains("DisplayFormats.formatTimestamp("));
+    }
+
+    @Test
+    void jvmInternalsTablesBindColumnTitlesToI18n() throws Exception {
+        String source = java.nio.file.Files.readString(
+                java.nio.file.Path.of("src/main/java/com/youngledo/jmcfx/ui/shell/AppShellController.java"));
+        String jvmTables = source.substring(source.indexOf("private void configureJvmFlagsTable()"),
+                source.indexOf("// --- JVM Internals: bind methods ---"));
+
+        assertFalse(jvmTables.contains("new TableColumn<>(\""),
+                "JVM Internals column titles should be localized through i18n bindings");
+        assertTrue(jvmTables.contains("localizedColumn("));
+    }
+
+    @Test
     void eventDetailFallbackTextComesFromI18n() {
         I18n i18n = new I18n(java.util.Locale.ENGLISH);
 
@@ -282,6 +421,101 @@ class AppShellTest {
         assertEquals("跟随系统", AppShellController.languageModeDisplayName(i18n, LanguageMode.SYSTEM));
     }
 
+    @Test
+    void openingRecordingStatusUsesSelectedFileName() {
+        I18n i18n = new I18n(java.util.Locale.ENGLISH);
+
+        assertEquals("Opening recording: sample.jfr",
+                AppShellController.openingRecordingStatus(i18n, Path.of("/tmp/sample.jfr")));
+    }
+
+    @Test
+    void openRecordingButtonIsDisabledOnlyWhileOpening() {
+        assertTrue(AppShellController.shouldDisableOpenRecordingButton(true));
+        assertFalse(AppShellController.shouldDisableOpenRecordingButton(false));
+    }
+
+    @Test
+    void preparingRecordingWorkspaceDoesNotPreloadAnalysisPages() {
+        AppShellController controller = new AppShellController(
+                new AppShellViewModel(),
+                new FakeRecordingRepository(),
+                new FakeEventQueryService(),
+                throwingRuleAnalysisService(),
+                null, null, null,
+                null, null, null,
+                null, null, null,
+                null, null, null,
+                new I18n(java.util.Locale.ENGLISH));
+
+        controller.prepareRecordingWorkspace(Path.of("startup.jfr"));
+    }
+
+    @Test
+    void sectionLoadingIsQueuedOnRecordingExecutor() {
+        QueueingRecordingOpenExecutor executor = new QueueingRecordingOpenExecutor();
+        AtomicInteger analysisCalls = new AtomicInteger();
+        AppShellController controller = new AppShellController(
+                new AppShellViewModel(),
+                new FakeRecordingRepository(),
+                new FakeEventQueryService(),
+                recording -> {
+                    analysisCalls.incrementAndGet();
+                    return List.of();
+                },
+                null, null, null,
+                null, null, null,
+                null, null, null,
+                null, null, null,
+                new I18n(java.util.Locale.ENGLISH),
+                executor);
+        AppShellController.PreparedRecordingWorkspace prepared = controller.prepareRecordingWorkspace(Path.of("startup.jfr"));
+        RecordingWorkspace workspace = new RecordingWorkspace(prepared.recording(), prepared.overview(), prepared.events(),
+                prepared.analysis(), prepared.profiling(), prepared.exceptions(), prepared.threads(), prepared.fileio(),
+                prepared.socketio(), prepared.locks(), prepared.heap(), prepared.leakSuspects(), prepared.tlab(),
+                prepared.jvmInfo(), prepared.gcConfig(), prepared.gcSummary(), prepared.gcDetails(),
+                prepared.compilations(), prepared.codeCache(), prepared.classLoading(), prepared.vmOperations(),
+                prepared.environment(), prepared.javaAppOverview(), prepared.security(), prepared.nativeLibraries(),
+                prepared.threadDumps());
+
+        controller.loadWorkspaceSection(workspace, "analysis");
+
+        assertEquals(1, executor.queuedTaskCount());
+        assertEquals(0, analysisCalls.get());
+
+        executor.runNext();
+
+        assertEquals(1, analysisCalls.get());
+    }
+
+    @Test
+    void openingRecordingDoesNotPreloadHeavySections() {
+        QueueingRecordingOpenExecutor executor = new QueueingRecordingOpenExecutor();
+        AppShellController controller = new AppShellController(
+                new AppShellViewModel(),
+                new FakeRecordingRepository(),
+                new FakeEventQueryService(),
+                throwingRuleAnalysisService(),
+                null, null, null,
+                null, null, null,
+                null, null, null,
+                null, null, null,
+                new I18n(java.util.Locale.ENGLISH),
+                executor);
+        AppShellController.PreparedRecordingWorkspace prepared = controller.prepareRecordingWorkspace(Path.of("startup.jfr"));
+        RecordingWorkspace workspace = new RecordingWorkspace(prepared.recording(), prepared.overview(), prepared.events(),
+                prepared.analysis(), prepared.profiling(), prepared.exceptions(), prepared.threads(), prepared.fileio(),
+                prepared.socketio(), prepared.locks(), prepared.heap(), prepared.leakSuspects(), prepared.tlab(),
+                prepared.jvmInfo(), prepared.gcConfig(), prepared.gcSummary(), prepared.gcDetails(),
+                prepared.compilations(), prepared.codeCache(), prepared.classLoading(), prepared.vmOperations(),
+                prepared.environment(), prepared.javaAppOverview(), prepared.security(), prepared.nativeLibraries(),
+                prepared.threadDumps());
+
+        controller.preloadRecordingWorkspace(workspace);
+
+        assertEquals(0, executor.queuedTaskCount());
+    }
+
     private static Document appShellFxml() throws ParserConfigurationException, SAXException, IOException {
         return fxml("app-shell.fxml");
     }
@@ -289,6 +523,29 @@ class AppShellTest {
     private static RecordingSummary recording(String id, String fileName) {
         return new RecordingSummary(id, Path.of(fileName), fileName,
                 Instant.EPOCH, Instant.EPOCH.plusSeconds(1), 1000, 128);
+    }
+
+    private static RuleAnalysisService throwingRuleAnalysisService() {
+        return recording -> {
+            throw new AssertionError("Opening a recording must not run page analysis eagerly.");
+        };
+    }
+
+    private static final class QueueingRecordingOpenExecutor implements RecordingOpenExecutor {
+        private final Queue<Runnable> tasks = new ArrayDeque<>();
+
+        @Override
+        public void execute(Runnable runnable) {
+            tasks.add(runnable);
+        }
+
+        int queuedTaskCount() {
+            return tasks.size();
+        }
+
+        void runNext() {
+            tasks.remove().run();
+        }
     }
 
     private static Document fxml(String name) throws ParserConfigurationException, SAXException, IOException {
@@ -311,6 +568,14 @@ class AppShellTest {
         try (InputStream stream = AppShellController.class.getResourceAsStream("/css/app.css")) {
             return new String(stream.readAllBytes(), java.nio.charset.StandardCharsets.UTF_8);
         }
+    }
+
+    private static String cssBlock(String css, String selector) {
+        int start = css.indexOf(selector + " {");
+        assertTrue(start >= 0, selector + " rule must exist");
+        int end = css.indexOf('}', start);
+        assertTrue(end > start, selector + " rule must be closed");
+        return css.substring(start, end + 1);
     }
 
     private static Element elementByFxId(Document document, String fxId) {

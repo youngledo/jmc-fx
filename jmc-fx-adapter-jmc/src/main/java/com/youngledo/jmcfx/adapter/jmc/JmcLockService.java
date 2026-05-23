@@ -161,11 +161,7 @@ public class JmcLockService implements LockService {
 	}
 
 	private IItemCollection loadEvents(RecordingSummary recording) {
-		try {
-			return JfrLoaderToolkit.loadEvents(recording.path().toFile());
-		} catch (IOException | CouldNotLoadRecordingException e) {
-			throw new JmcFxException("Unable to load recording for lock analysis: " + recording.path(), e);
-		}
+		return JmcRecordingDataCache.SHARED.events(recording);
 	}
 
 	private static final class LockAccumulator {

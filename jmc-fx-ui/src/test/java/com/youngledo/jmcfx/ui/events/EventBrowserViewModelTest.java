@@ -12,6 +12,9 @@ import java.time.Instant;
 import java.util.ArrayDeque;
 import java.util.List;
 import java.util.Map;
+import java.util.concurrent.CountDownLatch;
+import java.util.concurrent.TimeUnit;
+import java.util.concurrent.atomic.AtomicReference;
 
 import org.junit.jupiter.api.Test;
 
@@ -35,6 +38,8 @@ import com.youngledo.jmcfx.domain.model.RecordingSummary;
 import com.youngledo.jmcfx.domain.service.EventQueryService;
 import com.youngledo.jmcfx.domain.service.EventQuerySession;
 import com.youngledo.jmcfx.testsupport.FakeEventQueryService;
+
+import javafx.application.Platform;
 
 class EventBrowserViewModelTest {
 
@@ -332,9 +337,9 @@ class EventBrowserViewModelTest {
         EventBrowserViewModel viewModel = new EventBrowserViewModel(service, executor);
 
         viewModel.loadRecording(recording());
-        executor.runLast();
+        runAndDrainFxEvents(executor::runLast);
         viewModel.selectAllEventTypes();
-        executor.runLast();
+        runAndDrainFxEvents(executor::runLast);
         assertFalse(viewModel.rowsProperty().isEmpty());
         assertNotNull(viewModel.selectedDetailsProperty().get());
         service.failWindows = true;
@@ -350,13 +355,43 @@ class EventBrowserViewModelTest {
         assertNull(viewModel.selectedDetailsProperty().get());
         assertEquals(1, executor.pendingCount());
 
-        executor.runLast();
+        runAndDrainFxEvents(executor::runLast);
 
         assertFalse(viewModel.loadingProperty().get());
         assertFalse(viewModel.errorProperty().get());
         assertTrue(viewModel.rowsProperty().isEmpty());
         assertNull(viewModel.selectedDetailsProperty().get());
         assertEquals("Operating System new", viewModel.eventTypeTreeProperty().getFirst().label());
+    }
+
+    @Test
+    void loadingRecordingFromBackgroundThreadUpdatesInitialStateOnFxThread() throws Exception {
+        ensureFxToolkit();
+        RecordingEventQueryService service = new RecordingEventQueryService();
+        ControllableEventBrowserExecutor executor = new ControllableEventBrowserExecutor();
+        EventBrowserViewModel viewModel = new EventBrowserViewModel(service, executor);
+        CountDownLatch statusChanged = new CountDownLatch(1);
+        AtomicReference<Thread> fxThread = new AtomicReference<>();
+        AtomicReference<Thread> listenerThread = new AtomicReference<>();
+        CountDownLatch fxThreadCaptured = new CountDownLatch(1);
+        Platform.runLater(() -> {
+            fxThread.set(Thread.currentThread());
+            fxThreadCaptured.countDown();
+        });
+        assertTrue(fxThreadCaptured.await(5, TimeUnit.SECONDS));
+        viewModel.statusMessageProperty().addListener((obs, old, val) -> {
+            if (val.contains("Loading")) {
+                listenerThread.set(Thread.currentThread());
+                statusChanged.countDown();
+            }
+        });
+
+        Thread backgroundThread = new Thread(() -> viewModel.loadRecording(recording()));
+        backgroundThread.start();
+        backgroundThread.join();
+
+        assertTrue(statusChanged.await(5, TimeUnit.SECONDS));
+        assertEquals(fxThread.get(), listenerThread.get());
     }
 
     @Test
@@ -369,14 +404,14 @@ class EventBrowserViewModelTest {
         viewModel.loadRecording(new RecordingSummary("new", Path.of("new.jfr"), "new.jfr",
                 Instant.EPOCH, Instant.EPOCH.plusSeconds(2), 2000, 256));
 
-        executor.runLast();
+        runAndDrainFxEvents(executor::runLast);
         assertEquals("new", viewModel.currentRecordingProperty().get().id());
         assertEquals("", viewModel.selectedEventTypeIdProperty().get());
         assertEquals("Operating System new", viewModel.eventTypeTreeProperty().getFirst().label());
         assertTrue(viewModel.rowsProperty().isEmpty());
         assertNull(viewModel.selectedDetailsProperty().get());
 
-        executor.runFirst();
+        runAndDrainFxEvents(executor::runFirst);
         assertEquals("new", viewModel.currentRecordingProperty().get().id());
         assertEquals("", viewModel.selectedEventTypeIdProperty().get());
         assertEquals("Operating System new", viewModel.eventTypeTreeProperty().getFirst().label());
@@ -412,6 +447,34 @@ class EventBrowserViewModelTest {
     private RecordingSummary recording() {
         return new RecordingSummary("rec", Path.of("rec.jfr"), "rec.jfr",
                 Instant.EPOCH, Instant.EPOCH.plusSeconds(1), 1000, 128);
+    }
+
+    private static void runAndDrainFxEvents(Runnable runnable) {
+        runnable.run();
+        CountDownLatch latch = new CountDownLatch(1);
+        try {
+            Platform.runLater(latch::countDown);
+            if (!latch.await(5, TimeUnit.SECONDS)) {
+                throw new AssertionError("Timed out waiting for JavaFX events");
+            }
+        } catch (IllegalStateException exception) {
+            latch.countDown();
+        } catch (InterruptedException exception) {
+            Thread.currentThread().interrupt();
+            throw new AssertionError("Interrupted waiting for JavaFX events", exception);
+        }
+    }
+
+    private static void ensureFxToolkit() throws InterruptedException {
+        CountDownLatch started = new CountDownLatch(1);
+        try {
+            Platform.startup(started::countDown);
+        } catch (IllegalStateException exception) {
+            started.countDown();
+        }
+        if (!started.await(5, TimeUnit.SECONDS)) {
+            throw new AssertionError("Timed out starting JavaFX toolkit");
+        }
     }
 
     private static final class ControllableEventBrowserExecutor implements EventBrowserBackgroundExecutor {

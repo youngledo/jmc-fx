@@ -8,6 +8,7 @@ import com.youngledo.jmcfx.domain.model.SocketIOEvent;
 import com.youngledo.jmcfx.domain.model.SocketIOGrouping;
 import com.youngledo.jmcfx.domain.model.SocketIOHistogram;
 import com.youngledo.jmcfx.domain.service.SocketIOService;
+import com.youngledo.jmcfx.ui.util.FxDispatch;
 
 import javafx.beans.property.ObjectProperty;
 import javafx.beans.property.SimpleObjectProperty;
@@ -49,9 +50,15 @@ public class SocketIOViewModel {
 
     public void load(RecordingSummary recording) {
         currentRecording = recording;
-        reloadHistogram();
-        reloadEvents();
-        timeline.set(socketIOService.loadTimeline(recording));
+        List<SocketIOHistogram> histogramData =
+                socketIOService.loadSocketIOHistogram(currentRecording, grouping.get());
+        List<SocketIOEvent> eventData = socketIOService.loadSocketIOEvents(currentRecording);
+        ChartDefinition chart = socketIOService.loadTimeline(recording);
+        FxDispatch.run(() -> {
+            histogram.setAll(histogramData);
+            events.setAll(eventData);
+            timeline.set(chart);
+        });
     }
 
     public void setGrouping(SocketIOGrouping newGrouping) {
@@ -64,11 +71,11 @@ public class SocketIOViewModel {
     private void reloadHistogram() {
         List<SocketIOHistogram> data =
                 socketIOService.loadSocketIOHistogram(currentRecording, grouping.get());
-        histogram.setAll(data);
+        FxDispatch.run(() -> histogram.setAll(data));
     }
 
     private void reloadEvents() {
         List<SocketIOEvent> data = socketIOService.loadSocketIOEvents(currentRecording);
-        events.setAll(data);
+        FxDispatch.run(() -> events.setAll(data));
     }
 }

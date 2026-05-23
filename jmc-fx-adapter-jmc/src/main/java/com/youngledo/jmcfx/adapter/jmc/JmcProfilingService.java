@@ -122,10 +122,6 @@ public class JmcProfilingService implements ProfilingService {
 	}
 
 	private IItemCollection loadEvents(RecordingSummary recording) {
-		try {
-			return JfrLoaderToolkit.loadEvents(recording.path().toFile());
-		} catch (IOException | CouldNotLoadRecordingException e) {
-			throw new JmcFxException("Unable to load recording for profiling: " + recording.path(), e);
-		}
+		return JmcRecordingDataCache.SHARED.events(recording);
 	}
 }

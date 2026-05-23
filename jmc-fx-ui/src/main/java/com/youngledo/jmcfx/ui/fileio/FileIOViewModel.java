@@ -7,6 +7,7 @@ import com.youngledo.jmcfx.domain.model.FileIOEvent;
 import com.youngledo.jmcfx.domain.model.FileIOHistogram;
 import com.youngledo.jmcfx.domain.model.RecordingSummary;
 import com.youngledo.jmcfx.domain.service.FileIOService;
+import com.youngledo.jmcfx.ui.util.FxDispatch;
 
 import javafx.beans.property.ObjectProperty;
 import javafx.beans.property.SimpleObjectProperty;
@@ -42,9 +43,14 @@ public class FileIOViewModel {
 
     public void load(RecordingSummary recording) {
         currentRecording = recording;
-        reloadHistogram();
-        reloadEvents();
-        timeline.set(fileIOService.loadTimeline(recording));
+        List<FileIOHistogram> histogramData = fileIOService.loadFileIOHistogram(currentRecording);
+        List<FileIOEvent> eventData = fileIOService.loadFileIOEvents(currentRecording);
+        ChartDefinition chart = fileIOService.loadTimeline(recording);
+        FxDispatch.run(() -> {
+            histogram.setAll(histogramData);
+            events.setAll(eventData);
+            timeline.set(chart);
+        });
     }
 
     private void reloadHistogram() {

@@ -5,6 +5,7 @@ import java.util.List;
 import com.youngledo.jmcfx.domain.model.RecordingSummary;
 import com.youngledo.jmcfx.domain.model.ThreadSummary;
 import com.youngledo.jmcfx.domain.service.ThreadService;
+import com.youngledo.jmcfx.ui.util.FxDispatch;
 
 import javafx.beans.property.ObjectProperty;
 import javafx.beans.property.SimpleObjectProperty;
@@ -37,7 +38,9 @@ public class ThreadViewModel {
     /// @param recording the flight recording to analyze
     public void load(RecordingSummary recording) {
         List<ThreadSummary> summaries = threadService.loadThreadSummaries(recording);
-        threadSummaries.setAll(summaries);
-        selectedThread.set(null);
+        FxDispatch.run(() -> {
+            threadSummaries.setAll(summaries);
+            selectedThread.set(null);
+        });
     }
 }

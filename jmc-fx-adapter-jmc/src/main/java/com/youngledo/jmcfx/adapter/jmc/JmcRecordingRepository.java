@@ -1,19 +1,18 @@
 package com.youngledo.jmcfx.adapter.jmc;
 
 import java.io.IOException;
+import java.io.RandomAccessFile;
 import java.nio.file.Files;
 import java.nio.file.Path;
 import java.time.Instant;
+import java.util.List;
 
-import org.openjdk.jmc.common.item.IItem;
-import org.openjdk.jmc.common.item.IItemCollection;
-import org.openjdk.jmc.common.item.IItemIterable;
-import org.openjdk.jmc.common.item.IMemberAccessor;
 import org.openjdk.jmc.common.unit.IQuantity;
+import org.openjdk.jmc.common.unit.IRange;
 import org.openjdk.jmc.common.unit.UnitLookup;
 import org.openjdk.jmc.flightrecorder.CouldNotLoadRecordingException;
-import org.openjdk.jmc.flightrecorder.JfrAttributes;
-import org.openjdk.jmc.flightrecorder.JfrLoaderToolkit;
+import org.openjdk.jmc.flightrecorder.internal.ChunkInfo;
+import org.openjdk.jmc.flightrecorder.internal.FlightRecordingLoader;
 
 import com.youngledo.jmcfx.domain.model.RecordingSummary;
 import com.youngledo.jmcfx.domain.service.JmcFxException;
@@ -33,57 +32,51 @@ public class JmcRecordingRepository implements RecordingRepository {
         try {
             long size = Files.size(path);
             Path normalized = path.toAbsolutePath().normalize();
-            TimeRange range = readTimeRange(path);
+            RecordingTimeRange timeRange = recordingTimeRange(normalized);
             return new RecordingSummary(normalized.toString(), path, path.getFileName().toString(),
-                    range.start, range.end, range.durationMillis, size);
+                    timeRange.startTime(), timeRange.endTime(), timeRange.durationMillis(), size);
         } catch (IOException exception) {
             throw new JmcFxException("Unable to read recording file: " + path, exception);
         }
     }
 
-    private static TimeRange readTimeRange(Path path) {
-        try {
-            IItemCollection events = JfrLoaderToolkit.loadEvents(path.toFile());
-            return computeTimeRange(events);
-        } catch (CouldNotLoadRecordingException | IOException exception) {
-            return new TimeRange(Instant.EPOCH, Instant.EPOCH, 0);
-        }
-    }
-
-    private static TimeRange computeTimeRange(IItemCollection events) {
-        IQuantity minStart = null;
-        IQuantity maxEnd = null;
-        for (IItemIterable itemIter : events) {
-            IMemberAccessor<IQuantity, IItem> startAccessor =
-                    JfrAttributes.START_TIME.getAccessor(itemIter.getType());
-            IMemberAccessor<IQuantity, IItem> endAccessor =
-                    JfrAttributes.END_TIME.getAccessor(itemIter.getType());
-            for (IItem item : itemIter) {
-                IQuantity start = startAccessor.getMember(item);
-                IQuantity end = endAccessor.getMember(item);
-                if (start != null && (minStart == null || start.compareTo(minStart) < 0)) {
-                    minStart = start;
+    private RecordingTimeRange recordingTimeRange(Path path) throws IOException {
+        try (RandomAccessFile file = new RandomAccessFile(path.toFile(), "r")) {
+            List<ChunkInfo> chunks = FlightRecordingLoader.readChunkInfo(
+                    FlightRecordingLoader.createChunkSupplier(file));
+            if (chunks.isEmpty()) {
+                return RecordingTimeRange.EMPTY;
+            }
+            Instant start = null;
+            Instant end = null;
+            for (ChunkInfo chunk : chunks) {
+                IRange<IQuantity> range = chunk.getChunkRange();
+                if (range == null) {
+                    continue;
                 }
-                if (end != null && (maxEnd == null || end.compareTo(maxEnd) > 0)) {
-                    maxEnd = end;
+                Instant chunkStart = toInstant(range.getStart());
+                Instant chunkEnd = toInstant(range.getEnd());
+                if (chunkStart != null && (start == null || chunkStart.isBefore(start))) {
+                    start = chunkStart;
+                }
+                if (chunkEnd != null && (end == null || chunkEnd.isAfter(end))) {
+                    end = chunkEnd;
                 }
             }
+            if (start == null || end == null || end.isBefore(start)) {
+                return RecordingTimeRange.EMPTY;
+            }
+            return new RecordingTimeRange(start, end, java.time.Duration.between(start, end).toMillis());
+        } catch (CouldNotLoadRecordingException exception) {
+            return RecordingTimeRange.EMPTY;
         }
-        Instant startInstant = toInstant(minStart);
-        Instant endInstant = toInstant(maxEnd);
-        long durationMillis = startInstant.equals(Instant.EPOCH) || endInstant.equals(Instant.EPOCH)
-                ? 0
-                : endInstant.toEpochMilli() - startInstant.toEpochMilli();
-        return new TimeRange(startInstant, endInstant, durationMillis);
     }
 
     private static Instant toInstant(IQuantity quantity) {
-        if (quantity == null) {
-            return Instant.EPOCH;
-        }
-        return UnitLookup.toDate(quantity).toInstant();
+        return quantity == null ? null : UnitLookup.toDate(quantity).toInstant();
     }
 
-    private record TimeRange(Instant start, Instant end, long durationMillis) {
+    private record RecordingTimeRange(Instant startTime, Instant endTime, long durationMillis) {
+        private static final RecordingTimeRange EMPTY = new RecordingTimeRange(Instant.EPOCH, Instant.EPOCH, 0);
     }
 }

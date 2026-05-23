@@ -7,6 +7,7 @@ import com.youngledo.jmcfx.domain.model.ExceptionGrouping;
 import com.youngledo.jmcfx.domain.model.ExceptionSummary;
 import com.youngledo.jmcfx.domain.model.RecordingSummary;
 import com.youngledo.jmcfx.domain.service.ExceptionService;
+import com.youngledo.jmcfx.ui.util.FxDispatch;
 
 import javafx.beans.property.ObjectProperty;
 import javafx.beans.property.SimpleObjectProperty;
@@ -42,8 +43,12 @@ public class ExceptionViewModel {
 
     public void load(RecordingSummary recording) {
         currentRecording = recording;
-        reloadHistogram();
-        timeline.set(exceptionService.loadTimeline(recording));
+        List<ExceptionSummary> data = exceptionService.loadHistogram(currentRecording, grouping.get());
+        ChartDefinition chart = exceptionService.loadTimeline(recording);
+        FxDispatch.run(() -> {
+            histogram.setAll(data);
+            timeline.set(chart);
+        });
     }
 
     public void setGrouping(ExceptionGrouping newGrouping) {
@@ -55,6 +60,6 @@ public class ExceptionViewModel {
 
     private void reloadHistogram() {
         List<ExceptionSummary> data = exceptionService.loadHistogram(currentRecording, grouping.get());
-        histogram.setAll(data);
+        FxDispatch.run(() -> histogram.setAll(data));
     }
 }

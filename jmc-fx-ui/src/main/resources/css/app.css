@@ -82,11 +82,6 @@
     -fx-pref-height: 32px;
     -fx-alignment: center-left;
     -fx-opacity: 1.0;
-    -color-button-bg: -color-bg-default;
-    -color-button-border: -color-border-default;
-    -color-button-border-hover: -color-border-default;
-    -color-button-border-focused: -color-border-default;
-    -color-button-border-pressed: -color-border-default;
 }
 
 .search-content {
@@ -135,6 +130,7 @@
 .app-nav-tree .tree-cell {
     -fx-padding: 0;
     -fx-indent: 0;
+    -fx-cell-indent: 0;
     -color-cell-bg: -color-bg-inset;
     -color-cell-bg-selected: -color-accent-subtle;
     -color-cell-bg-selected-focused: -color-accent-subtle;
@@ -144,6 +140,7 @@
 
 .app-nav-tree-cell > .tree-disclosure-node,
 .app-nav-tree-cell > .tree-disclosure-node > .arrow {
+    -fx-padding: 0;
     -fx-min-width: 0;
     -fx-pref-width: 0;
     -fx-max-width: 0;
@@ -157,7 +154,7 @@
     -fx-min-height: 2.1em;
     -fx-pref-height: 2.1em;
     -fx-max-height: 2.1em;
-    -fx-padding: 0 6px 0 1.2em;
+    -fx-padding: 0 6px 0 8px;
     -fx-spacing: 9px;
     -fx-border-color: -color-border-muted;
     -fx-border-width: 0 0 0 1px;
@@ -218,7 +215,7 @@
 
 .home-hero {
     -fx-padding: 28px;
-    -fx-background-color: -color-bg-subtle;
+    -fx-background-color: -color-bg-default;
     -fx-border-width: 1px;
     -fx-border-color: -color-border-default;
     -fx-background-radius: 8px;
@@ -338,6 +335,7 @@
 /* Timeline chart */
 .timeline-chart {
     -fx-padding: 0;
+    -fx-min-height: 160px;
 }
 .timeline-chart .chart-plot-background {
     -fx-background-color: -color-bg-default;

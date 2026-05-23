@@ -37,4 +37,22 @@ class JmcRecordingRepositoryTest {
         assertEquals(0, summary.durationMillis());
         assertTrue(summary.sizeBytes() > 0);
     }
+
+    @Test
+    void openUsesRecordingChunkTimeRangeWhenAvailable() throws Exception {
+        Path recording = Files.createTempFile("jmc-fx-real-time-range", ".jfr");
+        try (jdk.jfr.Recording jfr = new jdk.jfr.Recording()) {
+            jfr.start();
+            Thread.sleep(50);
+            jfr.stop();
+            jfr.dump(recording);
+        }
+
+        RecordingSummary summary = new JmcRecordingRepository().open(recording);
+
+        assertTrue(summary.startTime().isAfter(Instant.EPOCH), summary.startTime().toString());
+        assertTrue(summary.endTime().isAfter(summary.startTime()) || summary.endTime().equals(summary.startTime()),
+                summary.endTime().toString());
+        assertTrue(summary.durationMillis() >= 0);
+    }
 }

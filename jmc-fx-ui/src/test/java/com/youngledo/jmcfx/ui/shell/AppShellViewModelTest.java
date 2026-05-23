@@ -9,6 +9,7 @@ import static org.junit.jupiter.api.Assertions.assertTrue;
 
 import java.nio.file.Path;
 import java.time.Instant;
+import java.util.List;
 
 import org.junit.jupiter.api.Test;
 
@@ -63,6 +64,7 @@ class AppShellViewModelTest {
         assertEquals(1, viewModel.recordingWorkspacesProperty().size());
         assertSame(workspace, viewModel.selectedWorkspaceProperty().get());
         assertEquals(recording(), workspace.recording());
+        assertEquals("analysis", workspace.selectedSectionProperty().get());
         assertFalse(workspace.id().isBlank());
     }
 
@@ -115,6 +117,20 @@ class AppShellViewModelTest {
 
         assertEquals("analysis", viewModel.selectedSectionProperty().get());
         assertEquals("analysis", first.selectedSectionProperty().get());
+    }
+
+    @Test
+    void javaApplicationSubPagesAreRecordingSections() {
+        AppShellViewModel viewModel = new AppShellViewModel();
+        RecordingWorkspace workspace = viewModel.openRecording(
+                recording(), new OverviewViewModel(), eventBrowserViewModel(), ruleResultsViewModel());
+
+        for (String sectionId : List.of("threadHistogram", "security", "nativeLibraries", "threadDumps")) {
+            viewModel.showSection(sectionId);
+
+            assertEquals(sectionId, viewModel.selectedSectionProperty().get());
+            assertEquals(sectionId, workspace.selectedSectionProperty().get());
+        }
     }
 
     @Test
