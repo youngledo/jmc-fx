@@ -284,6 +284,9 @@
             </VBox>
             <VBox fx:id="gcDetailsPane" spacing="8" visible="false" managed="false">
                 <Label fx:id="gcDetailsTitleLabel" styleClass="view-title"/>
+                <VBox fx:id="gcHeapChartContainer" prefHeight="160"/>
+                <VBox fx:id="gcMetaspaceChartContainer" prefHeight="160"/>
+                <VBox fx:id="gcPauseChartContainer" prefHeight="160"/>
                 <Label fx:id="gcEventsLabel"/>
                 <TableView fx:id="gcEventsTable" styleClass="dense-table" prefHeight="200"/>
                 <Label fx:id="gcReferenceStatsLabel"/>
@@ -293,6 +296,7 @@
             </VBox>
             <VBox fx:id="compilationsPane" spacing="8" visible="false" managed="false">
                 <Label fx:id="compilationsTitleLabel" styleClass="view-title"/>
+                <VBox fx:id="compilationDurationChartContainer" prefHeight="180"/>
                 <Label fx:id="compilationEventsLabel"/>
                 <TableView fx:id="compilationsTable" styleClass="dense-table" prefHeight="250"/>
                 <Label fx:id="compilationFailuresLabel"/>
@@ -300,6 +304,8 @@
             </VBox>
             <VBox fx:id="codeCachePane" spacing="8" visible="false" managed="false">
                 <Label fx:id="codeCacheTitleLabel" styleClass="view-title"/>
+                <VBox fx:id="codeCacheEntriesChartContainer" prefHeight="160"/>
+                <VBox fx:id="codeCacheSweepChartContainer" prefHeight="160"/>
                 <Label fx:id="codeCacheSweepsLabel"/>
                 <TableView fx:id="codeCacheSweepsTable" styleClass="dense-table" prefHeight="200"/>
                 <Label fx:id="codeCacheStatsLabel"/>
@@ -307,6 +313,7 @@
             </VBox>
             <VBox fx:id="classLoadingPane" spacing="8" visible="false" managed="false">
                 <Label fx:id="classLoadingTitleLabel" styleClass="view-title"/>
+                <VBox fx:id="classLoadingChartContainer" prefHeight="160"/>
                 <Label fx:id="classLoadingHistogramLabel"/>
                 <TableView fx:id="classLoadingHistogramTable" styleClass="dense-table" prefHeight="150"/>
                 <Label fx:id="classLoadingEventsLabel"/>

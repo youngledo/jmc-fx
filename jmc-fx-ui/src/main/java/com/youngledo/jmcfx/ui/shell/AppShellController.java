@@ -367,11 +367,25 @@ public class AppShellController {
     @FXML private TableView<GcEvent> gcEventsTable;
     @FXML private TableView<GcReferenceStat> gcReferenceStatsTable;
     @FXML private TableView<GcHeapSummary> gcHeapSummaryTable;
+    @FXML private VBox gcHeapChartContainer;
+    private final TimelineChart gcHeapChart = new TimelineChart();
+    @FXML private VBox gcMetaspaceChartContainer;
+    private final TimelineChart gcMetaspaceChart = new TimelineChart();
+    @FXML private VBox gcPauseChartContainer;
+    private final TimelineChart gcPauseChart = new TimelineChart();
     @FXML private TableView<CompilationEvent> compilationsTable;
+    @FXML private VBox compilationDurationChartContainer;
+    private final TimelineChart compilationDurationChart = new TimelineChart();
     @FXML private TableView<CompilationEvent> compilationFailuresTable;
     @FXML private TableView<CodeCacheSweep> codeCacheSweepsTable;
+    @FXML private VBox codeCacheEntriesChartContainer;
+    private final TimelineChart codeCacheEntriesChart = new TimelineChart();
+    @FXML private VBox codeCacheSweepChartContainer;
+    private final TimelineChart codeCacheSweepChart = new TimelineChart();
     @FXML private TableView<CodeCacheStats> codeCacheStatsTable;
     @FXML private TableView<ClassloaderSummary> classLoadingHistogramTable;
+    @FXML private VBox classLoadingChartContainer;
+    private final TimelineChart classLoadingChart = new TimelineChart();
     @FXML private TableView<ClassloadEvent> classLoadingEventsTable;
     @FXML private TableView<ClassloaderStatistics> classLoadingStatsTable;
     @FXML private TableView<VmOperationSummary> vmOperationSummaryTable;
@@ -544,6 +558,13 @@ public class AppShellController {
         heapTimelineContainer.getChildren().add(heapTimelineChart);
         tlabTimelineContainer.getChildren().add(tlabTimelineChart);
         threadHistogramChartContainer.getChildren().add(threadHistogramChart);
+        gcHeapChartContainer.getChildren().add(gcHeapChart);
+        gcMetaspaceChartContainer.getChildren().add(gcMetaspaceChart);
+        gcPauseChartContainer.getChildren().add(gcPauseChart);
+        compilationDurationChartContainer.getChildren().add(compilationDurationChart);
+        codeCacheEntriesChartContainer.getChildren().add(codeCacheEntriesChart);
+        codeCacheSweepChartContainer.getChildren().add(codeCacheSweepChart);
+        classLoadingChartContainer.getChildren().add(classLoadingChart);
         bindOverview(null);
         bindEvents();
         configureAnalysisTable();
@@ -2386,6 +2407,9 @@ public class AppShellController {
     }
 
     private void bindGcDetails(GcDetailsViewModel nextViewModel) {
+        gcHeapChart.setData(null);
+        gcMetaspaceChart.setData(null);
+        gcPauseChart.setData(null);
         gcEventsTable.setItems(FXCollections.emptyObservableList());
         gcReferenceStatsTable.setItems(FXCollections.emptyObservableList());
         gcHeapSummaryTable.setItems(FXCollections.emptyObservableList());
@@ -2396,9 +2420,16 @@ public class AppShellController {
         gcEventsTable.setItems(nextViewModel.gcEvents());
         gcReferenceStatsTable.setItems(nextViewModel.referenceStats());
         gcHeapSummaryTable.setItems(nextViewModel.heapSummaries());
+        nextViewModel.heapChartProperty().addListener((obs, old, val) -> gcHeapChart.setData(val));
+        gcHeapChart.setData(nextViewModel.heapChartProperty().get());
+        nextViewModel.metaspaceChartProperty().addListener((obs, old, val) -> gcMetaspaceChart.setData(val));
+        gcMetaspaceChart.setData(nextViewModel.metaspaceChartProperty().get());
+        nextViewModel.pauseChartProperty().addListener((obs, old, val) -> gcPauseChart.setData(val));
+        gcPauseChart.setData(nextViewModel.pauseChartProperty().get());
     }
 
     private void bindCompilations(CompilationsViewModel nextViewModel) {
+        compilationDurationChart.setData(null);
         compilationsTable.setItems(FXCollections.emptyObservableList());
         compilationFailuresTable.setItems(FXCollections.emptyObservableList());
         compilationsViewModel = nextViewModel;
@@ -2407,9 +2438,13 @@ public class AppShellController {
         }
         compilationsTable.setItems(nextViewModel.compilations());
         compilationFailuresTable.setItems(nextViewModel.failures());
+        nextViewModel.durationChartProperty().addListener((obs, old, val) -> compilationDurationChart.setData(val));
+        compilationDurationChart.setData(nextViewModel.durationChartProperty().get());
     }
 
     private void bindCodeCache(CodeCacheViewModel nextViewModel) {
+        codeCacheEntriesChart.setData(null);
+        codeCacheSweepChart.setData(null);
         codeCacheSweepsTable.setItems(FXCollections.emptyObservableList());
         codeCacheStatsTable.setItems(FXCollections.emptyObservableList());
         codeCacheViewModel = nextViewModel;
@@ -2418,9 +2453,14 @@ public class AppShellController {
         }
         codeCacheSweepsTable.setItems(nextViewModel.sweeps());
         codeCacheStatsTable.setItems(nextViewModel.statistics());
+        nextViewModel.entriesChartProperty().addListener((obs, old, val) -> codeCacheEntriesChart.setData(val));
+        codeCacheEntriesChart.setData(nextViewModel.entriesChartProperty().get());
+        nextViewModel.sweepChartProperty().addListener((obs, old, val) -> codeCacheSweepChart.setData(val));
+        codeCacheSweepChart.setData(nextViewModel.sweepChartProperty().get());
     }
 
     private void bindClassLoading(ClassLoadingViewModel nextViewModel) {
+        classLoadingChart.setData(null);
         classLoadingHistogramTable.setItems(FXCollections.emptyObservableList());
         classLoadingEventsTable.setItems(FXCollections.emptyObservableList());
         classLoadingStatsTable.setItems(FXCollections.emptyObservableList());
@@ -2431,6 +2471,8 @@ public class AppShellController {
         classLoadingHistogramTable.setItems(nextViewModel.histogram());
         classLoadingEventsTable.setItems(nextViewModel.events());
         classLoadingStatsTable.setItems(nextViewModel.statistics());
+        nextViewModel.chartProperty().addListener((obs, old, val) -> classLoadingChart.setData(val));
+        classLoadingChart.setData(nextViewModel.chartProperty().get());
     }
 
     private void bindVmOperations(VmOperationsViewModel nextViewModel) {
