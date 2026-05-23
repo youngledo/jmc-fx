@@ -5,6 +5,7 @@ import java.time.format.DateTimeFormatter;
 import java.util.List;
 import java.util.StringJoiner;
 
+import com.youngledo.jmcfx.domain.model.ChartDefinition;
 import com.youngledo.jmcfx.domain.model.ActiveRecordingInfo;
 import com.youngledo.jmcfx.domain.model.ActiveSetting;
 import com.youngledo.jmcfx.domain.model.AgentInfo;
@@ -99,6 +100,8 @@ import com.youngledo.jmcfx.ui.jvm.JvmInfoViewModel;
 import com.youngledo.jmcfx.ui.jvm.VmOperationsViewModel;
 import com.youngledo.jmcfx.ui.leaks.LeakSuspectsViewModel;
 import com.youngledo.jmcfx.ui.locks.LockViewModel;
+import com.youngledo.jmcfx.ui.chart.TimelineChart;
+import com.youngledo.jmcfx.ui.util.CsvExport;
 import com.youngledo.jmcfx.ui.util.DisplayFormats;
 import com.youngledo.jmcfx.ui.util.HtmlToTextFlow;
 import com.youngledo.jmcfx.ui.overview.OverviewViewModel;
@@ -117,6 +120,8 @@ import javafx.collections.ListChangeListener;
 import javafx.fxml.FXML;
 import javafx.scene.control.Button;
 import javafx.scene.control.ContentDisplay;
+import javafx.scene.control.ContextMenu;
+import javafx.scene.control.MenuItem;
 import javafx.scene.control.Label;
 import javafx.scene.control.ListView;
 import javafx.scene.control.MenuButton;
@@ -288,13 +293,15 @@ public class AppShellController {
     @FXML private Button exceptionsGroupByMessage;
     @FXML private Button exceptionsGroupByClassAndMessage;
     @FXML private TableView<ExceptionSummary> exceptionsTable;
-    @FXML private Label exceptionsTimelineLabel;
+    @FXML private VBox exceptionsTimelineContainer;
+    private final TimelineChart exceptionsTimelineChart = new TimelineChart();
     @FXML private Label threadsTitleLabel;
     @FXML private TableView<ThreadSummary> threadsTable;
     @FXML private Label fileioTitleLabel;
     @FXML private TabPane fileioTabPane;
     @FXML private Tab fileioTimelineTab;
-    @FXML private Label fileioTimelinePlaceholderLabel;
+    @FXML private VBox fileioTimelineContainer;
+    private final TimelineChart fileioTimelineChart = new TimelineChart();
     @FXML private Tab fileioDurationTab;
     @FXML private TableView<FileIOHistogram> fileioHistogramTable;
     @FXML private Tab fileioEventLogTab;
@@ -306,7 +313,8 @@ public class AppShellController {
     @FXML private Button socketioGroupByPort;
     @FXML private TabPane socketioTabPane;
     @FXML private Tab socketioTimelineTab;
-    @FXML private Label socketioTimelinePlaceholderLabel;
+    @FXML private VBox socketioTimelineContainer;
+    private final TimelineChart socketioTimelineChart = new TimelineChart();
     @FXML private Tab socketioDurationTab;
     @FXML private TableView<SocketIOHistogram> socketioHistogramTable;
     @FXML private Tab socketioEventLogTab;
@@ -325,13 +333,15 @@ public class AppShellController {
     @FXML private TableView<LockHistogram> locksByThreadTable;
     @FXML private Label heapTitleLabel;
     @FXML private TableView<HeapClassHistogram> heapTable;
-    @FXML private Label heapTimelineLabel;
+    @FXML private VBox heapTimelineContainer;
+    private final TimelineChart heapTimelineChart = new TimelineChart();
     @FXML private Label leaksTitleLabel;
     @FXML private TableView<LeakCandidate> leaksTable;
     @FXML private TreeView<LeakReferenceNode> leaksReferenceTree;
     @FXML private Label tlabTitleLabel;
     @FXML private TableView<TlabAllocation> tlabTable;
-    @FXML private Label tlabTimelineLabel;
+    @FXML private VBox tlabTimelineContainer;
+    private final TimelineChart tlabTimelineChart = new TimelineChart();
     @FXML private TableView<JvmFlag> jvmFlagsTable;
     @FXML private TableView<JvmFlagChange> jvmFlagChangesTable;
     @FXML private TableView<GcSummary> gcSummaryTable;
@@ -501,6 +511,11 @@ public class AppShellController {
         constantPoolsPane.managedProperty().bind(constantPoolsPane.visibleProperty());
         settingsPane.visibleProperty().bind(viewModel.selectedSectionProperty().isEqualTo("settings"));
         settingsPane.managedProperty().bind(settingsPane.visibleProperty());
+        exceptionsTimelineContainer.getChildren().add(exceptionsTimelineChart);
+        fileioTimelineContainer.getChildren().add(fileioTimelineChart);
+        socketioTimelineContainer.getChildren().add(socketioTimelineChart);
+        heapTimelineContainer.getChildren().add(heapTimelineChart);
+        tlabTimelineContainer.getChildren().add(tlabTimelineChart);
         bindOverview(null);
         bindEvents();
         configureAnalysisTable();
@@ -535,6 +550,7 @@ public class AppShellController {
         configureSettingsTable();
         configureAgentsTable();
         configureConstantPoolsTable();
+        attachExportMenus();
         bindWorkspaceSelection();
         i18n.localeProperty().addListener((observable, oldValue, newValue) -> refreshOverviewOnLocaleChange());
     }
@@ -924,12 +940,15 @@ public class AppShellController {
     }
 
     private void bindExceptions(ExceptionViewModel nextViewModel) {
+        exceptionsTimelineChart.setData(null);
         exceptionsTable.setItems(FXCollections.emptyObservableList());
         exceptionViewModel = nextViewModel;
         if (nextViewModel == null) {
             return;
         }
         exceptionsTable.setItems(nextViewModel.histogramProperty());
+        nextViewModel.timelineProperty().addListener((obs, old, val) -> exceptionsTimelineChart.setData(val));
+        exceptionsTimelineChart.setData(nextViewModel.timelineProperty().get());
     }
 
     private void bindThreads(ThreadViewModel nextViewModel) {
@@ -942,6 +961,7 @@ public class AppShellController {
     }
 
     private void bindFileIO(FileIOViewModel nextViewModel) {
+        fileioTimelineChart.setData(null);
         fileioHistogramTable.setItems(FXCollections.emptyObservableList());
         fileioEventTable.setItems(FXCollections.emptyObservableList());
         fileIOViewModel = nextViewModel;
@@ -950,9 +970,12 @@ public class AppShellController {
         }
         fileioHistogramTable.setItems(nextViewModel.histogramProperty());
         fileioEventTable.setItems(nextViewModel.eventsProperty());
+        nextViewModel.timelineProperty().addListener((obs, old, val) -> fileioTimelineChart.setData(val));
+        fileioTimelineChart.setData(nextViewModel.timelineProperty().get());
     }
 
     private void bindSocketIO(SocketIOViewModel nextViewModel) {
+        socketioTimelineChart.setData(null);
         socketioHistogramTable.setItems(FXCollections.emptyObservableList());
         socketioEventTable.setItems(FXCollections.emptyObservableList());
         socketIOViewModel = nextViewModel;
@@ -961,6 +984,8 @@ public class AppShellController {
         }
         socketioHistogramTable.setItems(nextViewModel.histogramProperty());
         socketioEventTable.setItems(nextViewModel.eventsProperty());
+        nextViewModel.timelineProperty().addListener((obs, old, val) -> socketioTimelineChart.setData(val));
+        socketioTimelineChart.setData(nextViewModel.timelineProperty().get());
     }
 
     private void bindLocks(LockViewModel nextViewModel) {
@@ -1084,14 +1109,15 @@ public class AppShellController {
 
     private void bindHeap(HeapViewModel nextViewModel) {
         heapTable.setItems(FXCollections.emptyObservableList());
-        heapTimelineLabel.textProperty().unbind();
-        heapTimelineLabel.setText("");
+        heapTimelineChart.setData(null);
         heapViewModel = nextViewModel;
         if (nextViewModel == null) {
             return;
         }
         heapTable.setItems(nextViewModel.histogramProperty());
         heapTable.getSelectionModel().selectFirst();
+        nextViewModel.timelineProperty().addListener((obs, old, val) -> heapTimelineChart.setData(val));
+        heapTimelineChart.setData(nextViewModel.timelineProperty().get());
     }
 
     private void bindLeaks(LeakSuspectsViewModel nextViewModel) {
@@ -1108,14 +1134,15 @@ public class AppShellController {
 
     private void bindTlab(TlabViewModel nextViewModel) {
         tlabTable.setItems(FXCollections.emptyObservableList());
-        tlabTimelineLabel.textProperty().unbind();
-        tlabTimelineLabel.setText("");
+        tlabTimelineChart.setData(null);
         tlabViewModel = nextViewModel;
         if (nextViewModel == null) {
             return;
         }
         tlabTable.setItems(nextViewModel.allocationsProperty());
         tlabTable.getSelectionModel().selectFirst();
+        nextViewModel.timelineProperty().addListener((obs, old, val) -> tlabTimelineChart.setData(val));
+        tlabTimelineChart.setData(nextViewModel.timelineProperty().get());
     }
 
     private void updateLeakReferenceTree(LeakReferenceNode node) {
@@ -1213,11 +1240,9 @@ public class AppShellController {
         exceptionsGroupByClass.textProperty().bind(i18n.text("exceptions.grouping.byClass"));
         exceptionsGroupByMessage.textProperty().bind(i18n.text("exceptions.grouping.byMessage"));
         exceptionsGroupByClassAndMessage.textProperty().bind(i18n.text("exceptions.grouping.byClassAndMessage"));
-        exceptionsTimelineLabel.textProperty().bind(i18n.text("exceptions.timeline"));
         threadsTitleLabel.textProperty().bind(i18n.text("threads.title"));
         fileioTitleLabel.textProperty().bind(i18n.text("fileio.title"));
         fileioTimelineTab.textProperty().bind(i18n.text("fileio.tab.timeline"));
-        fileioTimelinePlaceholderLabel.textProperty().bind(i18n.text("fileio.timeline.unavailable"));
         fileioDurationTab.textProperty().bind(i18n.text("fileio.tab.duration"));
         fileioEventLogTab.textProperty().bind(i18n.text("fileio.tab.eventLog"));
         socketioTitleLabel.textProperty().bind(i18n.text("socketio.title"));
@@ -1225,7 +1250,6 @@ public class AppShellController {
         socketioGroupByHost.textProperty().bind(i18n.text("socketio.grouping.byHost"));
         socketioGroupByPort.textProperty().bind(i18n.text("socketio.grouping.byPort"));
         socketioTimelineTab.textProperty().bind(i18n.text("socketio.tab.timeline"));
-        socketioTimelinePlaceholderLabel.textProperty().bind(i18n.text("socketio.timeline.unavailable"));
         socketioDurationTab.textProperty().bind(i18n.text("socketio.tab.duration"));
         socketioEventLogTab.textProperty().bind(i18n.text("socketio.tab.eventLog"));
         locksTitleLabel.textProperty().bind(i18n.text("locks.title"));
@@ -1236,10 +1260,8 @@ public class AppShellController {
         locksByAddressTab.textProperty().bind(i18n.text("locks.tab.byAddress"));
         locksByThreadTab.textProperty().bind(i18n.text("locks.tab.byThread"));
         heapTitleLabel.textProperty().bind(i18n.text("heap.title"));
-        heapTimelineLabel.textProperty().bind(i18n.text("heap.timeline"));
         leaksTitleLabel.textProperty().bind(i18n.text("leaks.title"));
         tlabTitleLabel.textProperty().bind(i18n.text("tlab.title"));
-        tlabTimelineLabel.textProperty().bind(i18n.text("tlab.timeline"));
         jvmInfoTitleLabel.textProperty().bind(i18n.text("jvmInfo.title"));
         jvmFlagsLabel.textProperty().bind(i18n.text("jvmInfo.flags"));
         jvmFlagChangesLabel.textProperty().bind(i18n.text("jvmInfo.flagChanges"));
@@ -2385,5 +2407,64 @@ public class AppShellController {
         settingsTable.setItems(nextViewModel.activeSettingsProperty());
         agentsTable.setItems(nextViewModel.agentsProperty());
         constantPoolsTable.setItems(nextViewModel.constantPoolsProperty());
+    }
+
+    private void attachExportMenus() {
+        attachExportMenu(analysisTable);
+        attachExportMenu(profilingTable);
+        attachExportMenu(exceptionsTable);
+        attachExportMenu(threadsTable);
+        attachExportMenu(fileioHistogramTable);
+        attachExportMenu(fileioEventTable);
+        attachExportMenu(socketioHistogramTable);
+        attachExportMenu(socketioEventTable);
+        attachExportMenu(locksByClassTable);
+        attachExportMenu(locksByAddressTable);
+        attachExportMenu(locksByThreadTable);
+        attachExportMenu(heapTable);
+        attachExportMenu(leaksTable);
+        attachExportMenu(tlabTable);
+        attachExportMenu(jvmFlagsTable);
+        attachExportMenu(jvmFlagChangesTable);
+        attachExportMenu(gcEventsTable);
+        attachExportMenu(gcReferenceStatsTable);
+        attachExportMenu(gcHeapSummaryTable);
+        attachExportMenu(compilationsTable);
+        attachExportMenu(compilationFailuresTable);
+        attachExportMenu(codeCacheSweepsTable);
+        attachExportMenu(codeCacheStatsTable);
+        attachExportMenu(classLoadingHistogramTable);
+        attachExportMenu(classLoadingEventsTable);
+        attachExportMenu(classLoadingStatsTable);
+        attachExportMenu(vmOperationSummaryTable);
+        attachExportMenu(vmOperationEventsTable);
+        attachExportMenu(processesTable);
+        attachExportMenu(envVarsTable);
+        attachExportMenu(sysPropsTable);
+        attachExportMenu(recordingsTable);
+        attachExportMenu(settingsTable);
+        attachExportMenu(agentsTable);
+        attachExportMenu(constantPoolsTable);
+    }
+
+    private void attachExportMenu(TableView<?> table) {
+        MenuItem exportItem = new MenuItem(i18n.get("context.exportCsv"));
+        exportItem.setOnAction(event -> {
+            FileChooser chooser = new FileChooser();
+            chooser.setTitle(i18n.get("fileChooser.saveCsv.title"));
+            chooser.getExtensionFilters().add(
+                    new FileChooser.ExtensionFilter(i18n.get("fileChooser.csvFiles"), "*.csv"));
+            java.io.File target = chooser.showSaveDialog(root.getScene().getWindow());
+            if (target != null) {
+                try {
+                    CsvExport.export(table, target.toPath());
+                    viewModel.showStatus(i18n.format("status.exported", target.getName()));
+                } catch (Exception e) {
+                    viewModel.showStatus(i18n.get("status.exportFailed"));
+                }
+            }
+        });
+        ContextMenu menu = new ContextMenu(exportItem);
+        table.setContextMenu(menu);
     }
 }

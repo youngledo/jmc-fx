@@ -1,6 +1,6 @@
 # JMC FX
 
-JMC FX is an independent JavaFX desktop application that rebuilds the JDK Mission Control UI while reusing JMC core/headless libraries.
+JMC FX is an independent JavaFX desktop application that rebuilds the JDK Mission Control UI while reusing [JMC](https://github.com/openjdk/jmc) core/headless libraries.
 
 ## Requirements
 

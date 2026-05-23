@@ -154,7 +154,7 @@
                 <SplitPane VBox.vgrow="ALWAYS" DividerPositions="0.6">
                     <TableView fx:id="exceptionsTable" styleClass="dense-table" prefHeight="300"/>
                     <VBox>
-                        <Label fx:id="exceptionsTimelineLabel" styleClass="detail-title"/>
+                        <VBox fx:id="exceptionsTimelineContainer"/>
                     </VBox>
                 </SplitPane>
             </VBox>
@@ -167,7 +167,7 @@
                 <TabPane fx:id="fileioTabPane" VBox.vgrow="ALWAYS">
                     <tabs>
                         <Tab fx:id="fileioTimelineTab" closable="false">
-                            <Label fx:id="fileioTimelinePlaceholderLabel"/>
+                            <VBox fx:id="fileioTimelineContainer"/>
                         </Tab>
                         <Tab fx:id="fileioDurationTab" closable="false">
                             <TableView fx:id="fileioHistogramTable" styleClass="dense-table"/>
@@ -188,7 +188,7 @@
                 <TabPane fx:id="socketioTabPane" VBox.vgrow="ALWAYS">
                     <tabs>
                         <Tab fx:id="socketioTimelineTab" closable="false">
-                            <Label fx:id="socketioTimelinePlaceholderLabel"/>
+                            <VBox fx:id="socketioTimelineContainer"/>
                         </Tab>
                         <Tab fx:id="socketioDurationTab" closable="false">
                             <TableView fx:id="socketioHistogramTable" styleClass="dense-table"/>
@@ -225,7 +225,7 @@
                 <SplitPane VBox.vgrow="ALWAYS" DividerPositions="0.6">
                     <TableView fx:id="heapTable" styleClass="dense-table" prefHeight="300"/>
                     <VBox>
-                        <Label fx:id="heapTimelineLabel" styleClass="detail-title"/>
+                        <VBox fx:id="heapTimelineContainer"/>
                     </VBox>
                 </SplitPane>
             </VBox>
@@ -243,7 +243,7 @@
                 <SplitPane VBox.vgrow="ALWAYS" DividerPositions="0.6">
                     <TableView fx:id="tlabTable" styleClass="dense-table" prefHeight="300"/>
                     <VBox>
-                        <Label fx:id="tlabTimelineLabel" styleClass="detail-title"/>
+                        <VBox fx:id="tlabTimelineContainer"/>
                     </VBox>
                 </SplitPane>
             </VBox>
