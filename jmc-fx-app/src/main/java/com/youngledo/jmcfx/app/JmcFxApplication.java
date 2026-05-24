@@ -2,7 +2,6 @@ package com.youngledo.jmcfx.app;
 
 import java.util.Locale;
 
-import atlantafx.base.theme.PrimerLight;
 import com.youngledo.jmcfx.adapter.jmc.JmcEnvironmentService;
 import com.youngledo.jmcfx.adapter.jmc.JmcEventQueryService;
 import com.youngledo.jmcfx.adapter.jmc.JmcJavaAppService;
@@ -20,6 +19,7 @@ import com.youngledo.jmcfx.adapter.jmc.JmcThreadService;
 import com.youngledo.jmcfx.adapter.jmc.JmcTlabService;
 import com.youngledo.jmcfx.ui.shell.AppShell;
 import com.youngledo.jmcfx.ui.shell.AppShellFactory;
+import com.youngledo.jmcfx.ui.preferences.AppTheme;
 import javafx.application.Application;
 import javafx.scene.Scene;
 import javafx.stage.Stage;
@@ -34,7 +34,7 @@ public class JmcFxApplication extends Application {
 
     @Override
     public void start(Stage stage) {
-        Application.setUserAgentStylesheet(new PrimerLight().getUserAgentStylesheet());
+        Application.setUserAgentStylesheet(AppTheme.PRIMER_LIGHT.userAgentStylesheet());
         Locale systemLocale = Locale.getDefault();
         Locale.setDefault(Locale.ENGLISH);
         shell = new AppShellFactory(new JmcRecordingRepository(),

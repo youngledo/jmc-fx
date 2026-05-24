@@ -10,6 +10,7 @@ import com.youngledo.jmcfx.ui.i18n.LanguageMode;
 public final class JavaAppPreferences implements AppPreferences {
 
     private static final String LANGUAGE_MODE = "languageMode";
+    private static final String THEME = "theme";
 
     private final Preferences preferences;
 
@@ -33,6 +34,16 @@ public final class JavaAppPreferences implements AppPreferences {
     @Override
     public void setLanguageMode(LanguageMode mode) {
         preferences.put(LANGUAGE_MODE, (mode == null ? LanguageMode.SYSTEM : mode).persistedValue());
+    }
+
+    @Override
+    public AppTheme theme() {
+        return AppTheme.fromPersistedValue(preferences.get(THEME, AppTheme.PRIMER_LIGHT.persistedValue()));
+    }
+
+    @Override
+    public void setTheme(AppTheme theme) {
+        preferences.put(THEME, (theme == null ? AppTheme.PRIMER_LIGHT : theme).persistedValue());
     }
 
     void putRaw(String key, String value) {

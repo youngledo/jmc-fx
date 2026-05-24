@@ -21,6 +21,7 @@ import com.youngledo.jmcfx.ui.i18n.I18n;
 import com.youngledo.jmcfx.ui.preferences.AppPreferences;
 import com.youngledo.jmcfx.ui.preferences.JavaAppPreferences;
 
+import javafx.application.Application;
 import javafx.fxml.FXMLLoader;
 import javafx.scene.layout.BorderPane;
 
@@ -134,9 +135,15 @@ public class AppShellFactory {
         try {
             AppShellViewModel viewModel = new AppShellViewModel();
             viewModel.setLanguageMode(preferences.languageMode());
+            viewModel.setTheme(preferences.theme());
             i18n.setLanguageMode(viewModel.languageModeProperty().get());
+            applyTheme(viewModel.themeProperty().get());
             viewModel.languageModeProperty().addListener(
                     (observable, oldValue, newValue) -> preferences.setLanguageMode(newValue));
+            viewModel.themeProperty().addListener((observable, oldValue, newValue) -> {
+                preferences.setTheme(newValue);
+                applyTheme(newValue);
+            });
             FXMLLoader loader = new FXMLLoader(getClass().getResource("/com/youngledo/jmcfx/ui/shell/app-shell.fxml"));
             loader.setControllerFactory(type -> controllerFor(type, viewModel));
             BorderPane root = loader.load();
@@ -156,5 +163,9 @@ public class AppShellFactory {
                     jvmInternalsService, environmentService, javaAppService, i18n);
         }
         throw new IllegalArgumentException("Unsupported controller: " + type.getName());
+    }
+
+    private static void applyTheme(com.youngledo.jmcfx.ui.preferences.AppTheme theme) {
+        Application.setUserAgentStylesheet(theme.userAgentStylesheet());
     }
 }

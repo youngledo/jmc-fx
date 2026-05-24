@@ -7,4 +7,8 @@ public interface AppPreferences {
     LanguageMode languageMode();
 
     void setLanguageMode(LanguageMode mode);
+
+    AppTheme theme();
+
+    void setTheme(AppTheme theme);
 }

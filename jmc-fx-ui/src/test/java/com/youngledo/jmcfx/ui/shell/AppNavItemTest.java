@@ -17,6 +17,7 @@ class AppNavItemTest {
         assertEquals("", item.sectionId());
         assertEquals(false, item.recordingScoped());
         assertEquals(false, item.unavailable(false));
+        assertEquals(NavIconTone.RECORDING, item.iconTone());
     }
 
     @Test
@@ -30,6 +31,7 @@ class AppNavItemTest {
         assertEquals(true, item.recordingScoped());
         assertEquals(true, item.unavailable(false));
         assertEquals(false, item.unavailable(true));
+        assertEquals(NavIconTone.RECORDING, item.iconTone());
     }
 
     @Test
@@ -40,6 +42,7 @@ class AppNavItemTest {
         assertEquals(false, item.recordingScoped());
         assertEquals(true, item.unavailable(false));
         assertEquals(true, item.unavailable(true));
+        assertEquals(NavIconTone.NEUTRAL, item.iconTone());
     }
 
     @Test

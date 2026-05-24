@@ -384,9 +384,7 @@
     </center>
     <bottom>
         <HBox styleClass="status-bar" spacing="8">
-            <Label fx:id="statusLabel"/>
             <ProgressBar fx:id="progressBar" prefWidth="160" progress="0"/>
-            <Label fx:id="taskSummaryLabel" styleClass="task-summary"/>
         </HBox>
     </bottom>
 </BorderPane>

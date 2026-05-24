@@ -19,6 +19,7 @@ final class AppNavTreeCell extends TreeCell<AppNavItem> {
 
     private static final PseudoClass GROUP = PseudoClass.getPseudoClass("group");
     private static final PseudoClass UNAVAILABLE = PseudoClass.getPseudoClass("unavailable");
+    private static final String NAV_ICON = "nav-icon";
 
     private final BooleanProperty recordingOpen;
     private final I18n i18n;
@@ -33,7 +34,7 @@ final class AppNavTreeCell extends TreeCell<AppNavItem> {
         this.i18n = i18n;
         Region spacer = new Region();
         HBox.setHgrow(spacer, Priority.ALWAYS);
-        iconLabel.getStyleClass().add("nav-icon");
+        iconLabel.getStyleClass().add(NAV_ICON);
         titleLabel.getStyleClass().add("nav-title");
         arrowLabel.getStyleClass().add("nav-arrow");
         tagLabel.getStyleClass().add("nav-tag");
@@ -51,6 +52,7 @@ final class AppNavTreeCell extends TreeCell<AppNavItem> {
             setText(null);
             titleLabel.textProperty().unbind();
             titleLabel.setText(null);
+            iconLabel.getStyleClass().setAll(NAV_ICON);
             tagLabel.textProperty().unbind();
             tagLabel.setText(null);
             pseudoClassStateChanged(GROUP, false);
@@ -60,7 +62,8 @@ final class AppNavTreeCell extends TreeCell<AppNavItem> {
 
         titleLabel.textProperty().unbind();
         titleLabel.textProperty().bind(i18n.text(item.titleKey()));
-        iconLabel.setGraphic(new FontIcon(item.icon()));
+        iconLabel.getStyleClass().setAll(NAV_ICON, item.iconTone().styleClass());
+        iconLabel.setGraphic(iconFor(item));
         boolean expanded = getTreeItem() != null && getTreeItem().isExpanded();
         arrowLabel.setGraphic(new FontIcon(expanded ? Material2MZ.REMOVE : Material2AL.ADD));
 
@@ -75,5 +78,11 @@ final class AppNavTreeCell extends TreeCell<AppNavItem> {
         pseudoClassStateChanged(UNAVAILABLE, unavailable);
         setDisable(unavailable);
         setGraphic(root);
+    }
+
+    private static FontIcon iconFor(AppNavItem item) {
+        FontIcon icon = new FontIcon(item.icon());
+        icon.getStyleClass().add(item.iconTone().styleClass());
+        return icon;
     }
 }

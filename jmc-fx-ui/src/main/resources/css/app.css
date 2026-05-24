@@ -163,7 +163,6 @@
 
 .app-nav-tree-cell:selected > .nav-cell-container > .nav-title {
     -fx-text-fill: -color-accent-fg;
-    -fx-font-weight: bold;
 }
 
 .app-nav-tree-cell:hover:filled {
@@ -180,9 +179,102 @@
     -fx-border-width: 0;
 }
 
-.app-nav-tree-cell:group .ikonli-font-icon {
+.app-nav-tree-cell:group .nav-arrow .ikonli-font-icon {
     -fx-fill: -color-fg-muted;
     -fx-icon-color: -color-fg-muted;
+}
+
+.nav-icon {
+    -fx-min-width: 22px;
+    -fx-pref-width: 22px;
+    -fx-max-width: 22px;
+    -fx-min-height: 22px;
+    -fx-pref-height: 22px;
+    -fx-max-height: 22px;
+    -fx-alignment: CENTER;
+    -fx-background-radius: 5px;
+    -fx-background-color: transparent;
+}
+
+.app-nav-tree-cell:group .nav-icon {
+    -fx-min-width: 24px;
+    -fx-pref-width: 24px;
+    -fx-max-width: 24px;
+    -fx-min-height: 24px;
+    -fx-pref-height: 24px;
+    -fx-max-height: 24px;
+}
+
+.nav-icon-neutral {
+    -fx-background-color: rgba(100, 116, 139, 0.10);
+}
+
+.nav-icon-neutral .ikonli-font-icon {
+    -fx-icon-color: #64748b;
+    -fx-fill: #64748b;
+}
+
+.nav-icon-workspace {
+    -fx-background-color: rgba(8, 145, 178, 0.13);
+}
+
+.nav-icon-workspace .ikonli-font-icon {
+    -fx-icon-color: #0891b2;
+    -fx-fill: #0891b2;
+}
+
+.nav-icon-recording {
+    -fx-background-color: rgba(37, 99, 235, 0.13);
+}
+
+.nav-icon-recording .ikonli-font-icon {
+    -fx-icon-color: #2563eb;
+    -fx-fill: #2563eb;
+}
+
+.nav-icon-java {
+    -fx-background-color: rgba(5, 150, 105, 0.14);
+}
+
+.nav-icon-java .ikonli-font-icon {
+    -fx-icon-color: #059669;
+    -fx-fill: #059669;
+}
+
+.nav-icon-jvm {
+    -fx-background-color: rgba(217, 119, 6, 0.15);
+}
+
+.nav-icon-jvm .ikonli-font-icon {
+    -fx-icon-color: #d97706;
+    -fx-fill: #d97706;
+}
+
+.nav-icon-memory {
+    -fx-background-color: rgba(219, 39, 119, 0.13);
+}
+
+.nav-icon-memory .ikonli-font-icon {
+    -fx-icon-color: #db2777;
+    -fx-fill: #db2777;
+}
+
+.nav-icon-environment {
+    -fx-background-color: rgba(124, 58, 237, 0.13);
+}
+
+.nav-icon-environment .ikonli-font-icon {
+    -fx-icon-color: #7c3aed;
+    -fx-fill: #7c3aed;
+}
+
+.nav-icon-application {
+    -fx-background-color: rgba(71, 85, 105, 0.12);
+}
+
+.nav-icon-application .ikonli-font-icon {
+    -fx-icon-color: #64748b;
+    -fx-fill: #64748b;
 }
 
 .app-nav-tree-cell:unavailable > .nav-cell-container {

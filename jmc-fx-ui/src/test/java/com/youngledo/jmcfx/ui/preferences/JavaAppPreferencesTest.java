@@ -26,4 +26,24 @@ class JavaAppPreferencesTest {
 
         assertEquals(LanguageMode.SYSTEM, preferences.languageMode());
     }
+
+    @Test
+    void storesTheme() {
+        JavaAppPreferences preferences = JavaAppPreferences.inMemory();
+
+        assertEquals(AppTheme.PRIMER_LIGHT, preferences.theme());
+
+        preferences.setTheme(AppTheme.PRIMER_DARK);
+
+        assertEquals(AppTheme.PRIMER_DARK, preferences.theme());
+    }
+
+    @Test
+    void invalidPersistedThemeFallsBackToLight() {
+        JavaAppPreferences preferences = JavaAppPreferences.inMemory();
+
+        preferences.putRaw("theme", "solarized");
+
+        assertEquals(AppTheme.PRIMER_LIGHT, preferences.theme());
+    }
 }

@@ -152,6 +152,7 @@ import javafx.stage.FileChooser;
 import org.kordamp.ikonli.Ikon;
 import org.kordamp.ikonli.javafx.FontIcon;
 import org.kordamp.ikonli.material2.Material2AL;
+import org.kordamp.ikonli.material2.Material2MZ;
 
 /// FXML controller for `app-shell.fxml`.
 ///
@@ -249,8 +250,6 @@ public class AppShellController {
     @FXML private VBox agentsPane;
     @FXML private VBox constantPoolsPane;
     @FXML private VBox settingsPane;
-    @FXML private Label statusLabel;
-    @FXML private Label taskSummaryLabel;
     @FXML private ProgressBar progressBar;
     @FXML private Label homeKickerLabel;
     @FXML private Label homeTitleLabel;
@@ -499,8 +498,6 @@ public class AppShellController {
 
     @FXML
     void initialize() {
-        statusLabel.textProperty().bind(viewModel.statusMessageProperty());
-        taskSummaryLabel.textProperty().bind(viewModel.taskSummaryProperty());
         progressBar.setVisible(false);
         progressBar.setManaged(false);
         sidebar.bind(viewModel);
@@ -1712,6 +1709,7 @@ public class AppShellController {
         homeOpenRecordingButton.getStyleClass().add("toolbar-primary");
         homeConnectJvmButton.getStyleClass().add("toolbar-secondary");
         configureActionButton(homeOpenRecordingButton, Material2AL.FOLDER_OPEN, i18n.get("home.openRecording"));
+        configureActionButton(homeConnectJvmButton, Material2MZ.MEMORY, i18n.get("home.connectJvm"));
     }
 
     private static void configureActionButton(Button button, Ikon icon, String accessibleText) {

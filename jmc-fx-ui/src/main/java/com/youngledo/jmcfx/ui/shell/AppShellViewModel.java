@@ -27,6 +27,7 @@ import com.youngledo.jmcfx.ui.leaks.LeakSuspectsViewModel;
 import com.youngledo.jmcfx.ui.locks.LockViewModel;
 import com.youngledo.jmcfx.ui.overview.OverviewViewModel;
 import com.youngledo.jmcfx.domain.service.EventQueryService;
+import com.youngledo.jmcfx.ui.preferences.AppTheme;
 import com.youngledo.jmcfx.ui.profiling.ProfilingViewModel;
 import com.youngledo.jmcfx.ui.rules.RuleResultsViewModel;
 import com.youngledo.jmcfx.ui.socketio.SocketIOViewModel;
@@ -70,6 +71,7 @@ public class AppShellViewModel {
     private final StringProperty currentRecordingName = new SimpleStringProperty("");
     private final BooleanProperty recordingOpen = new SimpleBooleanProperty(false);
     private final ObjectProperty<LanguageMode> languageMode = new SimpleObjectProperty<>(LanguageMode.SYSTEM);
+    private final ObjectProperty<AppTheme> theme = new SimpleObjectProperty<>(AppTheme.PRIMER_LIGHT);
 
     public StringProperty selectedSectionProperty() {
         return selectedSection;
@@ -97,6 +99,18 @@ public class AppShellViewModel {
 
     public void setLanguageMode(LanguageMode mode) {
         languageMode.set(mode == null ? LanguageMode.ENGLISH : mode);
+    }
+
+    public ObjectProperty<AppTheme> themeProperty() {
+        return theme;
+    }
+
+    public void setTheme(AppTheme theme) {
+        this.theme.set(theme == null ? AppTheme.PRIMER_LIGHT : theme);
+    }
+
+    public void toggleTheme() {
+        setTheme(theme.get().toggle());
     }
 
     public ObservableList<RecordingWorkspace> recordingWorkspacesProperty() {

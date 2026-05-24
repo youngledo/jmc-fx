@@ -116,7 +116,8 @@ class AppShellTest {
                 "Home action buttons should keep JavaFX's default button style class; add local hooks in controller");
         assertFalse(elementByFxId(document, "homeConnectJvmButton").hasAttribute("styleClass"),
                 "Home action buttons should keep JavaFX's default button style class; add local hooks in controller");
-        assertEquals("taskSummaryLabel", elementByFxId(document, "taskSummaryLabel").getAttribute("fx:id"));
+        assertEquals(0, elementCountWithFxId(document, "statusLabel"));
+        assertEquals(0, elementCountWithFxId(document, "taskSummaryLabel"));
         assertEquals("tlabTimelineContainer", elementByFxId(document, "tlabTimelineContainer").getAttribute("fx:id"));
     }
 
@@ -149,6 +150,11 @@ class AppShellTest {
         assertTrue(css.contains(".sidebar-recording-card"));
         assertTrue(css.contains(".app-nav-tree"));
         assertTrue(css.contains(".app-nav-tree-cell"));
+        assertTrue(css.contains(".nav-icon-recording"));
+        assertTrue(css.contains(".nav-icon-java"));
+        assertTrue(css.contains(".nav-icon-memory"));
+        assertTrue(css.contains(".nav-icon-environment"));
+        assertTrue(css.contains(".nav-icon-application"));
         assertTrue(css.contains(":group"));
         assertTrue(css.contains(":unavailable"));
         assertTrue(css.contains(".sidebar-footer"));
@@ -213,6 +219,28 @@ class AppShellTest {
 
         assertTrue(source.contains("Platform.runLater(this::showOpenRecordingChooser)"),
                 "native file chooser should open after the button action finishes so pressed styling can clear");
+    }
+
+    @Test
+    void homeActionButtonsBothUseLeadingIcons() throws Exception {
+        String source = java.nio.file.Files.readString(
+                java.nio.file.Path.of("src/main/java/com/youngledo/jmcfx/ui/shell/AppShellController.java"));
+
+        assertTrue(source.contains("configureActionButton(homeOpenRecordingButton"),
+                "Open recording home action should keep its leading icon");
+        assertTrue(source.contains("configureActionButton(homeConnectJvmButton"),
+                "Connect JVM home action should use the same leading icon treatment");
+    }
+
+    @Test
+    void sidebarSearchAndThemeControlsAreEnabled() throws Exception {
+        String source = java.nio.file.Files.readString(
+                java.nio.file.Path.of("src/main/java/com/youngledo/jmcfx/ui/shell/AppSidebar.java"));
+
+        assertFalse(source.contains("searchButton.setDisable(true)"),
+                "sidebar search should be a usable navigation search control");
+        assertFalse(source.contains("themeButton.setDisable(true)"),
+                "theme button should toggle Primer light/dark themes");
     }
 
     @Test

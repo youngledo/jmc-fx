@@ -1,8 +1,10 @@
 package com.youngledo.jmcfx.ui.shell;
 
+import java.util.Locale;
 import java.util.function.Consumer;
 
 import com.youngledo.jmcfx.ui.i18n.I18n;
+import com.youngledo.jmcfx.ui.preferences.AppTheme;
 
 import org.kordamp.ikonli.javafx.FontIcon;
 import org.kordamp.ikonli.material2.Material2AL;
@@ -14,7 +16,10 @@ import javafx.geometry.Pos;
 import javafx.scene.AccessibleRole;
 import javafx.scene.control.Button;
 import javafx.scene.control.ContentDisplay;
+import javafx.scene.control.ContextMenu;
 import javafx.scene.control.Label;
+import javafx.scene.control.MenuItem;
+import javafx.scene.control.TextField;
 import javafx.scene.control.Tooltip;
 import javafx.scene.layout.HBox;
 import javafx.scene.layout.Priority;
@@ -30,8 +35,10 @@ public class AppSidebar extends VBox {
     private Label subtitle;
     private Label currentRecordingLabel;
     private Label version;
-    private Button searchButton;
-    private Label searchTitleLabel;
+    private TextField searchField;
+    private final ContextMenu searchResultsMenu = new ContextMenu();
+    private Button themeButton;
+    private AppTheme currentTheme = AppTheme.PRIMER_LIGHT;
 
     public AppSidebar() {
         this(new I18n(java.util.Locale.getDefault()));
@@ -51,6 +58,9 @@ public class AppSidebar extends VBox {
     void bind(AppShellViewModel viewModel) {
         recordingNameLabel.textProperty().bind(viewModel.currentRecordingNameProperty());
         navTree.bind(viewModel);
+        themeButton.setOnAction(event -> viewModel.toggleTheme());
+        viewModel.themeProperty().addListener((observable, oldValue, newValue) -> updateThemeButton(newValue));
+        updateThemeButton(viewModel.themeProperty().get());
     }
 
     void setNavigationHandler(Consumer<String> navigationHandler) {
@@ -70,11 +80,9 @@ public class AppSidebar extends VBox {
         if (subtitle != null) {
             subtitle.textProperty().bind(i18n.text("sidebar.subtitle"));
         }
-        if (searchButton != null) {
-            searchButton.setTooltip(i18n.tooltip("sidebar.searchWorkflows"));
-        }
-        if (searchTitleLabel != null) {
-            searchTitleLabel.textProperty().bind(i18n.text("sidebar.searchWorkflows"));
+        if (searchField != null) {
+            searchField.promptTextProperty().bind(i18n.text("sidebar.searchWorkflows"));
+            searchField.setTooltip(i18n.tooltip("sidebar.searchWorkflows"));
         }
         if (currentRecordingLabel != null) {
             currentRecordingLabel.textProperty().bind(i18n.text("sidebar.currentRecording"));
@@ -82,12 +90,15 @@ public class AppSidebar extends VBox {
         if (version != null) {
             version.textProperty().bind(i18n.text("sidebar.version"));
         }
+        if (themeButton != null) {
+            updateThemeButton(currentTheme);
+        }
     }
 
     private VBox createHeader() {
         VBox header = new VBox();
         header.getStyleClass().add("sidebar-header");
-        header.getChildren().setAll(createBrand(), createSearchButton());
+        header.getChildren().setAll(createBrand(), createSearchField());
         return header;
     }
 
@@ -102,8 +113,7 @@ public class AppSidebar extends VBox {
         VBox copy = new VBox(title, subtitle);
         copy.getStyleClass().add("sidebar-brand-copy");
 
-        Button themeButton = iconButton(i18n.get("sidebar.theme"), Material2MZ.WB_SUNNY);
-        themeButton.setDisable(true);
+        themeButton = iconButton(i18n.get("sidebar.theme"), Material2MZ.WB_SUNNY);
 
         HBox brand = new HBox(mark, copy, new Spacer(), themeButton);
         brand.getStyleClass().add("sidebar-brand");
@@ -111,23 +121,19 @@ public class AppSidebar extends VBox {
         return brand;
     }
 
-    private Button createSearchButton() {
-        searchTitleLabel = new Label("Search workflows", new FontIcon(Material2MZ.SEARCH));
-        searchTitleLabel.getStyleClass().add("search-title");
-        Label hint = new Label("/");
-        hint.getStyleClass().add("search-hint");
-        HBox content = new HBox(searchTitleLabel, new Spacer(), hint);
-        content.getStyleClass().add("search-content");
-        content.setAlignment(Pos.CENTER_LEFT);
-
-        searchButton = new Button();
-        searchButton.setGraphic(content);
-        searchButton.setContentDisplay(ContentDisplay.GRAPHIC_ONLY);
-        searchButton.getStyleClass().add("sidebar-search");
-        searchButton.setMaxWidth(Double.MAX_VALUE);
-        searchButton.setDisable(true);
-        searchButton.setAccessibleText("Search workflows");
-        return searchButton;
+    private TextField createSearchField() {
+        searchField = new TextField();
+        searchField.getStyleClass().add("sidebar-search");
+        searchField.setMaxWidth(Double.MAX_VALUE);
+        searchField.setAccessibleText("Search workflows");
+        searchField.textProperty().addListener((observable, oldValue, newValue) -> updateSearchResults(newValue));
+        searchField.setOnAction(event -> navigateFirstSearchResult());
+        searchField.focusedProperty().addListener((observable, oldValue, focused) -> {
+            if (!focused) {
+                searchResultsMenu.hide();
+            }
+        });
+        return searchField;
     }
 
     private VBox createRecordingCard() {
@@ -157,5 +163,79 @@ public class AppSidebar extends VBox {
         button.setAccessibleText(accessibleText);
         button.setTooltip(new Tooltip(accessibleText));
         return button;
+    }
+
+    private void updateSearchResults(String query) {
+        if (!shouldSearchQueryImmediately(i18n, query)) {
+            searchResultsMenu.hide();
+            return;
+        }
+        java.util.List<AppNavSearchResult> results = navTree.search(query);
+        searchResultsMenu.getItems().setAll(results.stream()
+                .limit(8)
+                .map(this::searchMenuItem)
+                .toList());
+        if (searchResultsMenu.getItems().isEmpty()) {
+            searchResultsMenu.hide();
+            return;
+        }
+        if (searchField.isFocused()) {
+            searchResultsMenu.show(searchField, javafx.geometry.Side.BOTTOM, 0, 2);
+        }
+    }
+
+    private MenuItem searchMenuItem(AppNavSearchResult result) {
+        MenuItem item = new MenuItem(result.title());
+        item.setOnAction(event -> {
+            navTree.navigateToSection(result.sectionId());
+            searchField.clear();
+            searchResultsMenu.hide();
+        });
+        return item;
+    }
+
+    private void navigateFirstSearchResult() {
+        if (!shouldSearchQueryImmediately(i18n, searchField.getText())) {
+            return;
+        }
+        navTree.search(searchField.getText()).stream().findFirst().ifPresent(result -> {
+            navTree.navigateToSection(result.sectionId());
+            searchField.clear();
+            searchResultsMenu.hide();
+        });
+    }
+
+    private void updateThemeButton(AppTheme theme) {
+        if (themeButton == null) {
+            return;
+        }
+        AppTheme currentTheme = theme == null ? AppTheme.PRIMER_LIGHT : theme;
+        this.currentTheme = currentTheme;
+        String key = currentTheme == AppTheme.PRIMER_DARK ? "sidebar.theme.light" : "sidebar.theme.dark";
+        String text = i18n.get(key);
+        org.kordamp.ikonli.Ikon icon = currentTheme == AppTheme.PRIMER_DARK
+                ? Material2MZ.WB_SUNNY
+                : Material2AL.BEDTIME;
+        themeButton.setGraphic(new FontIcon(icon));
+        themeButton.setAccessibleText(text);
+        themeButton.setTooltip(new Tooltip(text));
+    }
+
+    static boolean shouldSearchQueryImmediately(I18n i18n, String query) {
+        if (query == null || query.isBlank()) {
+            return false;
+        }
+        String trimmedQuery = query.trim();
+        if (trimmedQuery.codePointCount(0, trimmedQuery.length()) < 2) {
+            return false;
+        }
+        if (!Locale.SIMPLIFIED_CHINESE.equals(i18n.localeProperty().get())) {
+            return true;
+        }
+        return !trimmedQuery.chars().allMatch(AppSidebar::isAsciiLowercaseLetter);
+    }
+
+    private static boolean isAsciiLowercaseLetter(int codePoint) {
+        return codePoint >= 'a' && codePoint <= 'z';
     }
 }
