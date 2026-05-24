@@ -1,10 +1,10 @@
 package com.youngledo.jmcfx.adapter.jmc;
 
 import java.io.IOException;
-import java.time.Instant;
 import java.util.ArrayList;
 import java.util.Comparator;
 import java.util.HashMap;
+import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
 
@@ -31,6 +31,8 @@ import com.youngledo.jmcfx.domain.service.JmcFxException;
 import com.youngledo.jmcfx.domain.service.TlabService;
 
 public class JmcTlabService implements TlabService {
+
+    private static final long TIMELINE_BUCKET_MILLIS = 1_000;
 
     @Override
     public List<TlabAllocation> loadTlabAllocations(RecordingSummary recording) {
@@ -101,21 +103,28 @@ public class JmcTlabService implements TlabService {
         IItemCollection insideTlab = events.apply(JdkFilters.ALLOC_INSIDE_TLAB);
         IItemCollection outsideTlab = events.apply(JdkFilters.ALLOC_OUTSIDE_TLAB);
 
-        List<ChartDataPoint> points = new ArrayList<>();
-        collectTimelinePoints(insideTlab, points);
-        collectTimelinePoints(outsideTlab, points);
+        Map<Long, Long> bytesBySecond = new LinkedHashMap<>();
+        collectTimelineBytes(insideTlab, bytesBySecond);
+        collectTimelineBytes(outsideTlab, bytesBySecond);
 
-        if (points.isEmpty()) {
+        if (bytesBySecond.isEmpty()) {
             return new ChartDefinition("Time", "Bytes", List.of());
         }
 
+        List<ChartDataPoint> points = new ArrayList<>(bytesBySecond.entrySet().stream()
+                .map(entry -> new ChartDataPoint(entry.getKey(), entry.getValue()))
+                .toList());
         points.sort(Comparator.comparingDouble(ChartDataPoint::x));
         ChartSeries series = new ChartSeries("allocations", "Allocations",
-                ChartSeriesType.BAR, List.copyOf(points));
+                timelineSeriesType(), List.copyOf(points));
         return JmcResultLimiter.limitChart(new ChartDefinition("Time", "Bytes", List.of(series)));
     }
 
-    private void collectTimelinePoints(IItemCollection collection, List<ChartDataPoint> points) {
+    static ChartSeriesType timelineSeriesType() {
+        return ChartSeriesType.LINE;
+    }
+
+    private void collectTimelineBytes(IItemCollection collection, Map<Long, Long> bytesBySecond) {
         for (IItemIterable itemIter : collection) {
             @SuppressWarnings("unchecked")
             IMemberAccessor<IQuantity, IItem> startTimeAccessor =
@@ -127,8 +136,8 @@ public class JmcTlabService implements TlabService {
                 if (startTime == null) {
                     continue;
                 }
-                Instant instant = UnitLookup.toDate(startTime).toInstant();
-                double timeMs = instant.toEpochMilli();
+                long timeMs = UnitLookup.toDate(startTime).toInstant().toEpochMilli();
+                long bucket = timeMs / TIMELINE_BUCKET_MILLIS * TIMELINE_BUCKET_MILLIS;
                 long size = 0;
                 if (allocSizeAccessor != null) {
                     IQuantity qty = allocSizeAccessor.getMember(item);
@@ -136,7 +145,7 @@ public class JmcTlabService implements TlabService {
                         size = qty.longValue();
                     }
                 }
-                points.add(new ChartDataPoint(timeMs, size));
+                bytesBySecond.merge(bucket, size, Long::sum);
             }
         }
     }

@@ -1366,7 +1366,7 @@ public class AppShellController {
     }
 
     private void configureTlabTable() {
-        tlabTable.setPlaceholder(localizedTablePlaceholder("tlab.empty"));
+        tlabTable.setPlaceholder(emptyTablePlaceholder());
 
         TableColumn<TlabAllocation, String> threadCol = new TableColumn<>();
         threadCol.textProperty().bind(i18n.text("tlab.column.thread"));
@@ -1440,6 +1440,7 @@ public class AppShellController {
 
     private void bindTlab(TlabViewModel nextViewModel) {
         tlabTable.setItems(FXCollections.emptyObservableList());
+        tlabTable.setPlaceholder(emptyTablePlaceholder());
         tlabTimelineChart.setData(null);
         tlabViewModel = nextViewModel;
         if (nextViewModel == null) {
@@ -1447,8 +1448,21 @@ public class AppShellController {
         }
         tlabTable.setItems(nextViewModel.allocationsProperty());
         tlabTable.getSelectionModel().selectFirst();
+        updateTlabTablePlaceholder(nextViewModel);
+        nextViewModel.loadingProperty().addListener((obs, old, val) -> updateTlabTablePlaceholder(nextViewModel));
+        nextViewModel.loadedProperty().addListener((obs, old, val) -> updateTlabTablePlaceholder(nextViewModel));
         nextViewModel.timelineProperty().addListener((obs, old, val) -> tlabTimelineChart.setData(val));
         tlabTimelineChart.setData(nextViewModel.timelineProperty().get());
+    }
+
+    private void updateTlabTablePlaceholder(TlabViewModel viewModel) {
+        if (viewModel == null || !viewModel.loadedProperty().get()) {
+            tlabTable.setPlaceholder(viewModel != null && viewModel.loadingProperty().get()
+                    ? localizedTablePlaceholder("tlab.loading")
+                    : emptyTablePlaceholder());
+            return;
+        }
+        tlabTable.setPlaceholder(localizedTablePlaceholder("tlab.empty"));
     }
 
     private void updateLeakReferenceTree(LeakReferenceNode node) {

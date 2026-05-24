@@ -38,6 +38,20 @@ class TlabViewModelTest {
         assertNotNull(vm.timelineProperty().get());
     }
 
+    @Test
+    void startsUnloadedAndBecomesLoadedAfterLoadCompletes() {
+        FakeTlabService service = new FakeTlabService();
+        TlabViewModel vm = new TlabViewModel(service);
+
+        assertFalse(vm.loadedProperty().get());
+        assertFalse(vm.loadingProperty().get());
+
+        vm.load(testRecording());
+
+        assertTrue(vm.loadedProperty().get());
+        assertFalse(vm.loadingProperty().get());
+    }
+
     private RecordingSummary testRecording() {
         return new RecordingSummary("test", Path.of("test.jfr"), "test",
                 Instant.now(), Instant.now(), 1000, 1024);

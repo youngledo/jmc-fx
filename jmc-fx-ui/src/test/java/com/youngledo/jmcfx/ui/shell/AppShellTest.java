@@ -393,6 +393,19 @@ class AppShellTest {
     }
 
     @Test
+    void tlabPlaceholderDoesNotShowEmptyStateBeforeLazyLoadCompletes() throws Exception {
+        String source = java.nio.file.Files.readString(
+                java.nio.file.Path.of("src/main/java/com/youngledo/jmcfx/ui/shell/AppShellController.java"));
+        String configureTlabTable = source.substring(source.indexOf("private void configureTlabTable()"),
+                source.indexOf("private void bindHeap("));
+
+        assertFalse(configureTlabTable.contains("tlabTable.setPlaceholder(localizedTablePlaceholder(\"tlab.empty\"))"),
+                "TLAB is loaded lazily, so its initial placeholder must not say the recording has no TLAB data");
+        assertTrue(source.contains("updateTlabTablePlaceholder("),
+                "TLAB placeholder must switch to the empty message only after the lazy load completes");
+    }
+
+    @Test
     void jvmInternalsTablesUseSharedDisplayFormats() throws Exception {
         String source = java.nio.file.Files.readString(
                 java.nio.file.Path.of("src/main/java/com/youngledo/jmcfx/ui/shell/AppShellController.java"));
