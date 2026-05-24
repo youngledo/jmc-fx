@@ -199,7 +199,7 @@ public class JmcJvmInternalsService implements JvmInternalsService {
                     readInstant(JfrAttributes.START_TIME, item)));
         });
         result.sort(Comparator.comparingLong(GcEvent::gcId));
-        return List.copyOf(result);
+        return JmcResultLimiter.limitRows(result);
     }
 
     @Override
@@ -221,9 +221,9 @@ public class JmcJvmInternalsService implements JvmInternalsService {
                     usedPoints.add(new ChartDataPoint(time, readDoubleBytes(JdkAttributes.GC_METASPACE_USED, item)));
                     committedPoints.add(new ChartDataPoint(time, readDoubleBytes(JdkAttributes.GC_METASPACE_COMMITTED, item)));
                 });
-        return new ChartDefinition("Time", "Bytes", List.of(
+        return JmcResultLimiter.limitChart(new ChartDefinition("Time", "Bytes", List.of(
                 new ChartSeries("metaspace-used", "Used Metaspace", ChartSeriesType.LINE, List.copyOf(usedPoints)),
-                new ChartSeries("metaspace-committed", "Committed Metaspace", ChartSeriesType.LINE, List.copyOf(committedPoints))));
+                new ChartSeries("metaspace-committed", "Committed Metaspace", ChartSeriesType.LINE, List.copyOf(committedPoints)))));
     }
 
     @Override
@@ -236,8 +236,8 @@ public class JmcJvmInternalsService implements JvmInternalsService {
                     double time = readEpochSeconds(JfrAttributes.START_TIME, item);
                     pausePoints.add(new ChartDataPoint(time, readDurationMicros(item) / 1000.0));
                 });
-        return new ChartDefinition("Time", "Pause (ms)", List.of(
-                new ChartSeries("gc-pause", "GC Pause", ChartSeriesType.LINE, List.copyOf(pausePoints))));
+        return JmcResultLimiter.limitChart(new ChartDefinition("Time", "Pause (ms)", List.of(
+                new ChartSeries("gc-pause", "GC Pause", ChartSeriesType.LINE, List.copyOf(pausePoints)))));
     }
 
     @Override
@@ -251,7 +251,7 @@ public class JmcJvmInternalsService implements JvmInternalsService {
                     readString(JdkAttributes.REFERENCE_STATISTICS_TYPE, item),
                     readLong(JdkAttributes.REFERENCE_STATISTICS_COUNT, item)));
         });
-        return List.copyOf(result);
+        return JmcResultLimiter.limitRows(result);
     }
 
     @Override
@@ -270,7 +270,7 @@ public class JmcJvmInternalsService implements JvmInternalsService {
                             readLongBytes(JdkAttributes.GC_METASPACE_COMMITTED, item),
                             readLongBytes(JdkAttributes.GC_METASPACE_RESERVED, item)));
                 });
-        return List.copyOf(result);
+        return JmcResultLimiter.limitRows(result);
     }
 
     // --- 5E: Compilations ---
@@ -291,7 +291,7 @@ public class JmcJvmInternalsService implements JvmInternalsService {
                             readLongBytes(JdkAttributes.COMPILER_INLINED_SIZE, item),
                             readInstant(JfrAttributes.START_TIME, item)));
                 });
-        return List.copyOf(result);
+        return JmcResultLimiter.limitRows(result);
     }
 
     @Override
@@ -310,7 +310,7 @@ public class JmcJvmInternalsService implements JvmInternalsService {
                             0,
                             readInstant(JfrAttributes.START_TIME, item)));
                 });
-        return List.copyOf(result);
+        return JmcResultLimiter.limitRows(result);
     }
 
     @Override
@@ -323,8 +323,8 @@ public class JmcJvmInternalsService implements JvmInternalsService {
                     double time = readEpochSeconds(JfrAttributes.START_TIME, item);
                     points.add(new ChartDataPoint(time, readDurationMicros(item) / 1000.0));
                 });
-        return new ChartDefinition("Time", "Duration (ms)", List.of(
-                new ChartSeries("compilation-duration", "Compilation Duration", ChartSeriesType.LINE, List.copyOf(points))));
+        return JmcResultLimiter.limitChart(new ChartDefinition("Time", "Duration (ms)", List.of(
+                new ChartSeries("compilation-duration", "Compilation Duration", ChartSeriesType.LINE, List.copyOf(points)))));
     }
 
     // --- 5F: Code Cache ---
@@ -344,7 +344,7 @@ public class JmcJvmInternalsService implements JvmInternalsService {
                             readLong(JdkAttributes.SWEEP_METHOD_SWEPT, item),
                             readLong(JdkAttributes.SWEEP_METHOD_RECLAIMED, item)));
                 });
-        return List.copyOf(result);
+        return JmcResultLimiter.limitRows(result);
     }
 
     @Override
@@ -362,7 +362,7 @@ public class JmcJvmInternalsService implements JvmInternalsService {
                             0,
                             0));
                 });
-        return List.copyOf(result);
+        return JmcResultLimiter.limitRows(result);
     }
 
     @Override
@@ -377,9 +377,9 @@ public class JmcJvmInternalsService implements JvmInternalsService {
                     entriesPoints.add(new ChartDataPoint(time, readLong(JdkAttributes.ENTRIES, item)));
                     methodsPoints.add(new ChartDataPoint(time, readLong(JdkAttributes.METHODS, item)));
                 });
-        return new ChartDefinition("Time", "Count", List.of(
+        return JmcResultLimiter.limitChart(new ChartDefinition("Time", "Count", List.of(
                 new ChartSeries("entries", "Entries", ChartSeriesType.LINE, List.copyOf(entriesPoints)),
-                new ChartSeries("methods", "Methods", ChartSeriesType.LINE, List.copyOf(methodsPoints))));
+                new ChartSeries("methods", "Methods", ChartSeriesType.LINE, List.copyOf(methodsPoints)))));
     }
 
     @Override
@@ -394,9 +394,9 @@ public class JmcJvmInternalsService implements JvmInternalsService {
                     sweptPoints.add(new ChartDataPoint(time, readLong(JdkAttributes.SWEEP_METHOD_SWEPT, item)));
                     flushedPoints.add(new ChartDataPoint(time, readLong(JdkAttributes.SWEEP_METHOD_FLUSHED, item)));
                 });
-        return new ChartDefinition("Time", "Count", List.of(
+        return JmcResultLimiter.limitChart(new ChartDefinition("Time", "Count", List.of(
                 new ChartSeries("swept", "Swept", ChartSeriesType.LINE, List.copyOf(sweptPoints)),
-                new ChartSeries("flushed", "Flushed", ChartSeriesType.LINE, List.copyOf(flushedPoints))));
+                new ChartSeries("flushed", "Flushed", ChartSeriesType.LINE, List.copyOf(flushedPoints)))));
     }
 
     // --- 5G: Class Loading ---
@@ -453,9 +453,9 @@ public class JmcJvmInternalsService implements JvmInternalsService {
                             readString(JdkAttributes.CLASS_DEFINING_CLASSLOADER_STRING, item),
                             readString(JdkAttributes.CLASS_INITIATING_CLASSLOADER_STRING, item),
                             readDurationMicros(item)));
-                });
+        });
         result.sort(Comparator.comparing(ClassloadEvent::startTime));
-        return List.copyOf(result);
+        return JmcResultLimiter.limitRows(result);
     }
 
     @Override
@@ -473,7 +473,7 @@ public class JmcJvmInternalsService implements JvmInternalsService {
                             readLongBytes(JdkAttributes.ANONYMOUS_BLOCK_SIZE, item),
                             readLong(JdkAttributes.ANONYMOUS_CLASS_COUNT, item)));
                 });
-        return List.copyOf(result);
+        return JmcResultLimiter.limitRows(result);
     }
 
     @Override
@@ -488,9 +488,9 @@ public class JmcJvmInternalsService implements JvmInternalsService {
                     loadedPoints.add(new ChartDataPoint(time, readLong(JdkAttributes.CLASSLOADER_LOADED_COUNT, item)));
                     unloadedPoints.add(new ChartDataPoint(time, readLong(JdkAttributes.CLASSLOADER_UNLOADED_COUNT, item)));
                 });
-        return new ChartDefinition("Time", "Count", List.of(
+        return JmcResultLimiter.limitChart(new ChartDefinition("Time", "Count", List.of(
                 new ChartSeries("loaded", "Loaded", ChartSeriesType.LINE, List.copyOf(loadedPoints)),
-                new ChartSeries("unloaded", "Unloaded", ChartSeriesType.LINE, List.copyOf(unloadedPoints))));
+                new ChartSeries("unloaded", "Unloaded", ChartSeriesType.LINE, List.copyOf(unloadedPoints)))));
     }
 
     // --- 5H: VM Operations ---
@@ -533,9 +533,9 @@ public class JmcJvmInternalsService implements JvmInternalsService {
                             readBoolean(JdkAttributes.SAFEPOINT, item),
                             readDurationMicros(item),
                             readEventThreadName(item)));
-                });
+        });
         result.sort(Comparator.comparing(VmOperationEvent::startTime));
-        return List.copyOf(result);
+        return JmcResultLimiter.limitRows(result);
     }
 
     // --- Internal helpers ---
@@ -689,8 +689,8 @@ public class JmcJvmInternalsService implements JvmInternalsService {
                     usedPoints.add(new ChartDataPoint(time, readDoubleBytes(usedAttr, item)));
                     totalPoints.add(new ChartDataPoint(time, readDoubleBytes(totalAttr, item)));
                 });
-        return new ChartDefinition(xLabel, yLabel, List.of(
+        return JmcResultLimiter.limitChart(new ChartDefinition(xLabel, yLabel, List.of(
                 new ChartSeries(usedLabel.toLowerCase().replace(' ', '-'), usedLabel, ChartSeriesType.LINE, List.copyOf(usedPoints)),
-                new ChartSeries(totalLabel.toLowerCase().replace(' ', '-'), totalLabel, ChartSeriesType.LINE, List.copyOf(totalPoints))));
+                new ChartSeries(totalLabel.toLowerCase().replace(' ', '-'), totalLabel, ChartSeriesType.LINE, List.copyOf(totalPoints)))));
     }
 }

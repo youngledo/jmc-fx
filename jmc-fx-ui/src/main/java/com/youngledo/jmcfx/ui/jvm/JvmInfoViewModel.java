@@ -10,8 +10,8 @@ import com.youngledo.jmcfx.domain.model.KeyValueSection;
 import com.youngledo.jmcfx.domain.model.RecordingSummary;
 import com.youngledo.jmcfx.domain.service.JvmInternalsService;
 import com.youngledo.jmcfx.ui.util.DisplayFormats;
+import com.youngledo.jmcfx.ui.util.FxDispatch;
 
-import javafx.application.Platform;
 import javafx.collections.FXCollections;
 import javafx.collections.ObservableList;
 
@@ -30,21 +30,19 @@ public class JvmInfoViewModel {
     }
 
     public void load(RecordingSummary recording) {
-        Thread.startVirtualThread(() -> {
-            JvmInfo info = service.loadJvmInfo(recording);
-            List<JvmFlag> flagList = service.loadJvmFlags(recording);
-            List<JvmFlagChange> changes = service.loadJvmFlagChanges(recording);
-            List<KeyValueSection> sections = List.of(
-                    new KeyValueSection("JVM Information", List.of(
-                            new KeyValueEntry("JVM Name", info.jvmName()),
-                            new KeyValueEntry("JVM Version", info.jvmVersion()),
-                            new KeyValueEntry("JVM Arguments", info.jvmArguments()),
-                            new KeyValueEntry("PID", DisplayFormats.formatInteger(info.pid())))));
-            Platform.runLater(() -> {
-                infoSections.setAll(sections);
-                flags.setAll(flagList);
-                flagChanges.setAll(changes);
-            });
+        JvmInfo info = service.loadJvmInfo(recording);
+        List<JvmFlag> flagList = service.loadJvmFlags(recording);
+        List<JvmFlagChange> changes = service.loadJvmFlagChanges(recording);
+        List<KeyValueSection> sections = List.of(
+                new KeyValueSection("JVM Information", List.of(
+                        new KeyValueEntry("JVM Name", info.jvmName()),
+                        new KeyValueEntry("JVM Version", info.jvmVersion()),
+                        new KeyValueEntry("JVM Arguments", info.jvmArguments()),
+                        new KeyValueEntry("PID", DisplayFormats.formatInteger(info.pid())))));
+        FxDispatch.run(() -> {
+            infoSections.setAll(sections);
+            flags.setAll(flagList);
+            flagChanges.setAll(changes);
         });
     }
 

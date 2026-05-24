@@ -7,8 +7,8 @@ import com.youngledo.jmcfx.domain.model.CodeCacheStats;
 import com.youngledo.jmcfx.domain.model.CodeCacheSweep;
 import com.youngledo.jmcfx.domain.model.RecordingSummary;
 import com.youngledo.jmcfx.domain.service.JvmInternalsService;
+import com.youngledo.jmcfx.ui.util.FxDispatch;
 
-import javafx.application.Platform;
 import javafx.beans.property.ObjectProperty;
 import javafx.beans.property.SimpleObjectProperty;
 import javafx.collections.FXCollections;
@@ -46,17 +46,15 @@ public class CodeCacheViewModel {
     }
 
     public void load(RecordingSummary recording) {
-        Thread.startVirtualThread(() -> {
-            List<CodeCacheSweep> sweepList = service.loadCodeCacheSweeps(recording);
-            List<CodeCacheStats> statsList = service.loadCodeCacheStatistics(recording);
-            ChartDefinition entries = service.loadCodeCacheEntriesChart(recording);
-            ChartDefinition sweep = service.loadCodeCacheSweepChart(recording);
-            Platform.runLater(() -> {
-                sweeps.setAll(sweepList);
-                statistics.setAll(statsList);
-                entriesChart.set(entries);
-                sweepChart.set(sweep);
-            });
+        List<CodeCacheSweep> sweepList = service.loadCodeCacheSweeps(recording);
+        List<CodeCacheStats> statsList = service.loadCodeCacheStatistics(recording);
+        ChartDefinition entries = service.loadCodeCacheEntriesChart(recording);
+        ChartDefinition sweep = service.loadCodeCacheSweepChart(recording);
+        FxDispatch.run(() -> {
+            sweeps.setAll(sweepList);
+            statistics.setAll(statsList);
+            entriesChart.set(entries);
+            sweepChart.set(sweep);
         });
     }
 }

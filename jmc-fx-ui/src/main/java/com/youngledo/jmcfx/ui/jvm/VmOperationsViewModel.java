@@ -6,8 +6,8 @@ import com.youngledo.jmcfx.domain.model.RecordingSummary;
 import com.youngledo.jmcfx.domain.model.VmOperationEvent;
 import com.youngledo.jmcfx.domain.model.VmOperationSummary;
 import com.youngledo.jmcfx.domain.service.JvmInternalsService;
+import com.youngledo.jmcfx.ui.util.FxDispatch;
 
-import javafx.application.Platform;
 import javafx.collections.FXCollections;
 import javafx.collections.ObservableList;
 
@@ -33,13 +33,11 @@ public class VmOperationsViewModel {
     }
 
     public void load(RecordingSummary recording) {
-        Thread.startVirtualThread(() -> {
-            List<VmOperationSummary> summ = service.loadVmOperationSummary(recording);
-            List<VmOperationEvent> evts = service.loadVmOperationEvents(recording);
-            Platform.runLater(() -> {
-                summary.setAll(summ);
-                events.setAll(evts);
-            });
+        List<VmOperationSummary> summ = service.loadVmOperationSummary(recording);
+        List<VmOperationEvent> evts = service.loadVmOperationEvents(recording);
+        FxDispatch.run(() -> {
+            summary.setAll(summ);
+            events.setAll(evts);
         });
     }
 }

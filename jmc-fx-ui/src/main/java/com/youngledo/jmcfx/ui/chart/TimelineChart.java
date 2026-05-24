@@ -2,6 +2,7 @@ package com.youngledo.jmcfx.ui.chart;
 
 import java.time.Instant;
 import java.time.ZoneId;
+import java.util.ArrayList;
 import java.util.List;
 
 import com.youngledo.jmcfx.domain.model.ChartDataPoint;
@@ -29,6 +30,7 @@ import javafx.scene.layout.VBox;
 public class TimelineChart extends VBox {
 
     private static final double ZOOM_FACTOR = 0.85;
+    static final int MAX_RENDERED_POINTS_PER_SERIES = 2_000;
 
     private final NumberAxis xAxis = new NumberAxis();
     private final NumberAxis yAxis = new NumberAxis();
@@ -47,13 +49,14 @@ public class TimelineChart extends VBox {
         if (definition == null || definition.series().isEmpty()) {
             return;
         }
-        xAxis.setLabel(definition.xLabel());
-        xAxis.setTickLabelFormatter(new XAxisTickFormatter(definition.xLabel(), ZoneId.systemDefault()));
-        yAxis.setLabel(definition.yLabel());
-        AxisRange initialRange = dataRange(definition);
-        ChartSeriesType primaryType = definition.series().getFirst().type();
+        ChartDefinition renderableDefinition = renderableDefinition(definition);
+        xAxis.setLabel(renderableDefinition.xLabel());
+        xAxis.setTickLabelFormatter(new XAxisTickFormatter(renderableDefinition.xLabel(), ZoneId.systemDefault()));
+        yAxis.setLabel(renderableDefinition.yLabel());
+        AxisRange initialRange = dataRange(renderableDefinition);
+        ChartSeriesType primaryType = renderableDefinition.series().getFirst().type();
         if (primaryType == ChartSeriesType.BAR) {
-            XYChart<String, Number> chart = createBarChart(definition);
+            XYChart<String, Number> chart = createBarChart(renderableDefinition);
             VBox.setVgrow(chart, Priority.ALWAYS);
             chart.setMaxSize(Double.MAX_VALUE, Double.MAX_VALUE);
             getChildren().add(chart);
@@ -62,7 +65,7 @@ public class TimelineChart extends VBox {
         XYChart<Number, Number> chart = createChart(primaryType);
         VBox.setVgrow(chart, Priority.ALWAYS);
         chart.setMaxSize(Double.MAX_VALUE, Double.MAX_VALUE);
-        for (ChartSeries seriesDef : definition.series()) {
+        for (ChartSeries seriesDef : renderableDefinition.series()) {
             XYChart.Series<Number, Number> fxSeries = new XYChart.Series<>();
             fxSeries.setName(seriesDef.name());
             for (ChartDataPoint point : seriesDef.points()) {
@@ -72,6 +75,33 @@ public class TimelineChart extends VBox {
         }
         configureZoom(chart, initialRange);
         getChildren().add(chart);
+    }
+
+    static ChartDefinition renderableDefinition(ChartDefinition definition) {
+        if (definition == null || definition.series().isEmpty()) {
+            return definition;
+        }
+        List<ChartSeries> series = definition.series().stream()
+                .map(TimelineChart::renderableSeries)
+                .toList();
+        return new ChartDefinition(definition.xLabel(), definition.yLabel(), series);
+    }
+
+    private static ChartSeries renderableSeries(ChartSeries series) {
+        if (series.points().size() <= MAX_RENDERED_POINTS_PER_SERIES) {
+            return series;
+        }
+        return new ChartSeries(series.id(), series.name(), series.type(), sampleEvenly(series.points()));
+    }
+
+    private static List<ChartDataPoint> sampleEvenly(List<ChartDataPoint> points) {
+        int sourceSize = points.size();
+        List<ChartDataPoint> sampled = new ArrayList<>(MAX_RENDERED_POINTS_PER_SERIES);
+        for (int index = 0; index < MAX_RENDERED_POINTS_PER_SERIES; index++) {
+            int sourceIndex = (int) Math.floor(index * (sourceSize - 1.0) / (MAX_RENDERED_POINTS_PER_SERIES - 1.0));
+            sampled.add(points.get(sourceIndex));
+        }
+        return List.copyOf(sampled);
     }
 
     public int getChartCount() {

@@ -109,7 +109,7 @@ public class JmcJavaAppService implements JavaAppService {
                     acc.allocatedBytes, acc.exceptionCount));
         }
         results.sort(Comparator.comparingInt(ThreadHistogramRow::profilingCount).reversed());
-        return List.copyOf(results);
+        return JmcResultLimiter.limitRows(results);
     }
 
     @Override
@@ -170,7 +170,7 @@ public class JmcJavaAppService implements JavaAppService {
                     ChartSeriesType.LINE, List.copyOf(exceptionPoints)));
         }
 
-        return new ChartDefinition("Time", "Value", List.copyOf(series));
+        return JmcResultLimiter.limitChart(new ChartDefinition("Time", "Value", List.copyOf(series)));
     }
 
     @Override
@@ -213,7 +213,7 @@ public class JmcJavaAppService implements JavaAppService {
             }
         }
         results.sort(Comparator.comparing(X509CertificateEntry::startTime));
-        return List.copyOf(results);
+        return JmcResultLimiter.limitRows(results);
     }
 
     @Override
@@ -243,7 +243,7 @@ public class JmcJavaAppService implements JavaAppService {
             }
         }
         results.sort(Comparator.comparing(NativeLibraryEntry::startTime));
-        return List.copyOf(results);
+        return JmcResultLimiter.limitRows(results);
     }
 
     @Override
@@ -275,7 +275,7 @@ public class JmcJavaAppService implements JavaAppService {
             }
         }
         results.sort(Comparator.comparing(ThreadDumpEntry::startTime));
-        return List.copyOf(results);
+        return JmcResultLimiter.limitRows(results);
     }
 
     // --- Private helpers ---

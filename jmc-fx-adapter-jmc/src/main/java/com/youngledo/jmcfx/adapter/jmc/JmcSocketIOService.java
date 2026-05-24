@@ -56,7 +56,7 @@ public class JmcSocketIOService implements SocketIOService {
 					acc.totalDuration, acc.maxDuration, avgDuration));
 		}
 		results.sort(Comparator.comparingLong(SocketIOHistogram::totalDuration).reversed());
-		return List.copyOf(results);
+		return JmcResultLimiter.limitRows(results);
 	}
 
 	@Override
@@ -69,7 +69,7 @@ public class JmcSocketIOService implements SocketIOService {
 		collectEvents(socketReads, results, "jdk.SocketRead");
 		collectEvents(socketWrites, results, "jdk.SocketWrite");
 		results.sort(Comparator.comparingLong(SocketIOEvent::timestamp));
-		return List.copyOf(results);
+		return JmcResultLimiter.limitRows(results);
 	}
 
 	@Override
@@ -99,7 +99,7 @@ public class JmcSocketIOService implements SocketIOService {
 			seriesList.add(new ChartSeries("socket-write", "Socket Write",
 					ChartSeriesType.LINE, List.copyOf(writePoints)));
 		}
-		return new ChartDefinition("Time", "Duration (ms)", List.copyOf(seriesList));
+		return JmcResultLimiter.limitChart(new ChartDefinition("Time", "Duration (ms)", List.copyOf(seriesList)));
 	}
 
 	private void collectHistogramEntries(IItemCollection collection,

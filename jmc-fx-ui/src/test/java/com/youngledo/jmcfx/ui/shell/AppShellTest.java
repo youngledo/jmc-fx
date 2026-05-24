@@ -25,7 +25,9 @@ import org.xml.sax.SAXException;
 
 import com.youngledo.jmcfx.ui.util.DisplayFormats;
 import com.youngledo.jmcfx.domain.model.EventTypeSelection;
+import com.youngledo.jmcfx.domain.model.StackTreeNode;
 import com.youngledo.jmcfx.domain.model.RecordingSummary;
+import com.youngledo.jmcfx.domain.service.ProfilingService;
 import com.youngledo.jmcfx.domain.service.RuleAnalysisService;
 import com.youngledo.jmcfx.ui.events.EventBrowserViewModel;
 import com.youngledo.jmcfx.ui.i18n.I18n;
@@ -517,6 +519,84 @@ class AppShellTest {
     }
 
     @Test
+    void queuedSectionLoadingRunsOnlyLatestRequestedHeavySection() {
+        QueueingRecordingOpenExecutor executor = new QueueingRecordingOpenExecutor();
+        AtomicInteger analysisCalls = new AtomicInteger();
+        AtomicInteger profilingCalls = new AtomicInteger();
+        AppShellController controller = new AppShellController(
+                new AppShellViewModel(),
+                new FakeRecordingRepository(),
+                new FakeEventQueryService(),
+                recording -> {
+                    analysisCalls.incrementAndGet();
+                    return List.of();
+                },
+                profilingService(profilingCalls),
+                null, null,
+                null, null, null,
+                null, null, null,
+                null, null, null,
+                new I18n(java.util.Locale.ENGLISH),
+                executor);
+        AppShellController.PreparedRecordingWorkspace prepared = controller.prepareRecordingWorkspace(Path.of("startup.jfr"));
+        RecordingWorkspace workspace = new RecordingWorkspace(prepared.recording(), prepared.overview(), prepared.events(),
+                prepared.analysis(), prepared.profiling(), prepared.exceptions(), prepared.threads(), prepared.fileio(),
+                prepared.socketio(), prepared.locks(), prepared.heap(), prepared.leakSuspects(), prepared.tlab(),
+                prepared.jvmInfo(), prepared.gcConfig(), prepared.gcSummary(), prepared.gcDetails(),
+                prepared.compilations(), prepared.codeCache(), prepared.classLoading(), prepared.vmOperations(),
+                prepared.environment(), prepared.javaAppOverview(), prepared.security(), prepared.nativeLibraries(),
+                prepared.threadDumps());
+
+        controller.loadWorkspaceSection(workspace, "analysis");
+        controller.loadWorkspaceSection(workspace, "profiling");
+
+        assertEquals(2, executor.queuedTaskCount());
+
+        executor.runNext();
+        executor.runNext();
+
+        assertEquals(0, analysisCalls.get());
+        assertEquals(1, profilingCalls.get());
+    }
+
+    @Test
+    void queuedSectionLoadingIsSkippedWhenUserNavigatesToLightSection() {
+        QueueingRecordingOpenExecutor executor = new QueueingRecordingOpenExecutor();
+        AtomicInteger analysisCalls = new AtomicInteger();
+        AppShellController controller = new AppShellController(
+                new AppShellViewModel(),
+                new FakeRecordingRepository(),
+                new FakeEventQueryService(),
+                recording -> {
+                    analysisCalls.incrementAndGet();
+                    return List.of();
+                },
+                null, null, null,
+                null, null, null,
+                null, null, null,
+                null, null, null,
+                new I18n(java.util.Locale.ENGLISH),
+                executor);
+        AppShellController.PreparedRecordingWorkspace prepared = controller.prepareRecordingWorkspace(Path.of("startup.jfr"));
+        RecordingWorkspace workspace = new RecordingWorkspace(prepared.recording(), prepared.overview(), prepared.events(),
+                prepared.analysis(), prepared.profiling(), prepared.exceptions(), prepared.threads(), prepared.fileio(),
+                prepared.socketio(), prepared.locks(), prepared.heap(), prepared.leakSuspects(), prepared.tlab(),
+                prepared.jvmInfo(), prepared.gcConfig(), prepared.gcSummary(), prepared.gcDetails(),
+                prepared.compilations(), prepared.codeCache(), prepared.classLoading(), prepared.vmOperations(),
+                prepared.environment(), prepared.javaAppOverview(), prepared.security(), prepared.nativeLibraries(),
+                prepared.threadDumps());
+
+        controller.loadWorkspaceSection(workspace, "analysis");
+        controller.loadWorkspaceSection(workspace, "overview");
+
+        assertEquals(1, executor.queuedTaskCount());
+
+        executor.runNext();
+
+        assertEquals(0, analysisCalls.get());
+    }
+
+    @Test
     void openingRecordingDoesNotPreloadHeavySections() {
         QueueingRecordingOpenExecutor executor = new QueueingRecordingOpenExecutor();
         AppShellController controller = new AppShellController(
@@ -556,6 +636,21 @@ class AppShellTest {
     private static RuleAnalysisService throwingRuleAnalysisService() {
         return recording -> {
             throw new AssertionError("Opening a recording must not run page analysis eagerly.");
+        };
+    }
+
+    private static ProfilingService profilingService(AtomicInteger calls) {
+        return new ProfilingService() {
+            @Override
+            public List<com.youngledo.jmcfx.domain.model.HotMethod> loadHotMethods(RecordingSummary recording) {
+                calls.incrementAndGet();
+                return List.of();
+            }
+
+            @Override
+            public StackTreeNode loadStackTraceTree(RecordingSummary recording, String method, boolean callers) {
+                return StackTreeNode.EMPTY;
+            }
         };
     }
 

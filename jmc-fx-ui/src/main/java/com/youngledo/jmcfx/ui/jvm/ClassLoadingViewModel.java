@@ -8,8 +8,8 @@ import com.youngledo.jmcfx.domain.model.ClassloaderSummary;
 import com.youngledo.jmcfx.domain.model.ClassloadEvent;
 import com.youngledo.jmcfx.domain.model.RecordingSummary;
 import com.youngledo.jmcfx.domain.service.JvmInternalsService;
+import com.youngledo.jmcfx.ui.util.FxDispatch;
 
-import javafx.application.Platform;
 import javafx.beans.property.ObjectProperty;
 import javafx.beans.property.SimpleObjectProperty;
 import javafx.collections.FXCollections;
@@ -47,17 +47,15 @@ public class ClassLoadingViewModel {
     }
 
     public void load(RecordingSummary recording) {
-        Thread.startVirtualThread(() -> {
-            List<ClassloaderSummary> hist = service.loadClassloaderHistogram(recording);
-            List<ClassloadEvent> evts = service.loadClassloadEvents(recording);
-            List<ClassloaderStatistics> stats = service.loadClassloaderStatistics(recording);
-            ChartDefinition ch = service.loadClassLoadingChart(recording);
-            Platform.runLater(() -> {
-                histogram.setAll(hist);
-                events.setAll(evts);
-                statistics.setAll(stats);
-                chart.set(ch);
-            });
+        List<ClassloaderSummary> hist = service.loadClassloaderHistogram(recording);
+        List<ClassloadEvent> evts = service.loadClassloadEvents(recording);
+        List<ClassloaderStatistics> stats = service.loadClassloaderStatistics(recording);
+        ChartDefinition ch = service.loadClassLoadingChart(recording);
+        FxDispatch.run(() -> {
+            histogram.setAll(hist);
+            events.setAll(evts);
+            statistics.setAll(stats);
+            chart.set(ch);
         });
     }
 }

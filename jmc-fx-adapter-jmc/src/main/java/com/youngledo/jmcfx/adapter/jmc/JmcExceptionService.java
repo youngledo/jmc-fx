@@ -73,7 +73,7 @@ public class JmcExceptionService implements ExceptionService {
 			results.add(new ExceptionSummary(acc.key, acc.className, acc.message, acc.count, pct));
 		}
 		results.sort(Comparator.comparingInt(ExceptionSummary::count).reversed());
-		return List.copyOf(results);
+		return JmcResultLimiter.limitRows(results);
 	}
 
 	@Override
@@ -104,7 +104,7 @@ public class JmcExceptionService implements ExceptionService {
 
 		ChartSeries series = new ChartSeries("exceptions", "Exceptions",
 				ChartSeriesType.LINE, List.copyOf(points));
-		return new ChartDefinition("Time", "Count", List.of(series));
+		return JmcResultLimiter.limitChart(new ChartDefinition("Time", "Count", List.of(series)));
 	}
 
 	@SuppressWarnings("unchecked")

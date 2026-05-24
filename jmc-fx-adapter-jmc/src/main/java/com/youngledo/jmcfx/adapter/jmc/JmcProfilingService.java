@@ -58,7 +58,7 @@ public class JmcProfilingService implements ProfilingService {
 			methods.add(new HotMethod(method, frameType, count, pct));
 		}
 		methods.sort(Comparator.comparingInt(HotMethod::count).reversed());
-		return List.copyOf(methods);
+		return JmcResultLimiter.limitRows(methods);
 	}
 
 	@Override

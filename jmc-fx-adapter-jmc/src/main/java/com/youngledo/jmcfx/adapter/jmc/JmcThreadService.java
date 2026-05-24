@@ -33,6 +33,8 @@ import com.youngledo.jmcfx.domain.service.ThreadService;
 /// {@link JfrAttributes#EVENT_THREAD}.
 public class JmcThreadService implements ThreadService {
 
+	private static final int MAX_ACTIVITIES_PER_THREAD = 2_000;
+
 	@Override
 	public List<ThreadSummary> loadThreadSummaries(RecordingSummary recording) {
 		IItemCollection events = loadEvents(recording);
@@ -78,10 +80,22 @@ public class JmcThreadService implements ThreadService {
 		for (ThreadAccumulator acc : buckets.values()) {
 			results.add(new ThreadSummary(acc.info.name, acc.info.id, acc.info.group,
 					false, acc.sampleCount, acc.blockedDurationMillis,
-					List.copyOf(acc.activities)));
+					limitActivities(acc.activities)));
 		}
 		results.sort(Comparator.comparingInt(ThreadSummary::sampleCount).reversed());
-		return List.copyOf(results);
+		return JmcResultLimiter.limitRows(results);
+	}
+
+	private static List<ThreadActivity> limitActivities(List<ThreadActivity> activities) {
+		if (activities.size() <= MAX_ACTIVITIES_PER_THREAD) {
+			return List.copyOf(activities);
+		}
+		List<ThreadActivity> sampled = new ArrayList<>(MAX_ACTIVITIES_PER_THREAD);
+		for (int index = 0; index < MAX_ACTIVITIES_PER_THREAD; index++) {
+			int sourceIndex = (int) Math.floor(index * (activities.size() - 1.0) / (MAX_ACTIVITIES_PER_THREAD - 1.0));
+			sampled.add(activities.get(sourceIndex));
+		}
+		return List.copyOf(sampled);
 	}
 
 	private ThreadLaneType classifyLane(String eventTypeId) {

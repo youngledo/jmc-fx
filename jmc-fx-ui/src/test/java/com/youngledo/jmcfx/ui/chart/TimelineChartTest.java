@@ -159,6 +159,23 @@ class TimelineChartTest {
     }
 
     @Test
+    void renderableDefinitionDownsamplesLargeSeriesBeforeJavaFxNodesAreCreated() {
+        List<ChartDataPoint> points = java.util.stream.IntStream
+                .range(0, TimelineChart.MAX_RENDERED_POINTS_PER_SERIES * 3)
+                .mapToObj(value -> new ChartDataPoint(value, value))
+                .toList();
+        ChartDefinition definition = new ChartDefinition("Time", "Value", List.of(
+                new ChartSeries("large", "Large", ChartSeriesType.LINE, points)));
+
+        ChartDefinition renderable = TimelineChart.renderableDefinition(definition);
+        List<ChartDataPoint> renderedPoints = renderable.series().getFirst().points();
+
+        assertEquals(TimelineChart.MAX_RENDERED_POINTS_PER_SERIES, renderedPoints.size());
+        assertEquals(points.getFirst(), renderedPoints.getFirst());
+        assertEquals(points.getLast(), renderedPoints.getLast());
+    }
+
+    @Test
     void timeAxisTicksFormatEpochMillisAsTimestamps() {
         assertEquals("1970-01-01 08:00:00.000",
                 TimelineChart.formatXAxisTick("Time", 0, java.time.ZoneId.of("Asia/Shanghai")));

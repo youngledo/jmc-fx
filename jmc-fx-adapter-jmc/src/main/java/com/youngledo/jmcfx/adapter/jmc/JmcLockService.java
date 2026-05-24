@@ -129,7 +129,7 @@ public class JmcLockService implements LockService {
 					acc.threads.size(), acc.addresses.size()));
 		}
 		results.sort(Comparator.comparingLong(LockHistogram::totalDuration).reversed());
-		return List.copyOf(results);
+		return JmcResultLimiter.limitRows(results);
 	}
 
 	private Map<String, Long> collectInflateCounts(IItemCollection events) {

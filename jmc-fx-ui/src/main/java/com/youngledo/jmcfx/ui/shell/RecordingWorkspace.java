@@ -42,6 +42,8 @@ public final class RecordingWorkspace {
     private final RecordingSummary recording;
     private final StringProperty selectedSection = new SimpleStringProperty("analysis");
     private final Set<String> loadedSections = new HashSet<>();
+    private final Set<String> loadingSections = new HashSet<>();
+    private volatile String latestRequestedLoadSection = "analysis";
     private final OverviewViewModel overviewViewModel;
     private final EventBrowserViewModel eventBrowserViewModel;
     private final RuleResultsViewModel ruleResultsViewModel;
@@ -129,15 +131,56 @@ public final class RecordingWorkspace {
     }
 
     public boolean isSectionLoaded(String sectionId) {
-        return loadedSections.contains(sectionId);
-    }
-
-    public void markSectionLoaded(String sectionId) {
-        loadedSections.add(sectionId);
+        synchronized (loadedSections) {
+            return loadedSections.contains(sectionId);
+        }
     }
 
     public boolean markSectionLoading(String sectionId) {
-        return loadedSections.add(sectionId);
+        synchronized (loadedSections) {
+            latestRequestedLoadSection = sectionId;
+            if (loadedSections.contains(sectionId) || loadingSections.contains(sectionId)) {
+                return false;
+            }
+            loadingSections.add(sectionId);
+            return true;
+        }
+    }
+
+    public void cancelPendingSectionLoads() {
+        synchronized (loadedSections) {
+            latestRequestedLoadSection = null;
+        }
+    }
+
+    public boolean shouldLoadSection(String sectionId) {
+        synchronized (loadedSections) {
+            return loadingSections.contains(sectionId)
+                    && !loadedSections.contains(sectionId)
+                    && Objects.equals(latestRequestedLoadSection, sectionId);
+        }
+    }
+
+    public boolean markSectionLoaded(String sectionId) {
+        synchronized (loadedSections) {
+            loadingSections.remove(sectionId);
+            loadedSections.add(sectionId);
+            return !loadingSections.isEmpty();
+        }
+    }
+
+    public boolean markSectionLoadSkipped(String sectionId) {
+        synchronized (loadedSections) {
+            loadingSections.remove(sectionId);
+            return !loadingSections.isEmpty();
+        }
+    }
+
+    public boolean markSectionLoadFailed(String sectionId) {
+        synchronized (loadedSections) {
+            loadingSections.remove(sectionId);
+            return !loadingSections.isEmpty();
+        }
     }
 
     public OverviewViewModel overviewViewModel() {

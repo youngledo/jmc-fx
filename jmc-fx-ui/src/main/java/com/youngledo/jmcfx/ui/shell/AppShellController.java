@@ -2039,20 +2039,40 @@ public class AppShellController {
 
     void loadWorkspaceSection(RecordingWorkspace workspace, String sectionId) {
         String canonicalSectionId = canonicalLoadSectionId(sectionId);
-        if (workspace == null || canonicalSectionId == null || !workspace.markSectionLoading(canonicalSectionId)) {
+        if (workspace == null) {
+            return;
+        }
+        if (canonicalSectionId == null) {
+            workspace.cancelPendingSectionLoads();
+            return;
+        }
+        if (!workspace.markSectionLoading(canonicalSectionId)) {
             return;
         }
         setBackgroundWorkVisible(true);
         viewModel.showTaskSummary(i18n.format("taskSummary.preparingSection", displayNameForSection(sectionId)));
         recordingOpenExecutor.execute(() -> {
+            if (!workspace.shouldLoadSection(canonicalSectionId)) {
+                boolean stillLoading = workspace.markSectionLoadSkipped(canonicalSectionId);
+                if (!stillLoading) {
+                    onFxThread(() -> setBackgroundWorkVisible(false));
+                }
+                return;
+            }
             try {
                 loadWorkspaceSectionNow(workspace, canonicalSectionId);
+                boolean stillLoading = workspace.markSectionLoaded(canonicalSectionId);
                 onFxThread(() -> viewModel.showTaskSummary(i18n.get("taskSummary.recordingReady")));
-                onFxThread(() -> setBackgroundWorkVisible(false));
+                if (!stillLoading) {
+                    onFxThread(() -> setBackgroundWorkVisible(false));
+                }
             } catch (RuntimeException exception) {
+                boolean stillLoading = workspace.markSectionLoadFailed(canonicalSectionId);
                 onFxThread(() -> viewModel.showTaskSummary(i18n.format("taskSummary.sectionFailed",
                         displayNameForSection(sectionId))));
-                onFxThread(() -> setBackgroundWorkVisible(false));
+                if (!stillLoading) {
+                    onFxThread(() -> setBackgroundWorkVisible(false));
+                }
             }
         });
     }

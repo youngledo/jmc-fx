@@ -6,8 +6,8 @@ import com.youngledo.jmcfx.domain.model.ChartDefinition;
 import com.youngledo.jmcfx.domain.model.CompilationEvent;
 import com.youngledo.jmcfx.domain.model.RecordingSummary;
 import com.youngledo.jmcfx.domain.service.JvmInternalsService;
+import com.youngledo.jmcfx.ui.util.FxDispatch;
 
-import javafx.application.Platform;
 import javafx.beans.property.ObjectProperty;
 import javafx.beans.property.SimpleObjectProperty;
 import javafx.collections.FXCollections;
@@ -40,15 +40,13 @@ public class CompilationsViewModel {
     }
 
     public void load(RecordingSummary recording) {
-        Thread.startVirtualThread(() -> {
-            List<CompilationEvent> events = service.loadCompilationEvents(recording);
-            List<CompilationEvent> failed = service.loadCompilationFailures(recording);
-            ChartDefinition chart = service.loadCompilationDurationChart(recording);
-            Platform.runLater(() -> {
-                compilations.setAll(events);
-                failures.setAll(failed);
-                durationChart.set(chart);
-            });
+        List<CompilationEvent> events = service.loadCompilationEvents(recording);
+        List<CompilationEvent> failed = service.loadCompilationFailures(recording);
+        ChartDefinition chart = service.loadCompilationDurationChart(recording);
+        FxDispatch.run(() -> {
+            compilations.setAll(events);
+            failures.setAll(failed);
+            durationChart.set(chart);
         });
     }
 }

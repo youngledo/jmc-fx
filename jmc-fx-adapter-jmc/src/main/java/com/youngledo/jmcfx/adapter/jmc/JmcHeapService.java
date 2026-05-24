@@ -68,7 +68,7 @@ public class JmcHeapService implements HeapService {
             results.add(new HeapClassHistogram(acc.className, acc.instances, 0, 0, pct));
         }
         results.sort(Comparator.comparingLong(HeapClassHistogram::instances).reversed());
-        return List.copyOf(results);
+        return JmcResultLimiter.limitRows(results);
     }
 
     private List<HeapClassHistogram> loadHeapSummaryRows(IItemCollection events) {
@@ -162,7 +162,7 @@ public class JmcHeapService implements HeapService {
                 ChartSeriesType.AREA, List.copyOf(usedPoints));
         ChartSeries totalSeries = new ChartSeries("heapTotal", "Total Heap",
                 ChartSeriesType.LINE, List.copyOf(totalPoints));
-        return new ChartDefinition("Time", "Bytes", List.of(usedSeries, totalSeries));
+        return JmcResultLimiter.limitChart(new ChartDefinition("Time", "Bytes", List.of(usedSeries, totalSeries)));
     }
 
     @SuppressWarnings("unchecked")

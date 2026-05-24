@@ -55,7 +55,7 @@ public class JmcFileIOService implements FileIOService {
 					acc.readSize, acc.writeSize, acc.totalDuration, acc.maxDuration, avgDuration));
 		}
 		results.sort(Comparator.comparingLong(FileIOHistogram::totalDuration).reversed());
-		return List.copyOf(results);
+		return JmcResultLimiter.limitRows(results);
 	}
 
 	@Override
@@ -68,7 +68,7 @@ public class JmcFileIOService implements FileIOService {
 		collectEvents(fileReads, results, "jdk.FileRead");
 		collectEvents(fileWrites, results, "jdk.FileWrite");
 		results.sort(Comparator.comparingLong(FileIOEvent::timestamp));
-		return List.copyOf(results);
+		return JmcResultLimiter.limitRows(results);
 	}
 
 	@Override
@@ -120,7 +120,7 @@ public class JmcFileIOService implements FileIOService {
 			seriesList.add(new ChartSeries("file-write", "File Write",
 					ChartSeriesType.LINE, List.copyOf(writePoints)));
 		}
-		return new ChartDefinition("Time", "Duration (ms)", List.copyOf(seriesList));
+		return JmcResultLimiter.limitChart(new ChartDefinition("Time", "Duration (ms)", List.copyOf(seriesList)));
 	}
 
 	private void collectHistogramEntries(IItemCollection collection,

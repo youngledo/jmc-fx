@@ -92,7 +92,7 @@ public class JmcTlabService implements TlabService {
                     insideAvg, outsideAvg, acc.insideTotalSize, acc.outsideTotalSize));
         }
         results.sort(Comparator.comparingLong(TlabAllocation::insideTotalSize).reversed());
-        return List.copyOf(results);
+        return JmcResultLimiter.limitRows(results);
     }
 
     @Override
@@ -112,7 +112,7 @@ public class JmcTlabService implements TlabService {
         points.sort(Comparator.comparingDouble(ChartDataPoint::x));
         ChartSeries series = new ChartSeries("allocations", "Allocations",
                 ChartSeriesType.BAR, List.copyOf(points));
-        return new ChartDefinition("Time", "Bytes", List.of(series));
+        return JmcResultLimiter.limitChart(new ChartDefinition("Time", "Bytes", List.of(series)));
     }
 
     private void collectTimelinePoints(IItemCollection collection, List<ChartDataPoint> points) {

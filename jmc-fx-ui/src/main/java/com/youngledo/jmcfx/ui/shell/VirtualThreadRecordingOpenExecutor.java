@@ -5,7 +5,8 @@ import java.util.concurrent.Executors;
 
 final class VirtualThreadRecordingOpenExecutor implements RecordingOpenExecutor {
 
-    private final ExecutorService delegate = Executors.newVirtualThreadPerTaskExecutor();
+    private final ExecutorService delegate = Executors.newSingleThreadExecutor(
+            Thread.ofVirtual().name("jmcfx-recording-loader-", 0).factory());
 
     @Override
     public void execute(Runnable runnable) {

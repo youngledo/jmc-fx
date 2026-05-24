@@ -5,8 +5,8 @@ import java.util.List;
 import com.youngledo.jmcfx.domain.model.GcSummary;
 import com.youngledo.jmcfx.domain.model.RecordingSummary;
 import com.youngledo.jmcfx.domain.service.JvmInternalsService;
+import com.youngledo.jmcfx.ui.util.FxDispatch;
 
-import javafx.application.Platform;
 import javafx.collections.FXCollections;
 import javafx.collections.ObservableList;
 
@@ -27,9 +27,7 @@ public class GcSummaryViewModel {
     }
 
     public void load(RecordingSummary recording) {
-        Thread.startVirtualThread(() -> {
-            List<GcSummary> data = service.loadGcSummaries(recording);
-            Platform.runLater(() -> summaries.setAll(data));
-        });
+        List<GcSummary> data = service.loadGcSummaries(recording);
+        FxDispatch.run(() -> summaries.setAll(data));
     }
 }
