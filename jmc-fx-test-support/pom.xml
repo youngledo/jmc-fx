@@ -2,22 +2,19 @@
 <project xmlns="http://maven.apache.org/POM/4.1.0"
          xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
          xsi:schemaLocation="http://maven.apache.org/POM/4.1.0 https://maven.apache.org/xsd/maven-4.1.0.xsd">
-  <modelVersion>4.1.0</modelVersion>
-  <parent>
-    <groupId>com.youngledo.jmcfx</groupId>
-    <artifactId>jmc-fx-parent</artifactId>
-  </parent>
-  <artifactId>jmc-fx-test-support</artifactId>
-  <name>JMC FX Test Support</name>
-  <dependencies>
-    <dependency>
-      <groupId>com.youngledo.jmcfx</groupId>
-      <artifactId>jmc-fx-domain</artifactId>
-    </dependency>
-    <dependency>
-      <groupId>org.junit.jupiter</groupId>
-      <artifactId>junit-jupiter</artifactId>
-      <scope>test</scope>
-    </dependency>
-  </dependencies>
+    <modelVersion>4.1.0</modelVersion>
+    <parent/>
+    <artifactId>jmc-fx-test-support</artifactId>
+    <name>JMC FX Test Support</name>
+    <dependencies>
+        <dependency>
+            <groupId>com.youngledo.jmcfx</groupId>
+            <artifactId>jmc-fx-domain</artifactId>
+        </dependency>
+        <dependency>
+            <groupId>org.junit.jupiter</groupId>
+            <artifactId>junit-jupiter</artifactId>
+            <scope>test</scope>
+        </dependency>
+    </dependencies>
 </project>

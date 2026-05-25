@@ -9,3 +9,4 @@ replay_pid*
 *.jfr
 docs/superpowers
 .claude/worktrees
+.codegraph

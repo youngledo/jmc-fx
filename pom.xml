@@ -6,7 +6,7 @@
     <modelVersion>4.1.0</modelVersion>
 
     <groupId>com.youngledo.jmcfx</groupId>
-    <artifactId>jmc-fx-parent</artifactId>
+    <artifactId>jmc-fx</artifactId>
     <version>0.1.0-SNAPSHOT</version>
     <packaging>pom</packaging>
 
@@ -25,10 +25,13 @@
         <project.build.sourceEncoding>UTF-8</project.build.sourceEncoding>
         <maven.compiler.release>26</maven.compiler.release>
         <javafx.version>26</javafx.version>
-        <junit.version>5.11.4</junit.version>
+
+        <jmc.version>9.1.2</jmc.version>
         <atlantafx.version>2.0.1</atlantafx.version>
         <ikonli.version>12.3.1</ikonli.version>
         <testfx.version>4.0.18</testfx.version>
+
+        <junit.version>5.11.4</junit.version>
     </properties>
 
     <dependencyManagement>
