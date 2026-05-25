@@ -36,7 +36,7 @@ final class AppNavTree extends TreeView<AppNavItem> {
         TreeItem<AppNavItem> application = group("nav.group.application", Material2MZ.SETTINGS, NavIconTone.APPLICATION);
 
         TreeItem<AppNavItem> home = page("home", "nav.home", Material2AL.HOME, false, NavIconTone.WORKSPACE);
-        TreeItem<AppNavItem> jvms = unavailablePage("jvms", "jvms.title", Material2MZ.MEMORY);
+        TreeItem<AppNavItem> jvms = page("jvms", "jvms.title", Material2MZ.MEMORY, false, NavIconTone.WORKSPACE);
         TreeItem<AppNavItem> analysis = page("analysis", "analysis.title", Material2AL.INSIGHTS, true, NavIconTone.RECORDING);
         TreeItem<AppNavItem> overview = page("overview", "overview.title", Material2MZ.PAGEVIEW, true, NavIconTone.RECORDING);
         TreeItem<AppNavItem> events = page("events", "events.title", Material2AL.EVENT, true, NavIconTone.RECORDING);

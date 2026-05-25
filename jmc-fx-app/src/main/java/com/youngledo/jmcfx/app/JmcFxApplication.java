@@ -9,6 +9,8 @@ import com.youngledo.jmcfx.adapter.jmc.JmcExceptionService;
 import com.youngledo.jmcfx.adapter.jmc.JmcFileIOService;
 import com.youngledo.jmcfx.adapter.jmc.JmcHeapService;
 import com.youngledo.jmcfx.adapter.jmc.JmcJvmInternalsService;
+import com.youngledo.jmcfx.adapter.jmc.JmcJmxConnectionService;
+import com.youngledo.jmcfx.adapter.jmc.JmcJvmDiscoveryService;
 import com.youngledo.jmcfx.adapter.jmc.JmcLeakSuspectsService;
 import com.youngledo.jmcfx.adapter.jmc.JmcLockService;
 import com.youngledo.jmcfx.adapter.jmc.JmcProfilingService;
@@ -48,6 +50,8 @@ public class JmcFxApplication extends Application {
                 new JmcJvmInternalsService(),
                 new JmcEnvironmentService(),
                 new JmcJavaAppService(),
+                new JmcJvmDiscoveryService(),
+                new JmcJmxConnectionService(),
                 new com.youngledo.jmcfx.ui.i18n.I18n(systemLocale)).create();
         Scene scene = new Scene(shell.root(), 1280, 800);
         scene.getStylesheets().add(getClass().getResource("/css/app.css").toExternalForm());

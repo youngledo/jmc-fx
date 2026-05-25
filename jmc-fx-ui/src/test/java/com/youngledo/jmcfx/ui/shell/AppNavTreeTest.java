@@ -105,10 +105,12 @@ class AppNavTreeTest {
     }
 
     @Test
-    void searchExcludesAlwaysUnavailablePages() {
+    void searchIncludesJvmBrowserWithoutRecording() {
         AppNavTree tree = new AppNavTree(new I18n(Locale.ENGLISH));
-        tree.setRecordingOpenForTesting(true);
 
-        assertTrue(tree.search("jvms").isEmpty());
+        List<AppNavSearchResult> results = tree.search("jvms");
+
+        assertFalse(results.isEmpty());
+        assertEquals("jvms", results.getFirst().sectionId());
     }
 }

@@ -37,7 +37,7 @@
                     <Label fx:id="homeSubtitleLabel" styleClass="welcome-subtitle" wrapText="true"/>
                     <HBox styleClass="home-actions" spacing="8">
                         <Button fx:id="homeOpenRecordingButton"/>
-                        <Button fx:id="homeConnectJvmButton" disable="true"/>
+                        <Button fx:id="homeConnectJvmButton"/>
                     </HBox>
                 </VBox>
                 <HBox styleClass="workflow-tiles" spacing="12">
@@ -126,7 +126,13 @@
             </VBox>
             <VBox fx:id="jvmsPane" spacing="8">
                 <Label fx:id="jvmsTitleLabel" styleClass="view-title"/>
-                <Label fx:id="jvmsUnavailableLabel" styleClass="unavailable-state" wrapText="true"/>
+                <HBox styleClass="page-toolbar" spacing="8">
+                    <Button fx:id="jvmsRefreshButton"/>
+                    <TextField fx:id="jvmsManualUrlField" HBox.hgrow="ALWAYS"/>
+                    <Button fx:id="jvmsConnectButton"/>
+                    <Button fx:id="jvmsDisconnectButton"/>
+                </HBox>
+                <TableView fx:id="jvmsTable" styleClass="dense-table" VBox.vgrow="ALWAYS"/>
             </VBox>
             <VBox fx:id="profilingPane" spacing="8">
                 <Label fx:id="profilingTitleLabel" styleClass="view-title"/>

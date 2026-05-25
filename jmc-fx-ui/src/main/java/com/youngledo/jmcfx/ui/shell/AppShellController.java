@@ -45,6 +45,9 @@ import com.youngledo.jmcfx.domain.model.GcSummary;
 import com.youngledo.jmcfx.domain.model.HeapClassHistogram;
 import com.youngledo.jmcfx.domain.model.ProcessInfo;
 import com.youngledo.jmcfx.domain.model.HotMethod;
+import com.youngledo.jmcfx.domain.model.JvmConnection;
+import com.youngledo.jmcfx.domain.model.JvmConnectionSource;
+import com.youngledo.jmcfx.domain.model.JvmConnectionState;
 import com.youngledo.jmcfx.domain.model.JvmFlag;
 import com.youngledo.jmcfx.domain.model.JvmFlagChange;
 import com.youngledo.jmcfx.domain.model.LeakCandidate;
@@ -74,6 +77,8 @@ import com.youngledo.jmcfx.domain.service.FileIOService;
 import com.youngledo.jmcfx.domain.service.HeapService;
 import com.youngledo.jmcfx.domain.service.JvmInternalsService;
 import com.youngledo.jmcfx.domain.service.JavaAppService;
+import com.youngledo.jmcfx.domain.service.JmxConnectionService;
+import com.youngledo.jmcfx.domain.service.JvmDiscoveryService;
 import com.youngledo.jmcfx.domain.service.LeakSuspectsService;
 import com.youngledo.jmcfx.domain.service.LockService;
 import com.youngledo.jmcfx.domain.service.ProfilingService;
@@ -103,6 +108,7 @@ import com.youngledo.jmcfx.ui.jvm.GcDetailsViewModel;
 import com.youngledo.jmcfx.ui.jvm.GcSummaryViewModel;
 import com.youngledo.jmcfx.ui.jvm.JvmInfoViewModel;
 import com.youngledo.jmcfx.ui.jvm.VmOperationsViewModel;
+import com.youngledo.jmcfx.ui.jvms.JvmBrowserViewModel;
 import com.youngledo.jmcfx.ui.leaks.LeakSuspectsViewModel;
 import com.youngledo.jmcfx.ui.locks.LockViewModel;
 import com.youngledo.jmcfx.ui.chart.TimelineChart;
@@ -117,6 +123,7 @@ import com.youngledo.jmcfx.ui.threads.ThreadViewModel;
 import com.youngledo.jmcfx.ui.tlab.TlabViewModel;
 
 import javafx.application.Platform;
+import javafx.beans.binding.Bindings;
 import javafx.beans.property.ReadOnlyStringWrapper;
 import javafx.beans.property.SimpleObjectProperty;
 import javafx.beans.value.ChangeListener;
@@ -144,6 +151,7 @@ import javafx.scene.control.Toggle;
 import javafx.scene.control.ToggleGroup;
 import javafx.scene.control.TreeItem;
 import javafx.scene.control.TreeView;
+import javafx.scene.input.MouseButton;
 import javafx.scene.layout.BorderPane;
 import javafx.scene.layout.HBox;
 import javafx.scene.layout.Region;
@@ -164,7 +172,6 @@ public class AppShellController {
     static final int DEFAULT_EVENT_TYPES_WIDTH = 260;
     static final double MAX_EVENT_TYPES_WIDTH = 360;
     static final double DEFAULT_EVENT_TYPES_DIVIDER_POSITION = 0.25;
-
     private final AppShellViewModel viewModel;
     private final RecordingRepository recordingRepository;
     private final EventQueryService eventQueryService;
@@ -181,6 +188,8 @@ public class AppShellController {
     private final JvmInternalsService jvmInternalsService;
     private final EnvironmentService environmentService;
     private final JavaAppService javaAppService;
+    private final JvmDiscoveryService jvmDiscoveryService;
+    private final JmxConnectionService jmxConnectionService;
     private final I18n i18n;
     private final RecordingOpenExecutor recordingOpenExecutor;
     private final ListChangeListener<EventTypeNode> eventTypeTreeListener = change -> rebuildEventTypeTree();
@@ -207,6 +216,7 @@ public class AppShellController {
     private SecurityViewModel securityViewModel;
     private NativeLibraryViewModel nativeLibraryViewModel;
     private ThreadDumpViewModel threadDumpViewModel;
+    private JvmBrowserViewModel jvmBrowserViewModel;
     private boolean eventTypesDividerInitialized;
     private boolean updatingRecordingTabs;
     private boolean recordingOpening;
@@ -292,7 +302,11 @@ public class AppShellController {
     @FXML private Label analysisDetailTitle;
     @FXML private TextArea analysisDetailExplanation;
     @FXML private Label jvmsTitleLabel;
-    @FXML private Label jvmsUnavailableLabel;
+    @FXML private Button jvmsRefreshButton;
+    @FXML private TextField jvmsManualUrlField;
+    @FXML private Button jvmsConnectButton;
+    @FXML private Button jvmsDisconnectButton;
+    @FXML private TableView<JvmConnection> jvmsTable;
     @FXML private Label profilingTitleLabel;
     @FXML private TableView<HotMethod> profilingTable;
     @FXML private TabPane profilingTreeTabs;
@@ -457,7 +471,30 @@ public class AppShellController {
                 profilingService, exceptionService, threadService,
                 fileIOService, socketIOService, lockService,
                 heapService, leakSuspectsService, tlabService,
-                jvmInternalsService, environmentService, javaAppService, i18n,
+                jvmInternalsService, environmentService, javaAppService,
+                null, null, i18n,
+                new VirtualThreadRecordingOpenExecutor());
+    }
+
+    public AppShellController(AppShellViewModel viewModel, RecordingRepository recordingRepository,
+            EventQueryService eventQueryService, RuleAnalysisService ruleAnalysisService,
+            ProfilingService profilingService, ExceptionService exceptionService,
+            ThreadService threadService, FileIOService fileIOService,
+            SocketIOService socketIOService, LockService lockService,
+            HeapService heapService, LeakSuspectsService leakSuspectsService,
+            TlabService tlabService,
+            JvmInternalsService jvmInternalsService,
+            EnvironmentService environmentService,
+            JavaAppService javaAppService,
+            JvmDiscoveryService jvmDiscoveryService,
+            JmxConnectionService jmxConnectionService,
+            I18n i18n) {
+        this(viewModel, recordingRepository, eventQueryService, ruleAnalysisService,
+                profilingService, exceptionService, threadService,
+                fileIOService, socketIOService, lockService,
+                heapService, leakSuspectsService, tlabService,
+                jvmInternalsService, environmentService, javaAppService,
+                jvmDiscoveryService, jmxConnectionService, i18n,
                 new VirtualThreadRecordingOpenExecutor());
     }
 
@@ -470,6 +507,27 @@ public class AppShellController {
             TlabService tlabService, JvmInternalsService jvmInternalsService,
             EnvironmentService environmentService,
             JavaAppService javaAppService,
+            I18n i18n,
+            RecordingOpenExecutor recordingOpenExecutor) {
+        this(viewModel, recordingRepository, eventQueryService, ruleAnalysisService,
+                profilingService, exceptionService, threadService,
+                fileIOService, socketIOService, lockService,
+                heapService, leakSuspectsService, tlabService,
+                jvmInternalsService, environmentService, javaAppService,
+                null, null, i18n, recordingOpenExecutor);
+    }
+
+    AppShellController(AppShellViewModel viewModel, RecordingRepository recordingRepository,
+            EventQueryService eventQueryService, RuleAnalysisService ruleAnalysisService,
+            ProfilingService profilingService, ExceptionService exceptionService,
+            ThreadService threadService, FileIOService fileIOService,
+            SocketIOService socketIOService, LockService lockService,
+            HeapService heapService, LeakSuspectsService leakSuspectsService,
+            TlabService tlabService, JvmInternalsService jvmInternalsService,
+            EnvironmentService environmentService,
+            JavaAppService javaAppService,
+            JvmDiscoveryService jvmDiscoveryService,
+            JmxConnectionService jmxConnectionService,
             I18n i18n,
             RecordingOpenExecutor recordingOpenExecutor) {
         this.viewModel = viewModel;
@@ -488,6 +546,8 @@ public class AppShellController {
         this.jvmInternalsService = jvmInternalsService;
         this.environmentService = environmentService;
         this.javaAppService = javaAppService;
+        this.jvmDiscoveryService = jvmDiscoveryService;
+        this.jmxConnectionService = jmxConnectionService;
         this.i18n = i18n;
         this.recordingOpenExecutor = recordingOpenExecutor;
     }
@@ -509,7 +569,10 @@ public class AppShellController {
         configureActionIcons();
         configureLanguageSelector();
         homeOpenRecordingButton.setOnAction(event -> openRecording());
+        homeConnectJvmButton.setOnAction(event -> viewModel.showSection("jvms"));
         configureRecordingTabs();
+        jvmBrowserViewModel = jvmDiscoveryService != null && jmxConnectionService != null
+                ? new JvmBrowserViewModel(jvmDiscoveryService, jmxConnectionService) : null;
         homePane.visibleProperty().bind(viewModel.selectedSectionProperty().isEqualTo("home"));
         homePane.managedProperty().bind(homePane.visibleProperty());
         overviewPane.visibleProperty().bind(viewModel.selectedSectionProperty().isEqualTo("overview"));
@@ -580,6 +643,16 @@ public class AppShellController {
         bindOverview(null);
         bindEvents();
         configureAnalysisTable();
+        configureJvmBrowserTable();
+        bindJvmBrowser();
+        viewModel.selectedSectionProperty().addListener((observable, oldValue, newValue) -> {
+            if ("jvms".equals(newValue)) {
+                refreshJvmBrowser();
+            }
+        });
+        if ("jvms".equals(viewModel.selectedSectionProperty().get())) {
+            refreshJvmBrowser();
+        }
         configureProfilingTable();
         configureExceptionTable();
         configureThreadTable();
@@ -713,6 +786,97 @@ public class AppShellController {
         analysisTable.getColumns().setAll(List.of(severityCol, nameCol, scoreCol, summaryCol));
         analysisTable.getSelectionModel().selectedItemProperty()
                 .addListener((obs, old, val) -> showAnalysisDetail(val));
+    }
+
+    private void configureJvmBrowserTable() {
+        jvmsTable.setPlaceholder(emptyTablePlaceholder());
+
+        TableColumn<JvmConnection, String> pidCol = localizedColumn("jvms.column.pid");
+        pidCol.setPrefWidth(90);
+        pidCol.setCellValueFactory(cell -> new ReadOnlyStringWrapper(cell.getValue().pid()));
+
+        TableColumn<JvmConnection, String> nameCol = localizedColumn("jvms.column.name");
+        nameCol.setPrefWidth(360);
+        nameCol.setCellValueFactory(cell -> new ReadOnlyStringWrapper(cell.getValue().displayName()));
+
+        TableColumn<JvmConnection, String> javaVersionCol = localizedColumn("jvms.column.javaVersion");
+        javaVersionCol.setPrefWidth(140);
+        javaVersionCol.setCellValueFactory(cell -> new ReadOnlyStringWrapper(cell.getValue().javaVersion()));
+
+        TableColumn<JvmConnection, String> stateCol = localizedColumn("jvms.column.state");
+        stateCol.setPrefWidth(130);
+        stateCol.setCellValueFactory(cell -> Bindings.createStringBinding(
+                () -> formatJvmState(cell.getValue().state()), i18n.localeProperty()));
+
+        TableColumn<JvmConnection, String> sourceCol = localizedColumn("jvms.column.source");
+        sourceCol.setPrefWidth(100);
+        sourceCol.setCellValueFactory(cell -> Bindings.createStringBinding(
+                () -> formatJvmSource(cell.getValue().source()), i18n.localeProperty()));
+
+        jvmsTable.getColumns().setAll(List.of(pidCol, nameCol, javaVersionCol, stateCol, sourceCol));
+    }
+
+    private void bindJvmBrowser() {
+        if (jvmBrowserViewModel == null) {
+            jvmsTable.setItems(FXCollections.emptyObservableList());
+            jvmsRefreshButton.setDisable(true);
+            jvmsManualUrlField.setDisable(true);
+            jvmsConnectButton.setDisable(true);
+            jvmsDisconnectButton.setDisable(true);
+            return;
+        }
+
+        jvmsTable.setItems(jvmBrowserViewModel.connectionsProperty());
+        jvmsTable.placeholderProperty().bind(Bindings.createObjectBinding(
+                () -> jvmBrowserViewModel.refreshCompletedProperty().get()
+                        && !jvmBrowserViewModel.loadingProperty().get()
+                        && !jvmBrowserViewModel.errorProperty().get()
+                                ? localizedTablePlaceholder("jvms.empty") : emptyTablePlaceholder(),
+                jvmBrowserViewModel.refreshCompletedProperty(),
+                jvmBrowserViewModel.loadingProperty(),
+                jvmBrowserViewModel.errorProperty(),
+                i18n.localeProperty()));
+        jvmsTable.getSelectionModel().selectedItemProperty().addListener((observable, oldValue, newValue) ->
+                jvmBrowserViewModel.selectedConnectionProperty().set(newValue));
+        jvmBrowserViewModel.selectedConnectionProperty().addListener((observable, oldValue, newValue) ->
+                jvmsTable.getSelectionModel().select(newValue));
+        jvmsManualUrlField.textProperty().bindBidirectional(jvmBrowserViewModel.manualConnectionUrlProperty());
+        jvmsRefreshButton.disableProperty().bind(jvmBrowserViewModel.loadingProperty());
+        jvmsManualUrlField.disableProperty().bind(jvmBrowserViewModel.loadingProperty());
+        jvmsConnectButton.disableProperty().bind(jvmBrowserViewModel.loadingProperty()
+                .or(Bindings.createBooleanBinding(
+                        () -> jvmBrowserViewModel.manualConnectionUrlProperty().get().trim().isEmpty()
+                                && !JvmBrowserViewModel.canConnectJvm(
+                                        jvmBrowserViewModel.selectedConnectionProperty().get()),
+                        jvmBrowserViewModel.manualConnectionUrlProperty(),
+                        jvmBrowserViewModel.selectedConnectionProperty())));
+        jvmsDisconnectButton.disableProperty().bind(jvmBrowserViewModel.loadingProperty()
+                .or(Bindings.createBooleanBinding(
+                        () -> !canDisconnectJvm(jvmBrowserViewModel.selectedConnectionProperty().get()),
+                        jvmBrowserViewModel.selectedConnectionProperty())));
+
+        jvmsRefreshButton.setOnAction(event -> refreshJvmBrowser());
+        jvmsConnectButton.setOnAction(event -> jvmBrowserViewModel.connectSelectedOrManual());
+        jvmsDisconnectButton.setOnAction(event -> jvmBrowserViewModel.disconnectSelected());
+        jvmsTable.setOnMouseClicked(event -> {
+            if (event.getButton() == MouseButton.PRIMARY && event.getClickCount() == 2) {
+                jvmBrowserViewModel.connectSelected();
+            }
+        });
+    }
+
+    private void refreshJvmBrowser() {
+        if (jvmBrowserViewModel != null) {
+            jvmBrowserViewModel.refresh();
+        }
+    }
+
+    private String formatJvmState(JvmConnectionState state) {
+        return i18n.get("jvms.state." + state.name().toLowerCase(java.util.Locale.ROOT));
+    }
+
+    private String formatJvmSource(JvmConnectionSource source) {
+        return i18n.get("jvms.source." + source.name().toLowerCase(java.util.Locale.ROOT));
     }
 
     private void bindAnalysis(RuleResultsViewModel nextViewModel) {
@@ -1552,7 +1716,10 @@ public class AppShellController {
         eventStackTraceTab.textProperty().bind(i18n.text("events.details.stackTrace"));
         analysisTitleLabel.textProperty().bind(i18n.text("analysis.title"));
         jvmsTitleLabel.textProperty().bind(i18n.text("jvms.title"));
-        jvmsUnavailableLabel.textProperty().bind(i18n.text("jvms.unavailable"));
+        jvmsRefreshButton.textProperty().bind(i18n.text("jvms.refresh"));
+        jvmsManualUrlField.promptTextProperty().bind(i18n.text("jvms.manualUrlPrompt"));
+        jvmsConnectButton.textProperty().bind(i18n.text("jvms.connect"));
+        jvmsDisconnectButton.textProperty().bind(i18n.text("jvms.disconnect"));
         profilingTitleLabel.textProperty().bind(i18n.text("profiling.title"));
         profilingCallersTab.textProperty().bind(i18n.text("profiling.tab.callers"));
         profilingCalleesTab.textProperty().bind(i18n.text("profiling.tab.callees"));
@@ -1706,6 +1873,10 @@ public class AppShellController {
         return opening;
     }
 
+    static boolean canDisconnectJvm(JvmConnection selectedConnection) {
+        return selectedConnection != null && selectedConnection.connected();
+    }
+
     static String openingRecordingStatus(I18n i18n, Path path) {
         return i18n.format("status.openingRecording", path.getFileName());
     }
@@ -1716,6 +1887,9 @@ public class AppShellController {
 
     public void close() {
         List.copyOf(viewModel.recordingWorkspacesProperty()).forEach(viewModel::closeWorkspace);
+        if (jvmBrowserViewModel != null) {
+            jvmBrowserViewModel.close();
+        }
         recordingOpenExecutor.close();
     }
 

@@ -118,6 +118,13 @@ class AppShellTest {
                 "Home action buttons should keep JavaFX's default button style class; add local hooks in controller");
         assertFalse(elementByFxId(document, "homeConnectJvmButton").hasAttribute("styleClass"),
                 "Home action buttons should keep JavaFX's default button style class; add local hooks in controller");
+        assertFalse(elementByFxId(document, "homeConnectJvmButton").hasAttribute("disable"),
+                "Connect JVM should be enabled now that the JVM browser page exists");
+        assertEquals("Button", elementByFxId(document, "jvmsRefreshButton").getTagName());
+        assertEquals("TextField", elementByFxId(document, "jvmsManualUrlField").getTagName());
+        assertEquals("Button", elementByFxId(document, "jvmsConnectButton").getTagName());
+        assertEquals("Button", elementByFxId(document, "jvmsDisconnectButton").getTagName());
+        assertEquals("TableView", elementByFxId(document, "jvmsTable").getTagName());
         assertEquals(0, elementCountWithFxId(document, "statusLabel"));
         assertEquals(0, elementCountWithFxId(document, "taskSummaryLabel"));
         assertEquals("tlabTimelineContainer", elementByFxId(document, "tlabTimelineContainer").getAttribute("fx:id"));
@@ -232,6 +239,100 @@ class AppShellTest {
                 "Open recording home action should keep its leading icon");
         assertTrue(source.contains("configureActionButton(homeConnectJvmButton"),
                 "Connect JVM home action should use the same leading icon treatment");
+    }
+
+    @Test
+    void jvmDisconnectButtonRequiresConnectedSelection() throws Exception {
+        String source = java.nio.file.Files.readString(
+                java.nio.file.Path.of("src/main/java/com/youngledo/jmcfx/ui/shell/AppShellController.java"));
+
+        assertTrue(source.contains("selectedConnection.connected"),
+                "Disconnect must be disabled for discovered but unconnected JVM rows");
+        assertFalse(source.contains("Bindings.isNull(jvmBrowserViewModel.selectedConnectionProperty())"),
+                "Selected discovered rows must not be enough to enable Disconnect");
+    }
+
+    @Test
+    void jvmBrowserDoesNotPersistDiscoveryCountInBottomStatus() throws Exception {
+        String source = java.nio.file.Files.readString(
+                java.nio.file.Path.of("src/main/java/com/youngledo/jmcfx/ui/jvms/JvmBrowserViewModel.java"));
+
+        assertFalse(source.contains("Discovered \" + discovered.size()"),
+                "The table already displays discovery results; bottom status should stay for transient state and errors");
+    }
+
+    @Test
+    void jvmBrowserUsesPidJavaVersionAndNoUrlColumn() throws Exception {
+        String source = java.nio.file.Files.readString(
+                java.nio.file.Path.of("src/main/java/com/youngledo/jmcfx/ui/shell/AppShellController.java"));
+
+        assertTrue(source.contains("jvms.column.pid"), "JVM table should include a PID column");
+        assertTrue(source.contains("cell.getValue().pid()"), "PID column must read JvmConnection.pid()");
+        assertTrue(source.contains("jvms.column.javaVersion"), "JVM table should include Java version");
+        assertTrue(source.contains("cell.getValue().javaVersion()"), "Java version column must read metadata");
+        assertFalse(source.contains("jvms.column.url"), "Connection URL column should be removed from JVM table");
+        assertFalse(source.contains("cell.getValue().connectionUrl()"),
+                "Connection URL should not be shown as a primary JVM Browser column");
+    }
+
+    @Test
+    void jvmBrowserRefreshesWhenOpenedAndManuallyWithoutPeriodicTimer() throws Exception {
+        String source = java.nio.file.Files.readString(
+                java.nio.file.Path.of("src/main/java/com/youngledo/jmcfx/ui/shell/AppShellController.java"));
+
+        assertTrue(source.contains("jvmsRefreshButton.setOnAction(event -> refreshJvmBrowser())"),
+                "Manual refresh button should trigger JVM Browser refresh");
+        assertTrue(source.contains("selectedSectionProperty().addListener"),
+                "Opening JVM Browser should refresh the local JVM list");
+        assertTrue(source.contains("\"jvms\".equals(newValue)"),
+                "JVM Browser should refresh when the JVMs section is opened");
+        assertFalse(source.contains("JVM_BROWSER_REFRESH_INTERVAL_SECONDS"),
+                "JVM Browser should not run periodic refresh");
+        assertFalse(source.contains("startJvmBrowserRefresh"),
+                "JVM Browser should not use timer-based refresh");
+        assertFalse(source.contains("jvmBrowserFirstRefreshDone"),
+                "JVM Browser should refresh every time the section opens");
+    }
+
+    @Test
+    void jvmBrowserEmptyPlaceholderWaitsForCompletedRefresh() throws Exception {
+        String source = java.nio.file.Files.readString(
+                java.nio.file.Path.of("src/main/java/com/youngledo/jmcfx/ui/shell/AppShellController.java"));
+
+        assertTrue(source.contains("jvmsTable.setPlaceholder(emptyTablePlaceholder())"),
+                "JVM Browser should not show no-data text before discovery finishes");
+        assertTrue(source.contains("refreshCompletedProperty()"),
+                "JVM Browser placeholder should depend on completed discovery");
+        assertTrue(source.contains("localizedTablePlaceholder(\"jvms.empty\")"),
+                "No-data text should appear only after completed empty discovery");
+    }
+
+    @Test
+    void jvmBrowserSupportsDoubleClickConnectAndNoBottomStatus() throws Exception {
+        String controller = java.nio.file.Files.readString(
+                java.nio.file.Path.of("src/main/java/com/youngledo/jmcfx/ui/shell/AppShellController.java"));
+        String fxml = java.nio.file.Files.readString(
+                java.nio.file.Path.of("src/main/resources/com/youngledo/jmcfx/ui/shell/app-shell.fxml"));
+
+        assertTrue(controller.contains("setOnMouseClicked"), "JVM table should handle double-click connect");
+        assertTrue(controller.contains("connectSelectedOrManual()"),
+                "Connect button should preserve manual URL priority");
+        assertTrue(controller.contains("jvmBrowserViewModel.connectSelected()"),
+                "Double-click should connect only the selected local JVM");
+        assertFalse(fxml.contains("jvmsStatusLabel"), "Bottom JVM status label should be removed");
+        assertFalse(controller.contains("jvmsStatusLabel.textProperty()"),
+                "Controller should not bind a removed bottom status label");
+    }
+
+    @Test
+    void jvmBrowserFormatsStateAndSourceThroughI18n() throws Exception {
+        String controller = java.nio.file.Files.readString(
+                java.nio.file.Path.of("src/main/java/com/youngledo/jmcfx/ui/shell/AppShellController.java"));
+
+        assertTrue(controller.contains("formatJvmState"), "State column should use localized display labels");
+        assertTrue(controller.contains("formatJvmSource"), "Source column should use localized display labels");
+        assertFalse(controller.contains("state().name()"), "State column must not show raw enum names");
+        assertFalse(controller.contains("source().name()"), "Source column must not show raw enum names");
     }
 
     @Test

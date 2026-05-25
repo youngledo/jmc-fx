@@ -9,6 +9,8 @@ import com.youngledo.jmcfx.domain.service.ExceptionService;
 import com.youngledo.jmcfx.domain.service.FileIOService;
 import com.youngledo.jmcfx.domain.service.HeapService;
 import com.youngledo.jmcfx.domain.service.JvmInternalsService;
+import com.youngledo.jmcfx.domain.service.JmxConnectionService;
+import com.youngledo.jmcfx.domain.service.JvmDiscoveryService;
 import com.youngledo.jmcfx.domain.service.LeakSuspectsService;
 import com.youngledo.jmcfx.domain.service.LockService;
 import com.youngledo.jmcfx.domain.service.ProfilingService;
@@ -46,6 +48,8 @@ public class AppShellFactory {
     private final JvmInternalsService jvmInternalsService;
     private final EnvironmentService environmentService;
     private final JavaAppService javaAppService;
+    private final JvmDiscoveryService jvmDiscoveryService;
+    private final JmxConnectionService jmxConnectionService;
     private final I18n i18n;
     private final AppPreferences preferences;
 
@@ -56,6 +60,7 @@ public class AppShellFactory {
                 null, null, null,
                 null, null, null,
                 null, null, null,
+                null, null,
                 new I18n(java.util.Locale.getDefault()), new JavaAppPreferences());
     }
 
@@ -70,7 +75,7 @@ public class AppShellFactory {
                 profilingService, exceptionService, threadService,
                 fileIOService, socketIOService, lockService,
                 heapService, leakSuspectsService, tlabService,
-                jvmInternalsService, null, null,
+                jvmInternalsService, null, null, null, null,
                 i18n, new JavaAppPreferences());
     }
 
@@ -88,7 +93,27 @@ public class AppShellFactory {
                 profilingService, exceptionService, threadService,
                 fileIOService, socketIOService, lockService,
                 heapService, leakSuspectsService, tlabService,
-                jvmInternalsService, environmentService, javaAppService,
+                jvmInternalsService, environmentService, javaAppService, null, null,
+                i18n, new JavaAppPreferences());
+    }
+
+    public AppShellFactory(RecordingRepository recordingRepository, EventQueryService eventQueryService,
+            RuleAnalysisService ruleAnalysisService, ProfilingService profilingService,
+            ExceptionService exceptionService, ThreadService threadService,
+            FileIOService fileIOService, SocketIOService socketIOService,
+            LockService lockService, HeapService heapService,
+            LeakSuspectsService leakSuspectsService, TlabService tlabService,
+            JvmInternalsService jvmInternalsService,
+            EnvironmentService environmentService,
+            JavaAppService javaAppService,
+            JvmDiscoveryService jvmDiscoveryService,
+            JmxConnectionService jmxConnectionService,
+            I18n i18n) {
+        this(recordingRepository, eventQueryService, ruleAnalysisService,
+                profilingService, exceptionService, threadService,
+                fileIOService, socketIOService, lockService,
+                heapService, leakSuspectsService, tlabService,
+                jvmInternalsService, environmentService, javaAppService, jvmDiscoveryService, jmxConnectionService,
                 i18n, new JavaAppPreferences());
     }
 
@@ -99,6 +124,7 @@ public class AppShellFactory {
                 null, null, null,
                 null, null, null,
                 null, null, null,
+                null, null,
                 i18n, preferences);
     }
 
@@ -111,6 +137,8 @@ public class AppShellFactory {
             JvmInternalsService jvmInternalsService,
             EnvironmentService environmentService,
             JavaAppService javaAppService,
+            JvmDiscoveryService jvmDiscoveryService,
+            JmxConnectionService jmxConnectionService,
             I18n i18n, AppPreferences preferences) {
         this.recordingRepository = recordingRepository;
         this.eventQueryService = eventQueryService;
@@ -127,6 +155,8 @@ public class AppShellFactory {
         this.jvmInternalsService = jvmInternalsService;
         this.environmentService = environmentService;
         this.javaAppService = javaAppService;
+        this.jvmDiscoveryService = jvmDiscoveryService;
+        this.jmxConnectionService = jmxConnectionService;
         this.i18n = i18n;
         this.preferences = preferences;
     }
@@ -160,7 +190,8 @@ public class AppShellFactory {
                     profilingService, exceptionService, threadService,
                     fileIOService, socketIOService, lockService,
                     heapService, leakSuspectsService, tlabService,
-                    jvmInternalsService, environmentService, javaAppService, i18n);
+                    jvmInternalsService, environmentService, javaAppService,
+                    jvmDiscoveryService, jmxConnectionService, i18n);
         }
         throw new IllegalArgumentException("Unsupported controller: " + type.getName());
     }

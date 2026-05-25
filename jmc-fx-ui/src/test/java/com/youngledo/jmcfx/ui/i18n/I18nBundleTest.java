@@ -49,6 +49,13 @@ class I18nBundleTest {
                 "tlab.column.insideAvgSize",
                 "tlab.column.outsideAvgSize",
                 "jvms.title",
+                "jvms.source.local",
+                "jvms.source.manual",
+                "jvms.state.attachable",
+                "jvms.state.connected",
+                "jvms.state.disconnected",
+                "jvms.state.discovered",
+                "jvms.state.unavailable",
                 "settings.title",
                 "settings.language");
 
