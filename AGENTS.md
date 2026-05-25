@@ -10,8 +10,8 @@ This project is not a fork of the OpenJDK JMC Eclipse RCP/SWT application. Do no
 
 These rules apply to every agent task, every implementation plan, every code review, and every future feature.
 
-- Java 25 is the minimum and primary runtime.
-- JavaFX 25 is the minimum and primary UI toolkit.
+- Java 26 is the minimum and primary runtime.
+- JavaFX 26 is the minimum and primary UI toolkit.
 - Maven 4.x is mandatory.
 - Maven build POMs must use model version `4.1.0`.
 - The root POM must use `root="true"`.
@@ -22,7 +22,7 @@ These rules apply to every agent task, every implementation plan, every code rev
 
 ## Modern Java Expectations
 
-Use Java 25 style deliberately where it improves clarity:
+Use Java 26 style deliberately where it improves clarity:
 
 - Use records for immutable data carriers.
 - Use sealed types for bounded domain hierarchies.
@@ -91,8 +91,9 @@ JMC FX is an independent project and is not affiliated with, endorsed by, or spo
 Before claiming work is complete, run or explicitly document why you could not run:
 
 ```bash
-mvn -v
-mvn verify
+sdk env
+./mvnw -v
+./mvnw verify
 ```
 
 Also verify:
@@ -104,8 +105,8 @@ rg -n "org.openjdk.jmc|JfrLoaderToolkit" jmc-fx-ui jmc-fx-app jmc-fx-domain
 
 Expected:
 
-- `mvn -v` reports Maven 4.x and Java 25.
-- `mvn verify` passes.
+- `./mvnw -v` reports Maven 4.x and Java 26.
+- `./mvnw verify` passes.
 - No Maven 3 `<modules>` syntax exists.
 - No JMC API usage appears outside `jmc-fx-adapter-jmc`.
 

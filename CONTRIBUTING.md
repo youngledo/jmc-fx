@@ -8,9 +8,20 @@ JMC FX does not modify or copy the OpenJDK JMC Eclipse RCP/SWT application UI.
 
 ## Required Toolchain
 
-- JDK 25
-- JavaFX 25
+- JDK 26
+- JavaFX 26
 - Maven Wrapper from this repository, fixed to Maven 4.0.0-rc-5
+
+The repository includes `.sdkmanrc` for SDKMAN users. Run `sdk env` after
+entering the project root so `./mvnw` starts on the required JDK:
+
+```bash
+sdk env
+./mvnw -v
+```
+
+The wrapper controls Maven, not Java. If `./mvnw -v` reports Java 25 or any
+other JDK, fix the active shell JDK before building.
 
 Maven build files must use:
 
@@ -26,7 +37,7 @@ Do not use Maven 3 `<modules>` in this repository.
 - Keep all OpenJDK JMC API calls inside `jmc-fx-adapter-jmc`.
 - Keep JavaFX controllers thin and move behavior into view models.
 - Keep long-running file, parsing, analysis, JMX, and recording-control work off the FX Application Thread.
-- Prefer Java 25 language and library features when they make code clearer.
+- Prefer Java 26 language and library features when they make code clearer.
 - Do not enable preview or experimental JDK features in the default build.
 - Use AtlantaFX as the base theme and layer small app-specific CSS after it.
 
@@ -60,7 +71,7 @@ Do not add comments that merely repeat the code. Prefer clearer names, smaller
 methods, records, sealed types, or focused helper methods before adding a
 comment.
 
-Java documentation comments must use Java 25 Markdown documentation comments
+Java documentation comments must use Java 26 Markdown documentation comments
 with `///`, not traditional block Javadoc with `/** ... */`. Their prose and
 examples must use Markdown formatting:
 
@@ -75,21 +86,24 @@ examples must use Markdown formatting:
 ## Build and Test
 
 Use the repository Maven Wrapper so every contributor builds with the same
-Maven 4 runtime:
+Maven 4 runtime. Activate the `.sdkmanrc` JDK first:
 
 ```bash
+sdk env
 ./mvnw verify
 ```
 
 To run the desktop app:
 
 ```bash
+sdk env
 ./mvnw -pl jmc-fx-app -am org.openjfx:javafx-maven-plugin:0.0.8:run
 ```
 
 Before submitting changes, verify:
 
 ```bash
+sdk env
 ./mvnw -v
 ./mvnw verify
 rg -n "<modules>|<module>" pom.xml **/pom.xml
@@ -99,7 +113,7 @@ rg -n "org.openjdk.jmc|JfrLoaderToolkit" jmc-fx-ui jmc-fx-app jmc-fx-domain
 Expected:
 
 - Maven 4.0.0-rc-5 through the repository wrapper
-- Java 25
+- Java 26
 - No Maven 3 `<modules>` syntax
 - No JMC API usage outside `jmc-fx-adapter-jmc`
 
@@ -123,7 +137,7 @@ Before public release, review the project name, package metadata, app bundle nam
 
 ## Pull Request Checklist
 
-- The change preserves the Java 25, JavaFX 25, and Maven 4 baseline.
+- The change preserves the Java 26, JavaFX 26, and Maven 4 baseline.
 - The change does not introduce Maven 3 reactor syntax.
 - UI code does not directly depend on OpenJDK JMC APIs.
 - Long-running operations do not run on the FX Application Thread.
