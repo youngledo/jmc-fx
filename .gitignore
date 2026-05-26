@@ -6,7 +6,8 @@ target/
 hs_err_pid*
 replay_pid*
 .superpowers/
+.worktrees/
 *.jfr
 docs/superpowers
-.claude/worktrees
+.claude/settings.local.json
 .codegraph
