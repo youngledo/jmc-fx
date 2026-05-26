@@ -561,11 +561,11 @@ public class JvmBrowserViewModel implements AutoCloseable {
 
     private void loadSessionForSelection(JvmConnection connection) {
         long generation = nextSessionLoadGeneration();
+        selectedSession.set(null);
+        clearRecordingControl();
+        clearMBeanBrowser();
+        clearSessionError();
         if (connection == null || !connection.connected()) {
-            selectedSession.set(null);
-            clearRecordingControl();
-            clearMBeanBrowser();
-            clearSessionError();
             sessionLoading.set(false);
             return;
         }

@@ -679,6 +679,42 @@ class JvmBrowserViewModelTest {
     }
 
     @Test
+    void switchingConnectedSelectionClearsMBeanStateBeforeNewSessionLoads() {
+        FakeJmxConnectionService jmx = new FakeJmxConnectionService();
+        CapturingMBeanBrowserService mbeans = new CapturingMBeanBrowserService();
+        QueuedJvmBrowserExecutor executor = new QueuedJvmBrowserExecutor();
+        JvmBrowserViewModel viewModel = new JvmBrowserViewModel(new FakeJvmDiscoveryService(), jmx, mbeans,
+                executor, Runnable::run);
+        JvmConnection first = connectedWithMBeans(viewModel, jmx, "42");
+        JvmConnection second = connectedWithMBeans(viewModel, jmx, "84");
+        MBeanNode operations = MBeanNode.objectName("demo:type=Operations", "Operations");
+        MBeanOperationInfo update = new MBeanOperationInfo("update", "void", "", List.of());
+        mbeans.setTree(first.id(), List.of(MBeanNode.domain("demo", List.of(operations))));
+        mbeans.setAttributes(first.id(), operations.objectName(), List.of());
+        mbeans.setOperations(first.id(), operations.objectName(), List.of(update));
+        mbeans.setOperationResult(first.id(), operations.objectName(), "update",
+                new MBeanOperationResult(true, "old", ""));
+        viewModel.selectedConnectionProperty().set(first);
+        executor.runNext();
+        executor.runNext();
+        viewModel.selectedMBeanProperty().set(operations);
+        executor.runNext();
+
+        viewModel.selectedConnectionProperty().set(second);
+        viewModel.invokeSelectedMBeanOperation();
+
+        assertEquals(null, viewModel.selectedSessionProperty().get());
+        assertTrue(viewModel.mbeanTreeProperty().isEmpty());
+        assertTrue(viewModel.mbeanAttributesProperty().isEmpty());
+        assertTrue(viewModel.mbeanOperationsProperty().isEmpty());
+        assertEquals(null, viewModel.selectedMBeanProperty().get());
+        assertEquals(null, viewModel.selectedMBeanOperationProperty().get());
+        assertFalse(viewModel.mbeanBrowserAvailableProperty().get());
+        assertEquals(null, mbeans.lastRequest);
+        assertEquals("Select an MBean operation to invoke.", viewModel.mbeanErrorMessageProperty().get());
+    }
+
+    @Test
     void operationSelectionChangeWhileInvokeIsInFlightIgnoresStaleInvokeResult() {
         FakeJmxConnectionService jmx = new FakeJmxConnectionService();
         FakeMBeanBrowserService mbeans = new FakeMBeanBrowserService();
@@ -742,9 +778,14 @@ class JvmBrowserViewModelTest {
     }
 
     private static JvmConnection connectedWithMBeans(JvmBrowserViewModel viewModel, FakeJmxConnectionService jmx) {
-        JvmConnection connected = JvmConnection.local("42", "demo.Main", "26.0.1", true)
+        return connectedWithMBeans(viewModel, jmx, "42");
+    }
+
+    private static JvmConnection connectedWithMBeans(JvmBrowserViewModel viewModel, FakeJmxConnectionService jmx,
+            String id) {
+        JvmConnection connected = JvmConnection.local(id, "demo.Main", "26.0.1", true)
                 .asConnected("service:jmx:local://42");
-        jmx.setSessionSnapshot("42", sessionSnapshot(connected));
+        jmx.setSessionSnapshot(id, sessionSnapshot(connected));
         viewModel.connectionsProperty().add(connected);
         return connected;
     }
