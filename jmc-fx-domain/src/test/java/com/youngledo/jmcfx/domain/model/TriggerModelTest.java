@@ -32,6 +32,23 @@ class TriggerModelTest {
     }
 
     @Test
+    void triggerOperatorExposesSymbols() {
+        assertEquals(">", TriggerOperator.GREATER_THAN.symbol());
+        assertEquals(">=", TriggerOperator.GREATER_THAN_OR_EQUAL.symbol());
+        assertEquals("<", TriggerOperator.LESS_THAN.symbol());
+        assertEquals("<=", TriggerOperator.LESS_THAN_OR_EQUAL.symbol());
+    }
+
+    @Test
+    void liveMetricSnapshotNormalizesUnitAndObservedAt() {
+        LiveMetricSnapshot snapshot = new LiveMetricSnapshot(
+                LiveMetricKind.HEAP_USED_PERCENT, 42.0, null, null);
+
+        assertEquals("", snapshot.unit());
+        assertEquals(Instant.EPOCH, snapshot.observedAt());
+    }
+
+    @Test
     void triggerRuleEvaluatesMatchingMetricOnlyWhenEnabled() {
         TriggerRule enabled = new TriggerRule("rule-1", "Heap high", true,
                 LiveMetricKind.HEAP_USED_PERCENT, TriggerOperator.GREATER_THAN_OR_EQUAL, 75.0,
@@ -49,6 +66,17 @@ class TriggerModelTest {
     }
 
     @Test
+    void triggerRuleNormalizesTextAndDoesNotMatchNullSnapshot() {
+        TriggerRule rule = new TriggerRule(null, null, true,
+                LiveMetricKind.HEAP_USED_PERCENT, TriggerOperator.GREATER_THAN_OR_EQUAL, 75.0,
+                TriggerAction.notifyOnly());
+
+        assertEquals("", rule.id());
+        assertEquals("", rule.name());
+        assertFalse(rule.matches(null));
+    }
+
+    @Test
     void commandActionCopiesArguments() {
         TriggerAction action = TriggerAction.diagnosticCommand("threadPrint", List.of("-l"));
 
@@ -59,11 +87,30 @@ class TriggerModelTest {
     }
 
     @Test
+    void triggerActionNormalizesNullArguments() {
+        TriggerAction action = TriggerAction.diagnosticCommand(null, null);
+
+        assertEquals(TriggerActionType.DIAGNOSTIC_COMMAND, action.type());
+        assertEquals("", action.commandName());
+        assertEquals(List.of(), action.arguments());
+    }
+
+    @Test
     void triggerEventNormalizesText() {
         TriggerEvent event = new TriggerEvent("rule-1", null,
                 LiveMetricKind.THREAD_COUNT, 12.0, "threads", Instant.EPOCH, null);
 
         assertEquals("", event.ruleName());
         assertEquals("", event.message());
+    }
+
+    @Test
+    void triggerEventNormalizesRuleIdUnitAndFiredAt() {
+        TriggerEvent event = new TriggerEvent(null, "Thread count high",
+                LiveMetricKind.THREAD_COUNT, 12.0, null, null, "message");
+
+        assertEquals("", event.ruleId());
+        assertEquals("", event.unit());
+        assertEquals(Instant.EPOCH, event.firedAt());
     }
 }
