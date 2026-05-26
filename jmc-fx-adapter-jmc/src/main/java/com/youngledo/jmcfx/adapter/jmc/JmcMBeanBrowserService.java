@@ -156,7 +156,7 @@ public class JmcMBeanBrowserService implements MBeanBrowserService {
     private Object convertArgument(String type, String argument) {
         return switch (type) {
             case "java.lang.String" -> argument;
-            case "boolean", "java.lang.Boolean" -> Boolean.parseBoolean(argument);
+            case "boolean", "java.lang.Boolean" -> parseBoolean(argument);
             case "byte", "java.lang.Byte" -> Byte.parseByte(argument);
             case "short", "java.lang.Short" -> Short.parseShort(argument);
             case "int", "java.lang.Integer" -> Integer.parseInt(argument);
@@ -165,6 +165,16 @@ public class JmcMBeanBrowserService implements MBeanBrowserService {
             case "double", "java.lang.Double" -> Double.parseDouble(argument);
             default -> throw new IllegalArgumentException("Unsupported parameter type: " + type);
         };
+    }
+
+    private boolean parseBoolean(String argument) {
+        if ("true".equalsIgnoreCase(argument)) {
+            return true;
+        }
+        if ("false".equalsIgnoreCase(argument)) {
+            return false;
+        }
+        throw new IllegalArgumentException("Invalid boolean value: " + argument + ". Expected true or false.");
     }
 
     private String displayName(ObjectName objectName) {
@@ -185,6 +195,30 @@ public class JmcMBeanBrowserService implements MBeanBrowserService {
         }
         if (value instanceof Object[] array) {
             return Arrays.deepToString(array);
+        }
+        if (value instanceof boolean[] array) {
+            return Arrays.toString(array);
+        }
+        if (value instanceof byte[] array) {
+            return Arrays.toString(array);
+        }
+        if (value instanceof short[] array) {
+            return Arrays.toString(array);
+        }
+        if (value instanceof int[] array) {
+            return Arrays.toString(array);
+        }
+        if (value instanceof long[] array) {
+            return Arrays.toString(array);
+        }
+        if (value instanceof float[] array) {
+            return Arrays.toString(array);
+        }
+        if (value instanceof double[] array) {
+            return Arrays.toString(array);
+        }
+        if (value instanceof char[] array) {
+            return Arrays.toString(array);
         }
         return String.valueOf(value);
     }

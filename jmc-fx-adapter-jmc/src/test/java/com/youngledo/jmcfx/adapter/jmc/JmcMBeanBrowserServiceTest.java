@@ -1,6 +1,7 @@
 package com.youngledo.jmcfx.adapter.jmc;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 
 import java.lang.management.ManagementFactory;
@@ -125,6 +126,26 @@ class JmcMBeanBrowserServiceTest {
         assertEquals("", result.error());
     }
 
+    @Test
+    void invalidBooleanArgumentFailsWithoutInvokingOperation() {
+        MBeanOperationResult result = service.invoke(new MBeanOperationRequest(
+                CONNECTION,
+                ECHO_NAME.getCanonicalName(),
+                "setEnabled",
+                List.of("boolean"),
+                List.of("treu")));
+
+        assertFalse(result.success());
+        assertEquals("", result.value());
+        assertTrue(result.error().contains("boolean"));
+        assertEquals("0", service.invoke(new MBeanOperationRequest(
+                CONNECTION,
+                ECHO_NAME.getCanonicalName(),
+                "enabledCallCount",
+                List.of(),
+                List.of())).value());
+    }
+
     private static ObjectName objectName(String name) {
         try {
             return new ObjectName(name);
@@ -143,10 +164,15 @@ class JmcMBeanBrowserServiceTest {
         String echo(String value);
 
         String echo(int value);
+
+        void setEnabled(boolean enabled);
+
+        int enabledCallCount();
     }
 
     public static final class Echo implements EchoMBean {
         private String message = "hello";
+        private int enabledCallCount;
 
         @Override
         public String getMessage() {
@@ -171,6 +197,16 @@ class JmcMBeanBrowserServiceTest {
         @Override
         public String echo(int value) {
             return "echo int: " + value;
+        }
+
+        @Override
+        public void setEnabled(boolean enabled) {
+            enabledCallCount++;
+        }
+
+        @Override
+        public int enabledCallCount() {
+            return enabledCallCount;
         }
     }
 }
