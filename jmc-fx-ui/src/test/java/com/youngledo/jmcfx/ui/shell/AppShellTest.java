@@ -125,6 +125,11 @@ class AppShellTest {
         assertEquals("Button", elementByFxId(document, "jvmsConnectButton").getTagName());
         assertEquals("Button", elementByFxId(document, "jvmsDisconnectButton").getTagName());
         assertEquals("TableView", elementByFxId(document, "jvmsTable").getTagName());
+        assertEquals("VBox", elementByFxId(document, "jvmsSessionDetailPane").getTagName());
+        assertEquals("Label", elementByFxId(document, "jvmsSessionTitleLabel").getTagName());
+        assertEquals("Label", elementByFxId(document, "jvmsRuntimeSummaryLabel").getTagName());
+        assertEquals("ListView", elementByFxId(document, "jvmsCapabilitiesList").getTagName());
+        assertEquals("Label", elementByFxId(document, "jvmsSessionErrorLabel").getTagName());
         assertEquals(0, elementCountWithFxId(document, "statusLabel"));
         assertEquals(0, elementCountWithFxId(document, "taskSummaryLabel"));
         assertEquals("tlabTimelineContainer", elementByFxId(document, "tlabTimelineContainer").getAttribute("fx:id"));
@@ -333,6 +338,32 @@ class AppShellTest {
         assertTrue(controller.contains("formatJvmSource"), "Source column should use localized display labels");
         assertFalse(controller.contains("state().name()"), "State column must not show raw enum names");
         assertFalse(controller.contains("source().name()"), "Source column must not show raw enum names");
+    }
+
+    @Test
+    void jvmBrowserBindsLiveSessionDetail() throws Exception {
+        String controller = java.nio.file.Files.readString(
+                java.nio.file.Path.of("src/main/java/com/youngledo/jmcfx/ui/shell/AppShellController.java"));
+
+        assertTrue(controller.contains("jvmsSessionDetailPane.visibleProperty()"),
+                "JVM session detail pane should be visible only for selected connected sessions");
+        assertTrue(controller.contains("selectedSessionProperty()"),
+                "JVM session detail should bind to the ViewModel session snapshot");
+        assertTrue(controller.contains("jvmsCapabilitiesList.setItems"),
+                "JVM capabilities should be shown in the detail list");
+        assertTrue(controller.contains("formatJvmCapability"),
+                "Capabilities should be formatted through a controller helper");
+    }
+
+    @Test
+    void jvmRuntimeSummaryFormatsUptimeWithSharedDurationFormatter() throws Exception {
+        String controller = java.nio.file.Files.readString(
+                java.nio.file.Path.of("src/main/java/com/youngledo/jmcfx/ui/shell/AppShellController.java"));
+
+        assertTrue(controller.contains("DisplayFormats.formatDuration(snapshot.runtime().uptimeMillis())"),
+                "JVM runtime summary should use the shared duration formatter for uptime");
+        assertFalse(controller.contains("uptime %d ms"),
+                "JVM runtime summary must not show raw uptime milliseconds");
     }
 
     @Test

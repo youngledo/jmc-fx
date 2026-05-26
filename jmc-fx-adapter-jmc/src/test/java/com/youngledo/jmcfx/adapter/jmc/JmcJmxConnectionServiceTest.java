@@ -5,13 +5,21 @@ import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertThrows;
 
 import java.io.IOException;
+import java.lang.management.ManagementFactory;
+import java.time.Instant;
+import java.util.Set;
 
+import javax.management.MBeanServerConnection;
+import javax.management.ObjectName;
 import javax.management.remote.JMXServiceURL;
 
 import org.junit.jupiter.api.Test;
 
 import com.youngledo.jmcfx.domain.model.JvmConnection;
+import com.youngledo.jmcfx.domain.model.JvmCapability;
+import com.youngledo.jmcfx.domain.model.JvmCapabilityStatus;
 import com.youngledo.jmcfx.domain.model.JvmConnectionSource;
+import com.youngledo.jmcfx.domain.model.JvmSessionSnapshot;
 import com.youngledo.jmcfx.domain.service.JmcFxException;
 
 class JmcJmxConnectionServiceTest {
@@ -120,6 +128,49 @@ class JmcJmxConnectionServiceTest {
         assertEquals("service:jmx:rmi:///jndi/rmi://127.0.0.1:0/jmxrmi", url.toString());
     }
 
+    @Test
+    void sessionSnapshotReadsRuntimeAndCapabilitiesFromRegisteredConnector() throws Exception {
+        RecordingLocalConnectorResolver resolver = new RecordingLocalConnectorResolver("service:jmx:local://42");
+        RecordingJmxConnectorFactory connectorFactory = new RecordingJmxConnectorFactory();
+        connectorFactory.nextMBeanServer = MBeanServers.runtimeServer(true, true);
+        JmcJmxConnectionService service = new JmcJmxConnectionService(resolver, connectorFactory);
+        JvmConnection connected = service.connectLocal(JvmConnection.local("42", "demo.Main", "26.0.1", true));
+
+        JvmSessionSnapshot snapshot = service.sessionSnapshot(connected);
+
+        assertEquals("OpenJDK 64-Bit Server VM", snapshot.runtime().vmName());
+        assertEquals("Eclipse Adoptium", snapshot.runtime().vmVendor());
+        assertEquals("26.0.1", snapshot.runtime().vmVersion());
+        assertEquals(JvmCapabilityStatus.AVAILABLE, snapshot.statusOf(JvmCapability.MBEAN_SERVER));
+        assertEquals(JvmCapabilityStatus.AVAILABLE, snapshot.statusOf(JvmCapability.RUNTIME_MXBEAN));
+        assertEquals(JvmCapabilityStatus.AVAILABLE, snapshot.statusOf(JvmCapability.FLIGHT_RECORDER));
+        assertEquals(JvmCapabilityStatus.AVAILABLE, snapshot.statusOf(JvmCapability.DIAGNOSTIC_COMMANDS));
+    }
+
+    @Test
+    void sessionSnapshotMarksOptionalCapabilitiesUnavailableWhenMBeansAreMissing() throws Exception {
+        RecordingLocalConnectorResolver resolver = new RecordingLocalConnectorResolver("service:jmx:local://42");
+        RecordingJmxConnectorFactory connectorFactory = new RecordingJmxConnectorFactory();
+        connectorFactory.nextMBeanServer = MBeanServers.runtimeServer(false, false);
+        JmcJmxConnectionService service = new JmcJmxConnectionService(resolver, connectorFactory);
+        JvmConnection connected = service.connectLocal(JvmConnection.local("42", "demo.Main", "26.0.1", true));
+
+        JvmSessionSnapshot snapshot = service.sessionSnapshot(connected);
+
+        assertEquals(JvmCapabilityStatus.UNAVAILABLE, snapshot.statusOf(JvmCapability.FLIGHT_RECORDER));
+        assertEquals(JvmCapabilityStatus.UNAVAILABLE, snapshot.statusOf(JvmCapability.DIAGNOSTIC_COMMANDS));
+    }
+
+    @Test
+    void sessionSnapshotRejectsDisconnectedConnection() {
+        JmcJmxConnectionService service = new JmcJmxConnectionService();
+
+        JmcFxException exception = assertThrows(JmcFxException.class,
+                () -> service.sessionSnapshot(new JvmConnection("missing", "Missing", "", true)));
+
+        assertEquals("No live JVM session for connection: missing", exception.getMessage());
+    }
+
     private static final class RecordingLocalConnectorResolver
             implements JmcJmxConnectionService.LocalConnectorAddressResolver {
         private final String address;
@@ -138,19 +189,25 @@ class JmcJmxConnectionServiceTest {
 
     private static final class RecordingJmxConnectorFactory implements JmcJmxConnectionService.JmxConnectorFactory {
         private final java.util.List<NoopJmxConnector> createdConnectors = new java.util.ArrayList<>();
+        private MBeanServerConnection nextMBeanServer = MBeanServers.runtimeServer(true, true);
         private String connectedUrl = "";
 
         @Override
         public javax.management.remote.JMXConnector connect(JMXServiceURL serviceUrl) {
             connectedUrl = serviceUrl.toString();
-            NoopJmxConnector connector = new NoopJmxConnector();
+            NoopJmxConnector connector = new NoopJmxConnector(nextMBeanServer);
             createdConnectors.add(connector);
             return connector;
         }
     }
 
     private static final class NoopJmxConnector implements javax.management.remote.JMXConnector {
+        private final MBeanServerConnection mBeanServer;
         private int closeCount;
+
+        private NoopJmxConnector(MBeanServerConnection mBeanServer) {
+            this.mBeanServer = mBeanServer;
+        }
 
         @Override
         public void connect() {
@@ -162,7 +219,7 @@ class JmcJmxConnectionServiceTest {
 
         @Override
         public javax.management.MBeanServerConnection getMBeanServerConnection() {
-            throw new UnsupportedOperationException();
+            return mBeanServer;
         }
 
         @Override
@@ -224,6 +281,41 @@ class JmcJmxConnectionServiceTest {
         public void detach(String pid) {
             attachedPid = pid;
             detachedPid = pid;
+        }
+    }
+
+    private static final class MBeanServers {
+        private static MBeanServerConnection runtimeServer(boolean flightRecorder, boolean diagnosticCommands) {
+            Set<String> registered = new java.util.HashSet<>();
+            registered.add(ManagementFactory.RUNTIME_MXBEAN_NAME);
+            registered.add(ManagementFactory.MEMORY_MXBEAN_NAME);
+            registered.add(ManagementFactory.THREAD_MXBEAN_NAME);
+            if (flightRecorder) {
+                registered.add("jdk.management.jfr:type=FlightRecorder");
+            }
+            if (diagnosticCommands) {
+                registered.add("com.sun.management:type=DiagnosticCommand");
+            }
+            return (MBeanServerConnection) java.lang.reflect.Proxy.newProxyInstance(
+                    MBeanServerConnection.class.getClassLoader(),
+                    new Class<?>[] { MBeanServerConnection.class },
+                    (proxy, method, args) -> switch (method.getName()) {
+                        case "getAttribute" -> runtimeAttribute((String) args[1]);
+                        case "isRegistered" -> registered.contains(((ObjectName) args[0]).getCanonicalName());
+                        default -> throw new UnsupportedOperationException(method.getName());
+                    });
+        }
+
+        private static Object runtimeAttribute(String attribute) {
+            return switch (attribute) {
+                case "VmName" -> "OpenJDK 64-Bit Server VM";
+                case "VmVendor" -> "Eclipse Adoptium";
+                case "VmVersion" -> "26.0.1";
+                case "SpecVersion" -> "26";
+                case "StartTime" -> Instant.EPOCH.toEpochMilli();
+                case "Uptime" -> 1234L;
+                default -> throw new UnsupportedOperationException(attribute);
+            };
         }
     }
 }

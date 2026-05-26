@@ -45,11 +45,13 @@ import com.youngledo.jmcfx.domain.model.GcSummary;
 import com.youngledo.jmcfx.domain.model.HeapClassHistogram;
 import com.youngledo.jmcfx.domain.model.ProcessInfo;
 import com.youngledo.jmcfx.domain.model.HotMethod;
+import com.youngledo.jmcfx.domain.model.JvmCapabilitySnapshot;
 import com.youngledo.jmcfx.domain.model.JvmConnection;
 import com.youngledo.jmcfx.domain.model.JvmConnectionSource;
 import com.youngledo.jmcfx.domain.model.JvmConnectionState;
 import com.youngledo.jmcfx.domain.model.JvmFlag;
 import com.youngledo.jmcfx.domain.model.JvmFlagChange;
+import com.youngledo.jmcfx.domain.model.JvmSessionSnapshot;
 import com.youngledo.jmcfx.domain.model.LeakCandidate;
 import com.youngledo.jmcfx.domain.model.LeakReferenceNode;
 import com.youngledo.jmcfx.domain.model.LockGrouping;
@@ -308,6 +310,11 @@ public class AppShellController {
     @FXML private Button jvmsConnectButton;
     @FXML private Button jvmsDisconnectButton;
     @FXML private TableView<JvmConnection> jvmsTable;
+    @FXML private VBox jvmsSessionDetailPane;
+    @FXML private Label jvmsSessionTitleLabel;
+    @FXML private Label jvmsRuntimeSummaryLabel;
+    @FXML private ListView<JvmCapabilitySnapshot> jvmsCapabilitiesList;
+    @FXML private Label jvmsSessionErrorLabel;
     @FXML private Label profilingTitleLabel;
     @FXML private TableView<HotMethod> profilingTable;
     @FXML private TabPane profilingTreeTabs;
@@ -830,6 +837,8 @@ public class AppShellController {
             jvmsManualUrlField.setDisable(true);
             jvmsConnectButton.setDisable(true);
             jvmsDisconnectButton.setDisable(true);
+            jvmsSessionDetailPane.setVisible(false);
+            jvmsSessionDetailPane.setManaged(false);
             return;
         }
 
@@ -861,6 +870,28 @@ public class AppShellController {
                 .or(Bindings.createBooleanBinding(
                         () -> !canDisconnectJvm(jvmBrowserViewModel.selectedConnectionProperty().get()),
                         jvmBrowserViewModel.selectedConnectionProperty())));
+        jvmsSessionDetailPane.visibleProperty().bind(jvmBrowserViewModel.selectedSessionProperty().isNotNull()
+                .or(jvmBrowserViewModel.sessionErrorProperty()));
+        jvmsSessionDetailPane.managedProperty().bind(jvmsSessionDetailPane.visibleProperty());
+        jvmsSessionTitleLabel.textProperty().bind(i18n.text("jvms.session.title"));
+        jvmsRuntimeSummaryLabel.textProperty().bind(Bindings.createStringBinding(
+                () -> formatJvmRuntime(jvmBrowserViewModel.selectedSessionProperty().get()),
+                jvmBrowserViewModel.selectedSessionProperty(), i18n.localeProperty()));
+        jvmsCapabilitiesList.setItems(FXCollections.observableArrayList());
+        jvmBrowserViewModel.selectedSessionProperty().addListener((observable, oldValue, newValue) ->
+                jvmsCapabilitiesList.setItems(newValue == null
+                        ? FXCollections.emptyObservableList()
+                        : FXCollections.observableArrayList(newValue.capabilities())));
+        jvmsCapabilitiesList.setCellFactory(list -> new javafx.scene.control.ListCell<>() {
+            @Override
+            protected void updateItem(JvmCapabilitySnapshot item, boolean empty) {
+                super.updateItem(item, empty);
+                setText(empty || item == null ? null : formatJvmCapability(item));
+            }
+        });
+        jvmsSessionErrorLabel.visibleProperty().bind(jvmBrowserViewModel.sessionErrorProperty());
+        jvmsSessionErrorLabel.managedProperty().bind(jvmsSessionErrorLabel.visibleProperty());
+        jvmsSessionErrorLabel.textProperty().bind(jvmBrowserViewModel.sessionErrorMessageProperty());
 
         jvmsRefreshButton.setOnAction(event -> refreshJvmBrowser());
         jvmsConnectButton.setOnAction(event -> jvmBrowserViewModel.connectSelectedOrManual());
@@ -884,6 +915,23 @@ public class AppShellController {
 
     private String formatJvmSource(JvmConnectionSource source) {
         return i18n.get("jvms.source." + source.name().toLowerCase(java.util.Locale.ROOT));
+    }
+
+    private String formatJvmRuntime(JvmSessionSnapshot snapshot) {
+        if (snapshot == null) {
+            return i18n.get("jvms.session.empty");
+        }
+        return String.format(java.util.Locale.ROOT, "%s %s, %s, uptime %s",
+                snapshot.runtime().vmName(),
+                snapshot.runtime().vmVersion(),
+                snapshot.runtime().vmVendor(),
+                DisplayFormats.formatDuration(snapshot.runtime().uptimeMillis()));
+    }
+
+    private String formatJvmCapability(JvmCapabilitySnapshot snapshot) {
+        return i18n.get("jvms.capability." + snapshot.capability().name().toLowerCase(java.util.Locale.ROOT))
+                + ": "
+                + i18n.get("jvms.capability.status." + snapshot.status().name().toLowerCase(java.util.Locale.ROOT));
     }
 
     private void bindAnalysis(RuleResultsViewModel nextViewModel) {

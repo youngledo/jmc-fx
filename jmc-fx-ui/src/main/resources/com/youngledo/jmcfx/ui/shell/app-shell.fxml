@@ -132,7 +132,17 @@
                     <Button fx:id="jvmsConnectButton"/>
                     <Button fx:id="jvmsDisconnectButton"/>
                 </HBox>
-                <TableView fx:id="jvmsTable" styleClass="dense-table" VBox.vgrow="ALWAYS"/>
+                <SplitPane orientation="VERTICAL" VBox.vgrow="ALWAYS" DividerPositions="0.62">
+                    <items>
+                        <TableView fx:id="jvmsTable" styleClass="dense-table"/>
+                        <VBox fx:id="jvmsSessionDetailPane" styleClass="summary-panel" spacing="6">
+                            <Label fx:id="jvmsSessionTitleLabel" styleClass="detail-title"/>
+                            <Label fx:id="jvmsRuntimeSummaryLabel" wrapText="true"/>
+                            <ListView fx:id="jvmsCapabilitiesList"/>
+                            <Label fx:id="jvmsSessionErrorLabel" styleClass="unavailable-state" wrapText="true"/>
+                        </VBox>
+                    </items>
+                </SplitPane>
             </VBox>
             <VBox fx:id="profilingPane" spacing="8">
                 <Label fx:id="profilingTitleLabel" styleClass="view-title"/>

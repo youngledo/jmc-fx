@@ -1,17 +1,22 @@
 package com.youngledo.jmcfx.testsupport;
 
+import java.util.HashMap;
 import java.util.HashSet;
+import java.util.Map;
 import java.util.Set;
 import java.util.UUID;
 
 import com.youngledo.jmcfx.domain.model.JvmConnection;
 import com.youngledo.jmcfx.domain.model.JvmConnectionSource;
 import com.youngledo.jmcfx.domain.model.JvmConnectionState;
+import com.youngledo.jmcfx.domain.model.JvmSessionSnapshot;
+import com.youngledo.jmcfx.domain.service.JmcFxException;
 import com.youngledo.jmcfx.domain.service.JmxConnectionService;
 
 public class FakeJmxConnectionService implements JmxConnectionService {
 
     private final Set<String> connectedConnections = new HashSet<>();
+    private final Map<String, JvmSessionSnapshot> sessionSnapshots = new HashMap<>();
     private RuntimeException failure;
 
     public void failWith(RuntimeException failure) {
@@ -20,6 +25,10 @@ public class FakeJmxConnectionService implements JmxConnectionService {
 
     public Set<String> connectedConnections() {
         return Set.copyOf(connectedConnections);
+    }
+
+    public void setSessionSnapshot(String connectionId, JvmSessionSnapshot snapshot) {
+        sessionSnapshots.put(connectionId, snapshot);
     }
 
     @Override
@@ -49,9 +58,23 @@ public class FakeJmxConnectionService implements JmxConnectionService {
     }
 
     @Override
+    public JvmSessionSnapshot sessionSnapshot(JvmConnection connection) {
+        if (failure != null) {
+            throw failure;
+        }
+        String id = connection == null ? "" : connection.id();
+        JvmSessionSnapshot snapshot = sessionSnapshots.get(id);
+        if (snapshot == null) {
+            throw new JmcFxException("No live JVM session for connection: " + id);
+        }
+        return snapshot;
+    }
+
+    @Override
     public void disconnect(JvmConnection connection) {
         if (connection != null) {
             connectedConnections.remove(connection.id());
+            sessionSnapshots.remove(connection.id());
         }
     }
 }

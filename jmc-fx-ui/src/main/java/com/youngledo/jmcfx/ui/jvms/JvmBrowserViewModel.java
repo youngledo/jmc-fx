@@ -9,6 +9,7 @@ import java.util.stream.Collectors;
 
 import com.youngledo.jmcfx.domain.model.JvmConnection;
 import com.youngledo.jmcfx.domain.model.JvmConnectionSource;
+import com.youngledo.jmcfx.domain.model.JvmSessionSnapshot;
 import com.youngledo.jmcfx.domain.service.JmxConnectionService;
 import com.youngledo.jmcfx.domain.service.JvmDiscoveryService;
 
@@ -35,6 +36,10 @@ public class JvmBrowserViewModel implements AutoCloseable {
     private final BooleanProperty loading = new SimpleBooleanProperty(false);
     private final BooleanProperty error = new SimpleBooleanProperty(false);
     private final BooleanProperty refreshCompleted = new SimpleBooleanProperty(false);
+    private final ObjectProperty<JvmSessionSnapshot> selectedSession = new SimpleObjectProperty<>();
+    private final BooleanProperty sessionLoading = new SimpleBooleanProperty(false);
+    private final BooleanProperty sessionError = new SimpleBooleanProperty(false);
+    private final StringProperty sessionErrorMessage = new SimpleStringProperty("");
     private int pendingWorkCount;
 
     public JvmBrowserViewModel(JvmDiscoveryService discoveryService, JmxConnectionService connectionService) {
@@ -48,6 +53,7 @@ public class JvmBrowserViewModel implements AutoCloseable {
         this.connectionService = Objects.requireNonNull(connectionService, "connectionService");
         this.executor = Objects.requireNonNull(executor, "executor");
         this.fxRunner = Objects.requireNonNull(fxRunner, "fxRunner");
+        this.selectedConnection.addListener((observable, oldValue, newValue) -> loadSessionForSelection(newValue));
     }
 
     public ObservableList<JvmConnection> connectionsProperty() {
@@ -80,6 +86,22 @@ public class JvmBrowserViewModel implements AutoCloseable {
 
     public BooleanProperty refreshCompletedProperty() {
         return refreshCompleted;
+    }
+
+    public ObjectProperty<JvmSessionSnapshot> selectedSessionProperty() {
+        return selectedSession;
+    }
+
+    public BooleanProperty sessionLoadingProperty() {
+        return sessionLoading;
+    }
+
+    public BooleanProperty sessionErrorProperty() {
+        return sessionError;
+    }
+
+    public StringProperty sessionErrorMessageProperty() {
+        return sessionErrorMessage;
     }
 
     public void refresh() {
@@ -135,7 +157,11 @@ public class JvmBrowserViewModel implements AutoCloseable {
             try {
                 connectionService.disconnect(selected);
                 JvmConnection disconnected = selected.asDisconnected("Disconnected");
-                runOnFx(() -> replaceOrAdd(disconnected, "Disconnected."));
+                runOnFx(() -> {
+                    replaceOrAdd(disconnected, "Disconnected.");
+                    selectedSession.set(null);
+                    clearSessionError();
+                });
             } catch (RuntimeException exception) {
                 fail(exception);
             }
@@ -274,6 +300,39 @@ public class JvmBrowserViewModel implements AutoCloseable {
     private void clearError() {
         error.set(false);
         errorMessage.set("");
+    }
+
+    private void loadSessionForSelection(JvmConnection connection) {
+        if (connection == null || !connection.connected()) {
+            selectedSession.set(null);
+            clearSessionError();
+            sessionLoading.set(false);
+            return;
+        }
+        sessionLoading.set(true);
+        executor.execute(() -> {
+            try {
+                JvmSessionSnapshot snapshot = connectionService.sessionSnapshot(connection);
+                runOnFx(() -> {
+                    selectedSession.set(snapshot);
+                    clearSessionError();
+                    sessionLoading.set(false);
+                });
+            } catch (RuntimeException exception) {
+                runOnFx(() -> {
+                    selectedSession.set(null);
+                    sessionError.set(true);
+                    sessionErrorMessage.set(exception.getMessage() == null
+                            ? exception.getClass().getSimpleName() : exception.getMessage());
+                    sessionLoading.set(false);
+                });
+            }
+        });
+    }
+
+    private void clearSessionError() {
+        sessionError.set(false);
+        sessionErrorMessage.set("");
     }
 
     private void fail(RuntimeException exception) {

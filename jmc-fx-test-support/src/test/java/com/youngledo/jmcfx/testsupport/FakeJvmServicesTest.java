@@ -8,9 +8,15 @@ import java.util.List;
 
 import org.junit.jupiter.api.Test;
 
+import com.youngledo.jmcfx.domain.model.JvmCapability;
+import com.youngledo.jmcfx.domain.model.JvmCapabilitySnapshot;
+import com.youngledo.jmcfx.domain.model.JvmCapabilityStatus;
 import com.youngledo.jmcfx.domain.model.JvmConnection;
 import com.youngledo.jmcfx.domain.model.JvmConnectionSource;
 import com.youngledo.jmcfx.domain.model.JvmConnectionState;
+import com.youngledo.jmcfx.domain.model.JvmRuntimeSnapshot;
+import com.youngledo.jmcfx.domain.model.JvmSessionSnapshot;
+import com.youngledo.jmcfx.domain.service.JmcFxException;
 
 class FakeJvmServicesTest {
 
@@ -64,6 +70,31 @@ class FakeJvmServicesTest {
 
         assertThrows(IllegalArgumentException.class,
                 () -> service.connectLocal(JvmConnection.local("", "unknown.Main", "26.0.1", true)));
+    }
+
+    @Test
+    void fakeJmxServiceReturnsRegisteredSessionSnapshot() {
+        FakeJmxConnectionService service = new FakeJmxConnectionService();
+        JvmConnection connection = service.connect("service:jmx:rmi:///jndi/rmi://localhost:9999/jmxrmi");
+        JvmSessionSnapshot snapshot = new JvmSessionSnapshot(connection,
+                new JvmRuntimeSnapshot("OpenJDK 64-Bit Server VM", "Eclipse Adoptium",
+                        "26.0.1", "26", java.time.Instant.EPOCH, 1000),
+                List.of(new JvmCapabilitySnapshot(JvmCapability.MBEAN_SERVER,
+                        JvmCapabilityStatus.AVAILABLE, "Available")));
+
+        service.setSessionSnapshot(connection.id(), snapshot);
+
+        assertEquals(snapshot, service.sessionSnapshot(connection));
+    }
+
+    @Test
+    void fakeJmxServiceRejectsUnknownSessionSnapshot() {
+        FakeJmxConnectionService service = new FakeJmxConnectionService();
+
+        JmcFxException exception = assertThrows(JmcFxException.class,
+                () -> service.sessionSnapshot(new JvmConnection("missing", "Missing", "", true)));
+
+        assertEquals("No live JVM session for connection: missing", exception.getMessage());
     }
 
     private static JvmConnection local(String pid, String name) {

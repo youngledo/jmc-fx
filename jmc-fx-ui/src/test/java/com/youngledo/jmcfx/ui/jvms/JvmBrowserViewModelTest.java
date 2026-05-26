@@ -4,15 +4,21 @@ import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 
+import java.time.Instant;
 import java.util.ArrayDeque;
 import java.util.List;
 import java.util.Queue;
 
 import org.junit.jupiter.api.Test;
 
+import com.youngledo.jmcfx.domain.model.JvmCapability;
+import com.youngledo.jmcfx.domain.model.JvmCapabilitySnapshot;
+import com.youngledo.jmcfx.domain.model.JvmCapabilityStatus;
 import com.youngledo.jmcfx.domain.model.JvmConnection;
 import com.youngledo.jmcfx.domain.model.JvmConnectionSource;
 import com.youngledo.jmcfx.domain.model.JvmConnectionState;
+import com.youngledo.jmcfx.domain.model.JvmRuntimeSnapshot;
+import com.youngledo.jmcfx.domain.model.JvmSessionSnapshot;
 import com.youngledo.jmcfx.testsupport.FakeJmxConnectionService;
 import com.youngledo.jmcfx.testsupport.FakeJvmDiscoveryService;
 
@@ -250,12 +256,88 @@ class JvmBrowserViewModelTest {
         assertEquals("Disconnected.", viewModel.statusMessageProperty().get());
     }
 
+    @Test
+    void connectSelectedLoadsSessionSnapshot() {
+        FakeJvmDiscoveryService discovery = new FakeJvmDiscoveryService();
+        discovery.add(localConnection("42", "demo.Main"));
+        FakeJmxConnectionService jmx = new FakeJmxConnectionService();
+        JvmBrowserViewModel viewModel = viewModel(discovery, jmx);
+        viewModel.refresh();
+        JvmConnection selected = viewModel.connectionsProperty().getFirst();
+        JvmSessionSnapshot snapshot = sessionSnapshot(selected.asConnected("service:jmx:local://42"));
+        jmx.setSessionSnapshot("42", snapshot);
+
+        viewModel.connectSelectedOrManual();
+
+        assertEquals("OpenJDK 64-Bit Server VM",
+                viewModel.selectedSessionProperty().get().runtime().vmName());
+        assertFalse(viewModel.sessionLoadingProperty().get());
+        assertFalse(viewModel.sessionErrorProperty().get());
+    }
+
+    @Test
+    void selectingConnectedRowLoadsSessionSnapshot() {
+        FakeJvmDiscoveryService discovery = new FakeJvmDiscoveryService();
+        FakeJmxConnectionService jmx = new FakeJmxConnectionService();
+        JvmBrowserViewModel viewModel = viewModel(discovery, jmx);
+        JvmConnection connected = JvmConnection.local("42", "demo.Main", "26.0.1", true)
+                .asConnected("service:jmx:local://42");
+        jmx.setSessionSnapshot("42", sessionSnapshot(connected));
+        viewModel.connectionsProperty().add(connected);
+
+        viewModel.selectedConnectionProperty().set(connected);
+
+        assertEquals(JvmCapabilityStatus.AVAILABLE,
+                viewModel.selectedSessionProperty().get().statusOf(JvmCapability.MBEAN_SERVER));
+    }
+
+    @Test
+    void sessionSnapshotFailurePreservesConnectedRow() {
+        FakeJvmDiscoveryService discovery = new FakeJvmDiscoveryService();
+        discovery.add(localConnection("42", "demo.Main"));
+        FakeJmxConnectionService jmx = new FakeJmxConnectionService();
+        JvmBrowserViewModel viewModel = viewModel(discovery, jmx);
+        viewModel.refresh();
+
+        viewModel.connectSelectedOrManual();
+
+        assertTrue(viewModel.connectionsProperty().getFirst().connected());
+        assertTrue(viewModel.sessionErrorProperty().get());
+        assertEquals("No live JVM session for connection: 42",
+                viewModel.sessionErrorMessageProperty().get());
+    }
+
+    @Test
+    void disconnectClearsSelectedSessionSnapshot() {
+        FakeJvmDiscoveryService discovery = new FakeJvmDiscoveryService();
+        discovery.add(localConnection("42", "demo.Main"));
+        FakeJmxConnectionService jmx = new FakeJmxConnectionService();
+        JvmBrowserViewModel viewModel = viewModel(discovery, jmx);
+        viewModel.refresh();
+        JvmConnection selected = viewModel.connectionsProperty().getFirst();
+        jmx.setSessionSnapshot("42", sessionSnapshot(selected.asConnected("service:jmx:local://42")));
+        viewModel.connectSelectedOrManual();
+
+        viewModel.disconnectSelected();
+
+        assertEquals(null, viewModel.selectedSessionProperty().get());
+        assertFalse(viewModel.sessionErrorProperty().get());
+    }
+
     private static JvmBrowserViewModel viewModel(FakeJvmDiscoveryService discovery, FakeJmxConnectionService jmx) {
         return new JvmBrowserViewModel(discovery, jmx, new DirectJvmBrowserExecutor(), Runnable::run);
     }
 
     private static JvmConnection localConnection(String id, String name) {
         return JvmConnection.local(id, name, "26.0.1", true);
+    }
+
+    private static JvmSessionSnapshot sessionSnapshot(JvmConnection connection) {
+        return new JvmSessionSnapshot(connection,
+                new JvmRuntimeSnapshot("OpenJDK 64-Bit Server VM", "Eclipse Adoptium",
+                        "26.0.1", "26", Instant.EPOCH, 1000),
+                List.of(new JvmCapabilitySnapshot(JvmCapability.MBEAN_SERVER,
+                        JvmCapabilityStatus.AVAILABLE, "Available")));
     }
 
     private static final class QueuedJvmBrowserExecutor implements JvmBrowserExecutor {
