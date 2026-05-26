@@ -403,6 +403,27 @@ class AppShellTest {
     }
 
     @Test
+    void appShellFactoryInjectsMBeanBrowserService() throws Exception {
+        String factory = java.nio.file.Files.readString(
+                java.nio.file.Path.of("src/main/java/com/youngledo/jmcfx/ui/shell/AppShellFactory.java"));
+        String controller = java.nio.file.Files.readString(
+                java.nio.file.Path.of("src/main/java/com/youngledo/jmcfx/ui/shell/AppShellController.java"));
+        String app = java.nio.file.Files.readString(
+                java.nio.file.Path.of("../jmc-fx-app/src/main/java/com/youngledo/jmcfx/app/JmcFxApplication.java"));
+
+        assertTrue(factory.contains("MBeanBrowserService mBeanBrowserService"),
+                "Factory should accept the MBean Browser port");
+        assertTrue(factory.contains("mBeanBrowserService"),
+                "Factory should pass the MBean Browser port to AppShellController");
+        assertTrue(controller.contains("MBeanBrowserService mBeanBrowserService"),
+                "Controller should inject the MBean Browser port");
+        assertTrue(controller.contains("flightRecordingService, mBeanBrowserService"),
+                "Controller should pass the MBean Browser port to JvmBrowserViewModel");
+        assertTrue(app.contains("new JmcMBeanBrowserService(jmxConnectionService)"),
+                "Application assembly should reuse the existing JMX connection service for MBeans");
+    }
+
+    @Test
     void jvmRuntimeSummaryFormatsUptimeWithSharedDurationFormatter() throws Exception {
         String controller = java.nio.file.Files.readString(
                 java.nio.file.Path.of("src/main/java/com/youngledo/jmcfx/ui/shell/AppShellController.java"));

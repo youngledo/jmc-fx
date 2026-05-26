@@ -88,6 +88,7 @@ import com.youngledo.jmcfx.domain.service.JmxConnectionService;
 import com.youngledo.jmcfx.domain.service.JvmDiscoveryService;
 import com.youngledo.jmcfx.domain.service.LeakSuspectsService;
 import com.youngledo.jmcfx.domain.service.LockService;
+import com.youngledo.jmcfx.domain.service.MBeanBrowserService;
 import com.youngledo.jmcfx.domain.service.ProfilingService;
 import com.youngledo.jmcfx.domain.service.RecordingRepository;
 import com.youngledo.jmcfx.domain.service.RuleAnalysisService;
@@ -203,6 +204,7 @@ public class AppShellController {
     private final JvmDiscoveryService jvmDiscoveryService;
     private final JmxConnectionService jmxConnectionService;
     private final FlightRecordingService flightRecordingService;
+    private final MBeanBrowserService mBeanBrowserService;
     private final I18n i18n;
     private final RecordingOpenExecutor recordingOpenExecutor;
     private final ListChangeListener<EventTypeNode> eventTypeTreeListener = change -> rebuildEventTypeTree();
@@ -533,7 +535,30 @@ public class AppShellController {
                 fileIOService, socketIOService, lockService,
                 heapService, leakSuspectsService, tlabService,
                 jvmInternalsService, environmentService, javaAppService,
-                jvmDiscoveryService, jmxConnectionService, flightRecordingService, i18n,
+                jvmDiscoveryService, jmxConnectionService, flightRecordingService, null, i18n);
+    }
+
+    public AppShellController(AppShellViewModel viewModel, RecordingRepository recordingRepository,
+            EventQueryService eventQueryService, RuleAnalysisService ruleAnalysisService,
+            ProfilingService profilingService, ExceptionService exceptionService,
+            ThreadService threadService, FileIOService fileIOService,
+            SocketIOService socketIOService, LockService lockService,
+            HeapService heapService, LeakSuspectsService leakSuspectsService,
+            TlabService tlabService,
+            JvmInternalsService jvmInternalsService,
+            EnvironmentService environmentService,
+            JavaAppService javaAppService,
+            JvmDiscoveryService jvmDiscoveryService,
+            JmxConnectionService jmxConnectionService,
+            FlightRecordingService flightRecordingService,
+            MBeanBrowserService mBeanBrowserService,
+            I18n i18n) {
+        this(viewModel, recordingRepository, eventQueryService, ruleAnalysisService,
+                profilingService, exceptionService, threadService,
+                fileIOService, socketIOService, lockService,
+                heapService, leakSuspectsService, tlabService,
+                jvmInternalsService, environmentService, javaAppService,
+                jvmDiscoveryService, jmxConnectionService, flightRecordingService, mBeanBrowserService, i18n,
                 new VirtualThreadRecordingOpenExecutor());
     }
 
@@ -592,6 +617,29 @@ public class AppShellController {
             FlightRecordingService flightRecordingService,
             I18n i18n,
             RecordingOpenExecutor recordingOpenExecutor) {
+        this(viewModel, recordingRepository, eventQueryService, ruleAnalysisService,
+                profilingService, exceptionService, threadService,
+                fileIOService, socketIOService, lockService,
+                heapService, leakSuspectsService, tlabService,
+                jvmInternalsService, environmentService, javaAppService,
+                jvmDiscoveryService, jmxConnectionService, flightRecordingService, null, i18n, recordingOpenExecutor);
+    }
+
+    AppShellController(AppShellViewModel viewModel, RecordingRepository recordingRepository,
+            EventQueryService eventQueryService, RuleAnalysisService ruleAnalysisService,
+            ProfilingService profilingService, ExceptionService exceptionService,
+            ThreadService threadService, FileIOService fileIOService,
+            SocketIOService socketIOService, LockService lockService,
+            HeapService heapService, LeakSuspectsService leakSuspectsService,
+            TlabService tlabService, JvmInternalsService jvmInternalsService,
+            EnvironmentService environmentService,
+            JavaAppService javaAppService,
+            JvmDiscoveryService jvmDiscoveryService,
+            JmxConnectionService jmxConnectionService,
+            FlightRecordingService flightRecordingService,
+            MBeanBrowserService mBeanBrowserService,
+            I18n i18n,
+            RecordingOpenExecutor recordingOpenExecutor) {
         this.viewModel = viewModel;
         this.recordingRepository = recordingRepository;
         this.eventQueryService = eventQueryService;
@@ -611,6 +659,7 @@ public class AppShellController {
         this.jvmDiscoveryService = jvmDiscoveryService;
         this.jmxConnectionService = jmxConnectionService;
         this.flightRecordingService = flightRecordingService;
+        this.mBeanBrowserService = mBeanBrowserService;
         this.i18n = i18n;
         this.recordingOpenExecutor = recordingOpenExecutor;
     }
@@ -637,7 +686,7 @@ public class AppShellController {
         configureRecordingTabs();
         jvmBrowserViewModel = jvmDiscoveryService != null && jmxConnectionService != null
                 ? new JvmBrowserViewModel(jvmDiscoveryService, jmxConnectionService, flightRecordingService,
-                        new com.youngledo.jmcfx.ui.jvms.VirtualThreadJvmBrowserExecutor(),
+                        mBeanBrowserService, new com.youngledo.jmcfx.ui.jvms.VirtualThreadJvmBrowserExecutor(),
                         Platform::runLater, this::openRecordingInBackground) : null;
         homePane.visibleProperty().bind(viewModel.selectedSectionProperty().isEqualTo("home"));
         homePane.managedProperty().bind(homePane.visibleProperty());
