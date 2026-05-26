@@ -674,10 +674,11 @@ public class JvmBrowserViewModel implements AutoCloseable {
             clearMBeanError();
             return;
         }
+        clearMBeanDetails();
+        mbeanOperationResult.set("");
         long generation = nextMBeanRequestGeneration();
         mbeanLoading.set(true);
         clearMBeanError();
-        mbeanOperationResult.set("");
         executor.execute(() -> {
             try {
                 List<MBeanAttributeInfo> attributes = mBeanBrowserService.attributes(snapshot.connection(),

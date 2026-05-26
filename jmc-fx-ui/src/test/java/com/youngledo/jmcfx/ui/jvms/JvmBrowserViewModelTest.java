@@ -715,6 +715,34 @@ class JvmBrowserViewModelTest {
     }
 
     @Test
+    void failingMBeanSelectionClearsPreviousDetailsBeforeInvokeCanUseThem() {
+        FakeJmxConnectionService jmx = new FakeJmxConnectionService();
+        CapturingMBeanBrowserService mbeans = new CapturingMBeanBrowserService();
+        JvmBrowserViewModel viewModel = viewModel(new FakeJvmDiscoveryService(), jmx, mbeans);
+        JvmConnection connected = connectedWithMBeans(viewModel, jmx);
+        MBeanNode first = MBeanNode.objectName("demo:type=First", "First");
+        MBeanNode second = MBeanNode.objectName("demo:type=Second", "Second");
+        MBeanOperationInfo update = new MBeanOperationInfo("update", "void", "", List.of());
+        mbeans.setTree(connected.id(), List.of(MBeanNode.domain("demo", List.of(first, second))));
+        mbeans.setAttributes(connected.id(), first.objectName(), List.of());
+        mbeans.setOperations(connected.id(), first.objectName(), List.of(update));
+        mbeans.setOperationResult(connected.id(), first.objectName(), "update",
+                new MBeanOperationResult(true, "old", ""));
+        viewModel.selectedConnectionProperty().set(connected);
+        viewModel.selectedMBeanProperty().set(first);
+        mbeans.failWith(new IllegalStateException("new details failed"));
+
+        viewModel.selectedMBeanProperty().set(second);
+        viewModel.invokeSelectedMBeanOperation();
+
+        assertTrue(viewModel.mbeanAttributesProperty().isEmpty());
+        assertTrue(viewModel.mbeanOperationsProperty().isEmpty());
+        assertEquals(null, viewModel.selectedMBeanOperationProperty().get());
+        assertEquals(null, mbeans.lastRequest);
+        assertEquals("Select an MBean operation to invoke.", viewModel.mbeanErrorMessageProperty().get());
+    }
+
+    @Test
     void operationSelectionChangeWhileInvokeIsInFlightIgnoresStaleInvokeResult() {
         FakeJmxConnectionService jmx = new FakeJmxConnectionService();
         FakeMBeanBrowserService mbeans = new FakeMBeanBrowserService();
