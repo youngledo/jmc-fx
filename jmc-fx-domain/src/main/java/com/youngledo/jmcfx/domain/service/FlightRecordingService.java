@@ -1,13 +1,39 @@
 package com.youngledo.jmcfx.domain.service;
 
 import java.nio.file.Path;
+import java.util.List;
 
+import com.youngledo.jmcfx.domain.model.FlightRecordingInfo;
+import com.youngledo.jmcfx.domain.model.FlightRecordingStartRequest;
+import com.youngledo.jmcfx.domain.model.FlightRecordingStopRequest;
+import com.youngledo.jmcfx.domain.model.FlightRecordingTemplate;
 import com.youngledo.jmcfx.domain.model.JvmConnection;
 
 public interface FlightRecordingService {
     boolean isRecordingControlAvailable(JvmConnection connection);
 
-    void startRecording(JvmConnection connection, String recordingName);
+    default List<FlightRecordingTemplate> templates(JvmConnection connection) {
+        return FlightRecordingTemplate.predefined();
+    }
 
-    Path stopAndSaveRecording(JvmConnection connection, String recordingName, Path destinationDirectory);
+    default List<FlightRecordingInfo> recordings(JvmConnection connection) {
+        throw new JmcFxException("Recording listing is not supported by this service.");
+    }
+
+    default FlightRecordingInfo startRecording(FlightRecordingStartRequest request) {
+        throw new JmcFxException("Recording control is not supported by this service.");
+    }
+
+    default Path stopAndSaveRecording(FlightRecordingStopRequest request) {
+        throw new JmcFxException("Recording control is not supported by this service.");
+    }
+
+    default void startRecording(JvmConnection connection, String recordingName) {
+        startRecording(new FlightRecordingStartRequest(connection, recordingName, FlightRecordingTemplate.profile()));
+    }
+
+    default Path stopAndSaveRecording(JvmConnection connection, String recordingName, Path destinationDirectory) {
+        Path destinationFile = destinationDirectory.resolve(recordingName + ".jfr");
+        return stopAndSaveRecording(new FlightRecordingStopRequest(connection, -1, destinationFile));
+    }
 }

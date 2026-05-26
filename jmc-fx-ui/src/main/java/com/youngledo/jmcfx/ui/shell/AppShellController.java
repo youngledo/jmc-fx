@@ -38,6 +38,7 @@ import com.youngledo.jmcfx.domain.model.ExceptionGrouping;
 import com.youngledo.jmcfx.domain.model.ExceptionSummary;
 import com.youngledo.jmcfx.domain.model.FileIOEvent;
 import com.youngledo.jmcfx.domain.model.FileIOHistogram;
+import com.youngledo.jmcfx.domain.model.FlightRecordingInfo;
 import com.youngledo.jmcfx.domain.model.GcEvent;
 import com.youngledo.jmcfx.domain.model.GcHeapSummary;
 import com.youngledo.jmcfx.domain.model.GcReferenceStat;
@@ -76,6 +77,7 @@ import com.youngledo.jmcfx.domain.service.EnvironmentService;
 import com.youngledo.jmcfx.domain.service.EventQueryService;
 import com.youngledo.jmcfx.domain.service.ExceptionService;
 import com.youngledo.jmcfx.domain.service.FileIOService;
+import com.youngledo.jmcfx.domain.service.FlightRecordingService;
 import com.youngledo.jmcfx.domain.service.HeapService;
 import com.youngledo.jmcfx.domain.service.JvmInternalsService;
 import com.youngledo.jmcfx.domain.service.JavaAppService;
@@ -193,6 +195,7 @@ public class AppShellController {
     private final JavaAppService javaAppService;
     private final JvmDiscoveryService jvmDiscoveryService;
     private final JmxConnectionService jmxConnectionService;
+    private final FlightRecordingService flightRecordingService;
     private final I18n i18n;
     private final RecordingOpenExecutor recordingOpenExecutor;
     private final ListChangeListener<EventTypeNode> eventTypeTreeListener = change -> rebuildEventTypeTree();
@@ -314,6 +317,10 @@ public class AppShellController {
     @FXML private Label jvmsSessionTitleLabel;
     @FXML private Label jvmsRuntimeSummaryLabel;
     @FXML private ListView<JvmCapabilitySnapshot> jvmsCapabilitiesList;
+    @FXML private Button jvmsStartRecordingButton;
+    @FXML private Button jvmsStopRecordingButton;
+    @FXML private TableView<FlightRecordingInfo> jvmsRecordingsTable;
+    @FXML private Label jvmsRecordingStatusLabel;
     @FXML private Label jvmsSessionErrorLabel;
     @FXML private Label profilingTitleLabel;
     @FXML private TableView<HotMethod> profilingTable;
@@ -485,7 +492,30 @@ public class AppShellController {
                 fileIOService, socketIOService, lockService,
                 heapService, leakSuspectsService, tlabService,
                 jvmInternalsService, environmentService, javaAppService,
-                null, null, i18n,
+                null, null, null, i18n,
+                new VirtualThreadRecordingOpenExecutor());
+    }
+
+    public AppShellController(AppShellViewModel viewModel, RecordingRepository recordingRepository,
+            EventQueryService eventQueryService, RuleAnalysisService ruleAnalysisService,
+            ProfilingService profilingService, ExceptionService exceptionService,
+            ThreadService threadService, FileIOService fileIOService,
+            SocketIOService socketIOService, LockService lockService,
+            HeapService heapService, LeakSuspectsService leakSuspectsService,
+            TlabService tlabService,
+            JvmInternalsService jvmInternalsService,
+            EnvironmentService environmentService,
+            JavaAppService javaAppService,
+            JvmDiscoveryService jvmDiscoveryService,
+            JmxConnectionService jmxConnectionService,
+            FlightRecordingService flightRecordingService,
+            I18n i18n) {
+        this(viewModel, recordingRepository, eventQueryService, ruleAnalysisService,
+                profilingService, exceptionService, threadService,
+                fileIOService, socketIOService, lockService,
+                heapService, leakSuspectsService, tlabService,
+                jvmInternalsService, environmentService, javaAppService,
+                jvmDiscoveryService, jmxConnectionService, flightRecordingService, i18n,
                 new VirtualThreadRecordingOpenExecutor());
     }
 
@@ -507,7 +537,7 @@ public class AppShellController {
                 fileIOService, socketIOService, lockService,
                 heapService, leakSuspectsService, tlabService,
                 jvmInternalsService, environmentService, javaAppService,
-                jvmDiscoveryService, jmxConnectionService, i18n,
+                jvmDiscoveryService, jmxConnectionService, null, i18n,
                 new VirtualThreadRecordingOpenExecutor());
     }
 
@@ -527,7 +557,7 @@ public class AppShellController {
                 fileIOService, socketIOService, lockService,
                 heapService, leakSuspectsService, tlabService,
                 jvmInternalsService, environmentService, javaAppService,
-                null, null, i18n, recordingOpenExecutor);
+                null, null, null, i18n, recordingOpenExecutor);
     }
 
     AppShellController(AppShellViewModel viewModel, RecordingRepository recordingRepository,
@@ -541,6 +571,7 @@ public class AppShellController {
             JavaAppService javaAppService,
             JvmDiscoveryService jvmDiscoveryService,
             JmxConnectionService jmxConnectionService,
+            FlightRecordingService flightRecordingService,
             I18n i18n,
             RecordingOpenExecutor recordingOpenExecutor) {
         this.viewModel = viewModel;
@@ -561,6 +592,7 @@ public class AppShellController {
         this.javaAppService = javaAppService;
         this.jvmDiscoveryService = jvmDiscoveryService;
         this.jmxConnectionService = jmxConnectionService;
+        this.flightRecordingService = flightRecordingService;
         this.i18n = i18n;
         this.recordingOpenExecutor = recordingOpenExecutor;
     }
@@ -586,7 +618,9 @@ public class AppShellController {
         homeConnectJvmButton.setOnAction(event -> viewModel.showSection("jvms"));
         configureRecordingTabs();
         jvmBrowserViewModel = jvmDiscoveryService != null && jmxConnectionService != null
-                ? new JvmBrowserViewModel(jvmDiscoveryService, jmxConnectionService) : null;
+                ? new JvmBrowserViewModel(jvmDiscoveryService, jmxConnectionService, flightRecordingService,
+                        new com.youngledo.jmcfx.ui.jvms.VirtualThreadJvmBrowserExecutor(),
+                        Platform::runLater, this::openRecordingInBackground) : null;
         homePane.visibleProperty().bind(viewModel.selectedSectionProperty().isEqualTo("home"));
         homePane.managedProperty().bind(homePane.visibleProperty());
         overviewPane.visibleProperty().bind(viewModel.selectedSectionProperty().isEqualTo("overview"));
@@ -658,6 +692,7 @@ public class AppShellController {
         bindEvents();
         configureAnalysisTable();
         configureJvmBrowserTable();
+        configureJvmRecordingsTable();
         bindJvmBrowser();
         viewModel.selectedSectionProperty().addListener((observable, oldValue, newValue) -> {
             if ("jvms".equals(newValue)) {
@@ -837,6 +872,9 @@ public class AppShellController {
             jvmsManualUrlField.setDisable(true);
             jvmsConnectButton.setDisable(true);
             jvmsDisconnectButton.setDisable(true);
+            jvmsStartRecordingButton.setDisable(true);
+            jvmsStopRecordingButton.setDisable(true);
+            jvmsRecordingsTable.setItems(FXCollections.emptyObservableList());
             jvmsSessionDetailPane.setVisible(false);
             jvmsSessionDetailPane.setManaged(false);
             return;
@@ -892,15 +930,81 @@ public class AppShellController {
         jvmsSessionErrorLabel.visibleProperty().bind(jvmBrowserViewModel.sessionErrorProperty());
         jvmsSessionErrorLabel.managedProperty().bind(jvmsSessionErrorLabel.visibleProperty());
         jvmsSessionErrorLabel.textProperty().bind(jvmBrowserViewModel.sessionErrorMessageProperty());
+        jvmsRecordingsTable.setItems(jvmBrowserViewModel.flightRecordingsProperty());
+        jvmsRecordingsTable.getSelectionModel().selectedItemProperty().addListener((observable, oldValue, newValue) ->
+                jvmBrowserViewModel.selectedFlightRecordingProperty().set(newValue));
+        jvmBrowserViewModel.selectedFlightRecordingProperty().addListener((observable, oldValue, newValue) ->
+                jvmsRecordingsTable.getSelectionModel().select(newValue));
+        jvmsStartRecordingButton.textProperty().bind(i18n.text("jvms.recordings.start"));
+        jvmsStopRecordingButton.textProperty().bind(i18n.text("jvms.recordings.stopSave"));
+        jvmsStartRecordingButton.disableProperty().bind(jvmBrowserViewModel.recordingLoadingProperty()
+                .or(jvmBrowserViewModel.recordingControlAvailableProperty().not()));
+        jvmsStopRecordingButton.disableProperty().bind(jvmBrowserViewModel.recordingLoadingProperty()
+                .or(jvmBrowserViewModel.recordingControlAvailableProperty().not())
+                .or(jvmBrowserViewModel.selectedFlightRecordingProperty().isNull()));
+        jvmsRecordingStatusLabel.textProperty().bind(Bindings.createStringBinding(
+                () -> jvmBrowserViewModel.recordingErrorProperty().get()
+                        ? jvmBrowserViewModel.recordingErrorMessageProperty().get()
+                        : jvmBrowserViewModel.recordingStatusMessageProperty().get(),
+                jvmBrowserViewModel.recordingErrorProperty(),
+                jvmBrowserViewModel.recordingErrorMessageProperty(),
+                jvmBrowserViewModel.recordingStatusMessageProperty()));
 
         jvmsRefreshButton.setOnAction(event -> refreshJvmBrowser());
         jvmsConnectButton.setOnAction(event -> jvmBrowserViewModel.connectSelectedOrManual());
         jvmsDisconnectButton.setOnAction(event -> jvmBrowserViewModel.disconnectSelected());
+        jvmsStartRecordingButton.setOnAction(event -> jvmBrowserViewModel.startFlightRecording());
+        jvmsStopRecordingButton.setOnAction(event -> saveSelectedFlightRecording());
         jvmsTable.setOnMouseClicked(event -> {
             if (event.getButton() == MouseButton.PRIMARY && event.getClickCount() == 2) {
                 jvmBrowserViewModel.connectSelected();
             }
         });
+    }
+
+    private void configureJvmRecordingsTable() {
+        jvmsRecordingsTable.setPlaceholder(localizedTablePlaceholder("jvms.recordings.empty"));
+
+        TableColumn<FlightRecordingInfo, Number> idCol = new TableColumn<>();
+        idCol.textProperty().bind(i18n.text("jvms.recordings.column.id"));
+        idCol.setPrefWidth(70);
+        idCol.setCellValueFactory(cell -> new javafx.beans.property.SimpleLongProperty(cell.getValue().id()));
+
+        TableColumn<FlightRecordingInfo, String> nameCol = localizedColumn("jvms.recordings.column.name");
+        nameCol.setPrefWidth(260);
+        nameCol.setCellValueFactory(cell -> new ReadOnlyStringWrapper(cell.getValue().name()));
+
+        TableColumn<FlightRecordingInfo, String> stateCol = localizedColumn("jvms.recordings.column.state");
+        stateCol.setPrefWidth(110);
+        stateCol.setCellValueFactory(cell -> Bindings.createStringBinding(
+                () -> formatFlightRecordingState(cell.getValue().state()), i18n.localeProperty()));
+
+        TableColumn<FlightRecordingInfo, String> durationCol = localizedColumn("jvms.recordings.column.duration");
+        durationCol.setPrefWidth(120);
+        durationCol.setCellValueFactory(cell -> new ReadOnlyStringWrapper(
+                DisplayFormats.formatDuration(cell.getValue().durationMillis())));
+
+        TableColumn<FlightRecordingInfo, String> sizeCol = localizedColumn("jvms.recordings.column.size");
+        sizeCol.setPrefWidth(110);
+        sizeCol.setCellValueFactory(cell -> new ReadOnlyStringWrapper(
+                DisplayFormats.formatFileSize(cell.getValue().sizeBytes())));
+
+        jvmsRecordingsTable.getColumns().setAll(List.of(idCol, nameCol, stateCol, durationCol, sizeCol));
+    }
+
+    private void saveSelectedFlightRecording() {
+        if (jvmBrowserViewModel == null || root == null || root.getScene() == null) {
+            return;
+        }
+        FileChooser chooser = new FileChooser();
+        chooser.setTitle(i18n.get("fileChooser.saveRecording.title"));
+        chooser.getExtensionFilters().add(
+                new FileChooser.ExtensionFilter(jfrRecordingsFilterDescription(i18n), "*.jfr"));
+        chooser.setInitialFileName("jmc-fx-live.jfr");
+        java.io.File file = chooser.showSaveDialog(root.getScene().getWindow());
+        if (file != null) {
+            jvmBrowserViewModel.stopAndSaveSelectedFlightRecording(file.toPath());
+        }
     }
 
     private void refreshJvmBrowser() {
@@ -915,6 +1019,10 @@ public class AppShellController {
 
     private String formatJvmSource(JvmConnectionSource source) {
         return i18n.get("jvms.source." + source.name().toLowerCase(java.util.Locale.ROOT));
+    }
+
+    private String formatFlightRecordingState(com.youngledo.jmcfx.domain.model.FlightRecordingState state) {
+        return i18n.get("jvms.recordings.state." + state.name().toLowerCase(java.util.Locale.ROOT));
     }
 
     private String formatJvmRuntime(JvmSessionSnapshot snapshot) {

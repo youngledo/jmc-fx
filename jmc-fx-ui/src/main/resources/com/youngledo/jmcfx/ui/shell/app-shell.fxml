@@ -139,6 +139,12 @@
                             <Label fx:id="jvmsSessionTitleLabel" styleClass="detail-title"/>
                             <Label fx:id="jvmsRuntimeSummaryLabel" wrapText="true"/>
                             <ListView fx:id="jvmsCapabilitiesList"/>
+                            <HBox styleClass="page-toolbar" spacing="8">
+                                <Button fx:id="jvmsStartRecordingButton"/>
+                                <Button fx:id="jvmsStopRecordingButton"/>
+                                <Label fx:id="jvmsRecordingStatusLabel" wrapText="true"/>
+                            </HBox>
+                            <TableView fx:id="jvmsRecordingsTable" styleClass="dense-table"/>
                             <Label fx:id="jvmsSessionErrorLabel" styleClass="unavailable-state" wrapText="true"/>
                         </VBox>
                     </items>

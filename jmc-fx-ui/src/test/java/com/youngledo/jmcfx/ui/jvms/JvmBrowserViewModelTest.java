@@ -4,6 +4,8 @@ import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 
+import java.nio.file.Path;
+import java.util.ArrayList;
 import java.time.Instant;
 import java.util.ArrayDeque;
 import java.util.List;
@@ -11,6 +13,8 @@ import java.util.Queue;
 
 import org.junit.jupiter.api.Test;
 
+import com.youngledo.jmcfx.domain.model.FlightRecordingInfo;
+import com.youngledo.jmcfx.domain.model.FlightRecordingState;
 import com.youngledo.jmcfx.domain.model.JvmCapability;
 import com.youngledo.jmcfx.domain.model.JvmCapabilitySnapshot;
 import com.youngledo.jmcfx.domain.model.JvmCapabilityStatus;
@@ -19,6 +23,7 @@ import com.youngledo.jmcfx.domain.model.JvmConnectionSource;
 import com.youngledo.jmcfx.domain.model.JvmConnectionState;
 import com.youngledo.jmcfx.domain.model.JvmRuntimeSnapshot;
 import com.youngledo.jmcfx.domain.model.JvmSessionSnapshot;
+import com.youngledo.jmcfx.testsupport.FakeFlightRecordingService;
 import com.youngledo.jmcfx.testsupport.FakeJmxConnectionService;
 import com.youngledo.jmcfx.testsupport.FakeJvmDiscoveryService;
 
@@ -324,12 +329,76 @@ class JvmBrowserViewModelTest {
         assertFalse(viewModel.sessionErrorProperty().get());
     }
 
+    @Test
+    void connectedSessionWithFlightRecorderLoadsRecordingControl() {
+        FakeFlightRecordingService recordings = new FakeFlightRecordingService();
+        FakeJmxConnectionService jmx = new FakeJmxConnectionService();
+        JvmBrowserViewModel viewModel = viewModel(new FakeJvmDiscoveryService(),
+                jmx, recordings);
+        JvmConnection connected = connectedWithFlightRecorder(viewModel, jmx, recordings);
+
+        viewModel.selectedConnectionProperty().set(connected);
+
+        assertTrue(viewModel.recordingControlAvailableProperty().get());
+        assertEquals(1, viewModel.flightRecordingsProperty().size());
+        assertEquals(FlightRecordingState.RUNNING, viewModel.flightRecordingsProperty().getFirst().state());
+    }
+
+    @Test
+    void startRecordingAddsRunningRecording() {
+        FakeFlightRecordingService recordings = new FakeFlightRecordingService();
+        FakeJmxConnectionService jmx = new FakeJmxConnectionService();
+        JvmBrowserViewModel viewModel = viewModel(new FakeJvmDiscoveryService(),
+                jmx, recordings);
+        viewModel.selectedConnectionProperty().set(connectedWithFlightRecorder(viewModel, jmx, recordings));
+
+        viewModel.startFlightRecording();
+
+        assertEquals(2, viewModel.flightRecordingsProperty().size());
+        assertEquals(FlightRecordingState.RUNNING, viewModel.flightRecordingsProperty().getLast().state());
+        assertEquals("JMC FX Recording", recordings.lastStartRequest().name());
+    }
+
+    @Test
+    void stopAndSaveRecordingPublishesSavedFileForOpening() {
+        FakeFlightRecordingService recordings = new FakeFlightRecordingService();
+        FakeJmxConnectionService jmx = new FakeJmxConnectionService();
+        List<Path> opened = new ArrayList<>();
+        JvmBrowserViewModel viewModel = new JvmBrowserViewModel(new FakeJvmDiscoveryService(),
+                jmx, recordings, new DirectJvmBrowserExecutor(), Runnable::run, opened::add);
+        viewModel.selectedConnectionProperty().set(connectedWithFlightRecorder(viewModel, jmx, recordings));
+        viewModel.selectedFlightRecordingProperty().set(viewModel.flightRecordingsProperty().getFirst());
+
+        viewModel.stopAndSaveSelectedFlightRecording(Path.of("target/live-capture.jfr"));
+
+        assertEquals(List.of(Path.of("target/live-capture.jfr")), opened);
+        assertEquals(100, recordings.lastStopRequest().recordingId());
+    }
+
     private static JvmBrowserViewModel viewModel(FakeJvmDiscoveryService discovery, FakeJmxConnectionService jmx) {
         return new JvmBrowserViewModel(discovery, jmx, new DirectJvmBrowserExecutor(), Runnable::run);
     }
 
+    private static JvmBrowserViewModel viewModel(FakeJvmDiscoveryService discovery, FakeJmxConnectionService jmx,
+            FakeFlightRecordingService recordings) {
+        return new JvmBrowserViewModel(discovery, jmx, recordings, new DirectJvmBrowserExecutor(), Runnable::run,
+                path -> { });
+    }
+
     private static JvmConnection localConnection(String id, String name) {
         return JvmConnection.local(id, name, "26.0.1", true);
+    }
+
+    private static JvmConnection connectedWithFlightRecorder(JvmBrowserViewModel viewModel, FakeJmxConnectionService jmx,
+            FakeFlightRecordingService recordings) {
+        JvmConnection connected = JvmConnection.local("42", "demo.Main", "26.0.1", true)
+                .asConnected("service:jmx:local://42");
+        jmx.setSessionSnapshot("42", flightRecorderSessionSnapshot(connected));
+        recordings.setAvailable("42", true);
+        recordings.addRecording("42", new FlightRecordingInfo(100, "Existing", FlightRecordingState.RUNNING,
+                1_000, 4096));
+        viewModel.connectionsProperty().add(connected);
+        return connected;
     }
 
     private static JvmSessionSnapshot sessionSnapshot(JvmConnection connection) {
@@ -338,6 +407,16 @@ class JvmBrowserViewModelTest {
                         "26.0.1", "26", Instant.EPOCH, 1000),
                 List.of(new JvmCapabilitySnapshot(JvmCapability.MBEAN_SERVER,
                         JvmCapabilityStatus.AVAILABLE, "Available")));
+    }
+
+    private static JvmSessionSnapshot flightRecorderSessionSnapshot(JvmConnection connection) {
+        return new JvmSessionSnapshot(connection,
+                new JvmRuntimeSnapshot("OpenJDK 64-Bit Server VM", "Eclipse Adoptium",
+                        "26.0.1", "26", Instant.EPOCH, 1000),
+                List.of(new JvmCapabilitySnapshot(JvmCapability.MBEAN_SERVER,
+                                JvmCapabilityStatus.AVAILABLE, "Available"),
+                        new JvmCapabilitySnapshot(JvmCapability.FLIGHT_RECORDER,
+                                JvmCapabilityStatus.AVAILABLE, "Available")));
     }
 
     private static final class QueuedJvmBrowserExecutor implements JvmBrowserExecutor {

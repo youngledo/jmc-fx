@@ -29,7 +29,7 @@ import com.youngledo.jmcfx.domain.model.JvmSessionSnapshot;
 import com.youngledo.jmcfx.domain.service.JmcFxException;
 import com.youngledo.jmcfx.domain.service.JmxConnectionService;
 
-public class JmcJmxConnectionService implements JmxConnectionService {
+public class JmcJmxConnectionService implements JmxConnectionService, JmxConnectionAccessor {
 
     static final String LOCAL_CONNECTOR_ADDRESS_PROPERTY =
             "com.sun.management.jmxremote.localConnectorAddress";
@@ -113,17 +113,25 @@ public class JmcJmxConnectionService implements JmxConnectionService {
     @Override
     public JvmSessionSnapshot sessionSnapshot(JvmConnection connection) {
         String id = connection == null ? "" : connection.id();
-        JMXConnector connector = connectors.get(id);
-        if (connector == null) {
-            throw new JmcFxException("No live JVM session for connection: " + id);
-        }
         try {
-            MBeanServerConnection server = connector.getMBeanServerConnection();
+            MBeanServerConnection server = mBeanServerConnection(connection);
             return new JvmSessionSnapshot(connection, runtimeSnapshot(server), capabilitySnapshots(server));
+        } catch (JmcFxException exception) {
+            throw exception;
         } catch (IOException | RuntimeException exception) {
             throw new JmcFxException("Unable to inspect JVM session " + id + ": "
                     + exception.getMessage(), exception);
         }
+    }
+
+    @Override
+    public MBeanServerConnection mBeanServerConnection(JvmConnection connection) throws IOException {
+        String id = connection == null ? "" : connection.id();
+        JMXConnector connector = connectors.get(id);
+        if (connector == null) {
+            throw new JmcFxException("No live JVM session for connection: " + id);
+        }
+        return connector.getMBeanServerConnection();
     }
 
     private void registerConnector(String id, JMXConnector connector) {

@@ -1,5 +1,6 @@
 package com.youngledo.jmcfx.ui.jvms;
 
+import java.nio.file.Path;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Objects;
@@ -7,9 +8,16 @@ import java.util.Set;
 import java.util.function.Consumer;
 import java.util.stream.Collectors;
 
+import com.youngledo.jmcfx.domain.model.FlightRecordingInfo;
+import com.youngledo.jmcfx.domain.model.FlightRecordingStartRequest;
+import com.youngledo.jmcfx.domain.model.FlightRecordingStopRequest;
+import com.youngledo.jmcfx.domain.model.FlightRecordingTemplate;
+import com.youngledo.jmcfx.domain.model.JvmCapability;
+import com.youngledo.jmcfx.domain.model.JvmCapabilityStatus;
 import com.youngledo.jmcfx.domain.model.JvmConnection;
 import com.youngledo.jmcfx.domain.model.JvmConnectionSource;
 import com.youngledo.jmcfx.domain.model.JvmSessionSnapshot;
+import com.youngledo.jmcfx.domain.service.FlightRecordingService;
 import com.youngledo.jmcfx.domain.service.JmxConnectionService;
 import com.youngledo.jmcfx.domain.service.JvmDiscoveryService;
 
@@ -26,10 +34,14 @@ public class JvmBrowserViewModel implements AutoCloseable {
 
     private final JvmDiscoveryService discoveryService;
     private final JmxConnectionService connectionService;
+    private final FlightRecordingService flightRecordingService;
     private final JvmBrowserExecutor executor;
     private final Consumer<Runnable> fxRunner;
+    private final Consumer<Path> savedRecordingHandler;
     private final ObservableList<JvmConnection> connections = FXCollections.observableArrayList();
+    private final ObservableList<FlightRecordingInfo> flightRecordings = FXCollections.observableArrayList();
     private final ObjectProperty<JvmConnection> selectedConnection = new SimpleObjectProperty<>();
+    private final ObjectProperty<FlightRecordingInfo> selectedFlightRecording = new SimpleObjectProperty<>();
     private final StringProperty manualConnectionUrl = new SimpleStringProperty("");
     private final StringProperty statusMessage = new SimpleStringProperty("");
     private final StringProperty errorMessage = new SimpleStringProperty("");
@@ -40,19 +52,32 @@ public class JvmBrowserViewModel implements AutoCloseable {
     private final BooleanProperty sessionLoading = new SimpleBooleanProperty(false);
     private final BooleanProperty sessionError = new SimpleBooleanProperty(false);
     private final StringProperty sessionErrorMessage = new SimpleStringProperty("");
+    private final BooleanProperty recordingControlAvailable = new SimpleBooleanProperty(false);
+    private final BooleanProperty recordingLoading = new SimpleBooleanProperty(false);
+    private final BooleanProperty recordingError = new SimpleBooleanProperty(false);
+    private final StringProperty recordingErrorMessage = new SimpleStringProperty("");
+    private final StringProperty recordingStatusMessage = new SimpleStringProperty("");
     private int pendingWorkCount;
 
     public JvmBrowserViewModel(JvmDiscoveryService discoveryService, JmxConnectionService connectionService) {
-        this(discoveryService, connectionService, new VirtualThreadJvmBrowserExecutor(),
-                javafx.application.Platform::runLater);
+        this(discoveryService, connectionService, null, new VirtualThreadJvmBrowserExecutor(),
+                javafx.application.Platform::runLater, path -> { });
     }
 
     public JvmBrowserViewModel(JvmDiscoveryService discoveryService, JmxConnectionService connectionService,
             JvmBrowserExecutor executor, Consumer<Runnable> fxRunner) {
+        this(discoveryService, connectionService, null, executor, fxRunner, path -> { });
+    }
+
+    public JvmBrowserViewModel(JvmDiscoveryService discoveryService, JmxConnectionService connectionService,
+            FlightRecordingService flightRecordingService, JvmBrowserExecutor executor, Consumer<Runnable> fxRunner,
+            Consumer<Path> savedRecordingHandler) {
         this.discoveryService = Objects.requireNonNull(discoveryService, "discoveryService");
         this.connectionService = Objects.requireNonNull(connectionService, "connectionService");
+        this.flightRecordingService = flightRecordingService;
         this.executor = Objects.requireNonNull(executor, "executor");
         this.fxRunner = Objects.requireNonNull(fxRunner, "fxRunner");
+        this.savedRecordingHandler = Objects.requireNonNull(savedRecordingHandler, "savedRecordingHandler");
         this.selectedConnection.addListener((observable, oldValue, newValue) -> loadSessionForSelection(newValue));
     }
 
@@ -62,6 +87,14 @@ public class JvmBrowserViewModel implements AutoCloseable {
 
     public ObjectProperty<JvmConnection> selectedConnectionProperty() {
         return selectedConnection;
+    }
+
+    public ObservableList<FlightRecordingInfo> flightRecordingsProperty() {
+        return flightRecordings;
+    }
+
+    public ObjectProperty<FlightRecordingInfo> selectedFlightRecordingProperty() {
+        return selectedFlightRecording;
     }
 
     public StringProperty manualConnectionUrlProperty() {
@@ -102,6 +135,26 @@ public class JvmBrowserViewModel implements AutoCloseable {
 
     public StringProperty sessionErrorMessageProperty() {
         return sessionErrorMessage;
+    }
+
+    public BooleanProperty recordingControlAvailableProperty() {
+        return recordingControlAvailable;
+    }
+
+    public BooleanProperty recordingLoadingProperty() {
+        return recordingLoading;
+    }
+
+    public BooleanProperty recordingErrorProperty() {
+        return recordingError;
+    }
+
+    public StringProperty recordingErrorMessageProperty() {
+        return recordingErrorMessage;
+    }
+
+    public StringProperty recordingStatusMessageProperty() {
+        return recordingStatusMessage;
     }
 
     public void refresh() {
@@ -160,10 +213,66 @@ public class JvmBrowserViewModel implements AutoCloseable {
                 runOnFx(() -> {
                     replaceOrAdd(disconnected, "Disconnected.");
                     selectedSession.set(null);
+                    clearRecordingControl();
                     clearSessionError();
                 });
             } catch (RuntimeException exception) {
                 fail(exception);
+            }
+        });
+    }
+
+    public void startFlightRecording() {
+        JvmConnection selected = selectedConnection.get();
+        if (!canUseRecordingControl(selected)) {
+            recordingError.set(true);
+            recordingErrorMessage.set("Select a connected JVM with Flight Recorder available.");
+            return;
+        }
+        recordingLoading.set(true);
+        clearRecordingError();
+        executor.execute(() -> {
+            try {
+                FlightRecordingStartRequest request = new FlightRecordingStartRequest(selected,
+                        "JMC FX Recording", FlightRecordingTemplate.profile());
+                flightRecordingService.startRecording(request);
+                List<FlightRecordingInfo> updated = flightRecordingService.recordings(selected);
+                runOnFx(() -> {
+                    flightRecordings.setAll(updated);
+                    selectedFlightRecording.set(updated.isEmpty() ? null : updated.getLast());
+                    recordingStatusMessage.set("Recording started.");
+                    recordingLoading.set(false);
+                });
+            } catch (RuntimeException exception) {
+                failRecording(exception);
+            }
+        });
+    }
+
+    public void stopAndSaveSelectedFlightRecording(Path destinationFile) {
+        JvmConnection selectedConnection = this.selectedConnection.get();
+        FlightRecordingInfo selectedRecording = selectedFlightRecording.get();
+        if (!canUseRecordingControl(selectedConnection) || selectedRecording == null) {
+            recordingError.set(true);
+            recordingErrorMessage.set("Select a running Flight Recording to save.");
+            return;
+        }
+        recordingLoading.set(true);
+        clearRecordingError();
+        executor.execute(() -> {
+            try {
+                Path saved = flightRecordingService.stopAndSaveRecording(new FlightRecordingStopRequest(
+                        selectedConnection, selectedRecording.id(), destinationFile));
+                List<FlightRecordingInfo> updated = flightRecordingService.recordings(selectedConnection);
+                runOnFx(() -> {
+                    flightRecordings.setAll(updated);
+                    selectedFlightRecording.set(updated.isEmpty() ? null : updated.getFirst());
+                    recordingStatusMessage.set("Recording saved: " + saved.getFileName());
+                    recordingLoading.set(false);
+                    savedRecordingHandler.accept(saved);
+                });
+            } catch (RuntimeException exception) {
+                failRecording(exception);
             }
         });
     }
@@ -305,6 +414,7 @@ public class JvmBrowserViewModel implements AutoCloseable {
     private void loadSessionForSelection(JvmConnection connection) {
         if (connection == null || !connection.connected()) {
             selectedSession.set(null);
+            clearRecordingControl();
             clearSessionError();
             sessionLoading.set(false);
             return;
@@ -316,11 +426,13 @@ public class JvmBrowserViewModel implements AutoCloseable {
                 runOnFx(() -> {
                     selectedSession.set(snapshot);
                     clearSessionError();
+                    loadRecordingControl(snapshot);
                     sessionLoading.set(false);
                 });
             } catch (RuntimeException exception) {
                 runOnFx(() -> {
                     selectedSession.set(null);
+                    clearRecordingControl();
                     sessionError.set(true);
                     sessionErrorMessage.set(exception.getMessage() == null
                             ? exception.getClass().getSimpleName() : exception.getMessage());
@@ -333,6 +445,55 @@ public class JvmBrowserViewModel implements AutoCloseable {
     private void clearSessionError() {
         sessionError.set(false);
         sessionErrorMessage.set("");
+    }
+
+    private void loadRecordingControl(JvmSessionSnapshot snapshot) {
+        if (flightRecordingService == null
+                || snapshot.statusOf(JvmCapability.FLIGHT_RECORDER) != JvmCapabilityStatus.AVAILABLE
+                || !flightRecordingService.isRecordingControlAvailable(snapshot.connection())) {
+            clearRecordingControl();
+            return;
+        }
+        try {
+            List<FlightRecordingInfo> recordings = flightRecordingService.recordings(snapshot.connection());
+            flightRecordings.setAll(recordings);
+            selectedFlightRecording.set(recordings.isEmpty() ? null : recordings.getFirst());
+            recordingControlAvailable.set(true);
+            clearRecordingError();
+        } catch (RuntimeException exception) {
+            clearRecordingControl();
+            recordingError.set(true);
+            recordingErrorMessage.set(exception.getMessage() == null
+                    ? exception.getClass().getSimpleName() : exception.getMessage());
+        }
+    }
+
+    private boolean canUseRecordingControl(JvmConnection connection) {
+        return flightRecordingService != null && connection != null && connection.connected()
+                && recordingControlAvailable.get();
+    }
+
+    private void clearRecordingControl() {
+        flightRecordings.clear();
+        selectedFlightRecording.set(null);
+        recordingControlAvailable.set(false);
+        recordingLoading.set(false);
+        recordingStatusMessage.set("");
+        clearRecordingError();
+    }
+
+    private void clearRecordingError() {
+        recordingError.set(false);
+        recordingErrorMessage.set("");
+    }
+
+    private void failRecording(RuntimeException exception) {
+        runOnFx(() -> {
+            recordingError.set(true);
+            recordingErrorMessage.set(exception.getMessage() == null ? exception.getClass().getSimpleName()
+                    : exception.getMessage());
+            recordingLoading.set(false);
+        });
     }
 
     private void fail(RuntimeException exception) {

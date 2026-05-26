@@ -129,6 +129,10 @@ class AppShellTest {
         assertEquals("Label", elementByFxId(document, "jvmsSessionTitleLabel").getTagName());
         assertEquals("Label", elementByFxId(document, "jvmsRuntimeSummaryLabel").getTagName());
         assertEquals("ListView", elementByFxId(document, "jvmsCapabilitiesList").getTagName());
+        assertEquals("Button", elementByFxId(document, "jvmsStartRecordingButton").getTagName());
+        assertEquals("Button", elementByFxId(document, "jvmsStopRecordingButton").getTagName());
+        assertEquals("TableView", elementByFxId(document, "jvmsRecordingsTable").getTagName());
+        assertEquals("Label", elementByFxId(document, "jvmsRecordingStatusLabel").getTagName());
         assertEquals("Label", elementByFxId(document, "jvmsSessionErrorLabel").getTagName());
         assertEquals(0, elementCountWithFxId(document, "statusLabel"));
         assertEquals(0, elementCountWithFxId(document, "taskSummaryLabel"));
@@ -353,6 +357,21 @@ class AppShellTest {
                 "JVM capabilities should be shown in the detail list");
         assertTrue(controller.contains("formatJvmCapability"),
                 "Capabilities should be formatted through a controller helper");
+    }
+
+    @Test
+    void jvmBrowserBindsFlightRecordingControl() throws Exception {
+        String controller = java.nio.file.Files.readString(
+                java.nio.file.Path.of("src/main/java/com/youngledo/jmcfx/ui/shell/AppShellController.java"));
+
+        assertTrue(controller.contains("jvmsRecordingsTable.setItems(jvmBrowserViewModel.flightRecordingsProperty())"),
+                "JVM recordings table should bind to live recording rows");
+        assertTrue(controller.contains("jvmsStartRecordingButton.setOnAction"),
+                "Start recording button should invoke the JVM browser ViewModel");
+        assertTrue(controller.contains("jvmsStopRecordingButton.setOnAction"),
+                "Stop recording button should save and open a JFR file");
+        assertTrue(controller.contains("openRecordingInBackground"),
+                "Saved recordings should reuse the existing recording open flow");
     }
 
     @Test

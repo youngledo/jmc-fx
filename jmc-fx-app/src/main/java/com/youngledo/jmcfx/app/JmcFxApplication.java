@@ -7,6 +7,7 @@ import com.youngledo.jmcfx.adapter.jmc.JmcEventQueryService;
 import com.youngledo.jmcfx.adapter.jmc.JmcJavaAppService;
 import com.youngledo.jmcfx.adapter.jmc.JmcExceptionService;
 import com.youngledo.jmcfx.adapter.jmc.JmcFileIOService;
+import com.youngledo.jmcfx.adapter.jmc.JmcFlightRecordingService;
 import com.youngledo.jmcfx.adapter.jmc.JmcHeapService;
 import com.youngledo.jmcfx.adapter.jmc.JmcJvmInternalsService;
 import com.youngledo.jmcfx.adapter.jmc.JmcJmxConnectionService;
@@ -37,6 +38,7 @@ public class JmcFxApplication extends Application {
     public void start(Stage stage) {
         Locale systemLocale = Locale.getDefault();
         Locale.setDefault(Locale.ENGLISH);
+        JmcJmxConnectionService jmxConnectionService = new JmcJmxConnectionService();
         shell = new AppShellFactory(new JmcRecordingRepository(),
                 new JmcEventQueryService(), new JmcRuleAnalysisService(),
                 new JmcProfilingService(), new JmcExceptionService(),
@@ -49,7 +51,8 @@ public class JmcFxApplication extends Application {
                 new JmcEnvironmentService(),
                 new JmcJavaAppService(),
                 new JmcJvmDiscoveryService(),
-                new JmcJmxConnectionService(),
+                jmxConnectionService,
+                new JmcFlightRecordingService(jmxConnectionService),
                 new com.youngledo.jmcfx.ui.i18n.I18n(systemLocale)).create();
         Scene scene = new Scene(shell.root(), 1280, 800);
         scene.getStylesheets().add(getClass().getResource("/css/app.css").toExternalForm());

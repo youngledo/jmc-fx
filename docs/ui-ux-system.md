@@ -264,6 +264,10 @@ Rules:
   one exists.
 - Error messages should be specific enough to debug but not expose stack traces.
 - Chinese and English labels must both fit the intended control width.
+- Simplified Chinese UI text must not insert spaces between Chinese characters
+  and adjacent Latin letters, product abbreviations, technical terms, or
+  numbers. Use forms like `打开JFR记录`, `Java版本`, `GC暂停`, and
+  `保存3个文件`.
 
 ## Live JVM Experience
 

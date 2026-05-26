@@ -64,7 +64,7 @@ class AppNavTreeTest {
 
         assertFalse(results.isEmpty());
         assertEquals("socketio", results.getFirst().sectionId());
-        assertEquals("套接字 I/O", results.getFirst().title());
+        assertEquals("套接字I/O", results.getFirst().title());
     }
 
     @Test
@@ -79,7 +79,7 @@ class AppNavTreeTest {
 
         assertFalse(results.isEmpty());
         assertEquals("fileio", results.getFirst().sectionId());
-        assertEquals("文件 I/O", results.getFirst().title());
+        assertEquals("文件I/O", results.getFirst().title());
     }
 
     @Test
