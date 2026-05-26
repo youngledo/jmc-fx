@@ -16,6 +16,12 @@ import com.youngledo.jmcfx.domain.model.JvmConnectionSource;
 import com.youngledo.jmcfx.domain.model.JvmConnectionState;
 import com.youngledo.jmcfx.domain.model.JvmRuntimeSnapshot;
 import com.youngledo.jmcfx.domain.model.JvmSessionSnapshot;
+import com.youngledo.jmcfx.domain.model.MBeanAttributeInfo;
+import com.youngledo.jmcfx.domain.model.MBeanNode;
+import com.youngledo.jmcfx.domain.model.MBeanOperationInfo;
+import com.youngledo.jmcfx.domain.model.MBeanOperationParameter;
+import com.youngledo.jmcfx.domain.model.MBeanOperationRequest;
+import com.youngledo.jmcfx.domain.model.MBeanOperationResult;
 import com.youngledo.jmcfx.domain.service.JmcFxException;
 
 class FakeJvmServicesTest {
@@ -95,6 +101,40 @@ class FakeJvmServicesTest {
                 () -> service.sessionSnapshot(new JvmConnection("missing", "Missing", "", true)));
 
         assertEquals("No live JVM session for connection: missing", exception.getMessage());
+    }
+
+    @Test
+    void fakeMBeanServiceReturnsRegisteredData() {
+        FakeMBeanBrowserService service = new FakeMBeanBrowserService();
+        JvmConnection connection = local("42", "demo.Main").asConnected("service:jmx:local://42");
+        MBeanNode runtime = MBeanNode.objectName("java.lang:type=Runtime", "Runtime");
+        MBeanAttributeInfo vmName = new MBeanAttributeInfo("VmName", "java.lang.String", true, false,
+                "OpenJDK", "");
+        MBeanOperationInfo operation = new MBeanOperationInfo("gc", "void", "",
+                List.of(new MBeanOperationParameter("verbose", "boolean", "")));
+
+        service.setTree(connection.id(), List.of(MBeanNode.domain("java.lang", List.of(runtime))));
+        service.setAttributes(connection.id(), runtime.objectName(), List.of(vmName));
+        service.setOperations(connection.id(), runtime.objectName(), List.of(operation));
+        service.setOperationResult(connection.id(), runtime.objectName(), "gc",
+                new MBeanOperationResult(true, "ok", ""));
+
+        assertEquals(1, service.tree(connection).size());
+        assertEquals(vmName, service.attributes(connection, runtime.objectName()).getFirst());
+        assertEquals(operation, service.operations(connection, runtime.objectName()).getFirst());
+        assertEquals("ok", service.invoke(new MBeanOperationRequest(connection,
+                runtime.objectName(), "gc", List.of("boolean"), List.of("true"))).value());
+    }
+
+    @Test
+    void fakeMBeanServiceRejectsMissingObjectName() {
+        FakeMBeanBrowserService service = new FakeMBeanBrowserService();
+        JvmConnection connection = local("42", "demo.Main").asConnected("service:jmx:local://42");
+
+        JmcFxException exception = assertThrows(JmcFxException.class,
+                () -> service.attributes(connection, "missing:type=Nope"));
+
+        assertEquals("No fake MBean attributes for 42 missing:type=Nope", exception.getMessage());
     }
 
     private static JvmConnection local(String pid, String name) {
