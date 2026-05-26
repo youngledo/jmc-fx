@@ -10,6 +10,9 @@ import java.util.List;
 
 import org.junit.jupiter.api.Test;
 
+import com.youngledo.jmcfx.domain.service.JmcFxException;
+import com.youngledo.jmcfx.domain.service.LiveMetricService;
+
 class TriggerModelTest {
 
     @Test
@@ -20,6 +23,12 @@ class TriggerModelTest {
         assertEquals("", definition.label());
         assertEquals("", definition.unit());
         assertEquals(80.0, definition.defaultThreshold());
+    }
+
+    @Test
+    void metricDefinitionRequiresKind() {
+        assertThrows(NullPointerException.class,
+                () -> new LiveMetricDefinition(null, "Heap used", "%", 80.0));
     }
 
     @Test
@@ -49,6 +58,12 @@ class TriggerModelTest {
     }
 
     @Test
+    void liveMetricSnapshotRequiresKind() {
+        assertThrows(NullPointerException.class,
+                () -> new LiveMetricSnapshot(null, 42.0, "%", Instant.EPOCH));
+    }
+
+    @Test
     void triggerRuleEvaluatesMatchingMetricOnlyWhenEnabled() {
         TriggerRule enabled = new TriggerRule("rule-1", "Heap high", true,
                 LiveMetricKind.HEAP_USED_PERCENT, TriggerOperator.GREATER_THAN_OR_EQUAL, 75.0,
@@ -74,6 +89,34 @@ class TriggerModelTest {
         assertEquals("", rule.id());
         assertEquals("", rule.name());
         assertFalse(rule.matches(null));
+    }
+
+    @Test
+    void triggerRuleRequiresMetricOperatorAndAction() {
+        assertThrows(NullPointerException.class,
+                () -> new TriggerRule("rule-1", "Heap high", true,
+                        null, TriggerOperator.GREATER_THAN_OR_EQUAL, 75.0, TriggerAction.notifyOnly()));
+        assertThrows(NullPointerException.class,
+                () -> new TriggerRule("rule-1", "Heap high", true,
+                        LiveMetricKind.HEAP_USED_PERCENT, null, 75.0, TriggerAction.notifyOnly()));
+        assertThrows(NullPointerException.class,
+                () -> new TriggerRule("rule-1", "Heap high", true,
+                        LiveMetricKind.HEAP_USED_PERCENT, TriggerOperator.GREATER_THAN_OR_EQUAL, 75.0, null));
+    }
+
+    @Test
+    void notifyOnlyActionUsesNotifyTypeAndEmptyImmutableArguments() {
+        TriggerAction action = TriggerAction.notifyOnly();
+
+        assertEquals(TriggerActionType.NOTIFY, action.type());
+        assertEquals("", action.commandName());
+        assertEquals(List.of(), action.arguments());
+        assertThrows(UnsupportedOperationException.class, () -> action.arguments().add("-l"));
+    }
+
+    @Test
+    void triggerActionRequiresType() {
+        assertThrows(NullPointerException.class, () -> new TriggerAction(null, "", List.of()));
     }
 
     @Test
@@ -112,5 +155,28 @@ class TriggerModelTest {
         assertEquals("", event.ruleId());
         assertEquals("", event.unit());
         assertEquals(Instant.EPOCH, event.firedAt());
+    }
+
+    @Test
+    void triggerEventRequiresMetric() {
+        assertThrows(NullPointerException.class,
+                () -> new TriggerEvent("rule-1", "Thread count high",
+                        null, 12.0, "threads", Instant.EPOCH, "message"));
+    }
+
+    @Test
+    void liveMetricServiceDefaultsRejectDefinitionsAndSnapshot() {
+        LiveMetricService service = new LiveMetricService() {
+        };
+        JvmConnection connection = new JvmConnection("local", "Local JVM", "service:jmx:rmi:///jndi/rmi://localhost/jmxrmi",
+                true);
+
+        JmcFxException definitionsFailure = assertThrows(JmcFxException.class,
+                () -> service.definitions(connection));
+        JmcFxException snapshotFailure = assertThrows(JmcFxException.class,
+                () -> service.snapshot(connection));
+
+        assertEquals("Live JVM metrics are not supported by this service.", definitionsFailure.getMessage());
+        assertEquals("Live JVM metrics are not supported by this service.", snapshotFailure.getMessage());
     }
 }
