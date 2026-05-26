@@ -104,6 +104,18 @@ class JmcDiagnosticCommandServiceTest {
     }
 
     @Test
+    void executeReturnsFailureResultForUnknownCommands() {
+        DiagnosticCommandResult result = service.execute(new DiagnosticCommandRequest(
+                CONNECTION,
+                "missing",
+                List.of()));
+
+        assertFalse(result.success());
+        assertEquals("", result.output());
+        assertTrue(result.error().contains("missing"));
+    }
+
+    @Test
     void commandsWrapMissingLiveSessionAsJmcFxException() {
         JmcDiagnosticCommandService disconnected = new JmcDiagnosticCommandService(connection -> {
             throw new java.io.IOException("session closed");
