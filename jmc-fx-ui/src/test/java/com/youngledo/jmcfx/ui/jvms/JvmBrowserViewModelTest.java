@@ -656,6 +656,60 @@ class JvmBrowserViewModelTest {
         assertFalse(viewModel.mbeanErrorProperty().get());
     }
 
+    @Test
+    void staleSessionSnapshotSuccessAfterSelectionClearDoesNotReloadMBeans() {
+        FakeJmxConnectionService jmx = new FakeJmxConnectionService();
+        FakeMBeanBrowserService mbeans = new FakeMBeanBrowserService();
+        QueuedJvmBrowserExecutor executor = new QueuedJvmBrowserExecutor();
+        JvmBrowserViewModel viewModel = new JvmBrowserViewModel(new FakeJvmDiscoveryService(), jmx, mbeans,
+                executor, Runnable::run);
+        JvmConnection connected = connectedWithMBeans(viewModel, jmx);
+        MBeanNode runtime = MBeanNode.objectName("java.lang:type=Runtime", "Runtime");
+        mbeans.setTree(connected.id(), List.of(MBeanNode.domain("java.lang", List.of(runtime))));
+        viewModel.selectedConnectionProperty().set(connected);
+
+        viewModel.selectedConnectionProperty().set(null);
+        executor.runNext();
+
+        assertEquals(null, viewModel.selectedSessionProperty().get());
+        assertTrue(viewModel.mbeanTreeProperty().isEmpty());
+        assertFalse(viewModel.mbeanBrowserAvailableProperty().get());
+        assertFalse(viewModel.mbeanLoadingProperty().get());
+        assertTrue(executor.isEmpty());
+    }
+
+    @Test
+    void operationSelectionChangeWhileInvokeIsInFlightIgnoresStaleInvokeResult() {
+        FakeJmxConnectionService jmx = new FakeJmxConnectionService();
+        FakeMBeanBrowserService mbeans = new FakeMBeanBrowserService();
+        QueuedJvmBrowserExecutor executor = new QueuedJvmBrowserExecutor();
+        JvmBrowserViewModel viewModel = new JvmBrowserViewModel(new FakeJvmDiscoveryService(), jmx, mbeans,
+                executor, Runnable::run);
+        JvmConnection connected = connectedWithMBeans(viewModel, jmx);
+        MBeanNode operations = MBeanNode.objectName("demo:type=Operations", "Operations");
+        MBeanOperationInfo update = new MBeanOperationInfo("update", "void", "", List.of());
+        MBeanOperationInfo reset = new MBeanOperationInfo("reset", "void", "", List.of());
+        mbeans.setTree(connected.id(), List.of(MBeanNode.domain("demo", List.of(operations))));
+        mbeans.setAttributes(connected.id(), operations.objectName(), List.of());
+        mbeans.setOperations(connected.id(), operations.objectName(), List.of(update, reset));
+        mbeans.setOperationResult(connected.id(), operations.objectName(), "update",
+                new MBeanOperationResult(false, "", "old failure"));
+        viewModel.selectedConnectionProperty().set(connected);
+        executor.runNext();
+        executor.runNext();
+        viewModel.selectedMBeanProperty().set(operations);
+        executor.runNext();
+        viewModel.selectedMBeanOperationProperty().set(update);
+        viewModel.invokeSelectedMBeanOperation();
+
+        viewModel.selectedMBeanOperationProperty().set(reset);
+        executor.runNext();
+
+        assertEquals("", viewModel.mbeanOperationResultProperty().get());
+        assertFalse(viewModel.mbeanErrorProperty().get());
+        assertEquals("", viewModel.mbeanErrorMessageProperty().get());
+    }
+
     private static JvmBrowserViewModel viewModel(FakeJvmDiscoveryService discovery, FakeJmxConnectionService jmx) {
         return new JvmBrowserViewModel(discovery, jmx, new DirectJvmBrowserExecutor(), Runnable::run);
     }
@@ -730,6 +784,10 @@ class JvmBrowserViewModelTest {
             queue.clear();
             queued.getLast().run();
             queue.addAll(queued.subList(0, queued.size() - 1));
+        }
+
+        private boolean isEmpty() {
+            return queue.isEmpty();
         }
     }
 

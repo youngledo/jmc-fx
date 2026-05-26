@@ -91,6 +91,7 @@ public class JvmBrowserViewModel implements AutoCloseable {
     private final BooleanProperty mbeanError = new SimpleBooleanProperty(false);
     private final Map<Long, JvmConnection> sessionStartedRecordings = new HashMap<>();
     private int pendingWorkCount;
+    private long sessionLoadGeneration;
     private long mbeanRequestGeneration;
 
     public JvmBrowserViewModel(JvmDiscoveryService discoveryService, JmxConnectionService connectionService) {
@@ -127,6 +128,7 @@ public class JvmBrowserViewModel implements AutoCloseable {
         this.savedRecordingHandler = Objects.requireNonNull(savedRecordingHandler, "savedRecordingHandler");
         this.selectedConnection.addListener((observable, oldValue, newValue) -> loadSessionForSelection(newValue));
         this.selectedMBean.addListener((observable, oldValue, newValue) -> loadSelectedMBeanDetails(newValue));
+        this.selectedMBeanOperation.addListener((observable, oldValue, newValue) -> clearMBeanOperationResult());
     }
 
     public ObservableList<JvmConnection> connectionsProperty() {
@@ -402,7 +404,7 @@ public class JvmBrowserViewModel implements AutoCloseable {
             try {
                 MBeanOperationResult result = mBeanBrowserService.invoke(request);
                 runOnFx(() -> {
-                    if (!isCurrentMBeanRequest(generation, snapshot, node)) {
+                    if (!isCurrentMBeanRequest(generation, snapshot, node, operation)) {
                         return;
                     }
                     if (result.success()) {
@@ -417,7 +419,7 @@ public class JvmBrowserViewModel implements AutoCloseable {
                     mbeanLoading.set(false);
                 });
             } catch (RuntimeException exception) {
-                failMBean(generation, snapshot, node, exception);
+                failMBean(generation, snapshot, node, operation, exception);
             }
         });
     }
@@ -558,6 +560,7 @@ public class JvmBrowserViewModel implements AutoCloseable {
     }
 
     private void loadSessionForSelection(JvmConnection connection) {
+        long generation = nextSessionLoadGeneration();
         if (connection == null || !connection.connected()) {
             selectedSession.set(null);
             clearRecordingControl();
@@ -571,6 +574,9 @@ public class JvmBrowserViewModel implements AutoCloseable {
             try {
                 JvmSessionSnapshot snapshot = connectionService.sessionSnapshot(connection);
                 runOnFx(() -> {
+                    if (!isCurrentSessionLoad(generation, connection)) {
+                        return;
+                    }
                     selectedSession.set(snapshot);
                     clearSessionError();
                     loadRecordingControl(snapshot);
@@ -582,6 +588,9 @@ public class JvmBrowserViewModel implements AutoCloseable {
                         .withThrowable(exception)
                         .log("Unable to load JVM session for {}", connection.displayName());
                 runOnFx(() -> {
+                    if (!isCurrentSessionLoad(generation, connection)) {
+                        return;
+                    }
                     selectedSession.set(null);
                     clearRecordingControl();
                     clearMBeanBrowser();
@@ -650,7 +659,7 @@ public class JvmBrowserViewModel implements AutoCloseable {
                     clearMBeanError();
                 });
             } catch (RuntimeException exception) {
-                failMBean(generation, snapshot, null, exception);
+                failMBean(generation, snapshot, null, null, exception);
             }
         });
     }
@@ -686,7 +695,7 @@ public class JvmBrowserViewModel implements AutoCloseable {
                     clearMBeanError();
                 });
             } catch (RuntimeException exception) {
-                failMBean(generation, snapshot, node, exception);
+                failMBean(generation, snapshot, node, null, exception);
             }
         });
     }
@@ -768,6 +777,13 @@ public class JvmBrowserViewModel implements AutoCloseable {
         mbeanErrorMessage.set("");
     }
 
+    private void clearMBeanOperationResult() {
+        nextMBeanRequestGeneration();
+        mbeanOperationResult.set("");
+        mbeanLoading.set(false);
+        clearMBeanError();
+    }
+
     private void failRecording(RuntimeException exception) {
         LOGGER.error("Flight Recorder action failed", exception);
         runOnFx(() -> {
@@ -778,14 +794,17 @@ public class JvmBrowserViewModel implements AutoCloseable {
         });
     }
 
-    private void failMBean(long generation, JvmSessionSnapshot snapshot, MBeanNode node, RuntimeException exception) {
+    private void failMBean(long generation, JvmSessionSnapshot snapshot, MBeanNode node,
+            MBeanOperationInfo operation, RuntimeException exception) {
         LOGGER.error("MBean browser action failed", exception);
         runOnFx(() -> {
             if (node == null) {
                 if (!isCurrentMBeanSessionRequest(generation, snapshot)) {
                     return;
                 }
-            } else if (!isCurrentMBeanRequest(generation, snapshot, node)) {
+            } else if (operation == null && !isCurrentMBeanRequest(generation, snapshot, node)) {
+                return;
+            } else if (operation != null && !isCurrentMBeanRequest(generation, snapshot, node, operation)) {
                 return;
             }
             mbeanError.set(true);
@@ -809,6 +828,15 @@ public class JvmBrowserViewModel implements AutoCloseable {
         fxRunner.accept(runnable);
     }
 
+    private long nextSessionLoadGeneration() {
+        return ++sessionLoadGeneration;
+    }
+
+    private boolean isCurrentSessionLoad(long generation, JvmConnection connection) {
+        return sessionLoadGeneration == generation && selectedConnection.get() == connection
+                && connection != null && connection.connected();
+    }
+
     private long nextMBeanRequestGeneration() {
         return ++mbeanRequestGeneration;
     }
@@ -819,6 +847,11 @@ public class JvmBrowserViewModel implements AutoCloseable {
 
     private boolean isCurrentMBeanRequest(long generation, JvmSessionSnapshot snapshot, MBeanNode node) {
         return isCurrentMBeanSessionRequest(generation, snapshot) && selectedMBean.get() == node;
+    }
+
+    private boolean isCurrentMBeanRequest(long generation, JvmSessionSnapshot snapshot, MBeanNode node,
+            MBeanOperationInfo operation) {
+        return isCurrentMBeanRequest(generation, snapshot, node) && selectedMBeanOperation.get() == operation;
     }
 
     private static List<String> parseMBeanArguments(String arguments) {
