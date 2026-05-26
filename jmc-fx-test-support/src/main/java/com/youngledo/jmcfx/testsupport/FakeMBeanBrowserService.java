@@ -40,7 +40,12 @@ public class FakeMBeanBrowserService implements MBeanBrowserService {
 
     public void setOperationResult(String connectionId, String objectName, String operationName,
             MBeanOperationResult result) {
-        results.put(new OperationKey(connectionId, objectName, operationName), result);
+        setOperationResult(connectionId, objectName, operationName, List.of(), result);
+    }
+
+    public void setOperationResult(String connectionId, String objectName, String operationName,
+            List<String> parameterTypes, MBeanOperationResult result) {
+        results.put(new OperationKey(connectionId, objectName, operationName, parameterTypes), result);
     }
 
     @Override
@@ -69,7 +74,8 @@ public class FakeMBeanBrowserService implements MBeanBrowserService {
     @Override
     public MBeanOperationResult invoke(MBeanOperationRequest request) {
         failIfConfigured();
-        OperationKey key = new OperationKey(request.connection().id(), request.objectName(), request.operationName());
+        OperationKey key = new OperationKey(request.connection().id(), request.objectName(), request.operationName(),
+                request.parameterTypes());
         MBeanOperationResult result = results.get(key);
         if (result == null) {
             throw new JmcFxException("No fake MBean operation result for " + key.operationName());
@@ -94,11 +100,13 @@ public class FakeMBeanBrowserService implements MBeanBrowserService {
         }
     }
 
-    private record OperationKey(String connectionId, String objectName, String operationName) {
+    private record OperationKey(String connectionId, String objectName, String operationName,
+            List<String> parameterTypes) {
         private OperationKey {
             connectionId = Objects.requireNonNullElse(connectionId, "");
             objectName = Objects.requireNonNullElse(objectName, "");
             operationName = Objects.requireNonNullElse(operationName, "");
+            parameterTypes = parameterTypes == null ? List.of() : List.copyOf(parameterTypes);
         }
     }
 }

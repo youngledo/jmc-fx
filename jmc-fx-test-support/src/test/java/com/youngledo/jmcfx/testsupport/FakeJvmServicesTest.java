@@ -116,7 +116,7 @@ class FakeJvmServicesTest {
         service.setTree(connection.id(), List.of(MBeanNode.domain("java.lang", List.of(runtime))));
         service.setAttributes(connection.id(), runtime.objectName(), List.of(vmName));
         service.setOperations(connection.id(), runtime.objectName(), List.of(operation));
-        service.setOperationResult(connection.id(), runtime.objectName(), "gc",
+        service.setOperationResult(connection.id(), runtime.objectName(), "gc", List.of("boolean"),
                 new MBeanOperationResult(true, "ok", ""));
 
         assertEquals(1, service.tree(connection).size());
@@ -135,6 +135,39 @@ class FakeJvmServicesTest {
                 () -> service.attributes(connection, "missing:type=Nope"));
 
         assertEquals("No fake MBean attributes for 42 missing:type=Nope", exception.getMessage());
+    }
+
+    @Test
+    void fakeMBeanServiceRejectsWrongOperationSignature() {
+        FakeMBeanBrowserService service = new FakeMBeanBrowserService();
+        JvmConnection connection = local("42", "demo.Main").asConnected("service:jmx:local://42");
+        String objectName = "demo:type=Operations";
+
+        service.setOperationResult(connection.id(), objectName, "update", List.of("java.lang.String"),
+                new MBeanOperationResult(true, "string", ""));
+
+        JmcFxException exception = assertThrows(JmcFxException.class,
+                () -> service.invoke(new MBeanOperationRequest(connection,
+                        objectName, "update", List.of("int"), List.of("7"))));
+
+        assertEquals("No fake MBean operation result for update", exception.getMessage());
+    }
+
+    @Test
+    void fakeMBeanServiceResolvesSameNameOperationsBySignature() {
+        FakeMBeanBrowserService service = new FakeMBeanBrowserService();
+        JvmConnection connection = local("42", "demo.Main").asConnected("service:jmx:local://42");
+        String objectName = "demo:type=Operations";
+
+        service.setOperationResult(connection.id(), objectName, "update", List.of("java.lang.String"),
+                new MBeanOperationResult(true, "string", ""));
+        service.setOperationResult(connection.id(), objectName, "update", List.of("int"),
+                new MBeanOperationResult(true, "int", ""));
+
+        assertEquals("string", service.invoke(new MBeanOperationRequest(connection,
+                objectName, "update", List.of("java.lang.String"), List.of("alpha"))).value());
+        assertEquals("int", service.invoke(new MBeanOperationRequest(connection,
+                objectName, "update", List.of("int"), List.of("7"))).value());
     }
 
     private static JvmConnection local(String pid, String name) {
