@@ -1,0 +1,30 @@
+name: Commit Message
+
+on:
+  pull_request:
+  push:
+
+jobs:
+  validate:
+    name: Validate commit messages
+    runs-on: ubuntu-latest
+    steps:
+      - name: Check out repository
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Validate pull request commits
+        if: github.event_name == 'pull_request'
+        run: scripts/validate-commit-range.sh "${{ github.event.pull_request.base.sha }}" "${{ github.event.pull_request.head.sha }}"
+
+      - name: Validate pushed commits
+        if: github.event_name == 'push' && !github.event.created
+        run: scripts/validate-commit-range.sh "${{ github.event.before }}" "${{ github.sha }}"
+
+      - name: Validate new branch commit
+        if: github.event_name == 'push' && github.event.created
+        run: |
+          tmp="$(mktemp)"
+          git log --format=%B -n 1 "${{ github.sha }}" > "$tmp"
+          scripts/validate-commit-message.sh "$tmp"

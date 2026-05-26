@@ -117,6 +117,52 @@ Expected:
 - No Maven 3 `<modules>` syntax
 - No JMC API usage outside `jmc-fx-adapter-jmc`
 
+## Git Commit Messages
+
+Commit messages must use Conventional Commits:
+
+```text
+<type>(optional-scope): <subject>
+```
+
+Allowed types:
+
+- `feat`
+- `fix`
+- `docs`
+- `style`
+- `refactor`
+- `test`
+- `build`
+- `ci`
+- `chore`
+- `perf`
+- `revert`
+
+Examples:
+
+```text
+feat: add JVM browser
+fix(adapter-jmc): handle missing recording id
+docs!: rewrite contributor guide
+```
+
+Rules:
+
+- Use a lowercase allowed type.
+- Use lowercase scopes with letters, digits, `.`, `_`, or `-`.
+- Keep the subject required and concise.
+- Do not end the subject with a period.
+
+Enable the repository Git hooks once after cloning:
+
+```bash
+git config core.hooksPath .githooks
+```
+
+The local `commit-msg` hook and GitHub Actions both run
+`scripts/validate-commit-message.sh`, so the same rules apply locally and in CI.
+
 ## Licensing
 
 JMC FX may reuse OpenJDK JMC core/headless libraries under their open source licenses, but contributors must keep attribution and redistribution obligations intact.
