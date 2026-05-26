@@ -25,6 +25,7 @@ public class FakeFlightRecordingService implements FlightRecordingService {
     private RuntimeException failure;
     private FlightRecordingStartRequest lastStartRequest;
     private FlightRecordingStopRequest lastStopRequest;
+    private final List<Long> discardedRecordingIds = new ArrayList<>();
 
     public void setAvailable(String connectionId, boolean available) {
         if (available) {
@@ -48,6 +49,10 @@ public class FakeFlightRecordingService implements FlightRecordingService {
 
     public FlightRecordingStopRequest lastStopRequest() {
         return lastStopRequest;
+    }
+
+    public List<Long> discardedRecordingIds() {
+        return List.copyOf(discardedRecordingIds);
     }
 
     @Override
@@ -83,12 +88,26 @@ public class FakeFlightRecordingService implements FlightRecordingService {
     public Path stopAndSaveRecording(FlightRecordingStopRequest request) {
         failIfConfigured();
         lastStopRequest = request;
+        removeRecording(request.connection().id(), request.recordingId());
         return request.destinationFile();
+    }
+
+    @Override
+    public void stopAndDiscardRecording(JvmConnection connection, long recordingId) {
+        failIfConfigured();
+        discardedRecordingIds.add(recordingId);
+        removeRecording(connection.id(), recordingId);
     }
 
     private void failIfConfigured() {
         if (failure != null) {
             throw failure;
         }
+    }
+
+    private void removeRecording(String connectionId, long recordingId) {
+        recordingsByConnectionId.computeIfPresent(connectionId, (ignored, recordings) -> recordings.stream()
+                .filter(recording -> recording.id() != recordingId)
+                .toList());
     }
 }

@@ -1004,7 +1004,9 @@ public class AppShellController {
         chooser.setTitle(i18n.get("fileChooser.saveRecording.title"));
         chooser.getExtensionFilters().add(
                 new FileChooser.ExtensionFilter(jfrRecordingsFilterDescription(i18n), "*.jfr"));
-        chooser.setInitialFileName("jmc-fx-live.jfr");
+        FlightRecordingInfo selectedRecording = jvmBrowserViewModel.selectedFlightRecording();
+        chooser.setInitialFileName(saveRecordingInitialFileName(
+                selectedRecording == null ? "" : selectedRecording.name()));
         java.io.File file = chooser.showSaveDialog(root.getScene().getWindow());
         if (file != null) {
             jvmBrowserViewModel.stopAndSaveSelectedFlightRecording(file.toPath());
@@ -1047,6 +1049,7 @@ public class AppShellController {
     }
 
     private void bindAnalysis(RuleResultsViewModel nextViewModel) {
+        analysisTable.placeholderProperty().unbind();
         analysisTable.setItems(FXCollections.emptyObservableList());
         analysisDetailTitle.setText("");
         analysisDetailExplanation.setText("");
@@ -1055,7 +1058,27 @@ public class AppShellController {
             return;
         }
         analysisTable.setItems(nextViewModel.resultsProperty());
+        analysisTable.placeholderProperty().bind(Bindings.createObjectBinding(
+                () -> analysisPlaceholder(nextViewModel),
+                nextViewModel.loadingProperty(),
+                nextViewModel.loadedProperty(),
+                nextViewModel.errorProperty(),
+                nextViewModel.errorMessageProperty(),
+                i18n.localeProperty()));
         analysisTable.getSelectionModel().selectFirst();
+    }
+
+    private Label analysisPlaceholder(RuleResultsViewModel viewModel) {
+        if (viewModel.loadingProperty().get()) {
+            return localizedTablePlaceholder("analysis.loading");
+        }
+        if (viewModel.errorProperty().get()) {
+            Label label = new Label();
+            label.setText(i18n.format("analysis.failed", viewModel.errorMessageProperty().get()));
+            return label;
+        }
+        return localizedTablePlaceholder(viewModel.loadedProperty().get()
+                ? "analysis.empty" : "analysis.loading");
     }
 
     private void showAnalysisDetail(RuleResult result) {
@@ -2055,6 +2078,20 @@ public class AppShellController {
 
     static String jfrRecordingsFilterDescription(I18n i18n) {
         return i18n.get("fileChooser.jfrRecordings");
+    }
+
+    static String saveRecordingInitialFileName(String recordingName) {
+        String baseName = recordingName == null ? "" : recordingName.trim();
+        if (baseName.endsWith(".jfr")) {
+            baseName = baseName.substring(0, baseName.length() - 4);
+        }
+        baseName = baseName.replaceAll("[^A-Za-z0-9._-]+", "_");
+        baseName = baseName.replaceAll("_+", "_");
+        baseName = baseName.replaceAll("^[_ .-]+|[_ .-]+$", "");
+        if (baseName.isBlank()) {
+            baseName = "jmcfx-recording";
+        }
+        return baseName + ".jfr";
     }
 
     static String languageModeDisplayName(I18n i18n, LanguageMode mode) {

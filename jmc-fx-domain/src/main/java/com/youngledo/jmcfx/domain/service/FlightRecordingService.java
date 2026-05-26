@@ -28,6 +28,10 @@ public interface FlightRecordingService {
         throw new JmcFxException("Recording control is not supported by this service.");
     }
 
+    default void stopAndDiscardRecording(JvmConnection connection, long recordingId) {
+        throw new JmcFxException("Recording control is not supported by this service.");
+    }
+
     default void startRecording(JvmConnection connection, String recordingName) {
         startRecording(new FlightRecordingStartRequest(connection, recordingName, FlightRecordingTemplate.profile()));
     }

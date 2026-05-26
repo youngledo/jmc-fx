@@ -2,9 +2,9 @@ package com.youngledo.jmcfx.adapter.jmc;
 
 import java.io.IOException;
 import java.nio.file.Path;
+import java.time.Clock;
 import java.util.Arrays;
 import java.util.List;
-import java.util.Map;
 import java.util.Objects;
 
 import javax.management.JMException;
@@ -12,6 +12,14 @@ import javax.management.MBeanServerConnection;
 import javax.management.MalformedObjectNameException;
 import javax.management.ObjectName;
 import javax.management.openmbean.CompositeData;
+import javax.management.openmbean.CompositeDataSupport;
+import javax.management.openmbean.CompositeType;
+import javax.management.openmbean.OpenType;
+import javax.management.openmbean.OpenDataException;
+import javax.management.openmbean.SimpleType;
+import javax.management.openmbean.TabularData;
+import javax.management.openmbean.TabularDataSupport;
+import javax.management.openmbean.TabularType;
 
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -35,9 +43,15 @@ public class JmcFlightRecordingService implements FlightRecordingService {
     private static final Logger LOGGER = LoggerFactory.getLogger(JmcFlightRecordingService.class);
 
     private final JmxConnectionAccessor connectionAccessor;
+    private final Clock clock;
 
     public JmcFlightRecordingService(JmxConnectionAccessor connectionAccessor) {
+        this(connectionAccessor, Clock.systemUTC());
+    }
+
+    JmcFlightRecordingService(JmxConnectionAccessor connectionAccessor, Clock clock) {
         this.connectionAccessor = Objects.requireNonNull(connectionAccessor, "connectionAccessor");
+        this.clock = Objects.requireNonNull(clock, "clock");
     }
 
     @Override
@@ -57,15 +71,15 @@ public class JmcFlightRecordingService implements FlightRecordingService {
     @Override
     public List<FlightRecordingInfo> recordings(JvmConnection connection) {
         MBeanServerConnection server = server(connection);
-        Object value = invoke(server, "getRecordings", new Object[0], new String[0]);
+        Object value = attribute(server, "Recordings");
         if (value instanceof Object[] array) {
-            return java.util.Arrays.stream(array)
-                    .map(JmcFlightRecordingService::recordingInfo)
+            return Arrays.stream(array)
+                    .map(this::recordingInfo)
                     .toList();
         }
         if (value instanceof List<?> list) {
             return list.stream()
-                    .map(JmcFlightRecordingService::recordingInfo)
+                    .map(this::recordingInfo)
                     .toList();
         }
         return List.of();
@@ -79,8 +93,8 @@ public class JmcFlightRecordingService implements FlightRecordingService {
                 new Object[] { id, request.template().name() },
                 new String[] { "long", "java.lang.String" });
         invoke(server, "setRecordingOptions",
-                new Object[] { id, Map.of("name", request.name()) },
-                new String[] { "long", "java.util.Map" });
+                new Object[] { id, optionTable("name", request.name()) },
+                new String[] { "long", "javax.management.openmbean.TabularData" });
         invoke(server, "startRecording", new Object[] { id }, new String[] { "long" });
         return recordings(request.connection()).stream()
                 .filter(recording -> recording.id() == id)
@@ -93,11 +107,30 @@ public class JmcFlightRecordingService implements FlightRecordingService {
         MBeanServerConnection server = server(request.connection());
         long id = request.recordingId();
         Path destination = request.destinationFile().toAbsolutePath();
-        invoke(server, "stopRecording", new Object[] { id }, new String[] { "long" });
+        if (recordingState(request.connection(), id) == FlightRecordingState.RUNNING) {
+            invoke(server, "stopRecording", new Object[] { id }, new String[] { "long" });
+        }
         invoke(server, "copyTo", new Object[] { id, destination.toString() },
                 new String[] { "long", "java.lang.String" });
         invoke(server, "closeRecording", new Object[] { id }, new String[] { "long" });
         return request.destinationFile();
+    }
+
+    @Override
+    public void stopAndDiscardRecording(JvmConnection connection, long recordingId) {
+        MBeanServerConnection server = server(connection);
+        if (recordingState(connection, recordingId) == FlightRecordingState.RUNNING) {
+            invoke(server, "stopRecording", new Object[] { recordingId }, new String[] { "long" });
+        }
+        invoke(server, "closeRecording", new Object[] { recordingId }, new String[] { "long" });
+    }
+
+    private FlightRecordingState recordingState(JvmConnection connection, long recordingId) {
+        return recordings(connection).stream()
+                .filter(recording -> recording.id() == recordingId)
+                .findFirst()
+                .map(FlightRecordingInfo::state)
+                .orElse(FlightRecordingState.UNKNOWN);
     }
 
     private MBeanServerConnection server(JvmConnection connection) {
@@ -121,16 +154,58 @@ public class JmcFlightRecordingService implements FlightRecordingService {
         }
     }
 
-    private static FlightRecordingInfo recordingInfo(Object value) {
+    private static Object attribute(MBeanServerConnection server, String attribute) {
+        try {
+            return server.getAttribute(FLIGHT_RECORDER, attribute);
+        } catch (JMException | IOException | RuntimeException exception) {
+            LOGGER.error("Unable to read Flight Recorder attribute {}", attribute, exception);
+            throw new JmcFxException("Unable to read Flight Recorder attribute " + attribute
+                    + ": " + exception.getMessage(), exception);
+        }
+    }
+
+    private static TabularData optionTable(String key, String value) {
+        try {
+            String[] names = { "key", "value" };
+            OpenType<?>[] types = { SimpleType.STRING, SimpleType.STRING };
+            CompositeType rowType = new CompositeType("java.util.Map<java.lang.String, java.lang.String>",
+                    "Flight Recorder recording option", names, names, types);
+            TabularType tableType = new TabularType("java.util.Map<java.lang.String, java.lang.String>",
+                    "Flight Recorder recording options", rowType, new String[] { "key" });
+            TabularDataSupport table = new TabularDataSupport(tableType);
+            table.put(new CompositeDataSupport(rowType, names, new Object[] { key, value }));
+            return table;
+        } catch (OpenDataException exception) {
+            throw new JmcFxException("Unable to create Flight Recorder options: " + exception.getMessage(), exception);
+        }
+    }
+
+    private FlightRecordingInfo recordingInfo(Object value) {
         if (value instanceof CompositeData data) {
             return new FlightRecordingInfo(
                     longValue(data, "id"),
                     stringValue(data, "name"),
                     stateValue(stringValue(data, "state")),
-                    longValue(data, "duration"),
+                    durationMillis(data),
                     longValue(data, "size"));
         }
         throw new JmcFxException("Unsupported Flight Recorder recording row: " + value);
+    }
+
+    private long durationMillis(CompositeData data) {
+        return durationMillis(data, clock);
+    }
+
+    private static long durationMillis(CompositeData data, Clock clock) {
+        long duration = longValue(data, "duration");
+        if (duration > 0 || stateValue(stringValue(data, "state")) != FlightRecordingState.RUNNING) {
+            return duration;
+        }
+        long startTime = longValue(data, "startTime");
+        if (startTime <= 0) {
+            return 0;
+        }
+        return Math.max(0, clock.millis() - startTime);
     }
 
     private static String stringValue(CompositeData data, String key) {

@@ -345,6 +345,23 @@ class JvmBrowserViewModelTest {
     }
 
     @Test
+    void connectedSessionShowsStoppedFlightRecordings() {
+        FakeFlightRecordingService recordings = new FakeFlightRecordingService();
+        FakeJmxConnectionService jmx = new FakeJmxConnectionService();
+        JvmBrowserViewModel viewModel = viewModel(new FakeJvmDiscoveryService(),
+                jmx, recordings);
+        JvmConnection connected = connectedWithFlightRecorder(viewModel, jmx, recordings);
+        recordings.addRecording("42", new FlightRecordingInfo(101, "Stopped",
+                FlightRecordingState.STOPPED, 1_000, 4096));
+
+        viewModel.selectedConnectionProperty().set(connected);
+
+        assertEquals(2, viewModel.flightRecordingsProperty().size());
+        assertEquals(FlightRecordingState.RUNNING, viewModel.flightRecordingsProperty().getFirst().state());
+        assertEquals(FlightRecordingState.STOPPED, viewModel.flightRecordingsProperty().getLast().state());
+    }
+
+    @Test
     void startRecordingAddsRunningRecording() {
         FakeFlightRecordingService recordings = new FakeFlightRecordingService();
         FakeJmxConnectionService jmx = new FakeJmxConnectionService();
@@ -356,7 +373,8 @@ class JvmBrowserViewModelTest {
 
         assertEquals(2, viewModel.flightRecordingsProperty().size());
         assertEquals(FlightRecordingState.RUNNING, viewModel.flightRecordingsProperty().getLast().state());
-        assertEquals("JMC FX Recording", recordings.lastStartRequest().name());
+        assertTrue(recordings.lastStartRequest().name().matches("jmcfx-42-\\d{14}"));
+        assertEquals("", viewModel.recordingStatusMessageProperty().get());
     }
 
     @Test
@@ -373,6 +391,51 @@ class JvmBrowserViewModelTest {
 
         assertEquals(List.of(Path.of("target/live-capture.jfr")), opened);
         assertEquals(100, recordings.lastStopRequest().recordingId());
+        assertEquals("", viewModel.recordingStatusMessageProperty().get());
+    }
+
+    @Test
+    void stopAndSaveRecordingRemovesSavedRecordingFromVisibleList() {
+        FakeFlightRecordingService recordings = new FakeFlightRecordingService();
+        FakeJmxConnectionService jmx = new FakeJmxConnectionService();
+        JvmBrowserViewModel viewModel = viewModel(new FakeJvmDiscoveryService(),
+                jmx, recordings);
+        viewModel.selectedConnectionProperty().set(connectedWithFlightRecorder(viewModel, jmx, recordings));
+        viewModel.selectedFlightRecordingProperty().set(viewModel.flightRecordingsProperty().getFirst());
+
+        viewModel.stopAndSaveSelectedFlightRecording(Path.of("target/Existing.jfr"));
+
+        assertEquals(List.of(), viewModel.flightRecordingsProperty());
+    }
+
+    @Test
+    void closeDiscardsOnlyRecordingsStartedInThisSession() {
+        FakeFlightRecordingService recordings = new FakeFlightRecordingService();
+        FakeJmxConnectionService jmx = new FakeJmxConnectionService();
+        JvmBrowserViewModel viewModel = viewModel(new FakeJvmDiscoveryService(), jmx, recordings);
+        viewModel.selectedConnectionProperty().set(connectedWithFlightRecorder(viewModel, jmx, recordings));
+
+        viewModel.startFlightRecording();
+        long startedRecordingId = viewModel.flightRecordingsProperty().getLast().id();
+
+        viewModel.close();
+
+        assertEquals(List.of(startedRecordingId), recordings.discardedRecordingIds());
+    }
+
+    @Test
+    void closeDoesNotDiscardSessionRecordingAfterItWasSaved() {
+        FakeFlightRecordingService recordings = new FakeFlightRecordingService();
+        FakeJmxConnectionService jmx = new FakeJmxConnectionService();
+        JvmBrowserViewModel viewModel = viewModel(new FakeJvmDiscoveryService(), jmx, recordings);
+        viewModel.selectedConnectionProperty().set(connectedWithFlightRecorder(viewModel, jmx, recordings));
+        viewModel.startFlightRecording();
+        viewModel.selectedFlightRecordingProperty().set(viewModel.flightRecordingsProperty().getLast());
+
+        viewModel.stopAndSaveSelectedFlightRecording(Path.of("target/live-capture.jfr"));
+        viewModel.close();
+
+        assertEquals(List.of(), recordings.discardedRecordingIds());
     }
 
     private static JvmBrowserViewModel viewModel(FakeJvmDiscoveryService discovery, FakeJmxConnectionService jmx) {

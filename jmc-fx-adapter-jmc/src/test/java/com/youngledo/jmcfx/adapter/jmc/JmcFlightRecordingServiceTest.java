@@ -6,6 +6,9 @@ import static org.junit.jupiter.api.Assertions.assertThrows;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 
 import java.nio.file.Path;
+import java.time.Clock;
+import java.time.Instant;
+import java.time.ZoneOffset;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Map;
@@ -17,6 +20,7 @@ import javax.management.openmbean.CompositeDataSupport;
 import javax.management.openmbean.CompositeType;
 import javax.management.openmbean.OpenType;
 import javax.management.openmbean.SimpleType;
+import javax.management.openmbean.TabularData;
 
 import org.junit.jupiter.api.Test;
 
@@ -45,7 +49,7 @@ class JmcFlightRecordingServiceTest {
     void recordingsMapsCompositeDataRows() throws Exception {
         RecordingMBeanServer server = new RecordingMBeanServer();
         server.recordings = new Object[] {
-                recordingData(17L, "Startup", "RUNNING", 12_000L, 4096L)
+                recordingData(17L, "Startup", "RUNNING", 12_000L, 4096L, 0L, 0L)
         };
         JmcFlightRecordingService service = new JmcFlightRecordingService(connection -> server.proxy());
 
@@ -60,6 +64,20 @@ class JmcFlightRecordingServiceTest {
     }
 
     @Test
+    void runningRecordingUsesElapsedTimeWhenDurationAttributeIsZero() throws Exception {
+        RecordingMBeanServer server = new RecordingMBeanServer();
+        server.recordings = new Object[] {
+                recordingData(17L, "Startup", "RUNNING", 0L, 4096L, 1_700_000_000_000L, 0L)
+        };
+        Clock clock = Clock.fixed(Instant.ofEpochMilli(1_700_000_012_345L), ZoneOffset.UTC);
+        JmcFlightRecordingService service = new JmcFlightRecordingService(connection -> server.proxy(), clock);
+
+        List<FlightRecordingInfo> recordings = service.recordings(connection());
+
+        assertEquals(12_345, recordings.getFirst().durationMillis());
+    }
+
+    @Test
     void startRecordingCreatesRecordingWithTemplateAndName() {
         RecordingMBeanServer server = new RecordingMBeanServer();
         JmcFlightRecordingService service = new JmcFlightRecordingService(connection -> server.proxy());
@@ -69,14 +87,18 @@ class JmcFlightRecordingServiceTest {
 
         assertEquals(77, info.id());
         assertEquals(List.of("newRecording", "setPredefinedConfiguration", "setRecordingOptions",
-                "startRecording", "getRecordings"), server.invocations);
+                "startRecording"), server.invocations);
+        assertEquals(List.of("Recordings"), server.attributes);
         assertEquals("profile", server.lastPredefinedConfiguration);
         assertEquals("CPU capture", server.lastOptions.get("name"));
     }
 
     @Test
-    void stopAndSaveRecordingCopiesAndClosesRecording() {
+    void stopAndSaveRecordingCopiesAndClosesRecording() throws Exception {
         RecordingMBeanServer server = new RecordingMBeanServer();
+        server.recordings = new Object[] {
+                recordingData(17L, "Startup", "RUNNING", 12_000L, 4096L, 0L, 0L)
+        };
         JmcFlightRecordingService service = new JmcFlightRecordingService(connection -> server.proxy());
         Path destination = Path.of("target/live-capture.jfr");
 
@@ -84,9 +106,45 @@ class JmcFlightRecordingServiceTest {
 
         assertEquals(destination, saved);
         assertEquals(List.of("stopRecording", "copyTo", "closeRecording"), server.invocations);
+        assertEquals(List.of("Recordings"), server.attributes);
         assertEquals(17L, server.lastRecordingId);
         assertEquals(destination.toAbsolutePath().toString(), server.lastCopyDestination);
     }
+
+    @Test
+    void stopAndSaveRecordingCopiesAndClosesStoppedRecordingWithoutStoppingAgain() throws Exception {
+        RecordingMBeanServer server = new RecordingMBeanServer();
+        server.recordings = new Object[] {
+                recordingData(17L, "Startup", "STOPPED", 12_000L, 4096L, 0L, 0L)
+        };
+        JmcFlightRecordingService service = new JmcFlightRecordingService(connection -> server.proxy());
+        Path destination = Path.of("target/live-capture.jfr");
+
+        Path saved = service.stopAndSaveRecording(new FlightRecordingStopRequest(connection(), 17, destination));
+
+        assertEquals(destination, saved);
+        assertEquals(List.of("copyTo", "closeRecording"), server.invocations);
+        assertEquals(List.of("Recordings"), server.attributes);
+        assertEquals(17L, server.lastRecordingId);
+        assertEquals(destination.toAbsolutePath().toString(), server.lastCopyDestination);
+    }
+
+    @Test
+    void stopAndDiscardRecordingStopsAndClosesWithoutCopying() throws Exception {
+        RecordingMBeanServer server = new RecordingMBeanServer();
+        server.recordings = new Object[] {
+                recordingData(17L, "Startup", "RUNNING", 12_000L, 4096L, 0L, 0L)
+        };
+        JmcFlightRecordingService service = new JmcFlightRecordingService(connection -> server.proxy());
+
+        service.stopAndDiscardRecording(connection(), 17);
+
+        assertEquals(List.of("stopRecording", "closeRecording"), server.invocations);
+        assertEquals(List.of("Recordings"), server.attributes);
+        assertEquals(17L, server.lastRecordingId);
+        assertEquals("", server.lastCopyDestination);
+    }
+
 
     @Test
     void missingLiveSessionThrowsDomainException() {
@@ -105,19 +163,21 @@ class JmcFlightRecordingServiceTest {
                 .asConnected("service:jmx:local://42");
     }
 
-    private static CompositeData recordingData(long id, String name, String state, long duration, long size)
-            throws Exception {
-        String[] names = { "id", "name", "state", "duration", "size" };
+    private static CompositeData recordingData(long id, String name, String state, long duration, long size,
+            long startTime, long stopTime) throws Exception {
+        String[] names = { "id", "name", "state", "duration", "size", "startTime", "stopTime" };
         OpenType<?>[] types = { SimpleType.LONG, SimpleType.STRING, SimpleType.STRING,
-                SimpleType.LONG, SimpleType.LONG };
+                SimpleType.LONG, SimpleType.LONG, SimpleType.LONG, SimpleType.LONG };
         CompositeType type = new CompositeType("RecordingInfo", "RecordingInfo", names, names, types);
-        return new CompositeDataSupport(type, names, new Object[] { id, name, state, duration, size });
+        return new CompositeDataSupport(type, names, new Object[] { id, name, state, duration, size,
+                startTime, stopTime });
     }
 
     private static final class RecordingMBeanServer {
         private boolean registered = true;
         private Object[] recordings = new Object[0];
         private final List<String> invocations = new ArrayList<>();
+        private final List<String> attributes = new ArrayList<>();
         private String lastPredefinedConfiguration = "";
         private Map<String, String> lastOptions = Map.of();
         private long lastRecordingId;
@@ -129,42 +189,64 @@ class JmcFlightRecordingServiceTest {
                     new Class<?>[] { MBeanServerConnection.class },
                     (proxy, method, args) -> switch (method.getName()) {
                         case "isRegistered" -> registered;
-                        case "invoke" -> invoke((String) args[1], (Object[]) args[2]);
+                        case "getAttribute" -> attribute((String) args[1]);
+                        case "invoke" -> invoke((String) args[1], (Object[]) args[2], (String[]) args[3]);
                         default -> throw new UnsupportedOperationException(method.getName());
                     });
         }
 
-        private Object invoke(String operation, Object[] args) throws Exception {
+        private Object attribute(String name) {
+            attributes.add(name);
+            return switch (name) {
+                case "Recordings" -> recordings;
+                default -> throw new UnsupportedOperationException(name);
+            };
+        }
+
+        private Object invoke(String operation, Object[] args, String[] signature) throws Exception {
             invocations.add(operation);
             return switch (operation) {
                 case "newRecording" -> 77L;
                 case "setPredefinedConfiguration" -> {
+                    assertEquals(List.of("long", "java.lang.String"), List.of(signature));
                     lastPredefinedConfiguration = (String) args[1];
                     yield null;
                 }
                 case "setRecordingOptions" -> {
-                    @SuppressWarnings("unchecked")
-                    Map<String, String> options = (Map<String, String>) args[1];
-                    lastOptions = options;
+                    assertEquals(List.of("long", "javax.management.openmbean.TabularData"), List.of(signature));
+                    lastOptions = options((TabularData) args[1]);
                     yield null;
                 }
-                case "startRecording" -> null;
-                case "getRecordings" -> recordings;
+                case "startRecording" -> {
+                    assertEquals(List.of("long"), List.of(signature));
+                    yield null;
+                }
                 case "stopRecording" -> {
+                    assertEquals(List.of("long"), List.of(signature));
                     lastRecordingId = (Long) args[0];
                     yield null;
                 }
                 case "copyTo" -> {
+                    assertEquals(List.of("long", "java.lang.String"), List.of(signature));
                     lastRecordingId = (Long) args[0];
                     lastCopyDestination = (String) args[1];
                     yield null;
                 }
                 case "closeRecording" -> {
+                    assertEquals(List.of("long"), List.of(signature));
                     lastRecordingId = (Long) args[0];
                     yield null;
                 }
                 default -> throw new UnsupportedOperationException(operation);
             };
+        }
+
+        private static Map<String, String> options(TabularData data) {
+            return data.values().stream()
+                    .map(CompositeData.class::cast)
+                    .collect(java.util.stream.Collectors.toMap(
+                            row -> row.get("key").toString(),
+                            row -> row.get("value").toString()));
         }
     }
 }

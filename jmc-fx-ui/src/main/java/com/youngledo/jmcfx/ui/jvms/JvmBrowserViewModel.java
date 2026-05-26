@@ -1,8 +1,13 @@
 package com.youngledo.jmcfx.ui.jvms;
 
 import java.nio.file.Path;
+import java.time.LocalDateTime;
+import java.time.ZoneOffset;
+import java.time.format.DateTimeFormatter;
 import java.util.ArrayList;
+import java.util.HashMap;
 import java.util.List;
+import java.util.Map;
 import java.util.Objects;
 import java.util.Set;
 import java.util.function.Consumer;
@@ -13,6 +18,7 @@ import org.slf4j.LoggerFactory;
 
 import com.youngledo.jmcfx.domain.model.FlightRecordingInfo;
 import com.youngledo.jmcfx.domain.model.FlightRecordingStartRequest;
+import com.youngledo.jmcfx.domain.model.FlightRecordingState;
 import com.youngledo.jmcfx.domain.model.FlightRecordingStopRequest;
 import com.youngledo.jmcfx.domain.model.FlightRecordingTemplate;
 import com.youngledo.jmcfx.domain.model.JvmCapability;
@@ -36,6 +42,8 @@ import javafx.collections.ObservableList;
 public class JvmBrowserViewModel implements AutoCloseable {
 
     private static final Logger LOGGER = LoggerFactory.getLogger(JvmBrowserViewModel.class);
+    private static final DateTimeFormatter RECORDING_NAME_TIMESTAMP =
+            DateTimeFormatter.ofPattern("yyyyMMddHHmmss");
 
     private final JvmDiscoveryService discoveryService;
     private final JmxConnectionService connectionService;
@@ -62,6 +70,7 @@ public class JvmBrowserViewModel implements AutoCloseable {
     private final BooleanProperty recordingError = new SimpleBooleanProperty(false);
     private final StringProperty recordingErrorMessage = new SimpleStringProperty("");
     private final StringProperty recordingStatusMessage = new SimpleStringProperty("");
+    private final Map<Long, JvmConnection> sessionStartedRecordings = new HashMap<>();
     private int pendingWorkCount;
 
     public JvmBrowserViewModel(JvmDiscoveryService discoveryService, JmxConnectionService connectionService) {
@@ -162,6 +171,10 @@ public class JvmBrowserViewModel implements AutoCloseable {
         return recordingStatusMessage;
     }
 
+    public FlightRecordingInfo selectedFlightRecording() {
+        return selectedFlightRecording.get();
+    }
+
     public void refresh() {
         beginWork();
         executor.execute(() -> {
@@ -239,13 +252,14 @@ public class JvmBrowserViewModel implements AutoCloseable {
         executor.execute(() -> {
             try {
                 FlightRecordingStartRequest request = new FlightRecordingStartRequest(selected,
-                        "JMC FX Recording", FlightRecordingTemplate.profile());
-                flightRecordingService.startRecording(request);
+                        recordingName(selected), FlightRecordingTemplate.profile());
+                FlightRecordingInfo started = flightRecordingService.startRecording(request);
+                sessionStartedRecordings.put(started.id(), selected);
                 List<FlightRecordingInfo> updated = flightRecordingService.recordings(selected);
                 runOnFx(() -> {
                     flightRecordings.setAll(updated);
                     selectedFlightRecording.set(updated.isEmpty() ? null : updated.getLast());
-                    recordingStatusMessage.set("Recording started.");
+                    recordingStatusMessage.set("");
                     recordingLoading.set(false);
                 });
             } catch (RuntimeException exception) {
@@ -268,11 +282,12 @@ public class JvmBrowserViewModel implements AutoCloseable {
             try {
                 Path saved = flightRecordingService.stopAndSaveRecording(new FlightRecordingStopRequest(
                         selectedConnection, selectedRecording.id(), destinationFile));
+                sessionStartedRecordings.remove(selectedRecording.id());
                 List<FlightRecordingInfo> updated = flightRecordingService.recordings(selectedConnection);
                 runOnFx(() -> {
                     flightRecordings.setAll(updated);
                     selectedFlightRecording.set(updated.isEmpty() ? null : updated.getFirst());
-                    recordingStatusMessage.set("Recording saved: " + saved.getFileName());
+                    recordingStatusMessage.set("");
                     recordingLoading.set(false);
                     savedRecordingHandler.accept(saved);
                 });
@@ -284,6 +299,7 @@ public class JvmBrowserViewModel implements AutoCloseable {
 
     @Override
     public void close() {
+        discardSessionStartedRecordings();
         executor.close();
     }
 
@@ -478,6 +494,39 @@ public class JvmBrowserViewModel implements AutoCloseable {
     private boolean canUseRecordingControl(JvmConnection connection) {
         return flightRecordingService != null && connection != null && connection.connected()
                 && recordingControlAvailable.get();
+    }
+
+    private void discardSessionStartedRecordings() {
+        if (flightRecordingService == null || sessionStartedRecordings.isEmpty()) {
+            return;
+        }
+        Map<Long, JvmConnection> started = Map.copyOf(sessionStartedRecordings);
+        sessionStartedRecordings.clear();
+        for (Map.Entry<Long, JvmConnection> entry : started.entrySet()) {
+            try {
+                if (isStillRunning(entry.getValue(), entry.getKey())) {
+                    flightRecordingService.stopAndDiscardRecording(entry.getValue(), entry.getKey());
+                }
+            } catch (RuntimeException exception) {
+                LOGGER.warn("Unable to discard Flight Recorder recording {} on {}",
+                        entry.getKey(), entry.getValue().displayName(), exception);
+            }
+        }
+    }
+
+    private boolean isStillRunning(JvmConnection connection, long recordingId) {
+        return flightRecordingService.recordings(connection).stream()
+                .anyMatch(recording -> recording.id() == recordingId
+                        && recording.state() == FlightRecordingState.RUNNING);
+    }
+
+    private static String recordingName(JvmConnection connection) {
+        String id = connection.pid().isBlank() ? connection.id() : connection.pid();
+        String safeId = id.replaceAll("[^A-Za-z0-9]+", "");
+        if (safeId.isBlank()) {
+            safeId = "jvm";
+        }
+        return "jmcfx-" + safeId + "-" + LocalDateTime.now(ZoneOffset.UTC).format(RECORDING_NAME_TIMESTAMP);
     }
 
     private void clearRecordingControl() {

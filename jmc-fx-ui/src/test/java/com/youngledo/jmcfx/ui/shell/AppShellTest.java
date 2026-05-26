@@ -641,6 +641,18 @@ class AppShellTest {
     }
 
     @Test
+    void saveRecordingInitialFileNameUsesRecordingName() {
+        assertEquals("jmcfx-42-20260526160235.jfr",
+                AppShellController.saveRecordingInitialFileName("jmcfx-42-20260526160235"));
+    }
+
+    @Test
+    void saveRecordingInitialFileNameSanitizesUnsafeCharacters() {
+        assertEquals("My_Recording_01.jfr",
+                AppShellController.saveRecordingInitialFileName("My Recording:01"));
+    }
+
+    @Test
     void languageModeDisplayNamesFollowCurrentLanguage() {
         I18n i18n = new I18n(java.util.Locale.ENGLISH);
 
