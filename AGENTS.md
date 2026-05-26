@@ -61,8 +61,7 @@ Rules:
 ## UI and Theme Rules
 
 - Use AtlantaFX as the base theme.
-- Use `PrimerLight` as the default theme.
-- Prepare for `PrimerDark`, but do not make dark mode block v1.
+- Use the system theme preference by default. Resolve it to `PrimerLight` for light mode and `PrimerDark` for dark mode, with `PrimerLight` as the fallback when the platform color scheme is unavailable.
 - Add application CSS after AtlantaFX.
 - Follow `docs/ui-guidelines.md` and `docs/ui-ux-system.md` for every UI/UX change.
 - Before adding or modifying UI, identify which `docs/ui-ux-system.md` page template and workflow pattern applies.

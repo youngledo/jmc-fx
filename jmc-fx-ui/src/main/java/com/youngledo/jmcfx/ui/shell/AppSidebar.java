@@ -4,23 +4,12 @@ import java.util.Locale;
 import java.util.function.Consumer;
 
 import com.youngledo.jmcfx.ui.i18n.I18n;
-import com.youngledo.jmcfx.ui.preferences.AppTheme;
 
-import org.kordamp.ikonli.javafx.FontIcon;
-import org.kordamp.ikonli.material2.Material2AL;
-import org.kordamp.ikonli.material2.Material2MZ;
-
-import atlantafx.base.controls.Spacer;
-import atlantafx.base.theme.Styles;
 import javafx.geometry.Pos;
-import javafx.scene.AccessibleRole;
-import javafx.scene.control.Button;
-import javafx.scene.control.ContentDisplay;
 import javafx.scene.control.ContextMenu;
 import javafx.scene.control.Label;
 import javafx.scene.control.MenuItem;
 import javafx.scene.control.TextField;
-import javafx.scene.control.Tooltip;
 import javafx.scene.layout.HBox;
 import javafx.scene.layout.Priority;
 import javafx.scene.layout.StackPane;
@@ -37,8 +26,6 @@ public class AppSidebar extends VBox {
     private Label version;
     private TextField searchField;
     private final ContextMenu searchResultsMenu = new ContextMenu();
-    private Button themeButton;
-    private AppTheme currentTheme = AppTheme.PRIMER_LIGHT;
 
     public AppSidebar() {
         this(new I18n(java.util.Locale.getDefault()));
@@ -58,9 +45,6 @@ public class AppSidebar extends VBox {
     void bind(AppShellViewModel viewModel) {
         recordingNameLabel.textProperty().bind(viewModel.currentRecordingNameProperty());
         navTree.bind(viewModel);
-        themeButton.setOnAction(event -> viewModel.toggleTheme());
-        viewModel.themeProperty().addListener((observable, oldValue, newValue) -> updateThemeButton(newValue));
-        updateThemeButton(viewModel.themeProperty().get());
     }
 
     void setNavigationHandler(Consumer<String> navigationHandler) {
@@ -90,9 +74,6 @@ public class AppSidebar extends VBox {
         if (version != null) {
             version.textProperty().bind(i18n.text("sidebar.version"));
         }
-        if (themeButton != null) {
-            updateThemeButton(currentTheme);
-        }
     }
 
     private VBox createHeader() {
@@ -113,9 +94,7 @@ public class AppSidebar extends VBox {
         VBox copy = new VBox(title, subtitle);
         copy.getStyleClass().add("sidebar-brand-copy");
 
-        themeButton = iconButton(i18n.get("sidebar.theme"), Material2MZ.WB_SUNNY);
-
-        HBox brand = new HBox(mark, copy, new Spacer(), themeButton);
+        HBox brand = new HBox(mark, copy);
         brand.getStyleClass().add("sidebar-brand");
         brand.setAlignment(Pos.CENTER_LEFT);
         return brand;
@@ -152,17 +131,6 @@ public class AppSidebar extends VBox {
         HBox footer = new HBox(version);
         footer.getStyleClass().add("sidebar-footer");
         return footer;
-    }
-
-    private static Button iconButton(String accessibleText, org.kordamp.ikonli.Ikon icon) {
-        Button button = new Button();
-        button.setGraphic(new FontIcon(icon));
-        button.setContentDisplay(ContentDisplay.GRAPHIC_ONLY);
-        button.getStyleClass().addAll("icon-button", Styles.BUTTON_CIRCLE, Styles.FLAT);
-        button.setAccessibleRole(AccessibleRole.BUTTON);
-        button.setAccessibleText(accessibleText);
-        button.setTooltip(new Tooltip(accessibleText));
-        return button;
     }
 
     private void updateSearchResults(String query) {
@@ -203,22 +171,6 @@ public class AppSidebar extends VBox {
             searchField.clear();
             searchResultsMenu.hide();
         });
-    }
-
-    private void updateThemeButton(AppTheme theme) {
-        if (themeButton == null) {
-            return;
-        }
-        AppTheme currentTheme = theme == null ? AppTheme.PRIMER_LIGHT : theme;
-        this.currentTheme = currentTheme;
-        String key = currentTheme == AppTheme.PRIMER_DARK ? "sidebar.theme.light" : "sidebar.theme.dark";
-        String text = i18n.get(key);
-        org.kordamp.ikonli.Ikon icon = currentTheme == AppTheme.PRIMER_DARK
-                ? Material2MZ.WB_SUNNY
-                : Material2AL.BEDTIME;
-        themeButton.setGraphic(new FontIcon(icon));
-        themeButton.setAccessibleText(text);
-        themeButton.setTooltip(new Tooltip(text));
     }
 
     static boolean shouldSearchQueryImmediately(I18n i18n, String query) {

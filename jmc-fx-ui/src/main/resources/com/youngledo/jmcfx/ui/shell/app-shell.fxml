@@ -373,17 +373,30 @@
                 <Label fx:id="constantPoolsTitleLabel" styleClass="view-title"/>
                 <TableView fx:id="constantPoolsTable" styleClass="dense-table" VBox.vgrow="ALWAYS"/>
             </VBox>
-            <VBox fx:id="settingsPane" spacing="8">
+            <VBox fx:id="settingsPane" spacing="36">
                 <Label fx:id="settingsTitleLabel" styleClass="view-title"/>
-                <Label fx:id="settingsLanguageLabel" styleClass="detail-title"/>
-                <HBox spacing="16" styleClass="settings-language-options">
-                    <fx:define>
-                        <ToggleGroup fx:id="languageToggleGroup"/>
-                    </fx:define>
-                    <RadioButton fx:id="languageFollowSystemRadio" toggleGroup="$languageToggleGroup"/>
-                    <RadioButton fx:id="languageEnglishRadio" toggleGroup="$languageToggleGroup"/>
-                    <RadioButton fx:id="languageChineseRadio" toggleGroup="$languageToggleGroup"/>
-                </HBox>
+                <VBox fx:id="settingsLanguageGroup" spacing="16">
+                    <Label fx:id="settingsLanguageLabel" styleClass="detail-title"/>
+                    <HBox spacing="24" styleClass="settings-language-options">
+                        <fx:define>
+                            <ToggleGroup fx:id="languageToggleGroup"/>
+                        </fx:define>
+                        <RadioButton fx:id="languageFollowSystemRadio" toggleGroup="$languageToggleGroup"/>
+                        <RadioButton fx:id="languageEnglishRadio" toggleGroup="$languageToggleGroup"/>
+                        <RadioButton fx:id="languageChineseRadio" toggleGroup="$languageToggleGroup"/>
+                    </HBox>
+                </VBox>
+                <VBox fx:id="settingsThemeGroup" spacing="16">
+                    <Label fx:id="settingsThemeLabel" styleClass="detail-title"/>
+                    <HBox spacing="24" styleClass="settings-theme-options">
+                        <fx:define>
+                            <ToggleGroup fx:id="themeToggleGroup"/>
+                        </fx:define>
+                        <RadioButton fx:id="themeFollowSystemRadio" toggleGroup="$themeToggleGroup"/>
+                        <RadioButton fx:id="themeLightRadio" toggleGroup="$themeToggleGroup"/>
+                        <RadioButton fx:id="themeDarkRadio" toggleGroup="$themeToggleGroup"/>
+                    </HBox>
+                </VBox>
             </VBox>
         </StackPane>
         </VBox>

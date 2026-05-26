@@ -71,7 +71,7 @@ public class AppShellViewModel {
     private final StringProperty currentRecordingName = new SimpleStringProperty("");
     private final BooleanProperty recordingOpen = new SimpleBooleanProperty(false);
     private final ObjectProperty<LanguageMode> languageMode = new SimpleObjectProperty<>(LanguageMode.SYSTEM);
-    private final ObjectProperty<AppTheme> theme = new SimpleObjectProperty<>(AppTheme.PRIMER_LIGHT);
+    private final ObjectProperty<AppTheme> theme = new SimpleObjectProperty<>(AppTheme.SYSTEM);
 
     public StringProperty selectedSectionProperty() {
         return selectedSection;
@@ -106,11 +106,7 @@ public class AppShellViewModel {
     }
 
     public void setTheme(AppTheme theme) {
-        this.theme.set(theme == null ? AppTheme.PRIMER_LIGHT : theme);
-    }
-
-    public void toggleTheme() {
-        setTheme(theme.get().toggle());
+        this.theme.set(theme == null ? AppTheme.SYSTEM : theme);
     }
 
     public ObservableList<RecordingWorkspace> recordingWorkspacesProperty() {

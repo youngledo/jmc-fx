@@ -19,6 +19,7 @@ import com.youngledo.jmcfx.domain.service.EventQuerySession;
 import com.youngledo.jmcfx.ui.events.EventBrowserBackgroundExecutor;
 import com.youngledo.jmcfx.ui.events.EventBrowserViewModel;
 import com.youngledo.jmcfx.ui.overview.OverviewViewModel;
+import com.youngledo.jmcfx.ui.preferences.AppTheme;
 import com.youngledo.jmcfx.ui.rules.RuleResultsViewModel;
 
 class AppShellViewModelTest {
@@ -47,6 +48,17 @@ class AppShellViewModelTest {
 
         assertEquals(com.youngledo.jmcfx.ui.i18n.LanguageMode.CHINESE_SIMPLIFIED,
                 viewModel.languageModeProperty().get());
+    }
+
+    @Test
+    void themeDefaultsToSystemAndCanChange() {
+        AppShellViewModel viewModel = new AppShellViewModel();
+
+        assertEquals(AppTheme.SYSTEM, viewModel.themeProperty().get());
+
+        viewModel.setTheme(AppTheme.PRIMER_DARK);
+
+        assertEquals(AppTheme.PRIMER_DARK, viewModel.themeProperty().get());
     }
 
     @Test

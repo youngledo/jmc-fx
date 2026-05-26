@@ -342,8 +342,44 @@ class AppShellTest {
 
         assertFalse(source.contains("searchButton.setDisable(true)"),
                 "sidebar search should be a usable navigation search control");
-        assertFalse(source.contains("themeButton.setDisable(true)"),
-                "theme button should toggle Primer light/dark themes");
+        assertFalse(source.contains("themeButton"),
+                "theme switching belongs in Settings, not the sidebar header");
+        assertFalse(source.contains("toggleTheme"),
+                "sidebar should not own theme switching");
+    }
+
+    @Test
+    void settingsPageContainsThemeSelectorNextToLanguageSelector() throws Exception {
+        Document document = appShellFxml();
+
+        assertEquals("36", elementByFxId(document, "settingsPane").getAttribute("spacing"));
+        assertEquals("VBox", elementByFxId(document, "settingsLanguageGroup").getTagName());
+        assertEquals("16", elementByFxId(document, "settingsLanguageGroup").getAttribute("spacing"));
+        assertEquals("VBox", elementByFxId(document, "settingsThemeGroup").getTagName());
+        assertEquals("16", elementByFxId(document, "settingsThemeGroup").getAttribute("spacing"));
+        assertEquals("24", elementByStyleClass(document, "settings-language-options").getAttribute("spacing"));
+        assertEquals("24", elementByStyleClass(document, "settings-theme-options").getAttribute("spacing"));
+        assertEquals("Label", elementByFxId(document, "settingsThemeLabel").getTagName());
+        assertEquals("RadioButton", elementByFxId(document, "themeFollowSystemRadio").getTagName());
+        assertEquals("RadioButton", elementByFxId(document, "themeLightRadio").getTagName());
+        assertEquals("RadioButton", elementByFxId(document, "themeDarkRadio").getTagName());
+    }
+
+    @Test
+    void controllerBindsThemeSelectorAndSystemThemePreference() throws Exception {
+        String source = java.nio.file.Files.readString(
+                java.nio.file.Path.of("src/main/java/com/youngledo/jmcfx/ui/shell/AppShellController.java"));
+        String factory = java.nio.file.Files.readString(
+                java.nio.file.Path.of("src/main/java/com/youngledo/jmcfx/ui/shell/AppShellFactory.java"));
+
+        assertTrue(source.contains("configureThemeSelector()"),
+                "settings page should configure the theme selector");
+        assertTrue(source.contains("themeToggleGroup.selectedToggleProperty()"),
+                "theme selector should update the shell view model");
+        assertTrue(source.contains("settings.theme.followSystem"),
+                "theme selector should expose follow-system text");
+        assertTrue(factory.contains("colorSchemeProperty().addListener"),
+                "system theme mode should listen for JavaFX platform color scheme changes");
     }
 
     @Test
@@ -821,6 +857,14 @@ class AppShellTest {
                 .map(Map.Entry::getValue)
                 .findFirst()
                 .orElseThrow(() -> new AssertionError("Missing fx:id " + fxId));
+    }
+
+    private static Element elementByStyleClass(Document document, String styleClass) {
+        return elements(document).entrySet().stream()
+                .filter(entry -> hasStyleClass(entry.getValue(), styleClass))
+                .map(Map.Entry::getValue)
+                .findFirst()
+                .orElseThrow(() -> new AssertionError("Missing styleClass " + styleClass));
     }
 
     private static int elementCountWithStyleClass(Document document, String styleClass) {

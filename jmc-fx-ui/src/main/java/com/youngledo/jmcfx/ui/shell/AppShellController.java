@@ -116,6 +116,7 @@ import com.youngledo.jmcfx.ui.util.CsvExport;
 import com.youngledo.jmcfx.ui.util.DisplayFormats;
 import com.youngledo.jmcfx.ui.util.HtmlToTextFlow;
 import com.youngledo.jmcfx.ui.overview.OverviewViewModel;
+import com.youngledo.jmcfx.ui.preferences.AppTheme;
 import com.youngledo.jmcfx.ui.profiling.ProfilingViewModel;
 import com.youngledo.jmcfx.ui.rules.RuleResultsViewModel;
 import com.youngledo.jmcfx.ui.socketio.SocketIOViewModel;
@@ -455,6 +456,11 @@ public class AppShellController {
     @FXML private RadioButton languageFollowSystemRadio;
     @FXML private RadioButton languageEnglishRadio;
     @FXML private RadioButton languageChineseRadio;
+    @FXML private Label settingsThemeLabel;
+    @FXML private ToggleGroup themeToggleGroup;
+    @FXML private RadioButton themeFollowSystemRadio;
+    @FXML private RadioButton themeLightRadio;
+    @FXML private RadioButton themeDarkRadio;
 
     public AppShellController(AppShellViewModel viewModel, RecordingRepository recordingRepository,
             EventQueryService eventQueryService, RuleAnalysisService ruleAnalysisService,
@@ -568,6 +574,7 @@ public class AppShellController {
         bindLocalizedText();
         configureActionIcons();
         configureLanguageSelector();
+        configureThemeSelector();
         homeOpenRecordingButton.setOnAction(event -> openRecording());
         homeConnectJvmButton.setOnAction(event -> viewModel.showSection("jvms"));
         configureRecordingTabs();
@@ -1788,6 +1795,7 @@ public class AppShellController {
         sysPropsSearchField.promptTextProperty().bind(i18n.text("sysProps.search.prompt"));
         settingsTitleLabel.textProperty().bind(i18n.text("settings.title"));
         settingsLanguageLabel.textProperty().bind(i18n.text("settings.language"));
+        settingsThemeLabel.textProperty().bind(i18n.text("settings.theme"));
     }
 
     private void configureLanguageSelector() {
@@ -1817,6 +1825,34 @@ public class AppShellController {
             return languageChineseRadio;
         }
         return languageFollowSystemRadio;
+    }
+
+    private void configureThemeSelector() {
+        themeFollowSystemRadio.setUserData(AppTheme.SYSTEM);
+        themeLightRadio.setUserData(AppTheme.PRIMER_LIGHT);
+        themeDarkRadio.setUserData(AppTheme.PRIMER_DARK);
+
+        themeFollowSystemRadio.textProperty().bind(i18n.text("settings.theme.followSystem"));
+        themeLightRadio.textProperty().bind(i18n.text("settings.theme.light"));
+        themeDarkRadio.textProperty().bind(i18n.text("settings.theme.dark"));
+
+        themeToggleGroup.selectToggle(themeToToggle(viewModel.themeProperty().get()));
+
+        themeToggleGroup.selectedToggleProperty().addListener((observable, oldValue, newValue) -> {
+            if (newValue != null && newValue.getUserData() instanceof AppTheme theme) {
+                viewModel.setTheme(theme);
+            }
+        });
+    }
+
+    private Toggle themeToToggle(AppTheme theme) {
+        if (theme == AppTheme.PRIMER_LIGHT) {
+            return themeLightRadio;
+        }
+        if (theme == AppTheme.PRIMER_DARK) {
+            return themeDarkRadio;
+        }
+        return themeFollowSystemRadio;
     }
 
     static boolean shouldSelectEventTypesTreeNode(String eventTypeId) {

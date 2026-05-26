@@ -38,12 +38,12 @@ public final class JavaAppPreferences implements AppPreferences {
 
     @Override
     public AppTheme theme() {
-        return AppTheme.fromPersistedValue(preferences.get(THEME, AppTheme.PRIMER_LIGHT.persistedValue()));
+        return AppTheme.fromPersistedValue(preferences.get(THEME, AppTheme.SYSTEM.persistedValue()));
     }
 
     @Override
     public void setTheme(AppTheme theme) {
-        preferences.put(THEME, (theme == null ? AppTheme.PRIMER_LIGHT : theme).persistedValue());
+        preferences.put(THEME, (theme == null ? AppTheme.SYSTEM : theme).persistedValue());
     }
 
     void putRaw(String key, String value) {

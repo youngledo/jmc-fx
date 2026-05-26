@@ -21,9 +21,13 @@ import com.youngledo.jmcfx.domain.service.ThreadService;
 import com.youngledo.jmcfx.domain.service.TlabService;
 import com.youngledo.jmcfx.ui.i18n.I18n;
 import com.youngledo.jmcfx.ui.preferences.AppPreferences;
+import com.youngledo.jmcfx.ui.preferences.AppTheme;
 import com.youngledo.jmcfx.ui.preferences.JavaAppPreferences;
 
 import javafx.application.Application;
+import javafx.application.ColorScheme;
+import javafx.application.Platform;
+import javafx.beans.value.ChangeListener;
 import javafx.fxml.FXMLLoader;
 import javafx.scene.layout.BorderPane;
 
@@ -167,13 +171,16 @@ public class AppShellFactory {
             viewModel.setLanguageMode(preferences.languageMode());
             viewModel.setTheme(preferences.theme());
             i18n.setLanguageMode(viewModel.languageModeProperty().get());
-            applyTheme(viewModel.themeProperty().get());
             viewModel.languageModeProperty().addListener(
                     (observable, oldValue, newValue) -> preferences.setLanguageMode(newValue));
             viewModel.themeProperty().addListener((observable, oldValue, newValue) -> {
                 preferences.setTheme(newValue);
-                applyTheme(newValue);
+                applyTheme(newValue, systemColorScheme());
             });
+            ChangeListener<ColorScheme> colorSchemeListener = (observable, oldValue, newValue) ->
+                    applyTheme(viewModel.themeProperty().get(), newValue);
+            Platform.getPreferences().colorSchemeProperty().addListener(colorSchemeListener);
+            applyTheme(viewModel.themeProperty().get(), systemColorScheme());
             FXMLLoader loader = new FXMLLoader(getClass().getResource("/com/youngledo/jmcfx/ui/shell/app-shell.fxml"));
             loader.setControllerFactory(type -> controllerFor(type, viewModel));
             BorderPane root = loader.load();
@@ -196,7 +203,13 @@ public class AppShellFactory {
         throw new IllegalArgumentException("Unsupported controller: " + type.getName());
     }
 
-    private static void applyTheme(com.youngledo.jmcfx.ui.preferences.AppTheme theme) {
-        Application.setUserAgentStylesheet(theme.userAgentStylesheet());
+    private static void applyTheme(AppTheme theme, ColorScheme colorScheme) {
+        AppTheme selected = theme == null ? AppTheme.SYSTEM : theme;
+        Application.setUserAgentStylesheet(selected.resolve(colorScheme).userAgentStylesheet());
+    }
+
+    private static ColorScheme systemColorScheme() {
+        ColorScheme colorScheme = Platform.getPreferences().getColorScheme();
+        return colorScheme == null ? ColorScheme.LIGHT : colorScheme;
     }
 }

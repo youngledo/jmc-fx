@@ -7,7 +7,9 @@ consistent desktop analysis application.
 ## Theme Boundary
 
 - Use AtlantaFX as the user-agent stylesheet.
-- Use `PrimerLight` as the default theme.
+- Use the system theme preference by default. Resolve it to `PrimerLight` for
+  light mode and `PrimerDark` for dark mode, with `PrimerLight` as the fallback
+  when the platform color scheme is unavailable.
 - Add JMC FX application CSS after AtlantaFX.
 - Treat AtlantaFX as the owner of standard control states: hover, armed,
   pressed, focused, disabled, selected, borders, and control color variables.
@@ -101,7 +103,7 @@ Before merging UI work, verify:
 
 - The change uses AtlantaFX defaults for standard control states.
 - Any custom CSS is scoped to app layout or product semantics.
-- The UI works with `PrimerLight` and does not block future `PrimerDark`.
+- The UI works with Follow System, `PrimerLight`, and `PrimerDark`.
 - Large datasets remain paged, sliced, summarized, or virtualized.
 - Numeric values and units use shared formatting rules.
 - Empty, loading, error, and no-data states are handled.
