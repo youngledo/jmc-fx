@@ -26,9 +26,16 @@ import com.youngledo.jmcfx.domain.model.JvmCapabilityStatus;
 import com.youngledo.jmcfx.domain.model.JvmConnection;
 import com.youngledo.jmcfx.domain.model.JvmConnectionSource;
 import com.youngledo.jmcfx.domain.model.JvmSessionSnapshot;
+import com.youngledo.jmcfx.domain.model.MBeanAttributeInfo;
+import com.youngledo.jmcfx.domain.model.MBeanNode;
+import com.youngledo.jmcfx.domain.model.MBeanOperationInfo;
+import com.youngledo.jmcfx.domain.model.MBeanOperationParameter;
+import com.youngledo.jmcfx.domain.model.MBeanOperationRequest;
+import com.youngledo.jmcfx.domain.model.MBeanOperationResult;
 import com.youngledo.jmcfx.domain.service.FlightRecordingService;
 import com.youngledo.jmcfx.domain.service.JmxConnectionService;
 import com.youngledo.jmcfx.domain.service.JvmDiscoveryService;
+import com.youngledo.jmcfx.domain.service.MBeanBrowserService;
 
 import javafx.beans.property.BooleanProperty;
 import javafx.beans.property.ObjectProperty;
@@ -48,16 +55,25 @@ public class JvmBrowserViewModel implements AutoCloseable {
     private final JvmDiscoveryService discoveryService;
     private final JmxConnectionService connectionService;
     private final FlightRecordingService flightRecordingService;
+    private final MBeanBrowserService mBeanBrowserService;
     private final JvmBrowserExecutor executor;
     private final Consumer<Runnable> fxRunner;
     private final Consumer<Path> savedRecordingHandler;
     private final ObservableList<JvmConnection> connections = FXCollections.observableArrayList();
     private final ObservableList<FlightRecordingInfo> flightRecordings = FXCollections.observableArrayList();
+    private final ObservableList<MBeanNode> mbeanTree = FXCollections.observableArrayList();
+    private final ObservableList<MBeanAttributeInfo> mbeanAttributes = FXCollections.observableArrayList();
+    private final ObservableList<MBeanOperationInfo> mbeanOperations = FXCollections.observableArrayList();
     private final ObjectProperty<JvmConnection> selectedConnection = new SimpleObjectProperty<>();
     private final ObjectProperty<FlightRecordingInfo> selectedFlightRecording = new SimpleObjectProperty<>();
+    private final ObjectProperty<MBeanNode> selectedMBean = new SimpleObjectProperty<>();
+    private final ObjectProperty<MBeanOperationInfo> selectedMBeanOperation = new SimpleObjectProperty<>();
     private final StringProperty manualConnectionUrl = new SimpleStringProperty("");
     private final StringProperty statusMessage = new SimpleStringProperty("");
     private final StringProperty errorMessage = new SimpleStringProperty("");
+    private final StringProperty mbeanErrorMessage = new SimpleStringProperty("");
+    private final StringProperty mbeanOperationArguments = new SimpleStringProperty("");
+    private final StringProperty mbeanOperationResult = new SimpleStringProperty("");
     private final BooleanProperty loading = new SimpleBooleanProperty(false);
     private final BooleanProperty error = new SimpleBooleanProperty(false);
     private final BooleanProperty refreshCompleted = new SimpleBooleanProperty(false);
@@ -70,6 +86,9 @@ public class JvmBrowserViewModel implements AutoCloseable {
     private final BooleanProperty recordingError = new SimpleBooleanProperty(false);
     private final StringProperty recordingErrorMessage = new SimpleStringProperty("");
     private final StringProperty recordingStatusMessage = new SimpleStringProperty("");
+    private final BooleanProperty mbeanBrowserAvailable = new SimpleBooleanProperty(false);
+    private final BooleanProperty mbeanLoading = new SimpleBooleanProperty(false);
+    private final BooleanProperty mbeanError = new SimpleBooleanProperty(false);
     private final Map<Long, JvmConnection> sessionStartedRecordings = new HashMap<>();
     private int pendingWorkCount;
 
@@ -84,15 +103,29 @@ public class JvmBrowserViewModel implements AutoCloseable {
     }
 
     public JvmBrowserViewModel(JvmDiscoveryService discoveryService, JmxConnectionService connectionService,
+            MBeanBrowserService mBeanBrowserService, JvmBrowserExecutor executor, Consumer<Runnable> fxRunner) {
+        this(discoveryService, connectionService, null, mBeanBrowserService, executor, fxRunner, path -> { });
+    }
+
+    public JvmBrowserViewModel(JvmDiscoveryService discoveryService, JmxConnectionService connectionService,
             FlightRecordingService flightRecordingService, JvmBrowserExecutor executor, Consumer<Runnable> fxRunner,
             Consumer<Path> savedRecordingHandler) {
+        this(discoveryService, connectionService, flightRecordingService, null, executor, fxRunner,
+                savedRecordingHandler);
+    }
+
+    public JvmBrowserViewModel(JvmDiscoveryService discoveryService, JmxConnectionService connectionService,
+            FlightRecordingService flightRecordingService, MBeanBrowserService mBeanBrowserService,
+            JvmBrowserExecutor executor, Consumer<Runnable> fxRunner, Consumer<Path> savedRecordingHandler) {
         this.discoveryService = Objects.requireNonNull(discoveryService, "discoveryService");
         this.connectionService = Objects.requireNonNull(connectionService, "connectionService");
         this.flightRecordingService = flightRecordingService;
+        this.mBeanBrowserService = mBeanBrowserService;
         this.executor = Objects.requireNonNull(executor, "executor");
         this.fxRunner = Objects.requireNonNull(fxRunner, "fxRunner");
         this.savedRecordingHandler = Objects.requireNonNull(savedRecordingHandler, "savedRecordingHandler");
         this.selectedConnection.addListener((observable, oldValue, newValue) -> loadSessionForSelection(newValue));
+        this.selectedMBean.addListener((observable, oldValue, newValue) -> loadSelectedMBeanDetails(newValue));
     }
 
     public ObservableList<JvmConnection> connectionsProperty() {
@@ -169,6 +202,50 @@ public class JvmBrowserViewModel implements AutoCloseable {
 
     public StringProperty recordingStatusMessageProperty() {
         return recordingStatusMessage;
+    }
+
+    public ObservableList<MBeanNode> mbeanTreeProperty() {
+        return mbeanTree;
+    }
+
+    public ObservableList<MBeanAttributeInfo> mbeanAttributesProperty() {
+        return mbeanAttributes;
+    }
+
+    public ObservableList<MBeanOperationInfo> mbeanOperationsProperty() {
+        return mbeanOperations;
+    }
+
+    public ObjectProperty<MBeanNode> selectedMBeanProperty() {
+        return selectedMBean;
+    }
+
+    public ObjectProperty<MBeanOperationInfo> selectedMBeanOperationProperty() {
+        return selectedMBeanOperation;
+    }
+
+    public BooleanProperty mbeanBrowserAvailableProperty() {
+        return mbeanBrowserAvailable;
+    }
+
+    public BooleanProperty mbeanLoadingProperty() {
+        return mbeanLoading;
+    }
+
+    public BooleanProperty mbeanErrorProperty() {
+        return mbeanError;
+    }
+
+    public StringProperty mbeanErrorMessageProperty() {
+        return mbeanErrorMessage;
+    }
+
+    public StringProperty mbeanOperationArgumentsProperty() {
+        return mbeanOperationArguments;
+    }
+
+    public StringProperty mbeanOperationResultProperty() {
+        return mbeanOperationResult;
     }
 
     public FlightRecordingInfo selectedFlightRecording() {
@@ -293,6 +370,49 @@ public class JvmBrowserViewModel implements AutoCloseable {
                 });
             } catch (RuntimeException exception) {
                 failRecording(exception);
+            }
+        });
+    }
+
+    public void refreshSelectedMBeanAttributes() {
+        loadSelectedMBeanDetails(selectedMBean.get());
+    }
+
+    public void invokeSelectedMBeanOperation() {
+        JvmSessionSnapshot snapshot = selectedSession.get();
+        MBeanNode node = selectedMBean.get();
+        MBeanOperationInfo operation = selectedMBeanOperation.get();
+        if (!canUseMBeanBrowser(snapshot) || node == null || node.domain() || operation == null) {
+            mbeanError.set(true);
+            mbeanErrorMessage.set("Select an MBean operation to invoke.");
+            return;
+        }
+
+        List<String> parameterTypes = operation.parameters().stream()
+                .map(MBeanOperationParameter::type)
+                .toList();
+        List<String> arguments = parseMBeanArguments(mbeanOperationArguments.get());
+        MBeanOperationRequest request = new MBeanOperationRequest(snapshot.connection(), node.objectName(),
+                operation.name(), parameterTypes, arguments);
+        mbeanLoading.set(true);
+        clearMBeanError();
+        executor.execute(() -> {
+            try {
+                MBeanOperationResult result = mBeanBrowserService.invoke(request);
+                runOnFx(() -> {
+                    if (result.success()) {
+                        mbeanOperationResult.set(result.value());
+                        clearMBeanError();
+                    } else {
+                        String message = displayMBeanResult(result);
+                        mbeanOperationResult.set(message);
+                        mbeanError.set(true);
+                        mbeanErrorMessage.set(message);
+                    }
+                    mbeanLoading.set(false);
+                });
+            } catch (RuntimeException exception) {
+                failMBean(exception);
             }
         });
     }
@@ -436,6 +556,7 @@ public class JvmBrowserViewModel implements AutoCloseable {
         if (connection == null || !connection.connected()) {
             selectedSession.set(null);
             clearRecordingControl();
+            clearMBeanBrowser();
             clearSessionError();
             sessionLoading.set(false);
             return;
@@ -448,6 +569,7 @@ public class JvmBrowserViewModel implements AutoCloseable {
                     selectedSession.set(snapshot);
                     clearSessionError();
                     loadRecordingControl(snapshot);
+                    loadMBeanBrowser(snapshot);
                     sessionLoading.set(false);
                 });
             } catch (RuntimeException exception) {
@@ -457,6 +579,7 @@ public class JvmBrowserViewModel implements AutoCloseable {
                 runOnFx(() -> {
                     selectedSession.set(null);
                     clearRecordingControl();
+                    clearMBeanBrowser();
                     sessionError.set(true);
                     sessionErrorMessage.set(exception.getMessage() == null
                             ? exception.getClass().getSimpleName() : exception.getMessage());
@@ -498,6 +621,68 @@ public class JvmBrowserViewModel implements AutoCloseable {
     private boolean canUseRecordingControl(JvmConnection connection) {
         return flightRecordingService != null && connection != null && connection.connected()
                 && recordingControlAvailable.get();
+    }
+
+    private void loadMBeanBrowser(JvmSessionSnapshot snapshot) {
+        if (!canUseMBeanBrowser(snapshot)) {
+            clearMBeanBrowser();
+            return;
+        }
+        mbeanBrowserAvailable.set(true);
+        mbeanLoading.set(true);
+        clearMBeanError();
+        clearMBeanDetails();
+        executor.execute(() -> {
+            try {
+                List<MBeanNode> tree = mBeanBrowserService.tree(snapshot.connection());
+                runOnFx(() -> {
+                    if (selectedSession.get() != snapshot) {
+                        return;
+                    }
+                    mbeanTree.setAll(tree);
+                    mbeanLoading.set(false);
+                    clearMBeanError();
+                });
+            } catch (RuntimeException exception) {
+                failMBean(exception);
+            }
+        });
+    }
+
+    private void loadSelectedMBeanDetails(MBeanNode node) {
+        JvmSessionSnapshot snapshot = selectedSession.get();
+        if (!canUseMBeanBrowser(snapshot) || node == null || node.domain()) {
+            clearMBeanDetails();
+            return;
+        }
+        mbeanLoading.set(true);
+        clearMBeanError();
+        mbeanOperationResult.set("");
+        executor.execute(() -> {
+            try {
+                List<MBeanAttributeInfo> attributes = mBeanBrowserService.attributes(snapshot.connection(),
+                        node.objectName());
+                List<MBeanOperationInfo> operations = mBeanBrowserService.operations(snapshot.connection(),
+                        node.objectName());
+                runOnFx(() -> {
+                    if (selectedSession.get() != snapshot || selectedMBean.get() != node) {
+                        return;
+                    }
+                    mbeanAttributes.setAll(attributes);
+                    mbeanOperations.setAll(operations);
+                    selectedMBeanOperation.set(operations.isEmpty() ? null : operations.getFirst());
+                    mbeanLoading.set(false);
+                    clearMBeanError();
+                });
+            } catch (RuntimeException exception) {
+                failMBean(exception);
+            }
+        });
+    }
+
+    private boolean canUseMBeanBrowser(JvmSessionSnapshot snapshot) {
+        return mBeanBrowserService != null && snapshot != null
+                && snapshot.statusOf(JvmCapability.MBEAN_SERVER) == JvmCapabilityStatus.AVAILABLE;
     }
 
     private void discardSessionStartedRecordings() {
@@ -549,6 +734,28 @@ public class JvmBrowserViewModel implements AutoCloseable {
         recordingErrorMessage.set("");
     }
 
+    private void clearMBeanBrowser() {
+        mbeanTree.clear();
+        selectedMBean.set(null);
+        mbeanBrowserAvailable.set(false);
+        mbeanLoading.set(false);
+        mbeanOperationArguments.set("");
+        mbeanOperationResult.set("");
+        clearMBeanDetails();
+        clearMBeanError();
+    }
+
+    private void clearMBeanDetails() {
+        mbeanAttributes.clear();
+        mbeanOperations.clear();
+        selectedMBeanOperation.set(null);
+    }
+
+    private void clearMBeanError() {
+        mbeanError.set(false);
+        mbeanErrorMessage.set("");
+    }
+
     private void failRecording(RuntimeException exception) {
         LOGGER.error("Flight Recorder action failed", exception);
         runOnFx(() -> {
@@ -556,6 +763,16 @@ public class JvmBrowserViewModel implements AutoCloseable {
             recordingErrorMessage.set(exception.getMessage() == null ? exception.getClass().getSimpleName()
                     : exception.getMessage());
             recordingLoading.set(false);
+        });
+    }
+
+    private void failMBean(RuntimeException exception) {
+        LOGGER.error("MBean browser action failed", exception);
+        runOnFx(() -> {
+            mbeanError.set(true);
+            mbeanErrorMessage.set(exception.getMessage() == null ? exception.getClass().getSimpleName()
+                    : exception.getMessage());
+            mbeanLoading.set(false);
         });
     }
 
@@ -571,5 +788,21 @@ public class JvmBrowserViewModel implements AutoCloseable {
 
     private void runOnFx(Runnable runnable) {
         fxRunner.accept(runnable);
+    }
+
+    private static List<String> parseMBeanArguments(String arguments) {
+        if (arguments == null || arguments.isBlank()) {
+            return List.of();
+        }
+        return List.of(arguments.split(",", -1)).stream()
+                .map(String::trim)
+                .toList();
+    }
+
+    private static String displayMBeanResult(MBeanOperationResult result) {
+        if (!result.error().isBlank()) {
+            return result.error();
+        }
+        return result.value();
     }
 }

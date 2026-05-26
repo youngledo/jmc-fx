@@ -5,9 +5,9 @@ import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 
 import java.nio.file.Path;
-import java.util.ArrayList;
 import java.time.Instant;
 import java.util.ArrayDeque;
+import java.util.ArrayList;
 import java.util.List;
 import java.util.Queue;
 
@@ -23,9 +23,16 @@ import com.youngledo.jmcfx.domain.model.JvmConnectionSource;
 import com.youngledo.jmcfx.domain.model.JvmConnectionState;
 import com.youngledo.jmcfx.domain.model.JvmRuntimeSnapshot;
 import com.youngledo.jmcfx.domain.model.JvmSessionSnapshot;
+import com.youngledo.jmcfx.domain.model.MBeanAttributeInfo;
+import com.youngledo.jmcfx.domain.model.MBeanNode;
+import com.youngledo.jmcfx.domain.model.MBeanOperationInfo;
+import com.youngledo.jmcfx.domain.model.MBeanOperationParameter;
+import com.youngledo.jmcfx.domain.model.MBeanOperationRequest;
+import com.youngledo.jmcfx.domain.model.MBeanOperationResult;
 import com.youngledo.jmcfx.testsupport.FakeFlightRecordingService;
 import com.youngledo.jmcfx.testsupport.FakeJmxConnectionService;
 import com.youngledo.jmcfx.testsupport.FakeJvmDiscoveryService;
+import com.youngledo.jmcfx.testsupport.FakeMBeanBrowserService;
 
 class JvmBrowserViewModelTest {
 
@@ -438,6 +445,166 @@ class JvmBrowserViewModelTest {
         assertEquals(List.of(), recordings.discardedRecordingIds());
     }
 
+    @Test
+    void connectedSessionWithMBeanServerLoadsMBeanTree() {
+        FakeJmxConnectionService jmx = new FakeJmxConnectionService();
+        FakeMBeanBrowserService mbeans = new FakeMBeanBrowserService();
+        JvmBrowserViewModel viewModel = viewModel(new FakeJvmDiscoveryService(), jmx, mbeans);
+        JvmConnection connected = connectedWithMBeans(viewModel, jmx);
+        MBeanNode runtime = MBeanNode.objectName("java.lang:type=Runtime", "Runtime");
+        mbeans.setTree(connected.id(), List.of(MBeanNode.domain("java.lang", List.of(runtime))));
+
+        viewModel.selectedConnectionProperty().set(connected);
+
+        assertTrue(viewModel.mbeanBrowserAvailableProperty().get());
+        assertEquals(1, viewModel.mbeanTreeProperty().size());
+        assertEquals("java.lang", viewModel.mbeanTreeProperty().getFirst().name());
+        assertFalse(viewModel.mbeanLoadingProperty().get());
+        assertFalse(viewModel.mbeanErrorProperty().get());
+    }
+
+    @Test
+    void selectingMBeanObjectLoadsAttributesAndOperations() {
+        FakeJmxConnectionService jmx = new FakeJmxConnectionService();
+        FakeMBeanBrowserService mbeans = new FakeMBeanBrowserService();
+        JvmBrowserViewModel viewModel = viewModel(new FakeJvmDiscoveryService(), jmx, mbeans);
+        JvmConnection connected = connectedWithMBeans(viewModel, jmx);
+        MBeanNode runtime = MBeanNode.objectName("java.lang:type=Runtime", "Runtime");
+        MBeanAttributeInfo vmName = new MBeanAttributeInfo("VmName", "java.lang.String", true, false,
+                "OpenJDK", "");
+        MBeanOperationInfo gc = new MBeanOperationInfo("gc", "void", "", List.of());
+        mbeans.setTree(connected.id(), List.of(MBeanNode.domain("java.lang", List.of(runtime))));
+        mbeans.setAttributes(connected.id(), runtime.objectName(), List.of(vmName));
+        mbeans.setOperations(connected.id(), runtime.objectName(), List.of(gc));
+        viewModel.selectedConnectionProperty().set(connected);
+
+        viewModel.selectedMBeanProperty().set(runtime);
+
+        assertEquals(List.of(vmName), viewModel.mbeanAttributesProperty());
+        assertEquals(List.of(gc), viewModel.mbeanOperationsProperty());
+        assertEquals(gc, viewModel.selectedMBeanOperationProperty().get());
+    }
+
+    @Test
+    void refreshReloadsSelectedMBeanAttributes() {
+        FakeJmxConnectionService jmx = new FakeJmxConnectionService();
+        FakeMBeanBrowserService mbeans = new FakeMBeanBrowserService();
+        JvmBrowserViewModel viewModel = viewModel(new FakeJvmDiscoveryService(), jmx, mbeans);
+        JvmConnection connected = connectedWithMBeans(viewModel, jmx);
+        MBeanNode runtime = MBeanNode.objectName("java.lang:type=Runtime", "Runtime");
+        MBeanAttributeInfo oldValue = new MBeanAttributeInfo("Uptime", "long", true, false, "1", "");
+        MBeanAttributeInfo newValue = new MBeanAttributeInfo("Uptime", "long", true, false, "2", "");
+        mbeans.setTree(connected.id(), List.of(MBeanNode.domain("java.lang", List.of(runtime))));
+        mbeans.setAttributes(connected.id(), runtime.objectName(), List.of(oldValue));
+        mbeans.setOperations(connected.id(), runtime.objectName(), List.of());
+        viewModel.selectedConnectionProperty().set(connected);
+        viewModel.selectedMBeanProperty().set(runtime);
+        mbeans.setAttributes(connected.id(), runtime.objectName(), List.of(newValue));
+
+        viewModel.refreshSelectedMBeanAttributes();
+
+        assertEquals(List.of(newValue), viewModel.mbeanAttributesProperty());
+    }
+
+    @Test
+    void invokeSelectedOperationStoresResultAndUsesParameterTypes() {
+        FakeJmxConnectionService jmx = new FakeJmxConnectionService();
+        CapturingMBeanBrowserService mbeans = new CapturingMBeanBrowserService();
+        JvmBrowserViewModel viewModel = viewModel(new FakeJvmDiscoveryService(), jmx, mbeans);
+        JvmConnection connected = connectedWithMBeans(viewModel, jmx);
+        MBeanNode operations = MBeanNode.objectName("demo:type=Operations", "Operations");
+        MBeanOperationInfo update = new MBeanOperationInfo("update", "java.lang.String", "",
+                List.of(new MBeanOperationParameter("name", "java.lang.String", ""),
+                        new MBeanOperationParameter("count", "int", "")));
+        mbeans.setTree(connected.id(), List.of(MBeanNode.domain("demo", List.of(operations))));
+        mbeans.setAttributes(connected.id(), operations.objectName(), List.of());
+        mbeans.setOperations(connected.id(), operations.objectName(), List.of(update));
+        mbeans.setOperationResult(connected.id(), operations.objectName(), "update",
+                List.of("java.lang.String", "int"), new MBeanOperationResult(true, "updated", ""));
+        viewModel.selectedConnectionProperty().set(connected);
+        viewModel.selectedMBeanProperty().set(operations);
+        viewModel.mbeanOperationArgumentsProperty().set(" alpha , 7 ");
+
+        viewModel.invokeSelectedMBeanOperation();
+
+        assertEquals("updated", viewModel.mbeanOperationResultProperty().get());
+        assertEquals(List.of("java.lang.String", "int"), mbeans.lastRequest.parameterTypes());
+        assertEquals(List.of("alpha", "7"), mbeans.lastRequest.arguments());
+    }
+
+    @Test
+    void failedInvokeSetsMBeanError() {
+        FakeJmxConnectionService jmx = new FakeJmxConnectionService();
+        FakeMBeanBrowserService mbeans = new FakeMBeanBrowserService();
+        JvmBrowserViewModel viewModel = viewModel(new FakeJvmDiscoveryService(), jmx, mbeans);
+        JvmConnection connected = connectedWithMBeans(viewModel, jmx);
+        MBeanNode operations = MBeanNode.objectName("demo:type=Operations", "Operations");
+        MBeanOperationInfo update = new MBeanOperationInfo("update", "void", "", List.of());
+        mbeans.setTree(connected.id(), List.of(MBeanNode.domain("demo", List.of(operations))));
+        mbeans.setAttributes(connected.id(), operations.objectName(), List.of());
+        mbeans.setOperations(connected.id(), operations.objectName(), List.of(update));
+        mbeans.setOperationResult(connected.id(), operations.objectName(), "update",
+                new MBeanOperationResult(false, "", "rejected"));
+        viewModel.selectedConnectionProperty().set(connected);
+        viewModel.selectedMBeanProperty().set(operations);
+
+        viewModel.invokeSelectedMBeanOperation();
+
+        assertTrue(viewModel.mbeanErrorProperty().get());
+        assertEquals("rejected", viewModel.mbeanErrorMessageProperty().get());
+        assertEquals("rejected", viewModel.mbeanOperationResultProperty().get());
+    }
+
+    @Test
+    void selectingMBeanDomainNodeClearsDetailsAndDoesNotFail() {
+        FakeJmxConnectionService jmx = new FakeJmxConnectionService();
+        FakeMBeanBrowserService mbeans = new FakeMBeanBrowserService();
+        JvmBrowserViewModel viewModel = viewModel(new FakeJvmDiscoveryService(), jmx, mbeans);
+        JvmConnection connected = connectedWithMBeans(viewModel, jmx);
+        MBeanNode runtime = MBeanNode.objectName("java.lang:type=Runtime", "Runtime");
+        MBeanNode domain = MBeanNode.domain("java.lang", List.of(runtime));
+        mbeans.setTree(connected.id(), List.of(domain));
+        mbeans.setAttributes(connected.id(), runtime.objectName(), List.of(
+                new MBeanAttributeInfo("VmName", "java.lang.String", true, false, "OpenJDK", "")));
+        mbeans.setOperations(connected.id(), runtime.objectName(), List.of(
+                new MBeanOperationInfo("gc", "void", "", List.of())));
+        viewModel.selectedConnectionProperty().set(connected);
+        viewModel.selectedMBeanProperty().set(runtime);
+
+        viewModel.selectedMBeanProperty().set(domain);
+
+        assertTrue(viewModel.mbeanAttributesProperty().isEmpty());
+        assertTrue(viewModel.mbeanOperationsProperty().isEmpty());
+        assertEquals(null, viewModel.selectedMBeanOperationProperty().get());
+        assertFalse(viewModel.mbeanErrorProperty().get());
+    }
+
+    @Test
+    void disconnectClearsMBeanState() {
+        FakeJmxConnectionService jmx = new FakeJmxConnectionService();
+        FakeMBeanBrowserService mbeans = new FakeMBeanBrowserService();
+        JvmBrowserViewModel viewModel = viewModel(new FakeJvmDiscoveryService(), jmx, mbeans);
+        JvmConnection connected = connectedWithMBeans(viewModel, jmx);
+        MBeanNode runtime = MBeanNode.objectName("java.lang:type=Runtime", "Runtime");
+        mbeans.setTree(connected.id(), List.of(MBeanNode.domain("java.lang", List.of(runtime))));
+        mbeans.setAttributes(connected.id(), runtime.objectName(), List.of(
+                new MBeanAttributeInfo("VmName", "java.lang.String", true, false, "OpenJDK", "")));
+        mbeans.setOperations(connected.id(), runtime.objectName(), List.of(
+                new MBeanOperationInfo("gc", "void", "", List.of())));
+        viewModel.selectedConnectionProperty().set(connected);
+        viewModel.selectedMBeanProperty().set(runtime);
+
+        viewModel.disconnectSelected();
+
+        assertTrue(viewModel.mbeanTreeProperty().isEmpty());
+        assertTrue(viewModel.mbeanAttributesProperty().isEmpty());
+        assertTrue(viewModel.mbeanOperationsProperty().isEmpty());
+        assertEquals(null, viewModel.selectedMBeanProperty().get());
+        assertFalse(viewModel.mbeanBrowserAvailableProperty().get());
+        assertFalse(viewModel.mbeanLoadingProperty().get());
+        assertFalse(viewModel.mbeanErrorProperty().get());
+    }
+
     private static JvmBrowserViewModel viewModel(FakeJvmDiscoveryService discovery, FakeJmxConnectionService jmx) {
         return new JvmBrowserViewModel(discovery, jmx, new DirectJvmBrowserExecutor(), Runnable::run);
     }
@@ -446,6 +613,11 @@ class JvmBrowserViewModelTest {
             FakeFlightRecordingService recordings) {
         return new JvmBrowserViewModel(discovery, jmx, recordings, new DirectJvmBrowserExecutor(), Runnable::run,
                 path -> { });
+    }
+
+    private static JvmBrowserViewModel viewModel(FakeJvmDiscoveryService discovery, FakeJmxConnectionService jmx,
+            FakeMBeanBrowserService mbeans) {
+        return new JvmBrowserViewModel(discovery, jmx, mbeans, new DirectJvmBrowserExecutor(), Runnable::run);
     }
 
     private static JvmConnection localConnection(String id, String name) {
@@ -460,6 +632,14 @@ class JvmBrowserViewModelTest {
         recordings.setAvailable("42", true);
         recordings.addRecording("42", new FlightRecordingInfo(100, "Existing", FlightRecordingState.RUNNING,
                 1_000, 4096));
+        viewModel.connectionsProperty().add(connected);
+        return connected;
+    }
+
+    private static JvmConnection connectedWithMBeans(JvmBrowserViewModel viewModel, FakeJmxConnectionService jmx) {
+        JvmConnection connected = JvmConnection.local("42", "demo.Main", "26.0.1", true)
+                .asConnected("service:jmx:local://42");
+        jmx.setSessionSnapshot("42", sessionSnapshot(connected));
         viewModel.connectionsProperty().add(connected);
         return connected;
     }
@@ -492,6 +672,16 @@ class JvmBrowserViewModelTest {
 
         private void runNext() {
             queue.remove().run();
+        }
+    }
+
+    private static final class CapturingMBeanBrowserService extends FakeMBeanBrowserService {
+        private MBeanOperationRequest lastRequest;
+
+        @Override
+        public MBeanOperationResult invoke(MBeanOperationRequest request) {
+            lastRequest = request;
+            return super.invoke(request);
         }
     }
 }
