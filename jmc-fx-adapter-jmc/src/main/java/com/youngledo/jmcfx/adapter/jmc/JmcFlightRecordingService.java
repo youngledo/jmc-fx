@@ -21,8 +21,8 @@ import javax.management.openmbean.TabularData;
 import javax.management.openmbean.TabularDataSupport;
 import javax.management.openmbean.TabularType;
 
-import org.slf4j.Logger;
-import org.slf4j.LoggerFactory;
+import org.apache.logging.log4j.LogManager;
+import org.apache.logging.log4j.Logger;
 
 import com.youngledo.jmcfx.domain.model.FlightRecordingInfo;
 import com.youngledo.jmcfx.domain.model.FlightRecordingStartRequest;
@@ -40,7 +40,7 @@ import com.youngledo.jmcfx.domain.service.JmcFxException;
 public class JmcFlightRecordingService implements FlightRecordingService {
 
     private static final ObjectName FLIGHT_RECORDER = objectName("jdk.management.jfr:type=FlightRecorder");
-    private static final Logger LOGGER = LoggerFactory.getLogger(JmcFlightRecordingService.class);
+    private static final Logger LOGGER = LogManager.getLogger(JmcFlightRecordingService.class);
 
     private final JmxConnectionAccessor connectionAccessor;
     private final Clock clock;
@@ -147,8 +147,10 @@ public class JmcFlightRecordingService implements FlightRecordingService {
         try {
             return server.invoke(FLIGHT_RECORDER, operation, params, signature);
         } catch (JMException | IOException | RuntimeException exception) {
-            LOGGER.error("Unable to invoke Flight Recorder operation {} with signature {}",
-                    operation, Arrays.toString(signature), exception);
+            LOGGER.atError()
+                    .withThrowable(exception)
+                    .log("Unable to invoke Flight Recorder operation {} with signature {}",
+                            operation, Arrays.toString(signature));
             throw new JmcFxException("Unable to invoke Flight Recorder operation " + operation
                     + ": " + exception.getMessage(), exception);
         }
@@ -158,7 +160,9 @@ public class JmcFlightRecordingService implements FlightRecordingService {
         try {
             return server.getAttribute(FLIGHT_RECORDER, attribute);
         } catch (JMException | IOException | RuntimeException exception) {
-            LOGGER.error("Unable to read Flight Recorder attribute {}", attribute, exception);
+            LOGGER.atError()
+                    .withThrowable(exception)
+                    .log("Unable to read Flight Recorder attribute {}", attribute);
             throw new JmcFxException("Unable to read Flight Recorder attribute " + attribute
                     + ": " + exception.getMessage(), exception);
         }

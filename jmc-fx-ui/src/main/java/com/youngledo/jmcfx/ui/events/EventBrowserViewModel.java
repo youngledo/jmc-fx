@@ -4,8 +4,8 @@ import java.util.ArrayDeque;
 import java.util.List;
 import java.util.concurrent.atomic.AtomicLong;
 
-import org.slf4j.Logger;
-import org.slf4j.LoggerFactory;
+import org.apache.logging.log4j.LogManager;
+import org.apache.logging.log4j.Logger;
 
 import com.youngledo.jmcfx.domain.model.EventColumn;
 import com.youngledo.jmcfx.domain.model.EventDetails;
@@ -37,7 +37,7 @@ import javafx.collections.ObservableList;
 /// View model for the windowed event browser state workflow.
 public class EventBrowserViewModel implements AutoCloseable {
 
-    private static final Logger LOGGER = LoggerFactory.getLogger(EventBrowserViewModel.class);
+    private static final Logger LOGGER = LogManager.getLogger(EventBrowserViewModel.class);
 
     private static final int DEFAULT_VISIBLE_ROWS = 100;
     private static final int PREFETCH_BEFORE = 50;

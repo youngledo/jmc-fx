@@ -13,8 +13,8 @@ import java.util.Set;
 import java.util.function.Consumer;
 import java.util.stream.Collectors;
 
-import org.slf4j.Logger;
-import org.slf4j.LoggerFactory;
+import org.apache.logging.log4j.LogManager;
+import org.apache.logging.log4j.Logger;
 
 import com.youngledo.jmcfx.domain.model.FlightRecordingInfo;
 import com.youngledo.jmcfx.domain.model.FlightRecordingStartRequest;
@@ -41,7 +41,7 @@ import javafx.collections.ObservableList;
 
 public class JvmBrowserViewModel implements AutoCloseable {
 
-    private static final Logger LOGGER = LoggerFactory.getLogger(JvmBrowserViewModel.class);
+    private static final Logger LOGGER = LogManager.getLogger(JvmBrowserViewModel.class);
     private static final DateTimeFormatter RECORDING_NAME_TIMESTAMP =
             DateTimeFormatter.ofPattern("yyyyMMddHHmmss");
 
@@ -451,7 +451,9 @@ public class JvmBrowserViewModel implements AutoCloseable {
                     sessionLoading.set(false);
                 });
             } catch (RuntimeException exception) {
-                LOGGER.error("Unable to load JVM session for {}", connection.displayName(), exception);
+                LOGGER.atError()
+                        .withThrowable(exception)
+                        .log("Unable to load JVM session for {}", connection.displayName());
                 runOnFx(() -> {
                     selectedSession.set(null);
                     clearRecordingControl();
@@ -483,7 +485,9 @@ public class JvmBrowserViewModel implements AutoCloseable {
             recordingControlAvailable.set(true);
             clearRecordingError();
         } catch (RuntimeException exception) {
-            LOGGER.error("Unable to load Flight Recorder state for {}", snapshot.connection().displayName(), exception);
+            LOGGER.atError()
+                    .withThrowable(exception)
+                    .log("Unable to load Flight Recorder state for {}", snapshot.connection().displayName());
             clearRecordingControl();
             recordingError.set(true);
             recordingErrorMessage.set(exception.getMessage() == null
@@ -508,8 +512,10 @@ public class JvmBrowserViewModel implements AutoCloseable {
                     flightRecordingService.stopAndDiscardRecording(entry.getValue(), entry.getKey());
                 }
             } catch (RuntimeException exception) {
-                LOGGER.warn("Unable to discard Flight Recorder recording {} on {}",
-                        entry.getKey(), entry.getValue().displayName(), exception);
+                LOGGER.atWarn()
+                        .withThrowable(exception)
+                        .log("Unable to discard Flight Recorder recording {} on {}",
+                                entry.getKey(), entry.getValue().displayName());
             }
         }
     }
