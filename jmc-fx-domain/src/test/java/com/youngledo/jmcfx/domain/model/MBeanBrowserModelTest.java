@@ -47,7 +47,16 @@ class MBeanBrowserModelTest {
     @Test
     void operationRequestRequiresConnection() {
         assertThrows(NullPointerException.class,
-                () -> new MBeanOperationRequest(null, "java.lang:type=Memory", "gc", List.of()));
+                () -> new MBeanOperationRequest(null, "java.lang:type=Memory", "gc",
+                        List.of("boolean"), List.of("true")));
+
+        MBeanOperationRequest request = new MBeanOperationRequest(
+                new JvmConnection("local", "Local JVM", "service:jmx:rmi://local", true),
+                "java.lang:type=Memory", "gc", null, List.of());
+
+        assertEquals(List.of(), request.parameterTypes());
+        assertThrows(UnsupportedOperationException.class,
+                () -> request.parameterTypes().add("java.lang.String"));
     }
 
     @Test
