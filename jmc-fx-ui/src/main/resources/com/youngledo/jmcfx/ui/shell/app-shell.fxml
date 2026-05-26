@@ -136,16 +136,42 @@
                     <items>
                         <TableView fx:id="jvmsTable" styleClass="dense-table"/>
                         <VBox fx:id="jvmsSessionDetailPane" styleClass="summary-panel" spacing="6">
-                            <Label fx:id="jvmsSessionTitleLabel" styleClass="detail-title"/>
-                            <Label fx:id="jvmsRuntimeSummaryLabel" wrapText="true"/>
-                            <ListView fx:id="jvmsCapabilitiesList"/>
-                            <HBox styleClass="page-toolbar" spacing="8">
-                                <Button fx:id="jvmsStartRecordingButton"/>
-                                <Button fx:id="jvmsStopRecordingButton"/>
-                                <Label fx:id="jvmsRecordingStatusLabel" wrapText="true"/>
-                            </HBox>
-                            <TableView fx:id="jvmsRecordingsTable" styleClass="dense-table"/>
-                            <Label fx:id="jvmsSessionErrorLabel" styleClass="unavailable-state" wrapText="true"/>
+                            <TabPane fx:id="jvmsLiveTabs" VBox.vgrow="ALWAYS">
+                                <tabs>
+                                    <Tab fx:id="jvmsSessionTab" closable="false">
+                                        <VBox spacing="6">
+                                            <Label fx:id="jvmsSessionTitleLabel" styleClass="detail-title"/>
+                                            <Label fx:id="jvmsRuntimeSummaryLabel" wrapText="true"/>
+                                            <ListView fx:id="jvmsCapabilitiesList"/>
+                                            <HBox styleClass="page-toolbar" spacing="8">
+                                                <Button fx:id="jvmsStartRecordingButton"/>
+                                                <Button fx:id="jvmsStopRecordingButton"/>
+                                                <Label fx:id="jvmsRecordingStatusLabel" wrapText="true"/>
+                                            </HBox>
+                                            <TableView fx:id="jvmsRecordingsTable" styleClass="dense-table" VBox.vgrow="ALWAYS"/>
+                                            <Label fx:id="jvmsSessionErrorLabel" styleClass="unavailable-state" wrapText="true"/>
+                                        </VBox>
+                                    </Tab>
+                                    <Tab fx:id="jvmsMBeanTab" closable="false">
+                                        <SplitPane DividerPositions="0.32">
+                                            <items>
+                                                <TreeView fx:id="jvmsMBeanTree" minWidth="160" prefWidth="260"/>
+                                                <VBox spacing="6">
+                                                    <HBox styleClass="page-toolbar" spacing="8">
+                                                        <Button fx:id="jvmsRefreshMBeanButton"/>
+                                                        <TextField fx:id="jvmsMBeanOperationArgumentsField" HBox.hgrow="ALWAYS"/>
+                                                        <Button fx:id="jvmsInvokeMBeanOperationButton"/>
+                                                    </HBox>
+                                                    <TableView fx:id="jvmsMBeanAttributesTable" styleClass="dense-table" VBox.vgrow="ALWAYS"/>
+                                                    <TableView fx:id="jvmsMBeanOperationsTable" styleClass="dense-table" VBox.vgrow="ALWAYS"/>
+                                                    <Label fx:id="jvmsMBeanResultLabel" wrapText="true"/>
+                                                    <Label fx:id="jvmsMBeanErrorLabel" styleClass="unavailable-state" wrapText="true"/>
+                                                </VBox>
+                                            </items>
+                                        </SplitPane>
+                                    </Tab>
+                                </tabs>
+                            </TabPane>
                         </VBox>
                     </items>
                 </SplitPane>

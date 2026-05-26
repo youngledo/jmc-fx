@@ -134,6 +134,17 @@ class AppShellTest {
         assertEquals("TableView", elementByFxId(document, "jvmsRecordingsTable").getTagName());
         assertEquals("Label", elementByFxId(document, "jvmsRecordingStatusLabel").getTagName());
         assertEquals("Label", elementByFxId(document, "jvmsSessionErrorLabel").getTagName());
+        assertEquals("TabPane", elementByFxId(document, "jvmsLiveTabs").getTagName());
+        assertEquals("Tab", elementByFxId(document, "jvmsSessionTab").getTagName());
+        assertEquals("Tab", elementByFxId(document, "jvmsMBeanTab").getTagName());
+        assertEquals("TreeView", elementByFxId(document, "jvmsMBeanTree").getTagName());
+        assertEquals("TableView", elementByFxId(document, "jvmsMBeanAttributesTable").getTagName());
+        assertEquals("TableView", elementByFxId(document, "jvmsMBeanOperationsTable").getTagName());
+        assertEquals("TextField", elementByFxId(document, "jvmsMBeanOperationArgumentsField").getTagName());
+        assertEquals("Button", elementByFxId(document, "jvmsRefreshMBeanButton").getTagName());
+        assertEquals("Button", elementByFxId(document, "jvmsInvokeMBeanOperationButton").getTagName());
+        assertEquals("Label", elementByFxId(document, "jvmsMBeanResultLabel").getTagName());
+        assertEquals("Label", elementByFxId(document, "jvmsMBeanErrorLabel").getTagName());
         assertEquals(0, elementCountWithFxId(document, "statusLabel"));
         assertEquals(0, elementCountWithFxId(document, "taskSummaryLabel"));
         assertEquals("tlabTimelineContainer", elementByFxId(document, "tlabTimelineContainer").getAttribute("fx:id"));
@@ -372,6 +383,23 @@ class AppShellTest {
                 "Stop recording button should save and open a JFR file");
         assertTrue(controller.contains("openRecordingInBackground"),
                 "Saved recordings should reuse the existing recording open flow");
+    }
+
+    @Test
+    void jvmBrowserBindsMBeanBrowserControls() throws Exception {
+        String controller = java.nio.file.Files.readString(
+                java.nio.file.Path.of("src/main/java/com/youngledo/jmcfx/ui/shell/AppShellController.java"));
+
+        assertTrue(controller.contains("jvmsMBeanTree.setRoot"),
+                "MBean tree should be rebuilt from the ViewModel tree root");
+        assertTrue(controller.contains("selectedMBeanProperty()"),
+                "MBean tree selection should update the selected MBean property");
+        assertTrue(controller.contains("jvmsMBeanAttributesTable.setItems"),
+                "MBean attributes table should bind to ViewModel attributes");
+        assertTrue(controller.contains("jvmsMBeanOperationsTable.setItems"),
+                "MBean operations table should bind to ViewModel operations");
+        assertTrue(controller.contains("invokeSelectedMBeanOperation"),
+                "MBean invoke button should delegate to the ViewModel");
     }
 
     @Test

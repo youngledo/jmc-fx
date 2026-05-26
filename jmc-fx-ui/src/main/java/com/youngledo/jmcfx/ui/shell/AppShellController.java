@@ -57,6 +57,9 @@ import com.youngledo.jmcfx.domain.model.LeakCandidate;
 import com.youngledo.jmcfx.domain.model.LeakReferenceNode;
 import com.youngledo.jmcfx.domain.model.LockGrouping;
 import com.youngledo.jmcfx.domain.model.LockHistogram;
+import com.youngledo.jmcfx.domain.model.MBeanAttributeInfo;
+import com.youngledo.jmcfx.domain.model.MBeanNode;
+import com.youngledo.jmcfx.domain.model.MBeanOperationInfo;
 import com.youngledo.jmcfx.domain.model.RecordingSummary;
 import com.youngledo.jmcfx.domain.model.RuleResult;
 import com.youngledo.jmcfx.domain.model.Severity;
@@ -318,6 +321,9 @@ public class AppShellController {
     @FXML private Button jvmsDisconnectButton;
     @FXML private TableView<JvmConnection> jvmsTable;
     @FXML private VBox jvmsSessionDetailPane;
+    @FXML private TabPane jvmsLiveTabs;
+    @FXML private Tab jvmsSessionTab;
+    @FXML private Tab jvmsMBeanTab;
     @FXML private Label jvmsSessionTitleLabel;
     @FXML private Label jvmsRuntimeSummaryLabel;
     @FXML private ListView<JvmCapabilitySnapshot> jvmsCapabilitiesList;
@@ -326,6 +332,14 @@ public class AppShellController {
     @FXML private TableView<FlightRecordingInfo> jvmsRecordingsTable;
     @FXML private Label jvmsRecordingStatusLabel;
     @FXML private Label jvmsSessionErrorLabel;
+    @FXML private TreeView<MBeanNode> jvmsMBeanTree;
+    @FXML private TableView<MBeanAttributeInfo> jvmsMBeanAttributesTable;
+    @FXML private TableView<MBeanOperationInfo> jvmsMBeanOperationsTable;
+    @FXML private TextField jvmsMBeanOperationArgumentsField;
+    @FXML private Button jvmsRefreshMBeanButton;
+    @FXML private Button jvmsInvokeMBeanOperationButton;
+    @FXML private Label jvmsMBeanResultLabel;
+    @FXML private Label jvmsMBeanErrorLabel;
     @FXML private Label profilingTitleLabel;
     @FXML private TableView<HotMethod> profilingTable;
     @FXML private TabPane profilingTreeTabs;
@@ -697,6 +711,7 @@ public class AppShellController {
         configureAnalysisTable();
         configureJvmBrowserTable();
         configureJvmRecordingsTable();
+        configureMBeanBrowser();
         bindJvmBrowser();
         viewModel.selectedSectionProperty().addListener((observable, oldValue, newValue) -> {
             if ("jvms".equals(newValue)) {
@@ -869,6 +884,55 @@ public class AppShellController {
         jvmsTable.getColumns().setAll(List.of(pidCol, nameCol, javaVersionCol, stateCol, sourceCol));
     }
 
+    private void configureMBeanBrowser() {
+        jvmsMBeanTree.setShowRoot(false);
+        jvmsMBeanTree.setRoot(new TreeItem<>());
+        jvmsMBeanTree.setCellFactory(tree -> new javafx.scene.control.TreeCell<>() {
+            @Override
+            protected void updateItem(MBeanNode item, boolean empty) {
+                super.updateItem(item, empty);
+                setText(empty || item == null ? null : item.name());
+            }
+        });
+
+        jvmsMBeanAttributesTable.setPlaceholder(emptyTablePlaceholder());
+        TableColumn<MBeanAttributeInfo, String> attributeNameCol =
+                localizedColumn("jvms.mbeans.attribute.name");
+        attributeNameCol.setPrefWidth(180);
+        attributeNameCol.setCellValueFactory(cell -> new ReadOnlyStringWrapper(cell.getValue().name()));
+
+        TableColumn<MBeanAttributeInfo, String> attributeTypeCol =
+                localizedColumn("jvms.mbeans.attribute.type");
+        attributeTypeCol.setPrefWidth(220);
+        attributeTypeCol.setCellValueFactory(cell -> new ReadOnlyStringWrapper(cell.getValue().type()));
+
+        TableColumn<MBeanAttributeInfo, String> attributeValueCol =
+                localizedColumn("jvms.mbeans.attribute.value");
+        attributeValueCol.setPrefWidth(360);
+        attributeValueCol.setCellValueFactory(cell -> new ReadOnlyStringWrapper(formatMBeanAttributeValue(cell.getValue())));
+
+        jvmsMBeanAttributesTable.getColumns().setAll(List.of(attributeNameCol, attributeTypeCol, attributeValueCol));
+
+        jvmsMBeanOperationsTable.setPlaceholder(emptyTablePlaceholder());
+        TableColumn<MBeanOperationInfo, String> operationNameCol =
+                localizedColumn("jvms.mbeans.operation.name");
+        operationNameCol.setPrefWidth(180);
+        operationNameCol.setCellValueFactory(cell -> new ReadOnlyStringWrapper(cell.getValue().name()));
+
+        TableColumn<MBeanOperationInfo, String> operationSignatureCol =
+                localizedColumn("jvms.mbeans.operation.signature");
+        operationSignatureCol.setPrefWidth(360);
+        operationSignatureCol.setCellValueFactory(cell -> new ReadOnlyStringWrapper(formatMBeanOperationSignature(cell.getValue())));
+
+        TableColumn<MBeanOperationInfo, String> operationReturnTypeCol =
+                localizedColumn("jvms.mbeans.operation.returnType");
+        operationReturnTypeCol.setPrefWidth(180);
+        operationReturnTypeCol.setCellValueFactory(cell -> new ReadOnlyStringWrapper(cell.getValue().returnType()));
+
+        jvmsMBeanOperationsTable.getColumns().setAll(
+                List.of(operationNameCol, operationSignatureCol, operationReturnTypeCol));
+    }
+
     private void bindJvmBrowser() {
         if (jvmBrowserViewModel == null) {
             jvmsTable.setItems(FXCollections.emptyObservableList());
@@ -879,6 +943,12 @@ public class AppShellController {
             jvmsStartRecordingButton.setDisable(true);
             jvmsStopRecordingButton.setDisable(true);
             jvmsRecordingsTable.setItems(FXCollections.emptyObservableList());
+            jvmsMBeanAttributesTable.setItems(FXCollections.emptyObservableList());
+            jvmsMBeanOperationsTable.setItems(FXCollections.emptyObservableList());
+            jvmsMBeanTree.setRoot(new TreeItem<>());
+            jvmsMBeanOperationArgumentsField.setDisable(true);
+            jvmsRefreshMBeanButton.setDisable(true);
+            jvmsInvokeMBeanOperationButton.setDisable(true);
             jvmsSessionDetailPane.setVisible(false);
             jvmsSessionDetailPane.setManaged(false);
             return;
@@ -953,17 +1023,101 @@ public class AppShellController {
                 jvmBrowserViewModel.recordingErrorProperty(),
                 jvmBrowserViewModel.recordingErrorMessageProperty(),
                 jvmBrowserViewModel.recordingStatusMessageProperty()));
+        bindMBeanBrowser();
 
         jvmsRefreshButton.setOnAction(event -> refreshJvmBrowser());
         jvmsConnectButton.setOnAction(event -> jvmBrowserViewModel.connectSelectedOrManual());
         jvmsDisconnectButton.setOnAction(event -> jvmBrowserViewModel.disconnectSelected());
         jvmsStartRecordingButton.setOnAction(event -> jvmBrowserViewModel.startFlightRecording());
         jvmsStopRecordingButton.setOnAction(event -> saveSelectedFlightRecording());
+        jvmsRefreshMBeanButton.setOnAction(event -> jvmBrowserViewModel.refreshSelectedMBeanAttributes());
+        jvmsInvokeMBeanOperationButton.setOnAction(event -> jvmBrowserViewModel.invokeSelectedMBeanOperation());
         jvmsTable.setOnMouseClicked(event -> {
             if (event.getButton() == MouseButton.PRIMARY && event.getClickCount() == 2) {
                 jvmBrowserViewModel.connectSelected();
             }
         });
+    }
+
+    private void bindMBeanBrowser() {
+        jvmsMBeanAttributesTable.setItems(jvmBrowserViewModel.mbeanAttributesProperty());
+        jvmsMBeanOperationsTable.setItems(jvmBrowserViewModel.mbeanOperationsProperty());
+        jvmBrowserViewModel.mbeanTreeProperty().addListener(
+                (ListChangeListener<MBeanNode>) change -> rebuildMBeanTree());
+        rebuildMBeanTree();
+
+        jvmsMBeanTree.getSelectionModel().selectedItemProperty().addListener((observable, oldValue, newValue) ->
+                jvmBrowserViewModel.selectedMBeanProperty().set(newValue == null ? null : newValue.getValue()));
+        jvmBrowserViewModel.selectedMBeanProperty().addListener((observable, oldValue, newValue) ->
+                selectMBeanTreeNode(newValue));
+
+        jvmsMBeanOperationsTable.getSelectionModel().selectedItemProperty().addListener((observable, oldValue, newValue) ->
+                jvmBrowserViewModel.selectedMBeanOperationProperty().set(newValue));
+        jvmBrowserViewModel.selectedMBeanOperationProperty().addListener((observable, oldValue, newValue) ->
+                jvmsMBeanOperationsTable.getSelectionModel().select(newValue));
+        jvmsMBeanOperationArgumentsField.textProperty().bindBidirectional(
+                jvmBrowserViewModel.mbeanOperationArgumentsProperty());
+        jvmsMBeanResultLabel.textProperty().bind(jvmBrowserViewModel.mbeanOperationResultProperty());
+        jvmsMBeanErrorLabel.textProperty().bind(jvmBrowserViewModel.mbeanErrorMessageProperty());
+        jvmsMBeanErrorLabel.visibleProperty().bind(jvmBrowserViewModel.mbeanErrorProperty());
+        jvmsMBeanErrorLabel.managedProperty().bind(jvmsMBeanErrorLabel.visibleProperty());
+
+        jvmsMBeanTree.disableProperty().bind(jvmBrowserViewModel.mbeanBrowserAvailableProperty().not());
+        jvmsMBeanAttributesTable.disableProperty().bind(jvmBrowserViewModel.mbeanBrowserAvailableProperty().not());
+        jvmsMBeanOperationsTable.disableProperty().bind(jvmBrowserViewModel.mbeanBrowserAvailableProperty().not());
+        jvmsMBeanOperationArgumentsField.disableProperty().bind(jvmBrowserViewModel.mbeanBrowserAvailableProperty().not()
+                .or(jvmBrowserViewModel.mbeanLoadingProperty()));
+        jvmsRefreshMBeanButton.disableProperty().bind(jvmBrowserViewModel.mbeanBrowserAvailableProperty().not()
+                .or(jvmBrowserViewModel.selectedMBeanProperty().isNull())
+                .or(jvmBrowserViewModel.mbeanLoadingProperty()));
+        jvmsInvokeMBeanOperationButton.disableProperty().bind(jvmBrowserViewModel.mbeanBrowserAvailableProperty().not()
+                .or(jvmBrowserViewModel.selectedMBeanOperationProperty().isNull())
+                .or(jvmBrowserViewModel.mbeanLoadingProperty()));
+    }
+
+    private void rebuildMBeanTree() {
+        TreeItem<MBeanNode> rootItem = new TreeItem<>(MBeanNode.domain(i18n.get("jvms.mbeans.root"),
+                jvmBrowserViewModel.mbeanTreeProperty()));
+        jvmBrowserViewModel.mbeanTreeProperty().stream()
+                .map(this::toMBeanTreeItem)
+                .forEach(rootItem.getChildren()::add);
+        rootItem.setExpanded(true);
+        jvmsMBeanTree.setRoot(rootItem);
+        selectMBeanTreeNode(jvmBrowserViewModel.selectedMBeanProperty().get());
+    }
+
+    private TreeItem<MBeanNode> toMBeanTreeItem(MBeanNode node) {
+        TreeItem<MBeanNode> item = new TreeItem<>(node);
+        node.children().stream()
+                .map(this::toMBeanTreeItem)
+                .forEach(item.getChildren()::add);
+        item.setExpanded(node.domain());
+        return item;
+    }
+
+    private void selectMBeanTreeNode(MBeanNode node) {
+        TreeItem<MBeanNode> item = findMBeanTreeItem(jvmsMBeanTree.getRoot(), node);
+        if (item == null) {
+            jvmsMBeanTree.getSelectionModel().clearSelection();
+        } else {
+            jvmsMBeanTree.getSelectionModel().select(item);
+        }
+    }
+
+    private TreeItem<MBeanNode> findMBeanTreeItem(TreeItem<MBeanNode> item, MBeanNode node) {
+        if (item == null || node == null) {
+            return null;
+        }
+        if (node.equals(item.getValue())) {
+            return item;
+        }
+        for (TreeItem<MBeanNode> child : item.getChildren()) {
+            TreeItem<MBeanNode> found = findMBeanTreeItem(child, node);
+            if (found != null) {
+                return found;
+            }
+        }
+        return null;
     }
 
     private void configureJvmRecordingsTable() {
@@ -1029,6 +1183,22 @@ public class AppShellController {
 
     private String formatFlightRecordingState(com.youngledo.jmcfx.domain.model.FlightRecordingState state) {
         return i18n.get("jvms.recordings.state." + state.name().toLowerCase(java.util.Locale.ROOT));
+    }
+
+    private static String formatMBeanAttributeValue(MBeanAttributeInfo attribute) {
+        if (attribute == null) {
+            return "";
+        }
+        return attribute.error().isBlank() ? attribute.value() : attribute.error();
+    }
+
+    private static String formatMBeanOperationSignature(MBeanOperationInfo operation) {
+        if (operation == null) {
+            return "";
+        }
+        return operation.parameters().stream()
+                .map(parameter -> parameter.name() + ": " + parameter.type())
+                .collect(java.util.stream.Collectors.joining(", "));
     }
 
     private String formatJvmRuntime(JvmSessionSnapshot snapshot) {
@@ -1910,6 +2080,11 @@ public class AppShellController {
         jvmsManualUrlField.promptTextProperty().bind(i18n.text("jvms.manualUrlPrompt"));
         jvmsConnectButton.textProperty().bind(i18n.text("jvms.connect"));
         jvmsDisconnectButton.textProperty().bind(i18n.text("jvms.disconnect"));
+        jvmsSessionTab.textProperty().bind(i18n.text("jvms.session.tab"));
+        jvmsMBeanTab.textProperty().bind(i18n.text("jvms.mbeans.tab"));
+        jvmsRefreshMBeanButton.textProperty().bind(i18n.text("jvms.mbeans.refresh"));
+        jvmsInvokeMBeanOperationButton.textProperty().bind(i18n.text("jvms.mbeans.invoke"));
+        jvmsMBeanOperationArgumentsField.promptTextProperty().bind(i18n.text("jvms.mbeans.arguments"));
         profilingTitleLabel.textProperty().bind(i18n.text("profiling.title"));
         profilingCallersTab.textProperty().bind(i18n.text("profiling.tab.callers"));
         profilingCalleesTab.textProperty().bind(i18n.text("profiling.tab.callees"));
