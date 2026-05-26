@@ -605,6 +605,57 @@ class JvmBrowserViewModelTest {
         assertFalse(viewModel.mbeanErrorProperty().get());
     }
 
+    @Test
+    void staleMBeanTreeFailureAfterDisconnectDoesNotSetError() {
+        FakeJmxConnectionService jmx = new FakeJmxConnectionService();
+        FakeMBeanBrowserService mbeans = new FakeMBeanBrowserService();
+        mbeans.failWith(new IllegalStateException("stale tree"));
+        QueuedJvmBrowserExecutor executor = new QueuedJvmBrowserExecutor();
+        JvmBrowserViewModel viewModel = new JvmBrowserViewModel(new FakeJvmDiscoveryService(), jmx, mbeans,
+                executor, Runnable::run);
+        JvmConnection connected = connectedWithMBeans(viewModel, jmx);
+        viewModel.selectedConnectionProperty().set(connected);
+        executor.runNext();
+
+        viewModel.disconnectSelected();
+        executor.runLast();
+        executor.runNext();
+
+        assertFalse(viewModel.mbeanErrorProperty().get());
+        assertEquals("", viewModel.mbeanErrorMessageProperty().get());
+        assertFalse(viewModel.mbeanLoadingProperty().get());
+    }
+
+    @Test
+    void selectingDomainWhileMBeanDetailsLoadIsInFlightIgnoresStaleCompletion() {
+        FakeJmxConnectionService jmx = new FakeJmxConnectionService();
+        FakeMBeanBrowserService mbeans = new FakeMBeanBrowserService();
+        QueuedJvmBrowserExecutor executor = new QueuedJvmBrowserExecutor();
+        JvmBrowserViewModel viewModel = new JvmBrowserViewModel(new FakeJvmDiscoveryService(), jmx, mbeans,
+                executor, Runnable::run);
+        JvmConnection connected = connectedWithMBeans(viewModel, jmx);
+        MBeanNode runtime = MBeanNode.objectName("java.lang:type=Runtime", "Runtime");
+        MBeanNode domain = MBeanNode.domain("java.lang", List.of(runtime));
+        MBeanAttributeInfo vmName = new MBeanAttributeInfo("VmName", "java.lang.String", true, false,
+                "OpenJDK", "");
+        MBeanOperationInfo gc = new MBeanOperationInfo("gc", "void", "", List.of());
+        mbeans.setTree(connected.id(), List.of(domain));
+        mbeans.setAttributes(connected.id(), runtime.objectName(), List.of(vmName));
+        mbeans.setOperations(connected.id(), runtime.objectName(), List.of(gc));
+        viewModel.selectedConnectionProperty().set(connected);
+        executor.runNext();
+        executor.runNext();
+        viewModel.selectedMBeanProperty().set(runtime);
+
+        viewModel.selectedMBeanProperty().set(domain);
+        executor.runNext();
+
+        assertFalse(viewModel.mbeanLoadingProperty().get());
+        assertTrue(viewModel.mbeanAttributesProperty().isEmpty());
+        assertTrue(viewModel.mbeanOperationsProperty().isEmpty());
+        assertFalse(viewModel.mbeanErrorProperty().get());
+    }
+
     private static JvmBrowserViewModel viewModel(FakeJvmDiscoveryService discovery, FakeJmxConnectionService jmx) {
         return new JvmBrowserViewModel(discovery, jmx, new DirectJvmBrowserExecutor(), Runnable::run);
     }
@@ -672,6 +723,13 @@ class JvmBrowserViewModelTest {
 
         private void runNext() {
             queue.remove().run();
+        }
+
+        private void runLast() {
+            List<Runnable> queued = new ArrayList<>(queue);
+            queue.clear();
+            queued.getLast().run();
+            queue.addAll(queued.subList(0, queued.size() - 1));
         }
     }
 

@@ -91,6 +91,7 @@ public class JvmBrowserViewModel implements AutoCloseable {
     private final BooleanProperty mbeanError = new SimpleBooleanProperty(false);
     private final Map<Long, JvmConnection> sessionStartedRecordings = new HashMap<>();
     private int pendingWorkCount;
+    private long mbeanRequestGeneration;
 
     public JvmBrowserViewModel(JvmDiscoveryService discoveryService, JmxConnectionService connectionService) {
         this(discoveryService, connectionService, null, new VirtualThreadJvmBrowserExecutor(),
@@ -394,12 +395,16 @@ public class JvmBrowserViewModel implements AutoCloseable {
         List<String> arguments = parseMBeanArguments(mbeanOperationArguments.get());
         MBeanOperationRequest request = new MBeanOperationRequest(snapshot.connection(), node.objectName(),
                 operation.name(), parameterTypes, arguments);
+        long generation = nextMBeanRequestGeneration();
         mbeanLoading.set(true);
         clearMBeanError();
         executor.execute(() -> {
             try {
                 MBeanOperationResult result = mBeanBrowserService.invoke(request);
                 runOnFx(() -> {
+                    if (!isCurrentMBeanRequest(generation, snapshot, node)) {
+                        return;
+                    }
                     if (result.success()) {
                         mbeanOperationResult.set(result.value());
                         clearMBeanError();
@@ -412,7 +417,7 @@ public class JvmBrowserViewModel implements AutoCloseable {
                     mbeanLoading.set(false);
                 });
             } catch (RuntimeException exception) {
-                failMBean(exception);
+                failMBean(generation, snapshot, node, exception);
             }
         });
     }
@@ -628,6 +633,7 @@ public class JvmBrowserViewModel implements AutoCloseable {
             clearMBeanBrowser();
             return;
         }
+        long generation = nextMBeanRequestGeneration();
         mbeanBrowserAvailable.set(true);
         mbeanLoading.set(true);
         clearMBeanError();
@@ -636,7 +642,7 @@ public class JvmBrowserViewModel implements AutoCloseable {
             try {
                 List<MBeanNode> tree = mBeanBrowserService.tree(snapshot.connection());
                 runOnFx(() -> {
-                    if (selectedSession.get() != snapshot) {
+                    if (!isCurrentMBeanSessionRequest(generation, snapshot)) {
                         return;
                     }
                     mbeanTree.setAll(tree);
@@ -644,7 +650,7 @@ public class JvmBrowserViewModel implements AutoCloseable {
                     clearMBeanError();
                 });
             } catch (RuntimeException exception) {
-                failMBean(exception);
+                failMBean(generation, snapshot, null, exception);
             }
         });
     }
@@ -652,9 +658,14 @@ public class JvmBrowserViewModel implements AutoCloseable {
     private void loadSelectedMBeanDetails(MBeanNode node) {
         JvmSessionSnapshot snapshot = selectedSession.get();
         if (!canUseMBeanBrowser(snapshot) || node == null || node.domain()) {
+            nextMBeanRequestGeneration();
             clearMBeanDetails();
+            mbeanOperationResult.set("");
+            mbeanLoading.set(false);
+            clearMBeanError();
             return;
         }
+        long generation = nextMBeanRequestGeneration();
         mbeanLoading.set(true);
         clearMBeanError();
         mbeanOperationResult.set("");
@@ -665,7 +676,7 @@ public class JvmBrowserViewModel implements AutoCloseable {
                 List<MBeanOperationInfo> operations = mBeanBrowserService.operations(snapshot.connection(),
                         node.objectName());
                 runOnFx(() -> {
-                    if (selectedSession.get() != snapshot || selectedMBean.get() != node) {
+                    if (!isCurrentMBeanRequest(generation, snapshot, node)) {
                         return;
                     }
                     mbeanAttributes.setAll(attributes);
@@ -675,7 +686,7 @@ public class JvmBrowserViewModel implements AutoCloseable {
                     clearMBeanError();
                 });
             } catch (RuntimeException exception) {
-                failMBean(exception);
+                failMBean(generation, snapshot, node, exception);
             }
         });
     }
@@ -735,6 +746,7 @@ public class JvmBrowserViewModel implements AutoCloseable {
     }
 
     private void clearMBeanBrowser() {
+        nextMBeanRequestGeneration();
         mbeanTree.clear();
         selectedMBean.set(null);
         mbeanBrowserAvailable.set(false);
@@ -766,9 +778,16 @@ public class JvmBrowserViewModel implements AutoCloseable {
         });
     }
 
-    private void failMBean(RuntimeException exception) {
+    private void failMBean(long generation, JvmSessionSnapshot snapshot, MBeanNode node, RuntimeException exception) {
         LOGGER.error("MBean browser action failed", exception);
         runOnFx(() -> {
+            if (node == null) {
+                if (!isCurrentMBeanSessionRequest(generation, snapshot)) {
+                    return;
+                }
+            } else if (!isCurrentMBeanRequest(generation, snapshot, node)) {
+                return;
+            }
             mbeanError.set(true);
             mbeanErrorMessage.set(exception.getMessage() == null ? exception.getClass().getSimpleName()
                     : exception.getMessage());
@@ -788,6 +807,18 @@ public class JvmBrowserViewModel implements AutoCloseable {
 
     private void runOnFx(Runnable runnable) {
         fxRunner.accept(runnable);
+    }
+
+    private long nextMBeanRequestGeneration() {
+        return ++mbeanRequestGeneration;
+    }
+
+    private boolean isCurrentMBeanSessionRequest(long generation, JvmSessionSnapshot snapshot) {
+        return mbeanRequestGeneration == generation && selectedSession.get() == snapshot && mbeanBrowserAvailable.get();
+    }
+
+    private boolean isCurrentMBeanRequest(long generation, JvmSessionSnapshot snapshot, MBeanNode node) {
+        return isCurrentMBeanSessionRequest(generation, snapshot) && selectedMBean.get() == node;
     }
 
     private static List<String> parseMBeanArguments(String arguments) {
