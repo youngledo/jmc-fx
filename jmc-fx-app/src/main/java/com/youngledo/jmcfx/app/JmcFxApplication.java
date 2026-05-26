@@ -26,16 +26,23 @@ import javafx.application.Application;
 import javafx.scene.Scene;
 import javafx.stage.Stage;
 
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
+
 /// JavaFX entry point for JMC FX.
 ///
 /// Startup is limited to theme selection, service assembly, shell creation,
 /// stylesheet ordering, and primary stage lifecycle.
 public class JmcFxApplication extends Application {
 
+    private static final Logger LOGGER = LoggerFactory.getLogger(JmcFxApplication.class);
+
     private AppShell shell;
 
     @Override
     public void start(Stage stage) {
+        Thread.setDefaultUncaughtExceptionHandler((thread, exception) ->
+                LOGGER.error("Uncaught exception on thread {}", thread.getName(), exception));
         Locale systemLocale = Locale.getDefault();
         Locale.setDefault(Locale.ENGLISH);
         JmcJmxConnectionService jmxConnectionService = new JmcJmxConnectionService();

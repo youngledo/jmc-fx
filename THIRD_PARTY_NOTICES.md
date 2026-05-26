@@ -27,3 +27,13 @@ Ikonli dependencies must be reviewed when runtime packaging is added.
 
 TestFX is used for testing and must be reviewed if test artifacts are
 redistributed.
+
+## SLF4J
+
+SLF4J is used as the logging API. Review its license terms before redistributing
+runtime artifacts.
+
+## Apache Log4j 2
+
+Apache Log4j 2 is used as the runtime logging implementation. Review its Apache
+License 2.0 terms and bundled notices before redistributing runtime artifacts.

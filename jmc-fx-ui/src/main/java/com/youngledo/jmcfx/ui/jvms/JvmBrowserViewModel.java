@@ -8,6 +8,9 @@ import java.util.Set;
 import java.util.function.Consumer;
 import java.util.stream.Collectors;
 
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
+
 import com.youngledo.jmcfx.domain.model.FlightRecordingInfo;
 import com.youngledo.jmcfx.domain.model.FlightRecordingStartRequest;
 import com.youngledo.jmcfx.domain.model.FlightRecordingStopRequest;
@@ -31,6 +34,8 @@ import javafx.collections.FXCollections;
 import javafx.collections.ObservableList;
 
 public class JvmBrowserViewModel implements AutoCloseable {
+
+    private static final Logger LOGGER = LoggerFactory.getLogger(JvmBrowserViewModel.class);
 
     private final JvmDiscoveryService discoveryService;
     private final JmxConnectionService connectionService;
@@ -430,6 +435,7 @@ public class JvmBrowserViewModel implements AutoCloseable {
                     sessionLoading.set(false);
                 });
             } catch (RuntimeException exception) {
+                LOGGER.error("Unable to load JVM session for {}", connection.displayName(), exception);
                 runOnFx(() -> {
                     selectedSession.set(null);
                     clearRecordingControl();
@@ -461,6 +467,7 @@ public class JvmBrowserViewModel implements AutoCloseable {
             recordingControlAvailable.set(true);
             clearRecordingError();
         } catch (RuntimeException exception) {
+            LOGGER.error("Unable to load Flight Recorder state for {}", snapshot.connection().displayName(), exception);
             clearRecordingControl();
             recordingError.set(true);
             recordingErrorMessage.set(exception.getMessage() == null
@@ -488,6 +495,7 @@ public class JvmBrowserViewModel implements AutoCloseable {
     }
 
     private void failRecording(RuntimeException exception) {
+        LOGGER.error("Flight Recorder action failed", exception);
         runOnFx(() -> {
             recordingError.set(true);
             recordingErrorMessage.set(exception.getMessage() == null ? exception.getClass().getSimpleName()
@@ -497,6 +505,7 @@ public class JvmBrowserViewModel implements AutoCloseable {
     }
 
     private void fail(RuntimeException exception) {
+        LOGGER.error("JVM browser action failed", exception);
         runOnFx(() -> {
             finishWork();
             error.set(true);

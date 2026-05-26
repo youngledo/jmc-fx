@@ -166,12 +166,16 @@ import org.kordamp.ikonli.Ikon;
 import org.kordamp.ikonli.javafx.FontIcon;
 import org.kordamp.ikonli.material2.Material2AL;
 import org.kordamp.ikonli.material2.Material2MZ;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 /// FXML controller for `app-shell.fxml`.
 ///
 /// The controller wires shell actions and bindings while feature behavior stays
 /// in view models.
 public class AppShellController {
+
+    private static final Logger LOGGER = LoggerFactory.getLogger(AppShellController.class);
 
     static final int MIN_EVENT_TYPES_WIDTH = 180;
     static final int DEFAULT_EVENT_TYPES_WIDTH = 260;
@@ -2307,6 +2311,7 @@ public class AppShellController {
                 PreparedRecordingWorkspace preparedWorkspace = prepareRecordingWorkspace(path);
                 onFxThread(() -> attachPreparedRecordingWorkspace(preparedWorkspace));
             } catch (RuntimeException exception) {
+                LOGGER.error("Unable to open recording {}", path, exception);
                 onFxThread(() -> showOpenRecordingFailure(exception));
             }
         });
@@ -2447,6 +2452,8 @@ public class AppShellController {
                     onFxThread(() -> setBackgroundWorkVisible(false));
                 }
             } catch (RuntimeException exception) {
+                LOGGER.error("Unable to load recording section {} for {}",
+                        canonicalSectionId, workspace.recording().path(), exception);
                 boolean stillLoading = workspace.markSectionLoadFailed(canonicalSectionId);
                 onFxThread(() -> viewModel.showTaskSummary(i18n.format("taskSummary.sectionFailed",
                         displayNameForSection(sectionId))));

@@ -3,9 +3,14 @@ package com.youngledo.jmcfx.ui.util;
 import java.util.concurrent.CountDownLatch;
 import java.util.concurrent.atomic.AtomicReference;
 
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
+
 import javafx.application.Platform;
 
 public final class FxDispatch {
+
+    private static final Logger LOGGER = LoggerFactory.getLogger(FxDispatch.class);
 
     private FxDispatch() {
     }
@@ -23,8 +28,10 @@ public final class FxDispatch {
                 try {
                     runnable.run();
                 } catch (RuntimeException exception) {
+                    LOGGER.error("Runtime exception on JavaFX dispatch", exception);
                     runtimeException.set(exception);
                 } catch (Error thrown) {
+                    LOGGER.error("Error on JavaFX dispatch", thrown);
                     error.set(thrown);
                 } finally {
                     finished.countDown();

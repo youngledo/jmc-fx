@@ -2,6 +2,7 @@ package com.youngledo.jmcfx.adapter.jmc;
 
 import java.io.IOException;
 import java.nio.file.Path;
+import java.util.Arrays;
 import java.util.List;
 import java.util.Map;
 import java.util.Objects;
@@ -11,6 +12,9 @@ import javax.management.MBeanServerConnection;
 import javax.management.MalformedObjectNameException;
 import javax.management.ObjectName;
 import javax.management.openmbean.CompositeData;
+
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 import com.youngledo.jmcfx.domain.model.FlightRecordingInfo;
 import com.youngledo.jmcfx.domain.model.FlightRecordingStartRequest;
@@ -28,6 +32,7 @@ import com.youngledo.jmcfx.domain.service.JmcFxException;
 public class JmcFlightRecordingService implements FlightRecordingService {
 
     private static final ObjectName FLIGHT_RECORDER = objectName("jdk.management.jfr:type=FlightRecorder");
+    private static final Logger LOGGER = LoggerFactory.getLogger(JmcFlightRecordingService.class);
 
     private final JmxConnectionAccessor connectionAccessor;
 
@@ -109,6 +114,8 @@ public class JmcFlightRecordingService implements FlightRecordingService {
         try {
             return server.invoke(FLIGHT_RECORDER, operation, params, signature);
         } catch (JMException | IOException | RuntimeException exception) {
+            LOGGER.error("Unable to invoke Flight Recorder operation {} with signature {}",
+                    operation, Arrays.toString(signature), exception);
             throw new JmcFxException("Unable to invoke Flight Recorder operation " + operation
                     + ": " + exception.getMessage(), exception);
         }

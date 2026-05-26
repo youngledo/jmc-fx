@@ -4,6 +4,9 @@ import java.util.ArrayDeque;
 import java.util.List;
 import java.util.concurrent.atomic.AtomicLong;
 
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
+
 import com.youngledo.jmcfx.domain.model.EventColumn;
 import com.youngledo.jmcfx.domain.model.EventDetails;
 import com.youngledo.jmcfx.domain.model.EventFieldDescriptor;
@@ -33,6 +36,8 @@ import javafx.collections.ObservableList;
 
 /// View model for the windowed event browser state workflow.
 public class EventBrowserViewModel implements AutoCloseable {
+
+    private static final Logger LOGGER = LoggerFactory.getLogger(EventBrowserViewModel.class);
 
     private static final int DEFAULT_VISIBLE_ROWS = 100;
     private static final int PREFETCH_BEFORE = 50;
@@ -458,6 +463,7 @@ public class EventBrowserViewModel implements AutoCloseable {
     }
 
     private void handleFailure(long sequence, RuntimeException exception) {
+        LOGGER.error("Unable to load event browser data", exception);
         onFxThread(() -> {
             if (stale(sequence)) {
                 return;
