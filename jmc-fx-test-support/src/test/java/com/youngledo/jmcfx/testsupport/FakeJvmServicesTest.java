@@ -4,10 +4,14 @@ import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertThrows;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 
+import java.time.Instant;
 import java.util.List;
 
 import org.junit.jupiter.api.Test;
 
+import com.youngledo.jmcfx.domain.model.DiagnosticCommandInfo;
+import com.youngledo.jmcfx.domain.model.DiagnosticCommandRequest;
+import com.youngledo.jmcfx.domain.model.DiagnosticCommandResult;
 import com.youngledo.jmcfx.domain.model.JvmCapability;
 import com.youngledo.jmcfx.domain.model.JvmCapabilitySnapshot;
 import com.youngledo.jmcfx.domain.model.JvmCapabilityStatus;
@@ -16,6 +20,9 @@ import com.youngledo.jmcfx.domain.model.JvmConnectionSource;
 import com.youngledo.jmcfx.domain.model.JvmConnectionState;
 import com.youngledo.jmcfx.domain.model.JvmRuntimeSnapshot;
 import com.youngledo.jmcfx.domain.model.JvmSessionSnapshot;
+import com.youngledo.jmcfx.domain.model.LiveMetricDefinition;
+import com.youngledo.jmcfx.domain.model.LiveMetricKind;
+import com.youngledo.jmcfx.domain.model.LiveMetricSnapshot;
 import com.youngledo.jmcfx.domain.model.MBeanAttributeInfo;
 import com.youngledo.jmcfx.domain.model.MBeanNode;
 import com.youngledo.jmcfx.domain.model.MBeanOperationInfo;
@@ -168,6 +175,40 @@ class FakeJvmServicesTest {
                 objectName, "update", List.of("java.lang.String"), List.of("alpha"))).value());
         assertEquals("int", service.invoke(new MBeanOperationRequest(connection,
                 objectName, "update", List.of("int"), List.of("7"))).value());
+    }
+
+    @Test
+    void fakeDiagnosticCommandServiceReturnsCommandsAndCapturesRequest() {
+        FakeDiagnosticCommandService service = new FakeDiagnosticCommandService();
+        JvmConnection connection = JvmConnection.local("42", "demo.Main", "26", true)
+                .asConnected("service:jmx:local://42");
+        DiagnosticCommandInfo command = new DiagnosticCommandInfo("threadPrint", "Thread Print", "",
+                List.of());
+        service.setCommands("42", List.of(command));
+        service.setResult("42", "threadPrint", new DiagnosticCommandResult(true, "dump", ""));
+
+        DiagnosticCommandResult result = service.execute(new DiagnosticCommandRequest(connection,
+                "threadPrint", List.of("-l")));
+
+        assertEquals(List.of(command), service.commands(connection));
+        assertEquals("dump", result.output());
+        assertEquals(List.of("-l"), service.lastRequest().arguments());
+    }
+
+    @Test
+    void fakeLiveMetricServiceReturnsDefinitionsAndSnapshots() {
+        FakeLiveMetricService service = new FakeLiveMetricService();
+        JvmConnection connection = JvmConnection.local("42", "demo.Main", "26", true)
+                .asConnected("service:jmx:local://42");
+        LiveMetricDefinition definition = new LiveMetricDefinition(
+                LiveMetricKind.HEAP_USED_PERCENT, "Heap Used", "%", 80.0);
+        LiveMetricSnapshot snapshot = new LiveMetricSnapshot(
+                LiveMetricKind.HEAP_USED_PERCENT, 91.5, "%", Instant.EPOCH);
+        service.setDefinitions("42", List.of(definition));
+        service.setSnapshot("42", List.of(snapshot));
+
+        assertEquals(List.of(definition), service.definitions(connection));
+        assertEquals(List.of(snapshot), service.snapshot(connection));
     }
 
     private static JvmConnection local(String pid, String name) {
