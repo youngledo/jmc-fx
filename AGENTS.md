@@ -64,7 +64,9 @@ Rules:
 - Use `PrimerLight` as the default theme.
 - Prepare for `PrimerDark`, but do not make dark mode block v1.
 - Add application CSS after AtlantaFX.
-- Follow the project UI guidelines in `docs/ui-guidelines.md` for every UI change.
+- Follow `docs/ui-guidelines.md` and `docs/ui-ux-system.md` for every UI/UX change.
+- Before adding or modifying UI, identify which `docs/ui-ux-system.md` page template and workflow pattern applies.
+- If a UI change intentionally deviates from `docs/ui-ux-system.md`, document the reason in the change summary or feature spec.
 - Prefer AtlantaFX style classes before custom CSS.
 - Do not fork or edit AtlantaFX source CSS.
 - Do not override AtlantaFX standard control states unless a maintainer approves a project-wide rule.
