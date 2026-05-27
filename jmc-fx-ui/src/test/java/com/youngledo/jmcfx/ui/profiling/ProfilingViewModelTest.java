@@ -3,6 +3,10 @@ package com.youngledo.jmcfx.ui.profiling;
 import java.nio.file.Path;
 import java.time.Instant;
 import java.util.List;
+import java.util.concurrent.CountDownLatch;
+import java.util.concurrent.TimeUnit;
+import java.util.concurrent.atomic.AtomicInteger;
+import java.util.concurrent.atomic.AtomicReference;
 
 import com.youngledo.jmcfx.domain.model.HotMethod;
 import com.youngledo.jmcfx.domain.model.RecordingSummary;
@@ -11,6 +15,8 @@ import com.youngledo.jmcfx.domain.service.ProfilingService;
 import com.youngledo.jmcfx.testsupport.FakeProfilingService;
 
 import org.junit.jupiter.api.Test;
+
+import javafx.application.Platform;
 
 import static org.junit.jupiter.api.Assertions.*;
 
@@ -154,6 +160,81 @@ class ProfilingViewModelTest {
     }
 
     @Test
+    void nullCallGraphMaxDepthFallsBackDuringRebuild() {
+        FakeProfilingService service = new FakeProfilingService();
+        service.addHotMethod(new HotMethod("com.Foo.bar()", "JIT_COMPILED", 50, 50.0));
+        service.setCallersTree(node("root", 100, node("caller", 60)));
+        service.setCalleesTree(node("root", 100, node("callee", 70)));
+
+        ProfilingViewModel vm = new ProfilingViewModel(service);
+        vm.load(testRecording());
+        vm.selectMethod("com.Foo.bar()");
+
+        vm.callGraphMaxDepthProperty().set(null);
+
+        assertDoesNotThrow(() -> vm.setCallGraphDirection(CallGraphDirection.CALLERS));
+        assertEquals("caller", vm.callGraphProperty().get().nodes().get(1).label());
+    }
+
+    @Test
+    void selectMethodBuildsCallGraphFromLatestDispatchState() {
+        startJavaFx();
+
+        CountDownLatch blockerStarted = new CountDownLatch(1);
+        CountDownLatch releaseFx = new CountDownLatch(1);
+        CountDownLatch retuneScheduled = new CountDownLatch(1);
+        AtomicReference<ProfilingViewModel> vmReference = new AtomicReference<>();
+        AtomicInteger treeLoads = new AtomicInteger();
+
+        ProfilingService service = new ProfilingService() {
+            @Override
+            public List<HotMethod> loadHotMethods(RecordingSummary recording) {
+                return List.of(new HotMethod("com.Foo.bar()", "JIT_COMPILED", 50, 50.0));
+            }
+
+            @Override
+            public StackTreeNode loadStackTraceTree(RecordingSummary recording, String method, boolean callers) {
+                StackTreeNode tree = callers
+                        ? node("root", 100, node("caller", 80, node("deep caller", 40)))
+                        : node("root", 100, node("callee", 70, node("deep callee", 30)));
+                if (treeLoads.incrementAndGet() == 2) {
+                    Platform.runLater(() -> {
+                        vmReference.get().setCallGraphDirection(CallGraphDirection.CALLERS);
+                        vmReference.get().setCallGraphMaxDepth(1);
+                    });
+                    retuneScheduled.countDown();
+                }
+                return tree;
+            }
+        };
+        ProfilingViewModel vm = new ProfilingViewModel(service);
+        vmReference.set(vm);
+        vm.load(testRecording());
+
+        Platform.runLater(() -> {
+            blockerStarted.countDown();
+            awaitUnchecked(releaseFx);
+        });
+        await(blockerStarted);
+
+        Thread selectThread = new Thread(() -> vm.selectMethod("com.Foo.bar()"), "select-method-test");
+        selectThread.start();
+        await(retuneScheduled);
+        awaitWaiting(selectThread);
+
+        releaseFx.countDown();
+        join(selectThread);
+
+        CallGraphLayout layout = vm.callGraphProperty().get();
+        assertEquals(CallGraphDirection.CALLERS, vm.callGraphDirectionProperty().get());
+        assertEquals(1, vm.callGraphMaxDepthProperty().get());
+        assertTrue(layout.maxDepth() <= 1);
+        assertEquals(List.of("com.Foo.bar()", "caller"), labels(layout));
+        assertEquals("node-1", layout.edges().getFirst().sourceId());
+        assertEquals("selected", layout.edges().getFirst().targetId());
+    }
+
+    @Test
     void loadClearsFlameGraphs() {
         FakeProfilingService service = new FakeProfilingService();
         service.addHotMethod(new HotMethod("com.Foo.bar()", "JIT_COMPILED", 50, 50.0));
@@ -271,5 +352,54 @@ class ProfilingViewModelTest {
         return layout.nodes().stream()
                 .map(CallGraphNode::label)
                 .toList();
+    }
+
+    private static void startJavaFx() {
+        CountDownLatch started = new CountDownLatch(1);
+        try {
+            Platform.startup(started::countDown);
+            await(started);
+        } catch (IllegalStateException exception) {
+            // JavaFX toolkit is already running for this test JVM.
+        }
+    }
+
+    private static void await(CountDownLatch latch) {
+        try {
+            assertTrue(latch.await(5, TimeUnit.SECONDS), "Timed out waiting for latch");
+        } catch (InterruptedException exception) {
+            Thread.currentThread().interrupt();
+            fail("Interrupted while waiting for latch");
+        }
+    }
+
+    private static void awaitUnchecked(CountDownLatch latch) {
+        try {
+            latch.await();
+        } catch (InterruptedException exception) {
+            Thread.currentThread().interrupt();
+            throw new AssertionError("Interrupted while waiting for latch", exception);
+        }
+    }
+
+    private static void awaitWaiting(Thread thread) {
+        long deadline = System.nanoTime() + TimeUnit.SECONDS.toNanos(5);
+        while (System.nanoTime() < deadline) {
+            if (thread.getState() == Thread.State.WAITING) {
+                return;
+            }
+            Thread.onSpinWait();
+        }
+        fail("Timed out waiting for thread to enter WAITING state");
+    }
+
+    private static void join(Thread thread) {
+        try {
+            thread.join(5000);
+            assertFalse(thread.isAlive(), "Thread did not finish");
+        } catch (InterruptedException exception) {
+            Thread.currentThread().interrupt();
+            fail("Interrupted while joining thread");
+        }
     }
 }

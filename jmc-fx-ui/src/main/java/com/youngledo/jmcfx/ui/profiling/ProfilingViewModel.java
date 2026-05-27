@@ -117,14 +117,13 @@ public class ProfilingViewModel {
         FlameGraphLayoutBuilder builder = FlameGraphLayoutBuilder.defaultBuilder();
         FlameGraphLayout callerFlameGraph = builder.build(callers);
         FlameGraphLayout calleeFlameGraph = builder.build(callees);
-        CallGraphLayout newCallGraph = buildCallGraph(method, callers, callees);
         FxDispatch.run(() -> {
             selectedMethodName = method;
             callersTree.set(callers);
             calleesTree.set(callees);
             callersFlameGraph.set(callerFlameGraph);
             calleesFlameGraph.set(calleeFlameGraph);
-            callGraph.set(newCallGraph);
+            callGraph.set(buildCallGraph(method, callers, callees));
         });
     }
 
@@ -148,8 +147,16 @@ public class ProfilingViewModel {
         CallGraphDirection direction = callGraphDirection.get();
         CallGraphDirection resolvedDirection = direction == null ? CallGraphDirection.CALLEES : direction;
         StackTreeNode sourceTree = resolvedDirection == CallGraphDirection.CALLERS ? callers : callees;
-        return new CallGraphLayoutBuilder(callGraphMaxDepth.get(), CallGraphLayoutBuilder.DEFAULT_MAX_NODES)
+        return new CallGraphLayoutBuilder(resolvedMaxDepth(), CallGraphLayoutBuilder.DEFAULT_MAX_NODES)
                 .build(method, sourceTree, resolvedDirection);
+    }
+
+    private int resolvedMaxDepth() {
+        Integer maxDepth = callGraphMaxDepth.get();
+        if (maxDepth == null) {
+            return CallGraphLayoutBuilder.DEFAULT_MAX_DEPTH;
+        }
+        return Math.max(1, maxDepth);
     }
 
     private StackTreeNode stackTreeOrEmpty(StackTreeNode stackTree) {
