@@ -28,7 +28,7 @@ public final class CallGraphLayoutBuilder {
         CallGraphDirection resolvedDirection = direction == null ? CallGraphDirection.CALLEES : direction;
         List<CallGraphNode> nodes = new ArrayList<>();
         List<CallGraphEdge> edges = new ArrayList<>();
-        nodes.add(new CallGraphNode("selected", selectedLabel, countOf(root), percentageOf(root), 0, 0.5, 0.5, true));
+        nodes.add(new CallGraphNode("selected", selectedLabel, countOf(root), percentageOf(root), 0, 0.5, 0, true));
 
         appendLevels(List.of(new PendingChild("selected", root, 1)), resolvedDirection, nodes, edges);
         return new CallGraphLayout(nodes, edges, deepestDepth(nodes));
@@ -114,7 +114,7 @@ public final class CallGraphLayoutBuilder {
     }
 
     private double yForDepth(int depth) {
-        return (double) Math.min(depth, maxDepth) / maxDepth;
+        return Math.min(depth, maxDepth) / (maxDepth + 1.0);
     }
 
     private static double xForSibling(int siblingIndex, int siblingCount) {

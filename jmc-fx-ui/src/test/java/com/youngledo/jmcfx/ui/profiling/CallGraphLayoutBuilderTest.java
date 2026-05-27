@@ -157,6 +157,27 @@ class CallGraphLayoutBuilderTest {
     }
 
     @Test
+    void separatesSelectedNodeYFromChildAndDescendantRows() {
+        StackTreeNode root = node("root", 100,
+                node("child", 50, node("descendant", 25)));
+
+        CallGraphLayout layout = new CallGraphLayoutBuilder(2, 8)
+                .build("selected", root, CallGraphDirection.CALLEES);
+
+        CallGraphNode selected = layout.nodes().stream()
+                .filter(CallGraphNode::primary)
+                .findFirst()
+                .orElseThrow();
+
+        assertEquals(0, selected.y());
+        assertTrue(layout.nodes().stream()
+                .filter(node -> !node.primary())
+                .noneMatch(node -> node.y() == selected.y()));
+        assertTrue(layout.nodes().stream()
+                .allMatch(node -> node.x() >= 0 && node.x() <= 1 && node.y() >= 0 && node.y() <= 1));
+    }
+
+    @Test
     void skipsNullAndNonPositiveChildren() {
         StackTreeNode root = new StackTreeNode("root", 100, 0,
                 Arrays.asList(null, node("zero", 0), node("negative", -5), node("positive", 10)));
