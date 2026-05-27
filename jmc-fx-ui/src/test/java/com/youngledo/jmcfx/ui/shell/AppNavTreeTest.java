@@ -105,6 +105,18 @@ class AppNavTreeTest {
     }
 
     @Test
+    void searchFindsAdvancedJfrRecordingPageAfterRecordingOpens() {
+        AppNavTree tree = new AppNavTree(new I18n(Locale.ENGLISH));
+        tree.setRecordingOpenForTesting(true);
+
+        List<AppNavSearchResult> results = tree.search("advanced jfr");
+
+        assertFalse(results.isEmpty());
+        assertEquals("advancedJfr", results.getFirst().sectionId());
+        assertEquals("Advanced JFR", results.getFirst().title());
+    }
+
+    @Test
     void searchIncludesJvmBrowserWithoutRecording() {
         AppNavTree tree = new AppNavTree(new I18n(Locale.ENGLISH));
 

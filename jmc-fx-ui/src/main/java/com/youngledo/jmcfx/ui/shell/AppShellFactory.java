@@ -2,6 +2,7 @@ package com.youngledo.jmcfx.ui.shell;
 
 import java.io.IOException;
 
+import com.youngledo.jmcfx.domain.service.AdvancedJfrAnalysisService;
 import com.youngledo.jmcfx.domain.service.DiagnosticCommandService;
 import com.youngledo.jmcfx.domain.service.EnvironmentService;
 import com.youngledo.jmcfx.domain.service.EventQueryService;
@@ -62,6 +63,7 @@ public class AppShellFactory {
     private final MBeanBrowserService mBeanBrowserService;
     private final DiagnosticCommandService diagnosticCommandService;
     private final LiveMetricService liveMetricService;
+    private final AdvancedJfrAnalysisService advancedJfrAnalysisService;
     private final I18n i18n;
     private final AppPreferences preferences;
 
@@ -73,7 +75,7 @@ public class AppShellFactory {
                 null, null, null,
                 null, null, null,
                 null, null, null, null, null,
-                null,
+                null, null,
                 new I18n(java.util.Locale.getDefault()), new JavaAppPreferences());
     }
 
@@ -88,7 +90,7 @@ public class AppShellFactory {
                 profilingService, exceptionService, threadService,
                 fileIOService, socketIOService, lockService,
                 heapService, leakSuspectsService, tlabService,
-                jvmInternalsService, null, null, null, null, null, null, null, null,
+                jvmInternalsService, null, null, null, null, null, null, null, null, null,
                 i18n, new JavaAppPreferences());
     }
 
@@ -106,7 +108,7 @@ public class AppShellFactory {
                 profilingService, exceptionService, threadService,
                 fileIOService, socketIOService, lockService,
                 heapService, leakSuspectsService, tlabService,
-                jvmInternalsService, environmentService, javaAppService, null, null, null, null, null, null,
+                jvmInternalsService, environmentService, javaAppService, null, null, null, null, null, null, null,
                 i18n, new JavaAppPreferences());
     }
 
@@ -128,7 +130,7 @@ public class AppShellFactory {
                 fileIOService, socketIOService, lockService,
                 heapService, leakSuspectsService, tlabService,
                 jvmInternalsService, environmentService, javaAppService, jvmDiscoveryService, jmxConnectionService,
-                flightRecordingService, null, null, null, i18n, new JavaAppPreferences());
+                flightRecordingService, null, null, null, null, i18n, new JavaAppPreferences());
     }
 
     public AppShellFactory(RecordingRepository recordingRepository, EventQueryService eventQueryService,
@@ -150,7 +152,7 @@ public class AppShellFactory {
                 fileIOService, socketIOService, lockService,
                 heapService, leakSuspectsService, tlabService,
                 jvmInternalsService, environmentService, javaAppService, jvmDiscoveryService, jmxConnectionService,
-                flightRecordingService, mBeanBrowserService, null, null, i18n, new JavaAppPreferences());
+                flightRecordingService, mBeanBrowserService, null, null, null, i18n, new JavaAppPreferences());
     }
 
     public AppShellFactory(RecordingRepository recordingRepository, EventQueryService eventQueryService,
@@ -175,7 +177,33 @@ public class AppShellFactory {
                 heapService, leakSuspectsService, tlabService,
                 jvmInternalsService, environmentService, javaAppService, jvmDiscoveryService, jmxConnectionService,
                 flightRecordingService, mBeanBrowserService, diagnosticCommandService, liveMetricService,
-                i18n, new JavaAppPreferences());
+                null, i18n, new JavaAppPreferences());
+    }
+
+    public AppShellFactory(RecordingRepository recordingRepository, EventQueryService eventQueryService,
+            RuleAnalysisService ruleAnalysisService, ProfilingService profilingService,
+            ExceptionService exceptionService, ThreadService threadService,
+            FileIOService fileIOService, SocketIOService socketIOService,
+            LockService lockService, HeapService heapService,
+            LeakSuspectsService leakSuspectsService, TlabService tlabService,
+            JvmInternalsService jvmInternalsService,
+            EnvironmentService environmentService,
+            JavaAppService javaAppService,
+            JvmDiscoveryService jvmDiscoveryService,
+            JmxConnectionService jmxConnectionService,
+            FlightRecordingService flightRecordingService,
+            MBeanBrowserService mBeanBrowserService,
+            DiagnosticCommandService diagnosticCommandService,
+            LiveMetricService liveMetricService,
+            AdvancedJfrAnalysisService advancedJfrAnalysisService,
+            I18n i18n) {
+        this(recordingRepository, eventQueryService, ruleAnalysisService,
+                profilingService, exceptionService, threadService,
+                fileIOService, socketIOService, lockService,
+                heapService, leakSuspectsService, tlabService,
+                jvmInternalsService, environmentService, javaAppService, jvmDiscoveryService, jmxConnectionService,
+                flightRecordingService, mBeanBrowserService, diagnosticCommandService, liveMetricService,
+                advancedJfrAnalysisService, i18n, new JavaAppPreferences());
     }
 
     public AppShellFactory(RecordingRepository recordingRepository, EventQueryService eventQueryService,
@@ -195,7 +223,7 @@ public class AppShellFactory {
                 fileIOService, socketIOService, lockService,
                 heapService, leakSuspectsService, tlabService,
                 jvmInternalsService, environmentService, javaAppService, jvmDiscoveryService, jmxConnectionService,
-                null, null, null, null, i18n, new JavaAppPreferences());
+                null, null, null, null, null, i18n, new JavaAppPreferences());
     }
 
     AppShellFactory(RecordingRepository recordingRepository, EventQueryService eventQueryService,
@@ -206,7 +234,7 @@ public class AppShellFactory {
                 null, null, null,
                 null, null, null,
                 null, null, null, null, null,
-                null, i18n, preferences);
+                null, null, i18n, preferences);
     }
 
     AppShellFactory(RecordingRepository recordingRepository, EventQueryService eventQueryService,
@@ -224,6 +252,7 @@ public class AppShellFactory {
             MBeanBrowserService mBeanBrowserService,
             DiagnosticCommandService diagnosticCommandService,
             LiveMetricService liveMetricService,
+            AdvancedJfrAnalysisService advancedJfrAnalysisService,
             I18n i18n, AppPreferences preferences) {
         this.recordingRepository = recordingRepository;
         this.eventQueryService = eventQueryService;
@@ -246,6 +275,7 @@ public class AppShellFactory {
         this.mBeanBrowserService = mBeanBrowserService;
         this.diagnosticCommandService = diagnosticCommandService;
         this.liveMetricService = liveMetricService;
+        this.advancedJfrAnalysisService = advancedJfrAnalysisService;
         this.i18n = i18n;
         this.preferences = preferences;
     }
@@ -284,7 +314,7 @@ public class AppShellFactory {
                     heapService, leakSuspectsService, tlabService,
                     jvmInternalsService, environmentService, javaAppService,
                     jvmDiscoveryService, jmxConnectionService, flightRecordingService, mBeanBrowserService,
-                    diagnosticCommandService, liveMetricService, i18n);
+                    diagnosticCommandService, liveMetricService, advancedJfrAnalysisService, i18n);
         }
         throw new IllegalArgumentException("Unsupported controller: " + type.getName());
     }

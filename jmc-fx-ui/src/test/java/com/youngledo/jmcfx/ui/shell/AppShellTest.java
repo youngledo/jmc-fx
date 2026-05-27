@@ -113,6 +113,15 @@ class AppShellTest {
         assertTrue("true".equals(elementByFxId(document, "homeJvmWorkflowDescriptionLabel").getAttribute("wrapText")));
 
         assertEquals("analysisPane", elementByFxId(document, "analysisPane").getAttribute("fx:id"));
+        assertEquals("VBox", elementByFxId(document, "advancedJfrPane").getTagName());
+        assertEquals("Label", elementByFxId(document, "advancedJfrTitleLabel").getTagName());
+        assertEquals("Label", elementByFxId(document, "advancedJfrSummaryLabel").getTagName());
+        assertEquals("VBox", elementByFxId(document, "advancedJfrHeatmapContainer").getTagName());
+        assertEquals(0, elementCountWithFxId(document, "advancedJfrSplitPane"));
+        assertTrue(hasStyleClass(elementByFxId(document, "advancedJfrSelectionPane"), "advanced-jfr-selection-pane"));
+        assertEquals("HBox", elementByFxId(document, "advancedJfrSelectionValues").getTagName());
+        assertEquals("Label", elementByFxId(document, "advancedJfrSelectedEventTypeLabel").getTagName());
+        assertEquals("Label", elementByFxId(document, "advancedJfrSelectedCountLabel").getTagName());
         assertEquals("homeOpenRecordingButton", elementByFxId(document, "homeOpenRecordingButton").getAttribute("fx:id"));
         assertFalse(elementByFxId(document, "homeOpenRecordingButton").hasAttribute("styleClass"),
                 "Home action buttons should keep JavaFX's default button style class; add local hooks in controller");
@@ -483,6 +492,25 @@ class AppShellTest {
                 "Application assembly should reuse the existing JMX connection service for diagnostic commands");
         assertTrue(app.contains("new JmcLiveMetricService(jmxConnectionService)"),
                 "Application assembly should reuse the existing JMX connection service for live metrics");
+    }
+
+    @Test
+    void appShellFactoryInjectsAdvancedJfrAnalysisService() throws Exception {
+        String factory = java.nio.file.Files.readString(
+                java.nio.file.Path.of("src/main/java/com/youngledo/jmcfx/ui/shell/AppShellFactory.java"));
+        String controller = java.nio.file.Files.readString(
+                java.nio.file.Path.of("src/main/java/com/youngledo/jmcfx/ui/shell/AppShellController.java"));
+        String app = java.nio.file.Files.readString(
+                java.nio.file.Path.of("../jmc-fx-app/src/main/java/com/youngledo/jmcfx/app/JmcFxApplication.java"));
+
+        assertTrue(factory.contains("AdvancedJfrAnalysisService advancedJfrAnalysisService"),
+                "Factory should accept the advanced JFR analysis port");
+        assertTrue(controller.contains("AdvancedJfrAnalysisService advancedJfrAnalysisService"),
+                "Controller should inject the advanced JFR analysis port");
+        assertTrue(controller.contains("new AdvancedJfrViewModel(advancedJfrAnalysisService)"),
+                "Controller should create the advanced JFR workspace view model when the port is available");
+        assertTrue(app.contains("new JmcAdvancedJfrAnalysisService()"),
+                "Application assembly should use the JMC-backed advanced JFR analysis adapter");
     }
 
     @Test

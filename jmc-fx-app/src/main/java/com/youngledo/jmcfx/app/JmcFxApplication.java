@@ -2,6 +2,7 @@ package com.youngledo.jmcfx.app;
 
 import java.util.Locale;
 
+import com.youngledo.jmcfx.adapter.jmc.JmcAdvancedJfrAnalysisService;
 import com.youngledo.jmcfx.adapter.jmc.JmcDiagnosticCommandService;
 import com.youngledo.jmcfx.adapter.jmc.JmcEnvironmentService;
 import com.youngledo.jmcfx.adapter.jmc.JmcEventQueryService;
@@ -68,6 +69,7 @@ public class JmcFxApplication extends Application {
                 new JmcMBeanBrowserService(jmxConnectionService),
                 new JmcDiagnosticCommandService(jmxConnectionService),
                 new JmcLiveMetricService(jmxConnectionService),
+                new JmcAdvancedJfrAnalysisService(),
                 new com.youngledo.jmcfx.ui.i18n.I18n(systemLocale)).create();
         Scene scene = new Scene(shell.root(), 1280, 800);
         scene.getStylesheets().add(getClass().getResource("/css/app.css").toExternalForm());

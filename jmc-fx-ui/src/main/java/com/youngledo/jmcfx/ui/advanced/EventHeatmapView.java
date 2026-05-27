@@ -6,15 +6,21 @@ import com.youngledo.jmcfx.domain.model.EventHeatmap;
 import com.youngledo.jmcfx.domain.model.EventHeatmapCell;
 import com.youngledo.jmcfx.domain.model.EventHeatmapRow;
 
+import javafx.scene.control.Label;
+import javafx.scene.control.OverrunStyle;
 import javafx.scene.layout.ColumnConstraints;
 import javafx.scene.layout.GridPane;
-import javafx.scene.layout.Priority;
 import javafx.scene.layout.Region;
 import javafx.scene.layout.RowConstraints;
 import javafx.scene.layout.VBox;
 import javafx.scene.text.Text;
 
 public class EventHeatmapView extends VBox {
+
+    private static final double ROW_LABEL_MIN_WIDTH = 220;
+    private static final double ROW_LABEL_PREF_WIDTH = 320;
+    private static final double ROW_LABEL_MAX_WIDTH = 380;
+    private static final double CELL_WIDTH = 28;
 
     private final GridPane grid = new GridPane();
     private Consumer<EventHeatmapCell> selectionHandler = cell -> { };
@@ -41,12 +47,11 @@ public class EventHeatmapView extends VBox {
             return;
         }
         grid.add(header("Event Type"), 0, 0);
-        grid.getColumnConstraints().add(new ColumnConstraints(120, 180, 260));
+        grid.getColumnConstraints().add(new ColumnConstraints(
+                ROW_LABEL_MIN_WIDTH, ROW_LABEL_PREF_WIDTH, ROW_LABEL_MAX_WIDTH));
         for (int column = 0; column < heatmap.bucketCount(); column++) {
             grid.add(header(Integer.toString(column + 1)), column + 1, 0);
-            ColumnConstraints constraint = new ColumnConstraints(24, 36, Double.MAX_VALUE);
-            constraint.setHgrow(Priority.ALWAYS);
-            grid.getColumnConstraints().add(constraint);
+            grid.getColumnConstraints().add(new ColumnConstraints(CELL_WIDTH, CELL_WIDTH, CELL_WIDTH));
         }
         long max = Math.max(1, heatmap.maxCellCount());
         int rowIndex = 1;
@@ -72,18 +77,22 @@ public class EventHeatmapView extends VBox {
         return label;
     }
 
-    private Text rowLabel(EventHeatmapRow row) {
-        Text label = new Text(row.label());
+    private Label rowLabel(EventHeatmapRow row) {
+        Label label = new Label(row.label());
         label.getStyleClass().add("event-heatmap-row-label");
+        label.setMinWidth(ROW_LABEL_MIN_WIDTH);
+        label.setPrefWidth(ROW_LABEL_PREF_WIDTH);
+        label.setMaxWidth(ROW_LABEL_MAX_WIDTH);
+        label.setTextOverrun(OverrunStyle.ELLIPSIS);
         return label;
     }
 
     private Region cellRegion(EventHeatmapCell cell, long max) {
         Region region = new Region();
         region.getStyleClass().add("event-heatmap-cell");
-        region.setMinSize(24, 20);
-        region.setPrefSize(36, 22);
-        region.setMaxSize(Double.MAX_VALUE, 22);
+        region.setMinSize(CELL_WIDTH, 20);
+        region.setPrefSize(CELL_WIDTH, 22);
+        region.setMaxSize(CELL_WIDTH, 22);
         double intensity = cell.count() <= 0 ? 0 : Math.max(0.18, Math.min(1.0, cell.count() / (double) max));
         region.setOpacity(0.35 + (0.65 * intensity));
         region.setOnMouseClicked(event -> select(region, cell));

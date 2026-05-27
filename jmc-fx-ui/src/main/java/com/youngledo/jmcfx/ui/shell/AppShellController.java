@@ -23,6 +23,7 @@ import com.youngledo.jmcfx.domain.model.ConstantPoolType;
 import com.youngledo.jmcfx.domain.model.DiagnosticCommandInfo;
 import com.youngledo.jmcfx.domain.model.EnvironmentVariable;
 import com.youngledo.jmcfx.domain.model.EventColumn;
+import com.youngledo.jmcfx.domain.model.EventHeatmap;
 import com.youngledo.jmcfx.domain.model.EventDetails;
 import com.youngledo.jmcfx.domain.model.EventFieldCondition;
 import com.youngledo.jmcfx.domain.model.EventFieldDescriptor;
@@ -84,6 +85,7 @@ import com.youngledo.jmcfx.domain.model.TlabAllocation;
 import com.youngledo.jmcfx.domain.model.VmOperationEvent;
 import com.youngledo.jmcfx.domain.model.VmOperationSummary;
 import com.youngledo.jmcfx.domain.model.X509CertificateEntry;
+import com.youngledo.jmcfx.domain.service.AdvancedJfrAnalysisService;
 import com.youngledo.jmcfx.domain.service.DiagnosticCommandService;
 import com.youngledo.jmcfx.domain.service.EnvironmentService;
 import com.youngledo.jmcfx.domain.service.EventQueryService;
@@ -105,6 +107,8 @@ import com.youngledo.jmcfx.domain.service.RuleAnalysisService;
 import com.youngledo.jmcfx.domain.service.SocketIOService;
 import com.youngledo.jmcfx.domain.service.ThreadService;
 import com.youngledo.jmcfx.domain.service.TlabService;
+import com.youngledo.jmcfx.ui.advanced.AdvancedJfrViewModel;
+import com.youngledo.jmcfx.ui.advanced.EventHeatmapView;
 import com.youngledo.jmcfx.ui.analysis.AnalysisSeverityCell;
 import com.youngledo.jmcfx.ui.events.EventBrowserViewModel;
 import com.youngledo.jmcfx.ui.events.VirtualThreadEventBrowserExecutor;
@@ -218,6 +222,7 @@ public class AppShellController {
     private final MBeanBrowserService mBeanBrowserService;
     private final DiagnosticCommandService diagnosticCommandService;
     private final LiveMetricService liveMetricService;
+    private final AdvancedJfrAnalysisService advancedJfrAnalysisService;
     private final I18n i18n;
     private final RecordingOpenExecutor recordingOpenExecutor;
     private final ListChangeListener<EventTypeNode> eventTypeTreeListener = change -> rebuildEventTypeTree();
@@ -244,7 +249,11 @@ public class AppShellController {
     private SecurityViewModel securityViewModel;
     private NativeLibraryViewModel nativeLibraryViewModel;
     private ThreadDumpViewModel threadDumpViewModel;
+    private AdvancedJfrViewModel advancedJfrViewModel;
     private JvmBrowserViewModel jvmBrowserViewModel;
+    private EventHeatmapView advancedJfrHeatmapView;
+    private final ChangeListener<EventHeatmap> advancedHeatmapListener =
+            (observable, oldValue, newValue) -> advancedJfrHeatmapView.setHeatmap(newValue);
     private boolean eventTypesDividerInitialized;
     private boolean updatingRecordingTabs;
     private boolean recordingOpening;
@@ -259,6 +268,7 @@ public class AppShellController {
     @FXML private VBox overviewPane;
     @FXML private VBox eventsPane;
     @FXML private VBox analysisPane;
+    @FXML private VBox advancedJfrPane;
     @FXML private VBox jvmsPane;
     @FXML private VBox profilingPane;
     @FXML private VBox exceptionsPane;
@@ -329,6 +339,14 @@ public class AppShellController {
     @FXML private TableView<RuleResult> analysisTable;
     @FXML private Label analysisDetailTitle;
     @FXML private TextArea analysisDetailExplanation;
+    @FXML private Label advancedJfrTitleLabel;
+    @FXML private Label advancedJfrSummaryLabel;
+    @FXML private VBox advancedJfrHeatmapContainer;
+    @FXML private Label advancedJfrSelectionTitleLabel;
+    @FXML private Label advancedJfrSelectedEventTypeCaptionLabel;
+    @FXML private Label advancedJfrSelectedEventTypeLabel;
+    @FXML private Label advancedJfrSelectedCountCaptionLabel;
+    @FXML private Label advancedJfrSelectedCountLabel;
     @FXML private Label jvmsTitleLabel;
     @FXML private Button jvmsRefreshButton;
     @FXML private TextField jvmsManualUrlField;
@@ -545,7 +563,7 @@ public class AppShellController {
                 fileIOService, socketIOService, lockService,
                 heapService, leakSuspectsService, tlabService,
                 jvmInternalsService, environmentService, javaAppService,
-                null, null, null, null, null, null, i18n,
+                null, null, null, null, null, null, null, i18n,
                 new VirtualThreadRecordingOpenExecutor());
     }
 
@@ -568,7 +586,8 @@ public class AppShellController {
                 fileIOService, socketIOService, lockService,
                 heapService, leakSuspectsService, tlabService,
                 jvmInternalsService, environmentService, javaAppService,
-                jvmDiscoveryService, jmxConnectionService, flightRecordingService, null, null, null, i18n);
+                jvmDiscoveryService, jmxConnectionService, flightRecordingService, null, null, null, null, i18n,
+                new VirtualThreadRecordingOpenExecutor());
     }
 
     public AppShellController(AppShellViewModel viewModel, RecordingRepository recordingRepository,
@@ -591,8 +610,8 @@ public class AppShellController {
                 fileIOService, socketIOService, lockService,
                 heapService, leakSuspectsService, tlabService,
                 jvmInternalsService, environmentService, javaAppService,
-                jvmDiscoveryService, jmxConnectionService, flightRecordingService, mBeanBrowserService, null, null,
-                i18n);
+                jvmDiscoveryService, jmxConnectionService, flightRecordingService, mBeanBrowserService, null, null, null,
+                i18n, new VirtualThreadRecordingOpenExecutor());
     }
 
     public AppShellController(AppShellViewModel viewModel, RecordingRepository recordingRepository,
@@ -611,6 +630,7 @@ public class AppShellController {
             MBeanBrowserService mBeanBrowserService,
             DiagnosticCommandService diagnosticCommandService,
             LiveMetricService liveMetricService,
+            AdvancedJfrAnalysisService advancedJfrAnalysisService,
             I18n i18n) {
         this(viewModel, recordingRepository, eventQueryService, ruleAnalysisService,
                 profilingService, exceptionService, threadService,
@@ -618,7 +638,7 @@ public class AppShellController {
                 heapService, leakSuspectsService, tlabService,
                 jvmInternalsService, environmentService, javaAppService,
                 jvmDiscoveryService, jmxConnectionService, flightRecordingService, mBeanBrowserService,
-                diagnosticCommandService, liveMetricService, i18n,
+                diagnosticCommandService, liveMetricService, advancedJfrAnalysisService, i18n,
                 new VirtualThreadRecordingOpenExecutor());
     }
 
@@ -640,7 +660,7 @@ public class AppShellController {
                 fileIOService, socketIOService, lockService,
                 heapService, leakSuspectsService, tlabService,
                 jvmInternalsService, environmentService, javaAppService,
-                jvmDiscoveryService, jmxConnectionService, null, null, null, null, i18n,
+                jvmDiscoveryService, jmxConnectionService, null, null, null, null, null, i18n,
                 new VirtualThreadRecordingOpenExecutor());
     }
 
@@ -660,7 +680,7 @@ public class AppShellController {
                 fileIOService, socketIOService, lockService,
                 heapService, leakSuspectsService, tlabService,
                 jvmInternalsService, environmentService, javaAppService,
-                null, null, null, null, null, null, i18n, recordingOpenExecutor);
+                null, null, null, null, null, null, null, i18n, recordingOpenExecutor);
     }
 
     AppShellController(AppShellViewModel viewModel, RecordingRepository recordingRepository,
@@ -682,7 +702,7 @@ public class AppShellController {
                 fileIOService, socketIOService, lockService,
                 heapService, leakSuspectsService, tlabService,
                 jvmInternalsService, environmentService, javaAppService,
-                jvmDiscoveryService, jmxConnectionService, flightRecordingService, null, null, null, i18n,
+                jvmDiscoveryService, jmxConnectionService, flightRecordingService, null, null, null, null, i18n,
                 recordingOpenExecutor);
     }
 
@@ -701,6 +721,7 @@ public class AppShellController {
             MBeanBrowserService mBeanBrowserService,
             DiagnosticCommandService diagnosticCommandService,
             LiveMetricService liveMetricService,
+            AdvancedJfrAnalysisService advancedJfrAnalysisService,
             I18n i18n,
             RecordingOpenExecutor recordingOpenExecutor) {
         this.viewModel = viewModel;
@@ -725,6 +746,7 @@ public class AppShellController {
         this.mBeanBrowserService = mBeanBrowserService;
         this.diagnosticCommandService = diagnosticCommandService;
         this.liveMetricService = liveMetricService;
+        this.advancedJfrAnalysisService = advancedJfrAnalysisService;
         this.i18n = i18n;
         this.recordingOpenExecutor = recordingOpenExecutor;
     }
@@ -762,6 +784,8 @@ public class AppShellController {
         eventsPane.managedProperty().bind(eventsPane.visibleProperty());
         analysisPane.visibleProperty().bind(viewModel.selectedSectionProperty().isEqualTo("analysis"));
         analysisPane.managedProperty().bind(analysisPane.visibleProperty());
+        advancedJfrPane.visibleProperty().bind(viewModel.selectedSectionProperty().isEqualTo("advancedJfr"));
+        advancedJfrPane.managedProperty().bind(advancedJfrPane.visibleProperty());
         jvmsPane.visibleProperty().bind(viewModel.selectedSectionProperty().isEqualTo("jvms"));
         jvmsPane.managedProperty().bind(jvmsPane.visibleProperty());
         profilingPane.visibleProperty().bind(viewModel.selectedSectionProperty().isEqualTo("profiling"));
@@ -898,6 +922,8 @@ public class AppShellController {
     }
 
     private void initializeCharts() {
+        advancedJfrHeatmapView = new EventHeatmapView();
+        advancedJfrHeatmapContainer.getChildren().setAll(advancedJfrHeatmapView);
         exceptionsTimelineChart = addChart(exceptionsTimelineContainer);
         fileioTimelineChart = addChart(fileioTimelineContainer);
         socketioTimelineChart = addChart(socketioTimelineContainer);
@@ -2507,6 +2533,10 @@ public class AppShellController {
         eventThreadTab.textProperty().bind(i18n.text("events.details.thread"));
         eventStackTraceTab.textProperty().bind(i18n.text("events.details.stackTrace"));
         analysisTitleLabel.textProperty().bind(i18n.text("analysis.title"));
+        advancedJfrTitleLabel.textProperty().bind(i18n.text("advancedJfr.title"));
+        advancedJfrSelectionTitleLabel.textProperty().bind(i18n.text("advancedJfr.selection"));
+        advancedJfrSelectedEventTypeCaptionLabel.textProperty().bind(i18n.text("advancedJfr.selectedEventType"));
+        advancedJfrSelectedCountCaptionLabel.textProperty().bind(i18n.text("advancedJfr.selectedCount"));
         jvmsTitleLabel.textProperty().bind(i18n.text("jvms.title"));
         jvmsRefreshButton.textProperty().bind(i18n.text("jvms.refresh"));
         jvmsManualUrlField.promptTextProperty().bind(i18n.text("jvms.manualUrlPrompt"));
@@ -2843,8 +2873,33 @@ public class AppShellController {
         bindClassLoading(workspace == null ? null : workspace.classLoadingViewModel());
         bindVmOperations(workspace == null ? null : workspace.vmOperationsViewModel());
         bindEnvironment(workspace == null ? null : workspace.environmentViewModel());
+        bindAdvancedJfr(workspace == null ? null : workspace.advancedJfrViewModel());
         loadedWorkspace = workspace;
         loadSelectedWorkspaceSection();
+    }
+
+    private void bindAdvancedJfr(AdvancedJfrViewModel nextViewModel) {
+        if (advancedJfrViewModel != null) {
+            advancedJfrViewModel.heatmapProperty().removeListener(advancedHeatmapListener);
+        }
+        advancedJfrSummaryLabel.textProperty().unbind();
+        advancedJfrSelectedEventTypeLabel.textProperty().unbind();
+        advancedJfrSelectedCountLabel.textProperty().unbind();
+        advancedJfrViewModel = nextViewModel;
+        advancedJfrHeatmapView.setHeatmap(null);
+        advancedJfrHeatmapView.setOnCellSelected(cell -> { });
+        if (nextViewModel == null) {
+            advancedJfrSummaryLabel.setText(i18n.get("advancedJfr.summary"));
+            advancedJfrSelectedEventTypeLabel.setText("");
+            advancedJfrSelectedCountLabel.setText("");
+            return;
+        }
+        nextViewModel.heatmapProperty().addListener(advancedHeatmapListener);
+        advancedJfrSummaryLabel.textProperty().bind(nextViewModel.summaryProperty());
+        advancedJfrSelectedEventTypeLabel.textProperty().bind(nextViewModel.selectedEventTypeProperty());
+        advancedJfrSelectedCountLabel.textProperty().bind(nextViewModel.selectedCountProperty());
+        advancedJfrHeatmapView.setOnCellSelected(nextViewModel::selectCell);
+        advancedJfrHeatmapView.setHeatmap(nextViewModel.heatmapProperty().get());
     }
 
     private void bindOverview(OverviewViewModel nextViewModel) {
@@ -3006,10 +3061,12 @@ public class AppShellController {
         SecurityViewModel security = javaAppService != null ? new SecurityViewModel(javaAppService) : null;
         NativeLibraryViewModel nativeLibraries = javaAppService != null ? new NativeLibraryViewModel(javaAppService) : null;
         ThreadDumpViewModel threadDumps = javaAppService != null ? new ThreadDumpViewModel(javaAppService) : null;
+        AdvancedJfrViewModel advancedJfr = advancedJfrAnalysisService != null
+                ? new AdvancedJfrViewModel(advancedJfrAnalysisService) : null;
         return new PreparedRecordingWorkspace(recording, overview, events, analysis, profiling, exceptions, threads,
                 fileio, socketio, locks, heap, leakSuspects, tlab, jvmInfo, gcConfig, gcSummary, gcDetails,
                 compilationsVm, codeCache, classLoading, vmOperations, environment, javaAppOverview, security,
-                nativeLibraries, threadDumps);
+                nativeLibraries, threadDumps, advancedJfr);
     }
 
     private void attachPreparedRecordingWorkspace(PreparedRecordingWorkspace prepared) {
@@ -3025,7 +3082,7 @@ public class AppShellController {
                 prepared.jvmInfo(), prepared.gcConfig(), prepared.gcSummary(), prepared.gcDetails(),
                 prepared.compilations(), prepared.codeCache(), prepared.classLoading(), prepared.vmOperations(),
                 prepared.environment(), prepared.javaAppOverview(), prepared.security(), prepared.nativeLibraries(),
-                prepared.threadDumps());
+                prepared.threadDumps(), prepared.advancedJfr());
         viewModel.showStatus(i18n.format("status.openedRecording", prepared.recording().name()));
         setRecordingOpening(false);
     }
@@ -3140,6 +3197,7 @@ public class AppShellController {
         switch (sectionId) {
             case "analysis" -> workspace.ruleResultsViewModel().analyze(recording);
             case "events" -> workspace.eventBrowserViewModel().loadRecording(recording);
+            case "advancedJfr" -> loadIfPresent(workspace.advancedJfrViewModel(), recording);
             case "profiling" -> loadIfPresent(workspace.profilingViewModel(), recording);
             case "exceptions" -> loadIfPresent(workspace.exceptionViewModel(), recording);
             case "threads" -> loadIfPresent(workspace.threadViewModel(), recording);
@@ -3306,6 +3364,12 @@ public class AppShellController {
         }
     }
 
+    private void loadIfPresent(AdvancedJfrViewModel viewModel, RecordingSummary recording) {
+        if (viewModel != null) {
+            viewModel.load(recording);
+        }
+    }
+
     record PreparedRecordingWorkspace(
             RecordingSummary recording,
             OverviewViewModel overview,
@@ -3332,7 +3396,8 @@ public class AppShellController {
             JavaAppOverviewViewModel javaAppOverview,
             SecurityViewModel security,
             NativeLibraryViewModel nativeLibraries,
-            ThreadDumpViewModel threadDumps) {
+            ThreadDumpViewModel threadDumps,
+            AdvancedJfrViewModel advancedJfr) {
     }
 
     private void rebuildEventTypeTree() {

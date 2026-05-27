@@ -146,6 +146,18 @@ class AppShellViewModelTest {
     }
 
     @Test
+    void advancedJfrIsARecordingSection() {
+        AppShellViewModel viewModel = new AppShellViewModel();
+        RecordingWorkspace workspace = viewModel.openRecording(
+                recording(), new OverviewViewModel(), eventBrowserViewModel(), ruleResultsViewModel());
+
+        viewModel.showSection("advancedJfr");
+
+        assertEquals("advancedJfr", viewModel.selectedSectionProperty().get());
+        assertEquals("advancedJfr", workspace.selectedSectionProperty().get());
+    }
+
+    @Test
     void exposesSidebarStateForSelectedWorkspace() {
         AppShellViewModel viewModel = new AppShellViewModel();
         RecordingWorkspace first = viewModel.openRecording(

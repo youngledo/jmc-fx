@@ -5,6 +5,7 @@ import java.util.Objects;
 import java.util.Set;
 
 import com.youngledo.jmcfx.domain.model.RecordingSummary;
+import com.youngledo.jmcfx.ui.advanced.AdvancedJfrViewModel;
 import com.youngledo.jmcfx.ui.events.EventBrowserViewModel;
 import com.youngledo.jmcfx.ui.environment.EnvironmentViewModel;
 import com.youngledo.jmcfx.ui.exceptions.ExceptionViewModel;
@@ -55,7 +56,7 @@ public class AppShellViewModel {
     private static final String SETTINGS_SECTION = "settings";
     private static final String JVMS_SECTION = "jvms";
     private static final String DEFAULT_RECORDING_SECTION = "analysis";
-    private static final Set<String> RECORDING_SECTIONS = Set.of("analysis", "overview", "events", "profiling",
+    private static final Set<String> RECORDING_SECTIONS = Set.of("analysis", "overview", "events", "advancedJfr", "profiling",
             "exceptions", "threads", "fileio", "socketio", "locks", "threadHistogram", "security",
             "nativeLibraries", "threadDumps", "heap", "leaks", "tlab", "jvmInfo", "gcConfig", "gcSummary",
             "gcDetails", "compilations", "codeCache", "classLoading", "vmOperations", "processes", "envVars",
@@ -132,7 +133,7 @@ public class AppShellViewModel {
         return openRecording(recording, new OverviewViewModel(),
                 new EventBrowserViewModel(new UnavailableEventQueryService()),
                 new RuleResultsViewModel(rec -> List.of()),
-                null, null, null, null, null, null, null, null, null,
+                null, null, null, null, null, null, null, null, null, null,
                 null, null, null, null, null, null, null, null, null,
                 null, null, null, null);
     }
@@ -140,7 +141,7 @@ public class AppShellViewModel {
     public RecordingWorkspace openRecording(RecordingSummary recording, OverviewViewModel overview,
             EventBrowserViewModel events, RuleResultsViewModel ruleResults) {
         return openRecording(recording, overview, events, ruleResults, null, null, null, null, null, null, null, null, null,
-                null, null, null, null, null, null, null, null, null,
+                null, null, null, null, null, null, null, null, null, null,
                 null, null, null, null);
     }
 
@@ -150,7 +151,7 @@ public class AppShellViewModel {
             FileIOViewModel fileio, SocketIOViewModel socketio, LockViewModel locks) {
         return openRecording(recording, overview, events, ruleResults, profiling, exceptions, threads,
                 fileio, socketio, locks, null, null, null,
-                null, null, null, null, null, null, null, null, null,
+                null, null, null, null, null, null, null, null, null, null,
                 null, null, null, null);
     }
 
@@ -161,7 +162,7 @@ public class AppShellViewModel {
             HeapViewModel heap, LeakSuspectsViewModel leakSuspects, TlabViewModel tlab) {
         return openRecording(recording, overview, events, ruleResults, profiling, exceptions, threads,
                 fileio, socketio, locks, heap, leakSuspects, tlab,
-                null, null, null, null, null, null, null, null, null,
+                null, null, null, null, null, null, null, null, null, null,
                 null, null, null, null);
     }
 
@@ -177,7 +178,7 @@ public class AppShellViewModel {
         return openRecording(recording, overview, events, ruleResults, profiling, exceptions, threads,
                 fileio, socketio, locks, heap, leakSuspects, tlab,
                 jvmInfo, gcConfig, gcSummary, gcDetails, compilations, codeCache, classLoading, vmOperations,
-                null, null, null, null, null);
+                null, null, null, null, null, null);
     }
 
     public RecordingWorkspace openRecording(RecordingSummary recording, OverviewViewModel overview,
@@ -192,7 +193,7 @@ public class AppShellViewModel {
         return openRecording(recording, overview, events, ruleResults, profiling, exceptions, threads,
                 fileio, socketio, locks, heap, leakSuspects, tlab,
                 jvmInfo, gcConfig, gcSummary, gcDetails, compilations, codeCache, classLoading, vmOperations,
-                environment, null, null, null, null);
+                environment, null, null, null, null, null);
     }
 
     public RecordingWorkspace openRecording(RecordingSummary recording, OverviewViewModel overview,
@@ -207,7 +208,8 @@ public class AppShellViewModel {
             JavaAppOverviewViewModel javaAppOverviewViewModel,
             SecurityViewModel securityViewModel,
             NativeLibraryViewModel nativeLibraryViewModel,
-            ThreadDumpViewModel threadDumpViewModel) {
+            ThreadDumpViewModel threadDumpViewModel,
+            AdvancedJfrViewModel advancedJfrViewModel) {
         Objects.requireNonNull(recording, "recording");
         Objects.requireNonNull(overview, "overview");
         Objects.requireNonNull(events, "events");
@@ -215,7 +217,8 @@ public class AppShellViewModel {
         RecordingWorkspace workspace = new RecordingWorkspace(recording, overview, events, ruleResults,
                 profiling, exceptions, threads, fileio, socketio, locks, heap, leakSuspects, tlab,
                 jvmInfo, gcConfig, gcSummary, gcDetails, compilations, codeCache, classLoading, vmOperations,
-                environment, javaAppOverviewViewModel, securityViewModel, nativeLibraryViewModel, threadDumpViewModel);
+                environment, javaAppOverviewViewModel, securityViewModel, nativeLibraryViewModel, threadDumpViewModel,
+                advancedJfrViewModel);
         workspace.selectedSectionProperty().set(DEFAULT_RECORDING_SECTION);
         recordingWorkspaces.add(workspace);
         selectWorkspace(workspace);

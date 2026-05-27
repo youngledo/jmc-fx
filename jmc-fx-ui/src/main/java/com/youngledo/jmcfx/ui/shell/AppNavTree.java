@@ -40,6 +40,7 @@ final class AppNavTree extends TreeView<AppNavItem> {
         TreeItem<AppNavItem> analysis = page("analysis", "analysis.title", Material2AL.INSIGHTS, true, NavIconTone.RECORDING);
         TreeItem<AppNavItem> overview = page("overview", "overview.title", Material2MZ.PAGEVIEW, true, NavIconTone.RECORDING);
         TreeItem<AppNavItem> events = page("events", "events.title", Material2AL.EVENT, true, NavIconTone.RECORDING);
+        TreeItem<AppNavItem> advancedJfr = page("advancedJfr", "nav.advancedJfr", Material2AL.GRID_ON, true, NavIconTone.RECORDING);
         TreeItem<AppNavItem> profiling = page("profiling", "nav.profiling", Material2AL.ASSIGNMENT, true, NavIconTone.JAVA);
         TreeItem<AppNavItem> exceptions = page("exceptions", "nav.exceptions", Material2MZ.REPORT, true, NavIconTone.JAVA);
         TreeItem<AppNavItem> threads = page("threads", "nav.threads", Material2AL.LIST, true, NavIconTone.JAVA);
@@ -70,7 +71,7 @@ final class AppNavTree extends TreeView<AppNavItem> {
         TreeItem<AppNavItem> settings = page("settings", "settings.title", Material2MZ.SETTINGS, false, NavIconTone.APPLICATION);
 
         workspace.getChildren().setAll(List.of(home, jvms));
-        recording.getChildren().setAll(List.of(analysis, overview, events));
+        recording.getChildren().setAll(List.of(analysis, overview, events, advancedJfr));
         javaApp.getChildren().setAll(List.of(profiling, exceptions, threads, fileio, socketio, locks,
                 threadHistogram, security, nativeLibraries, threadDumps));
         memoryAnalysis.getChildren().setAll(List.of(heap, leaks, tlab));
@@ -95,6 +96,7 @@ final class AppNavTree extends TreeView<AppNavItem> {
                 "analysis", analysis,
                 "overview", overview,
                 "events", events,
+                "advancedJfr", advancedJfr,
                 "profiling", profiling,
                 "exceptions", exceptions,
                 "threads", threads,

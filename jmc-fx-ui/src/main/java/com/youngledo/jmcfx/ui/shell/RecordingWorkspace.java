@@ -6,6 +6,7 @@ import java.util.HashSet;
 import java.util.Set;
 
 import com.youngledo.jmcfx.domain.model.RecordingSummary;
+import com.youngledo.jmcfx.ui.advanced.AdvancedJfrViewModel;
 import com.youngledo.jmcfx.ui.events.EventBrowserViewModel;
 import com.youngledo.jmcfx.ui.environment.EnvironmentViewModel;
 import com.youngledo.jmcfx.ui.exceptions.ExceptionViewModel;
@@ -69,6 +70,7 @@ public final class RecordingWorkspace {
     private final SecurityViewModel securityViewModel;
     private final NativeLibraryViewModel nativeLibraryViewModel;
     private final ThreadDumpViewModel threadDumpViewModel;
+    private final AdvancedJfrViewModel advancedJfrViewModel;
 
     public RecordingWorkspace(RecordingSummary recording, OverviewViewModel overviewViewModel,
             EventBrowserViewModel eventBrowserViewModel, RuleResultsViewModel ruleResultsViewModel,
@@ -90,6 +92,37 @@ public final class RecordingWorkspace {
             SecurityViewModel securityViewModel,
             NativeLibraryViewModel nativeLibraryViewModel,
             ThreadDumpViewModel threadDumpViewModel) {
+        this(recording, overviewViewModel, eventBrowserViewModel, ruleResultsViewModel,
+                profilingViewModel, exceptionViewModel, threadViewModel, fileIOViewModel,
+                socketIOViewModel, lockViewModel, heapViewModel, leakSuspectsViewModel,
+                tlabViewModel, jvmInfoViewModel, gcConfigViewModel, gcSummaryViewModel,
+                gcDetailsViewModel, compilationsViewModel, codeCacheViewModel,
+                classLoadingViewModel, vmOperationsViewModel, environmentViewModel,
+                javaAppOverviewViewModel, securityViewModel, nativeLibraryViewModel,
+                threadDumpViewModel, null);
+    }
+
+    public RecordingWorkspace(RecordingSummary recording, OverviewViewModel overviewViewModel,
+            EventBrowserViewModel eventBrowserViewModel, RuleResultsViewModel ruleResultsViewModel,
+            ProfilingViewModel profilingViewModel, ExceptionViewModel exceptionViewModel,
+            ThreadViewModel threadViewModel, FileIOViewModel fileIOViewModel,
+            SocketIOViewModel socketIOViewModel, LockViewModel lockViewModel,
+            HeapViewModel heapViewModel, LeakSuspectsViewModel leakSuspectsViewModel,
+            TlabViewModel tlabViewModel,
+            JvmInfoViewModel jvmInfoViewModel,
+            GcConfigViewModel gcConfigViewModel,
+            GcSummaryViewModel gcSummaryViewModel,
+            GcDetailsViewModel gcDetailsViewModel,
+            CompilationsViewModel compilationsViewModel,
+            CodeCacheViewModel codeCacheViewModel,
+            ClassLoadingViewModel classLoadingViewModel,
+            VmOperationsViewModel vmOperationsViewModel,
+            EnvironmentViewModel environmentViewModel,
+            JavaAppOverviewViewModel javaAppOverviewViewModel,
+            SecurityViewModel securityViewModel,
+            NativeLibraryViewModel nativeLibraryViewModel,
+            ThreadDumpViewModel threadDumpViewModel,
+            AdvancedJfrViewModel advancedJfrViewModel) {
         this.recording = Objects.requireNonNull(recording, "recording");
         this.overviewViewModel = Objects.requireNonNull(overviewViewModel, "overviewViewModel");
         this.eventBrowserViewModel = Objects.requireNonNull(eventBrowserViewModel, "eventBrowserViewModel");
@@ -116,6 +149,7 @@ public final class RecordingWorkspace {
         this.securityViewModel = securityViewModel;
         this.nativeLibraryViewModel = nativeLibraryViewModel;
         this.threadDumpViewModel = threadDumpViewModel;
+        this.advancedJfrViewModel = advancedJfrViewModel;
     }
 
     public String id() {
@@ -281,6 +315,10 @@ public final class RecordingWorkspace {
 
     public ThreadDumpViewModel threadDumpViewModel() {
         return threadDumpViewModel;
+    }
+
+    public AdvancedJfrViewModel advancedJfrViewModel() {
+        return advancedJfrViewModel;
     }
 
     public void close() {
