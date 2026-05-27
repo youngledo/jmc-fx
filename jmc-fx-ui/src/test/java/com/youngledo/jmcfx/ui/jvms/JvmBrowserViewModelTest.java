@@ -890,6 +890,35 @@ class JvmBrowserViewModelTest {
     }
 
     @Test
+    void evaluateTriggersUsesRuleSnapshotCapturedWhenQueued() {
+        FakeJmxConnectionService jmx = new FakeJmxConnectionService();
+        FakeLiveMetricService metrics = new FakeLiveMetricService();
+        QueuedJvmBrowserExecutor executor = new QueuedJvmBrowserExecutor();
+        JvmBrowserViewModel viewModel = new JvmBrowserViewModel(new FakeJvmDiscoveryService(), jmx, null, null,
+                null, metrics, executor, Runnable::run, path -> { });
+        JvmConnection connected = JvmConnection.local("42", "demo.Main", "26.0.1", true)
+                .asConnected("service:jmx:local://42");
+        LiveMetricDefinition heap = new LiveMetricDefinition(
+                LiveMetricKind.HEAP_USED_PERCENT, "Heap Used", "%", 80.0);
+        metrics.setSnapshot(connected.id(), List.of(new LiveMetricSnapshot(
+                LiveMetricKind.HEAP_USED_PERCENT, 91.0, "%", Instant.EPOCH)));
+        viewModel.selectedSessionProperty().set(sessionSnapshot(connected));
+        viewModel.selectedTriggerMetricProperty().set(heap);
+        viewModel.triggerNameProperty().set("Heap high");
+        viewModel.triggerThresholdProperty().set("80");
+        viewModel.addTriggerRule();
+
+        viewModel.evaluateTriggersNow();
+        viewModel.triggerRulesProperty().clear();
+        executor.runNext();
+
+        assertEquals(1, viewModel.triggerEventsProperty().size());
+        TriggerEvent event = viewModel.triggerEventsProperty().getFirst();
+        assertEquals("Heap high", event.ruleName());
+        assertEquals(91.0, event.value());
+    }
+
+    @Test
     void diagnosticCommandTriggerExecutesCommandWhenThresholdMatches() {
         FakeJmxConnectionService jmx = new FakeJmxConnectionService();
         FakeLiveMetricService metrics = new FakeLiveMetricService();

@@ -637,13 +637,14 @@ public class JvmBrowserViewModel implements AutoCloseable {
             return;
         }
 
+        List<TriggerRule> rules = List.copyOf(triggerRules);
         long generation = nextTriggerEvaluationGeneration();
         triggerLoading.set(true);
         clearTriggerError();
         executor.execute(() -> {
             try {
                 List<LiveMetricSnapshot> samples = liveMetricService.snapshot(snapshot.connection());
-                List<TriggerEvent> events = evaluateTriggerRules(snapshot, samples);
+                List<TriggerEvent> events = evaluateTriggerRules(snapshot, samples, rules);
                 runOnFx(() -> {
                     if (!isCurrentTriggerEvaluation(generation, snapshot)) {
                         return;
@@ -1022,11 +1023,12 @@ public class JvmBrowserViewModel implements AutoCloseable {
         return TriggerAction.diagnosticCommand(command == null ? "" : command.name(), List.of());
     }
 
-    private List<TriggerEvent> evaluateTriggerRules(JvmSessionSnapshot snapshot, List<LiveMetricSnapshot> samples) {
+    private List<TriggerEvent> evaluateTriggerRules(JvmSessionSnapshot snapshot, List<LiveMetricSnapshot> samples,
+            List<TriggerRule> rules) {
         Map<LiveMetricKind, LiveMetricSnapshot> byMetric = samples.stream()
                 .collect(Collectors.toMap(LiveMetricSnapshot::kind, sample -> sample, (first, second) -> second));
         List<TriggerEvent> events = new ArrayList<>();
-        for (TriggerRule rule : List.copyOf(triggerRules)) {
+        for (TriggerRule rule : rules) {
             LiveMetricSnapshot sample = byMetric.get(rule.metric());
             if (rule.matches(sample)) {
                 events.add(triggerEvent(snapshot, rule, sample));
