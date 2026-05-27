@@ -136,7 +136,10 @@ class AppShellTest {
         assertEquals("Label", elementByFxId(document, "jvmsSessionErrorLabel").getTagName());
         assertEquals("TabPane", elementByFxId(document, "jvmsLiveTabs").getTagName());
         assertEquals("Tab", elementByFxId(document, "jvmsSessionTab").getTagName());
+        assertTrue(hasStyleClass(elementByFxId(document, "jvmsSessionContent"), "jvms-live-tab-content"));
         assertEquals("Tab", elementByFxId(document, "jvmsMBeanTab").getTagName());
+        assertTrue(hasStyleClass(elementByFxId(document, "jvmsMBeanContent"), "jvms-live-tab-content"));
+        assertTrue(hasStyleClass(elementByFxId(document, "jvmsMBeanDetailPane"), "jvms-live-workspace"));
         assertEquals("TreeView", elementByFxId(document, "jvmsMBeanTree").getTagName());
         assertEquals("TableView", elementByFxId(document, "jvmsMBeanAttributesTable").getTagName());
         assertEquals("TableView", elementByFxId(document, "jvmsMBeanOperationsTable").getTagName());
@@ -146,6 +149,8 @@ class AppShellTest {
         assertEquals("Label", elementByFxId(document, "jvmsMBeanResultLabel").getTagName());
         assertEquals("Label", elementByFxId(document, "jvmsMBeanErrorLabel").getTagName());
         assertEquals("Tab", elementByFxId(document, "jvmsDiagnosticsTab").getTagName());
+        assertTrue(hasStyleClass(elementByFxId(document, "jvmsDiagnosticContent"), "jvms-live-tab-content"));
+        assertTrue(hasStyleClass(elementByFxId(document, "jvmsDiagnosticDetailPane"), "jvms-live-workspace"));
         assertEquals("TableView", elementByFxId(document, "jvmsDiagnosticCommandsTable").getTagName());
         assertEquals("TextField", elementByFxId(document, "jvmsDiagnosticArgumentsField").getTagName());
         assertEquals("Button", elementByFxId(document, "jvmsExecuteDiagnosticCommandButton").getTagName());
@@ -153,6 +158,8 @@ class AppShellTest {
         assertEquals("TextArea", elementByFxId(document, "jvmsDiagnosticOutputArea").getTagName());
         assertEquals("Label", elementByFxId(document, "jvmsDiagnosticErrorLabel").getTagName());
         assertEquals("Tab", elementByFxId(document, "jvmsTriggersTab").getTagName());
+        assertTrue(hasStyleClass(elementByFxId(document, "jvmsTriggersContent"), "jvms-live-tab-content"));
+        assertEquals("FlowPane", elementByFxId(document, "jvmsTriggerEditorPane").getTagName());
         assertEquals("TextField", elementByFxId(document, "jvmsTriggerNameField").getTagName());
         assertEquals("ComboBox", elementByFxId(document, "jvmsTriggerMetricCombo").getTagName());
         assertEquals("ComboBox", elementByFxId(document, "jvmsTriggerOperatorCombo").getTagName());
@@ -259,6 +266,16 @@ class AppShellTest {
 
         assertFalse(selectedNavTitle.contains("-fx-font-weight:"),
                 "selected navigation items should not change text weight because it relayouts TreeCells on click");
+    }
+
+    @Test
+    void jvmsLiveTabsUseUnifiedContentSpacing() throws Exception {
+        String css = appCss();
+        String tabContent = cssBlock(css, ".jvms-live-tab-content");
+        String workspace = cssBlock(css, ".jvms-live-workspace");
+
+        assertTrue(tabContent.contains("-fx-padding: 10px 10px 0 0"));
+        assertTrue(workspace.contains("-fx-padding: 0 0 0 8px"));
     }
 
     @Test

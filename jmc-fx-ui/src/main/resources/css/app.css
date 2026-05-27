@@ -395,6 +395,14 @@
     -fx-background-color: -color-bg-subtle;
 }
 
+.jvms-live-tab-content {
+    -fx-padding: 10px 10px 0 0;
+}
+
+.jvms-live-workspace {
+    -fx-padding: 0 0 0 8px;
+}
+
 .unavailable-state {
     -fx-text-fill: -color-fg-muted;
 }

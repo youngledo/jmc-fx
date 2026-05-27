@@ -15,6 +15,7 @@
 <?import javafx.scene.control.ToggleGroup?>
 <?import javafx.scene.control.TreeView?>
 <?import javafx.scene.layout.BorderPane?>
+<?import javafx.scene.layout.FlowPane?>
 <?import javafx.scene.layout.HBox?>
 <?import javafx.scene.layout.StackPane?>
 <?import javafx.scene.layout.VBox?>
@@ -140,7 +141,7 @@
                             <TabPane fx:id="jvmsLiveTabs" VBox.vgrow="ALWAYS">
                                 <tabs>
                                     <Tab fx:id="jvmsSessionTab" closable="false">
-                                        <VBox spacing="6">
+                                        <VBox fx:id="jvmsSessionContent" styleClass="jvms-live-tab-content" spacing="10">
                                             <Label fx:id="jvmsSessionTitleLabel" styleClass="detail-title"/>
                                             <Label fx:id="jvmsRuntimeSummaryLabel" wrapText="true"/>
                                             <ListView fx:id="jvmsCapabilitiesList"/>
@@ -154,10 +155,10 @@
                                         </VBox>
                                     </Tab>
                                     <Tab fx:id="jvmsMBeanTab" closable="false">
-                                        <SplitPane DividerPositions="0.32">
+                                        <SplitPane fx:id="jvmsMBeanContent" styleClass="jvms-live-tab-content" DividerPositions="0.32">
                                             <items>
                                                 <TreeView fx:id="jvmsMBeanTree" minWidth="160" prefWidth="260"/>
-                                                <VBox spacing="6">
+                                                <VBox fx:id="jvmsMBeanDetailPane" styleClass="jvms-live-workspace" spacing="10">
                                                     <HBox styleClass="page-toolbar" spacing="8">
                                                         <Button fx:id="jvmsRefreshMBeanButton"/>
                                                         <TextField fx:id="jvmsMBeanOperationArgumentsField" HBox.hgrow="ALWAYS"/>
@@ -172,10 +173,10 @@
                                         </SplitPane>
                                     </Tab>
                                     <Tab fx:id="jvmsDiagnosticsTab" closable="false">
-                                        <SplitPane DividerPositions="0.42" VBox.vgrow="ALWAYS">
+                                        <SplitPane fx:id="jvmsDiagnosticContent" styleClass="jvms-live-tab-content" DividerPositions="0.42" VBox.vgrow="ALWAYS">
                                             <items>
                                                 <TableView fx:id="jvmsDiagnosticCommandsTable" styleClass="dense-table"/>
-                                                <VBox spacing="6">
+                                                <VBox fx:id="jvmsDiagnosticDetailPane" styleClass="jvms-live-workspace" spacing="10">
                                                     <HBox styleClass="page-toolbar" spacing="8">
                                                         <TextField fx:id="jvmsDiagnosticArgumentsField" HBox.hgrow="ALWAYS"/>
                                                         <Button fx:id="jvmsExecuteDiagnosticCommandButton"/>
@@ -188,18 +189,18 @@
                                         </SplitPane>
                                     </Tab>
                                     <Tab fx:id="jvmsTriggersTab" closable="false">
-                                        <VBox spacing="6">
-                                            <HBox styleClass="page-toolbar" spacing="8">
-                                                <TextField fx:id="jvmsTriggerNameField"/>
-                                                <ComboBox fx:id="jvmsTriggerMetricCombo"/>
-                                                <ComboBox fx:id="jvmsTriggerOperatorCombo"/>
-                                                <TextField fx:id="jvmsTriggerThresholdField"/>
-                                                <ComboBox fx:id="jvmsTriggerActionCombo"/>
-                                                <ComboBox fx:id="jvmsTriggerCommandCombo"/>
+                                        <VBox fx:id="jvmsTriggersContent" styleClass="jvms-live-tab-content" spacing="10">
+                                            <FlowPane fx:id="jvmsTriggerEditorPane" styleClass="page-toolbar" hgap="8" vgap="8">
+                                                <TextField fx:id="jvmsTriggerNameField" prefWidth="180"/>
+                                                <ComboBox fx:id="jvmsTriggerMetricCombo" prefWidth="180"/>
+                                                <ComboBox fx:id="jvmsTriggerOperatorCombo" prefWidth="90"/>
+                                                <TextField fx:id="jvmsTriggerThresholdField" prefWidth="110"/>
+                                                <ComboBox fx:id="jvmsTriggerActionCombo" prefWidth="160"/>
+                                                <ComboBox fx:id="jvmsTriggerCommandCombo" prefWidth="180"/>
                                                 <Button fx:id="jvmsAddTriggerButton"/>
                                                 <Button fx:id="jvmsRemoveTriggerButton"/>
                                                 <Button fx:id="jvmsEvaluateTriggersButton"/>
-                                            </HBox>
+                                            </FlowPane>
                                             <SplitPane orientation="VERTICAL" DividerPositions="0.5" VBox.vgrow="ALWAYS">
                                                 <items>
                                                     <TableView fx:id="jvmsTriggerRulesTable" styleClass="dense-table"/>
