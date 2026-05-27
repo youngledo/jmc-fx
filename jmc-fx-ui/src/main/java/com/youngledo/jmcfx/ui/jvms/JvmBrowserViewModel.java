@@ -1171,6 +1171,7 @@ public class JvmBrowserViewModel implements AutoCloseable {
         nextTriggerEvaluationGeneration();
         liveMetricDefinitions.clear();
         selectedTriggerMetric.set(null);
+        selectedTriggerCommand.set(null);
         triggerRules.clear();
         triggerEvents.clear();
         triggerName.set("");

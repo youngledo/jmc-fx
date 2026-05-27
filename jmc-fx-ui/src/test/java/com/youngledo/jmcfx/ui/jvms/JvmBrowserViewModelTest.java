@@ -2,6 +2,7 @@ package com.youngledo.jmcfx.ui.jvms;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertFalse;
+import static org.junit.jupiter.api.Assertions.assertNull;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 
 import java.nio.file.Path;
@@ -916,6 +917,28 @@ class JvmBrowserViewModelTest {
         assertEquals("threadPrint", diagnostics.lastRequest().commandName());
         assertEquals(1, viewModel.triggerEventsProperty().size());
         assertTrue(viewModel.triggerEventsProperty().getFirst().message().contains("dump"));
+    }
+
+    @Test
+    void clearingSelectedSessionClearsSelectedTriggerCommand() {
+        FakeJmxConnectionService jmx = new FakeJmxConnectionService();
+        FakeDiagnosticCommandService diagnostics = new FakeDiagnosticCommandService();
+        FakeLiveMetricService metrics = new FakeLiveMetricService();
+        JvmBrowserViewModel viewModel = viewModel(new FakeJvmDiscoveryService(), jmx, diagnostics, metrics);
+        JvmConnection connected = connectedWithDiagnosticCommands(viewModel, jmx);
+        LiveMetricDefinition threads = new LiveMetricDefinition(
+                LiveMetricKind.THREAD_COUNT, "Threads", "threads", 250.0);
+        DiagnosticCommandInfo threadPrint = new DiagnosticCommandInfo(
+                "threadPrint", "Thread Print", "Prints threads.", List.of());
+        metrics.setDefinitions(connected.id(), List.of(threads));
+        diagnostics.setCommands(connected.id(), List.of(threadPrint));
+        viewModel.selectedConnectionProperty().set(connected);
+        viewModel.selectedTriggerCommandProperty().set(threadPrint);
+
+        viewModel.selectedConnectionProperty().set(null);
+
+        assertNull(viewModel.selectedSessionProperty().get());
+        assertNull(viewModel.selectedTriggerCommandProperty().get());
     }
 
     private static JvmBrowserViewModel viewModel(FakeJvmDiscoveryService discovery, FakeJmxConnectionService jmx) {
