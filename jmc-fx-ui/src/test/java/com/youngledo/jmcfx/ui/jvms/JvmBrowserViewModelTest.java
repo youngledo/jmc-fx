@@ -13,6 +13,8 @@ import java.util.Queue;
 
 import org.junit.jupiter.api.Test;
 
+import com.youngledo.jmcfx.domain.model.DiagnosticCommandInfo;
+import com.youngledo.jmcfx.domain.model.DiagnosticCommandResult;
 import com.youngledo.jmcfx.domain.model.FlightRecordingInfo;
 import com.youngledo.jmcfx.domain.model.FlightRecordingState;
 import com.youngledo.jmcfx.domain.model.JvmCapability;
@@ -29,6 +31,7 @@ import com.youngledo.jmcfx.domain.model.MBeanOperationInfo;
 import com.youngledo.jmcfx.domain.model.MBeanOperationParameter;
 import com.youngledo.jmcfx.domain.model.MBeanOperationRequest;
 import com.youngledo.jmcfx.domain.model.MBeanOperationResult;
+import com.youngledo.jmcfx.testsupport.FakeDiagnosticCommandService;
 import com.youngledo.jmcfx.testsupport.FakeFlightRecordingService;
 import com.youngledo.jmcfx.testsupport.FakeJmxConnectionService;
 import com.youngledo.jmcfx.testsupport.FakeJvmDiscoveryService;
@@ -774,6 +777,66 @@ class JvmBrowserViewModelTest {
         assertEquals("", viewModel.mbeanErrorMessageProperty().get());
     }
 
+    @Test
+    void connectedSessionWithDiagnosticCommandsLoadsCommands() {
+        FakeJmxConnectionService jmx = new FakeJmxConnectionService();
+        FakeDiagnosticCommandService diagnostics = new FakeDiagnosticCommandService();
+        JvmBrowserViewModel viewModel = viewModel(new FakeJvmDiscoveryService(), jmx, diagnostics);
+        JvmConnection connected = connectedWithDiagnosticCommands(viewModel, jmx);
+        DiagnosticCommandInfo vmCommandLine = new DiagnosticCommandInfo("VM.command_line",
+                "VM Command Line", "Prints the command line.", List.of());
+        diagnostics.setCommands(connected.id(), List.of(vmCommandLine));
+
+        viewModel.selectedConnectionProperty().set(connected);
+
+        assertTrue(viewModel.diagnosticCommandsAvailableProperty().get());
+        assertEquals(List.of(vmCommandLine), viewModel.diagnosticCommandsProperty());
+        assertEquals(vmCommandLine, viewModel.selectedDiagnosticCommandProperty().get());
+        assertFalse(viewModel.diagnosticCommandLoadingProperty().get());
+        assertFalse(viewModel.diagnosticCommandErrorProperty().get());
+    }
+
+    @Test
+    void executeSelectedDiagnosticCommandStoresOutput() {
+        FakeJmxConnectionService jmx = new FakeJmxConnectionService();
+        FakeDiagnosticCommandService diagnostics = new FakeDiagnosticCommandService();
+        JvmBrowserViewModel viewModel = viewModel(new FakeJvmDiscoveryService(), jmx, diagnostics);
+        JvmConnection connected = connectedWithDiagnosticCommands(viewModel, jmx);
+        DiagnosticCommandInfo threadPrint = new DiagnosticCommandInfo("Thread.print",
+                "Thread Print", "Prints threads.", List.of());
+        diagnostics.setCommands(connected.id(), List.of(threadPrint));
+        diagnostics.setResult(connected.id(), threadPrint.name(),
+                new DiagnosticCommandResult(true, "thread dump", ""));
+        viewModel.selectedConnectionProperty().set(connected);
+        viewModel.diagnosticCommandArgumentsProperty().set("-l 100");
+
+        viewModel.executeSelectedDiagnosticCommand();
+
+        assertEquals("thread dump", viewModel.diagnosticCommandOutputProperty().get());
+        assertFalse(viewModel.diagnosticCommandErrorProperty().get());
+        assertEquals(List.of("-l", "100"), diagnostics.lastRequest().arguments());
+    }
+
+    @Test
+    void failedDiagnosticCommandSetsErrorAndOutput() {
+        FakeJmxConnectionService jmx = new FakeJmxConnectionService();
+        FakeDiagnosticCommandService diagnostics = new FakeDiagnosticCommandService();
+        JvmBrowserViewModel viewModel = viewModel(new FakeJvmDiscoveryService(), jmx, diagnostics);
+        JvmConnection connected = connectedWithDiagnosticCommands(viewModel, jmx);
+        DiagnosticCommandInfo heapDump = new DiagnosticCommandInfo("GC.heap_dump",
+                "GC Heap Dump", "Dumps the heap.", List.of());
+        diagnostics.setCommands(connected.id(), List.of(heapDump));
+        diagnostics.setResult(connected.id(), heapDump.name(),
+                new DiagnosticCommandResult(false, "partial output", "permission denied"));
+        viewModel.selectedConnectionProperty().set(connected);
+
+        viewModel.executeSelectedDiagnosticCommand();
+
+        assertTrue(viewModel.diagnosticCommandErrorProperty().get());
+        assertEquals("permission denied", viewModel.diagnosticCommandErrorMessageProperty().get());
+        assertEquals("permission denied", viewModel.diagnosticCommandOutputProperty().get());
+    }
+
     private static JvmBrowserViewModel viewModel(FakeJvmDiscoveryService discovery, FakeJmxConnectionService jmx) {
         return new JvmBrowserViewModel(discovery, jmx, new DirectJvmBrowserExecutor(), Runnable::run);
     }
@@ -787,6 +850,12 @@ class JvmBrowserViewModelTest {
     private static JvmBrowserViewModel viewModel(FakeJvmDiscoveryService discovery, FakeJmxConnectionService jmx,
             FakeMBeanBrowserService mbeans) {
         return new JvmBrowserViewModel(discovery, jmx, mbeans, new DirectJvmBrowserExecutor(), Runnable::run);
+    }
+
+    private static JvmBrowserViewModel viewModel(FakeJvmDiscoveryService discovery, FakeJmxConnectionService jmx,
+            FakeDiagnosticCommandService diagnostics) {
+        return new JvmBrowserViewModel(discovery, jmx, null, null, diagnostics, null,
+                new DirectJvmBrowserExecutor(), Runnable::run, path -> { });
     }
 
     private static JvmConnection localConnection(String id, String name) {
@@ -818,6 +887,15 @@ class JvmBrowserViewModelTest {
         return connected;
     }
 
+    private static JvmConnection connectedWithDiagnosticCommands(JvmBrowserViewModel viewModel,
+            FakeJmxConnectionService jmx) {
+        JvmConnection connected = JvmConnection.local("42", "demo.Main", "26.0.1", true)
+                .asConnected("service:jmx:local://42");
+        jmx.setSessionSnapshot("42", diagnosticCommandsSessionSnapshot(connected));
+        viewModel.connectionsProperty().add(connected);
+        return connected;
+    }
+
     private static JvmSessionSnapshot sessionSnapshot(JvmConnection connection) {
         return new JvmSessionSnapshot(connection,
                 new JvmRuntimeSnapshot("OpenJDK 64-Bit Server VM", "Eclipse Adoptium",
@@ -833,6 +911,16 @@ class JvmBrowserViewModelTest {
                 List.of(new JvmCapabilitySnapshot(JvmCapability.MBEAN_SERVER,
                                 JvmCapabilityStatus.AVAILABLE, "Available"),
                         new JvmCapabilitySnapshot(JvmCapability.FLIGHT_RECORDER,
+                                JvmCapabilityStatus.AVAILABLE, "Available")));
+    }
+
+    private static JvmSessionSnapshot diagnosticCommandsSessionSnapshot(JvmConnection connection) {
+        return new JvmSessionSnapshot(connection,
+                new JvmRuntimeSnapshot("OpenJDK 64-Bit Server VM", "Eclipse Adoptium",
+                        "26.0.1", "26", Instant.EPOCH, 1000),
+                List.of(new JvmCapabilitySnapshot(JvmCapability.MBEAN_SERVER,
+                                JvmCapabilityStatus.AVAILABLE, "Available"),
+                        new JvmCapabilitySnapshot(JvmCapability.DIAGNOSTIC_COMMANDS,
                                 JvmCapabilityStatus.AVAILABLE, "Available")));
     }
 

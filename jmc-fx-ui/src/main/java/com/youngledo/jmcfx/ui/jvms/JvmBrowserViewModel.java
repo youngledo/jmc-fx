@@ -16,6 +16,9 @@ import java.util.stream.Collectors;
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
 
+import com.youngledo.jmcfx.domain.model.DiagnosticCommandInfo;
+import com.youngledo.jmcfx.domain.model.DiagnosticCommandRequest;
+import com.youngledo.jmcfx.domain.model.DiagnosticCommandResult;
 import com.youngledo.jmcfx.domain.model.FlightRecordingInfo;
 import com.youngledo.jmcfx.domain.model.FlightRecordingStartRequest;
 import com.youngledo.jmcfx.domain.model.FlightRecordingState;
@@ -32,9 +35,11 @@ import com.youngledo.jmcfx.domain.model.MBeanOperationInfo;
 import com.youngledo.jmcfx.domain.model.MBeanOperationParameter;
 import com.youngledo.jmcfx.domain.model.MBeanOperationRequest;
 import com.youngledo.jmcfx.domain.model.MBeanOperationResult;
+import com.youngledo.jmcfx.domain.service.DiagnosticCommandService;
 import com.youngledo.jmcfx.domain.service.FlightRecordingService;
 import com.youngledo.jmcfx.domain.service.JmxConnectionService;
 import com.youngledo.jmcfx.domain.service.JvmDiscoveryService;
+import com.youngledo.jmcfx.domain.service.LiveMetricService;
 import com.youngledo.jmcfx.domain.service.MBeanBrowserService;
 
 import javafx.beans.property.BooleanProperty;
@@ -56,6 +61,7 @@ public class JvmBrowserViewModel implements AutoCloseable {
     private final JmxConnectionService connectionService;
     private final FlightRecordingService flightRecordingService;
     private final MBeanBrowserService mBeanBrowserService;
+    private final DiagnosticCommandService diagnosticCommandService;
     private final JvmBrowserExecutor executor;
     private final Consumer<Runnable> fxRunner;
     private final Consumer<Path> savedRecordingHandler;
@@ -64,16 +70,21 @@ public class JvmBrowserViewModel implements AutoCloseable {
     private final ObservableList<MBeanNode> mbeanTree = FXCollections.observableArrayList();
     private final ObservableList<MBeanAttributeInfo> mbeanAttributes = FXCollections.observableArrayList();
     private final ObservableList<MBeanOperationInfo> mbeanOperations = FXCollections.observableArrayList();
+    private final ObservableList<DiagnosticCommandInfo> diagnosticCommands = FXCollections.observableArrayList();
     private final ObjectProperty<JvmConnection> selectedConnection = new SimpleObjectProperty<>();
     private final ObjectProperty<FlightRecordingInfo> selectedFlightRecording = new SimpleObjectProperty<>();
     private final ObjectProperty<MBeanNode> selectedMBean = new SimpleObjectProperty<>();
     private final ObjectProperty<MBeanOperationInfo> selectedMBeanOperation = new SimpleObjectProperty<>();
+    private final ObjectProperty<DiagnosticCommandInfo> selectedDiagnosticCommand = new SimpleObjectProperty<>();
     private final StringProperty manualConnectionUrl = new SimpleStringProperty("");
     private final StringProperty statusMessage = new SimpleStringProperty("");
     private final StringProperty errorMessage = new SimpleStringProperty("");
     private final StringProperty mbeanErrorMessage = new SimpleStringProperty("");
     private final StringProperty mbeanOperationArguments = new SimpleStringProperty("");
     private final StringProperty mbeanOperationResult = new SimpleStringProperty("");
+    private final StringProperty diagnosticCommandArguments = new SimpleStringProperty("");
+    private final StringProperty diagnosticCommandOutput = new SimpleStringProperty("");
+    private final StringProperty diagnosticCommandErrorMessage = new SimpleStringProperty("");
     private final BooleanProperty loading = new SimpleBooleanProperty(false);
     private final BooleanProperty error = new SimpleBooleanProperty(false);
     private final BooleanProperty refreshCompleted = new SimpleBooleanProperty(false);
@@ -89,10 +100,14 @@ public class JvmBrowserViewModel implements AutoCloseable {
     private final BooleanProperty mbeanBrowserAvailable = new SimpleBooleanProperty(false);
     private final BooleanProperty mbeanLoading = new SimpleBooleanProperty(false);
     private final BooleanProperty mbeanError = new SimpleBooleanProperty(false);
+    private final BooleanProperty diagnosticCommandsAvailable = new SimpleBooleanProperty(false);
+    private final BooleanProperty diagnosticCommandLoading = new SimpleBooleanProperty(false);
+    private final BooleanProperty diagnosticCommandError = new SimpleBooleanProperty(false);
     private final Map<Long, JvmConnection> sessionStartedRecordings = new HashMap<>();
     private int pendingWorkCount;
     private long sessionLoadGeneration;
     private long mbeanRequestGeneration;
+    private long diagnosticCommandRequestGeneration;
 
     public JvmBrowserViewModel(JvmDiscoveryService discoveryService, JmxConnectionService connectionService) {
         this(discoveryService, connectionService, null, new VirtualThreadJvmBrowserExecutor(),
@@ -106,29 +121,40 @@ public class JvmBrowserViewModel implements AutoCloseable {
 
     public JvmBrowserViewModel(JvmDiscoveryService discoveryService, JmxConnectionService connectionService,
             MBeanBrowserService mBeanBrowserService, JvmBrowserExecutor executor, Consumer<Runnable> fxRunner) {
-        this(discoveryService, connectionService, null, mBeanBrowserService, executor, fxRunner, path -> { });
+        this(discoveryService, connectionService, null, mBeanBrowserService, null, null, executor, fxRunner,
+                path -> { });
     }
 
     public JvmBrowserViewModel(JvmDiscoveryService discoveryService, JmxConnectionService connectionService,
             FlightRecordingService flightRecordingService, JvmBrowserExecutor executor, Consumer<Runnable> fxRunner,
             Consumer<Path> savedRecordingHandler) {
-        this(discoveryService, connectionService, flightRecordingService, null, executor, fxRunner,
+        this(discoveryService, connectionService, flightRecordingService, null, null, null, executor, fxRunner,
                 savedRecordingHandler);
     }
 
     public JvmBrowserViewModel(JvmDiscoveryService discoveryService, JmxConnectionService connectionService,
             FlightRecordingService flightRecordingService, MBeanBrowserService mBeanBrowserService,
             JvmBrowserExecutor executor, Consumer<Runnable> fxRunner, Consumer<Path> savedRecordingHandler) {
+        this(discoveryService, connectionService, flightRecordingService, mBeanBrowserService, null, null, executor,
+                fxRunner, savedRecordingHandler);
+    }
+
+    public JvmBrowserViewModel(JvmDiscoveryService discoveryService, JmxConnectionService connectionService,
+            FlightRecordingService flightRecordingService, MBeanBrowserService mBeanBrowserService,
+            DiagnosticCommandService diagnosticCommandService, LiveMetricService liveMetricService,
+            JvmBrowserExecutor executor, Consumer<Runnable> fxRunner, Consumer<Path> savedRecordingHandler) {
         this.discoveryService = Objects.requireNonNull(discoveryService, "discoveryService");
         this.connectionService = Objects.requireNonNull(connectionService, "connectionService");
         this.flightRecordingService = flightRecordingService;
         this.mBeanBrowserService = mBeanBrowserService;
+        this.diagnosticCommandService = diagnosticCommandService;
         this.executor = Objects.requireNonNull(executor, "executor");
         this.fxRunner = Objects.requireNonNull(fxRunner, "fxRunner");
         this.savedRecordingHandler = Objects.requireNonNull(savedRecordingHandler, "savedRecordingHandler");
         this.selectedConnection.addListener((observable, oldValue, newValue) -> loadSessionForSelection(newValue));
         this.selectedMBean.addListener((observable, oldValue, newValue) -> loadSelectedMBeanDetails(newValue));
         this.selectedMBeanOperation.addListener((observable, oldValue, newValue) -> clearMBeanOperationResult());
+        this.selectedDiagnosticCommand.addListener((observable, oldValue, newValue) -> clearDiagnosticCommandResult());
     }
 
     public ObservableList<JvmConnection> connectionsProperty() {
@@ -251,6 +277,38 @@ public class JvmBrowserViewModel implements AutoCloseable {
         return mbeanOperationResult;
     }
 
+    public ObservableList<DiagnosticCommandInfo> diagnosticCommandsProperty() {
+        return diagnosticCommands;
+    }
+
+    public ObjectProperty<DiagnosticCommandInfo> selectedDiagnosticCommandProperty() {
+        return selectedDiagnosticCommand;
+    }
+
+    public StringProperty diagnosticCommandArgumentsProperty() {
+        return diagnosticCommandArguments;
+    }
+
+    public StringProperty diagnosticCommandOutputProperty() {
+        return diagnosticCommandOutput;
+    }
+
+    public StringProperty diagnosticCommandErrorMessageProperty() {
+        return diagnosticCommandErrorMessage;
+    }
+
+    public BooleanProperty diagnosticCommandsAvailableProperty() {
+        return diagnosticCommandsAvailable;
+    }
+
+    public BooleanProperty diagnosticCommandLoadingProperty() {
+        return diagnosticCommandLoading;
+    }
+
+    public BooleanProperty diagnosticCommandErrorProperty() {
+        return diagnosticCommandError;
+    }
+
     public FlightRecordingInfo selectedFlightRecording() {
         return selectedFlightRecording.get();
     }
@@ -312,6 +370,7 @@ public class JvmBrowserViewModel implements AutoCloseable {
                     replaceOrAdd(disconnected, "Disconnected.");
                     selectedSession.set(null);
                     clearRecordingControl();
+                    clearDiagnosticCommands();
                     clearSessionError();
                 });
             } catch (RuntimeException exception) {
@@ -420,6 +479,45 @@ public class JvmBrowserViewModel implements AutoCloseable {
                 });
             } catch (RuntimeException exception) {
                 failMBean(generation, snapshot, node, operation, exception);
+            }
+        });
+    }
+
+    public void executeSelectedDiagnosticCommand() {
+        JvmSessionSnapshot snapshot = selectedSession.get();
+        DiagnosticCommandInfo command = selectedDiagnosticCommand.get();
+        if (!canUseDiagnosticCommands(snapshot) || command == null) {
+            diagnosticCommandError.set(true);
+            diagnosticCommandErrorMessage.set("Select a Diagnostic Command to execute.");
+            return;
+        }
+
+        List<String> arguments = parseDiagnosticCommandArguments(diagnosticCommandArguments.get());
+        DiagnosticCommandRequest request = new DiagnosticCommandRequest(snapshot.connection(), command.name(),
+                arguments);
+        long generation = nextDiagnosticCommandRequestGeneration();
+        diagnosticCommandLoading.set(true);
+        clearDiagnosticCommandError();
+        executor.execute(() -> {
+            try {
+                DiagnosticCommandResult result = diagnosticCommandService.execute(request);
+                runOnFx(() -> {
+                    if (!isCurrentDiagnosticCommandRequest(generation, snapshot, command)) {
+                        return;
+                    }
+                    if (result.success()) {
+                        diagnosticCommandOutput.set(result.output());
+                        clearDiagnosticCommandError();
+                    } else {
+                        String message = displayDiagnosticCommandResult(result);
+                        diagnosticCommandOutput.set(message);
+                        diagnosticCommandError.set(true);
+                        diagnosticCommandErrorMessage.set(message);
+                    }
+                    diagnosticCommandLoading.set(false);
+                });
+            } catch (RuntimeException exception) {
+                failDiagnosticCommand(generation, snapshot, command, exception);
             }
         });
     }
@@ -564,6 +662,7 @@ public class JvmBrowserViewModel implements AutoCloseable {
         selectedSession.set(null);
         clearRecordingControl();
         clearMBeanBrowser();
+        clearDiagnosticCommands();
         clearSessionError();
         if (connection == null || !connection.connected()) {
             sessionLoading.set(false);
@@ -581,6 +680,7 @@ public class JvmBrowserViewModel implements AutoCloseable {
                     clearSessionError();
                     loadRecordingControl(snapshot);
                     loadMBeanBrowser(snapshot);
+                    loadDiagnosticCommands(snapshot);
                     sessionLoading.set(false);
                 });
             } catch (RuntimeException exception) {
@@ -594,6 +694,7 @@ public class JvmBrowserViewModel implements AutoCloseable {
                     selectedSession.set(null);
                     clearRecordingControl();
                     clearMBeanBrowser();
+                    clearDiagnosticCommands();
                     sessionError.set(true);
                     sessionErrorMessage.set(exception.getMessage() == null
                             ? exception.getClass().getSimpleName() : exception.getMessage());
@@ -706,6 +807,44 @@ public class JvmBrowserViewModel implements AutoCloseable {
                 && snapshot.statusOf(JvmCapability.MBEAN_SERVER) == JvmCapabilityStatus.AVAILABLE;
     }
 
+    private void loadDiagnosticCommands(JvmSessionSnapshot snapshot) {
+        if (!canLoadDiagnosticCommands(snapshot)) {
+            clearDiagnosticCommands();
+            return;
+        }
+        long generation = nextDiagnosticCommandRequestGeneration();
+        diagnosticCommandsAvailable.set(true);
+        diagnosticCommandLoading.set(true);
+        clearDiagnosticCommandError();
+        diagnosticCommands.clear();
+        selectedDiagnosticCommand.set(null);
+        executor.execute(() -> {
+            try {
+                List<DiagnosticCommandInfo> commands = diagnosticCommandService.commands(snapshot.connection());
+                runOnFx(() -> {
+                    if (!isCurrentDiagnosticCommandSessionRequest(generation, snapshot)) {
+                        return;
+                    }
+                    diagnosticCommands.setAll(commands);
+                    selectedDiagnosticCommand.set(commands.isEmpty() ? null : commands.getFirst());
+                    diagnosticCommandLoading.set(false);
+                    clearDiagnosticCommandError();
+                });
+            } catch (RuntimeException exception) {
+                failDiagnosticCommand(generation, snapshot, null, exception);
+            }
+        });
+    }
+
+    private boolean canUseDiagnosticCommands(JvmSessionSnapshot snapshot) {
+        return canLoadDiagnosticCommands(snapshot) && diagnosticCommandsAvailable.get();
+    }
+
+    private boolean canLoadDiagnosticCommands(JvmSessionSnapshot snapshot) {
+        return diagnosticCommandService != null && snapshot != null
+                && snapshot.statusOf(JvmCapability.DIAGNOSTIC_COMMANDS) == JvmCapabilityStatus.AVAILABLE;
+    }
+
     private void discardSessionStartedRecordings() {
         if (flightRecordingService == null || sessionStartedRecordings.isEmpty()) {
             return;
@@ -785,6 +924,29 @@ public class JvmBrowserViewModel implements AutoCloseable {
         clearMBeanError();
     }
 
+    private void clearDiagnosticCommands() {
+        nextDiagnosticCommandRequestGeneration();
+        diagnosticCommands.clear();
+        selectedDiagnosticCommand.set(null);
+        diagnosticCommandsAvailable.set(false);
+        diagnosticCommandLoading.set(false);
+        diagnosticCommandArguments.set("");
+        diagnosticCommandOutput.set("");
+        clearDiagnosticCommandError();
+    }
+
+    private void clearDiagnosticCommandError() {
+        diagnosticCommandError.set(false);
+        diagnosticCommandErrorMessage.set("");
+    }
+
+    private void clearDiagnosticCommandResult() {
+        nextDiagnosticCommandRequestGeneration();
+        diagnosticCommandOutput.set("");
+        diagnosticCommandLoading.set(false);
+        clearDiagnosticCommandError();
+    }
+
     private void failRecording(RuntimeException exception) {
         LOGGER.error("Flight Recorder action failed", exception);
         runOnFx(() -> {
@@ -812,6 +974,24 @@ public class JvmBrowserViewModel implements AutoCloseable {
             mbeanErrorMessage.set(exception.getMessage() == null ? exception.getClass().getSimpleName()
                     : exception.getMessage());
             mbeanLoading.set(false);
+        });
+    }
+
+    private void failDiagnosticCommand(long generation, JvmSessionSnapshot snapshot,
+            DiagnosticCommandInfo command, RuntimeException exception) {
+        LOGGER.error("Diagnostic Command action failed", exception);
+        runOnFx(() -> {
+            if (command == null) {
+                if (!isCurrentDiagnosticCommandSessionRequest(generation, snapshot)) {
+                    return;
+                }
+            } else if (!isCurrentDiagnosticCommandRequest(generation, snapshot, command)) {
+                return;
+            }
+            diagnosticCommandError.set(true);
+            diagnosticCommandErrorMessage.set(exception.getMessage() == null ? exception.getClass().getSimpleName()
+                    : exception.getMessage());
+            diagnosticCommandLoading.set(false);
         });
     }
 
@@ -855,6 +1035,21 @@ public class JvmBrowserViewModel implements AutoCloseable {
         return isCurrentMBeanRequest(generation, snapshot, node) && selectedMBeanOperation.get() == operation;
     }
 
+    private long nextDiagnosticCommandRequestGeneration() {
+        return ++diagnosticCommandRequestGeneration;
+    }
+
+    private boolean isCurrentDiagnosticCommandSessionRequest(long generation, JvmSessionSnapshot snapshot) {
+        return diagnosticCommandRequestGeneration == generation && selectedSession.get() == snapshot
+                && diagnosticCommandsAvailable.get();
+    }
+
+    private boolean isCurrentDiagnosticCommandRequest(long generation, JvmSessionSnapshot snapshot,
+            DiagnosticCommandInfo command) {
+        return isCurrentDiagnosticCommandSessionRequest(generation, snapshot)
+                && selectedDiagnosticCommand.get() == command;
+    }
+
     private static List<String> parseMBeanArguments(String arguments) {
         if (arguments == null || arguments.isBlank()) {
             return List.of();
@@ -869,5 +1064,19 @@ public class JvmBrowserViewModel implements AutoCloseable {
             return result.error();
         }
         return result.value();
+    }
+
+    private static List<String> parseDiagnosticCommandArguments(String arguments) {
+        if (arguments == null || arguments.isBlank()) {
+            return List.of();
+        }
+        return List.of(arguments.trim().split("\\s+"));
+    }
+
+    private static String displayDiagnosticCommandResult(DiagnosticCommandResult result) {
+        if (!result.error().isBlank()) {
+            return result.error();
+        }
+        return result.output();
     }
 }
