@@ -483,6 +483,9 @@
 .profiling-flame-container {
     -fx-padding: 12px;
 }
+.profiling-call-graph-container {
+    -fx-padding: 12px;
+}
 .flame-graph-view {
     -fx-padding: 4px 0;
 }

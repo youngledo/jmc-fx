@@ -193,9 +193,21 @@ class AppShellTest {
         Element profilingTreeTabs = elementByFxId(document, "profilingTreeTabs");
         List<Element> tabs = childElements(childElement(profilingTreeTabs, "tabs"), "Tab");
 
-        assertEquals(List.of("profilingCallersFlameTab", "profilingCalleesFlameTab",
+        assertEquals(List.of("profilingCallGraphTab", "profilingCallersFlameTab", "profilingCalleesFlameTab",
                         "profilingCallersTab", "profilingCalleesTab"),
                 tabs.stream().map(tab -> tab.getAttribute("fx:id")).toList());
+
+        Element callGraphTab = elementByFxId(document, "profilingCallGraphTab");
+        assertEquals("Tab", callGraphTab.getTagName());
+        Element callGraphToolbar = elementByFxId(document, "profilingCallGraphToolbar");
+        assertEquals("HBox", callGraphToolbar.getTagName());
+        assertTrue(hasStyleClass(callGraphToolbar, "page-toolbar"));
+        assertEquals("ComboBox", elementByFxId(document, "profilingCallGraphDirectionCombo").getTagName());
+        assertEquals("Label", elementByFxId(document, "profilingCallGraphDepthLabel").getTagName());
+        assertEquals("Spinner", elementByFxId(document, "profilingCallGraphDepthSpinner").getTagName());
+        Element callGraphContainer = elementByFxId(document, "profilingCallGraphContainer");
+        assertEquals("VBox", callGraphContainer.getTagName());
+        assertTrue(hasStyleClass(callGraphContainer, "profiling-call-graph-container"));
 
         assertFlameGraphTab(document, "profilingCallersFlameContainer");
         assertFlameGraphTab(document, "profilingCalleesFlameContainer");
@@ -204,44 +216,78 @@ class AppShellTest {
     }
 
     @Test
-    void profilingFlameGraphShellWiringUsesViewModelLayoutsAndI18n() throws Exception {
+    void profilingGraphShellWiringUsesViewModelLayoutsAndI18n() throws Exception {
         String controller = java.nio.file.Files.readString(
                 java.nio.file.Path.of("src/main/java/com/youngledo/jmcfx/ui/shell/AppShellController.java"));
         String english = java.nio.file.Files.readString(
                 java.nio.file.Path.of("src/main/resources/com/youngledo/jmcfx/ui/i18n/messages.properties"));
         String chinese = java.nio.file.Files.readString(
                 java.nio.file.Path.of("src/main/resources/com/youngledo/jmcfx/ui/i18n/messages_zh_CN.properties"));
+        String css = appCss();
 
+        assertTrue(controller.contains("@FXML private Tab profilingCallGraphTab;"));
+        assertTrue(controller.contains("@FXML private HBox profilingCallGraphToolbar;"));
+        assertTrue(controller.contains("@FXML private ComboBox<CallGraphDirection> profilingCallGraphDirectionCombo;"));
+        assertTrue(controller.contains("@FXML private Label profilingCallGraphDepthLabel;"));
+        assertTrue(controller.contains("@FXML private Spinner<Integer> profilingCallGraphDepthSpinner;"));
+        assertTrue(controller.contains("@FXML private VBox profilingCallGraphContainer;"));
+        assertTrue(controller.contains("private CallGraphView profilingCallGraphView;"));
         assertTrue(controller.contains("@FXML private Tab profilingCallersFlameTab;"));
         assertTrue(controller.contains("@FXML private VBox profilingCallersFlameContainer;"));
         assertTrue(controller.contains("@FXML private Tab profilingCalleesFlameTab;"));
         assertTrue(controller.contains("@FXML private VBox profilingCalleesFlameContainer;"));
         assertTrue(controller.contains("private FlameGraphView profilingCallersFlameGraphView;"));
         assertTrue(controller.contains("private FlameGraphView profilingCalleesFlameGraphView;"));
+        assertTrue(controller.contains("profilingCallGraphView.emptyTextProperty().bind(i18n.text(\"profiling.callGraph.empty\"))"));
+        assertTrue(controller.contains("profilingCallGraphContainer.getChildren().setAll(profilingCallGraphView)"));
+        assertTrue(controller.contains("profilingCallGraphView.setLayout(null)"));
         assertTrue(controller.contains("profilingCallersFlameContainer.getChildren().setAll(profilingCallersFlameGraphView)"));
         assertTrue(controller.contains("profilingCalleesFlameContainer.getChildren().setAll(profilingCalleesFlameGraphView)"));
         assertTrue(controller.contains("profilingCallersFlameGraphView.setLayout(null)"));
         assertTrue(controller.contains("profilingCalleesFlameGraphView.setLayout(null)"));
+        assertTrue(controller.contains("currentProfilingViewModel.callGraphProperty().removeListener(callGraphListener)"));
         assertTrue(controller.contains("currentProfilingViewModel.callersTreeProperty().removeListener(callersTreeListener)"));
         assertTrue(controller.contains("currentProfilingViewModel.calleesTreeProperty().removeListener(calleesTreeListener)"));
         assertTrue(controller.contains("currentProfilingViewModel.callersFlameGraphProperty().removeListener(callersFlameGraphListener)"));
         assertTrue(controller.contains("currentProfilingViewModel.calleesFlameGraphProperty().removeListener(calleesFlameGraphListener)"));
+        assertTrue(controller.contains("nextViewModel.callGraphProperty().addListener(callGraphListener)"));
         assertTrue(controller.contains("nextViewModel.callersTreeProperty().addListener(callersTreeListener)"));
         assertTrue(controller.contains("nextViewModel.calleesTreeProperty().addListener(calleesTreeListener)"));
         assertTrue(controller.contains("nextViewModel.callersFlameGraphProperty().addListener(callersFlameGraphListener)"));
         assertTrue(controller.contains("nextViewModel.calleesFlameGraphProperty().addListener(calleesFlameGraphListener)"));
+        assertTrue(controller.contains("nextViewModel.callGraphProperty().get()"));
         assertTrue(controller.contains("nextViewModel.callersFlameGraphProperty().get()"));
         assertTrue(controller.contains("nextViewModel.calleesFlameGraphProperty().get()"));
+        assertTrue(controller.contains("setCallGraphDirection"));
+        assertTrue(controller.contains("setCallGraphMaxDepth"));
+        assertTrue(controller.contains("profiling.callGraph.direction.callers"));
+        assertTrue(controller.contains("profiling.callGraph.direction.callees"));
+        assertTrue(controller.contains("profilingCallGraphTab.textProperty().bind(i18n.text(\"profiling.tab.callGraph\"))"));
+        assertTrue(controller.contains("profilingCallGraphDirectionCombo.promptTextProperty().bind(i18n.text(\"profiling.callGraph.direction\"))"));
+        assertTrue(controller.contains("profilingCallGraphDepthLabel.textProperty().bind(i18n.text(\"profiling.callGraph.depth\"))"));
         assertTrue(controller.contains("profilingCallersFlameTab.textProperty().bind(i18n.text(\"profiling.tab.callersFlame\"))"));
         assertTrue(controller.contains("profilingCalleesFlameTab.textProperty().bind(i18n.text(\"profiling.tab.calleesFlame\"))"));
         assertTrue(controller.contains("profilingCallersFlameGraphView.emptyTextProperty().bind(i18n.text(\"profiling.flame.empty\"))"));
         assertTrue(controller.contains("profilingCalleesFlameGraphView.emptyTextProperty().bind(i18n.text(\"profiling.flame.empty\"))"));
 
+        assertTrue(css.contains(".profiling-call-graph-container"));
+        assertTrue(english.contains("profiling.tab.callGraph=Call Graph"));
         assertTrue(english.contains("profiling.tab.callersFlame=Caller Flame Graph"));
         assertTrue(english.contains("profiling.tab.calleesFlame=Callee Flame Graph"));
+        assertTrue(english.contains("profiling.callGraph.empty=Select a method to view the call graph."));
+        assertTrue(english.contains("profiling.callGraph.direction=Direction"));
+        assertTrue(english.contains("profiling.callGraph.direction.callers=Callers"));
+        assertTrue(english.contains("profiling.callGraph.direction.callees=Callees"));
+        assertTrue(english.contains("profiling.callGraph.depth=Depth"));
         assertTrue(english.contains("profiling.flame.empty=Select a method to view the flame graph."));
+        assertTrue(chinese.contains("profiling.tab.callGraph=调用图"));
         assertTrue(chinese.contains("profiling.tab.callersFlame=调用者火焰图"));
         assertTrue(chinese.contains("profiling.tab.calleesFlame=被调用者火焰图"));
+        assertTrue(chinese.contains("profiling.callGraph.empty=选择一个方法查看调用图。"));
+        assertTrue(chinese.contains("profiling.callGraph.direction=方向"));
+        assertTrue(chinese.contains("profiling.callGraph.direction.callers=调用者"));
+        assertTrue(chinese.contains("profiling.callGraph.direction.callees=被调用者"));
+        assertTrue(chinese.contains("profiling.callGraph.depth=深度"));
         assertTrue(chinese.contains("profiling.flame.empty=选择一个方法查看火焰图。"));
     }
 
@@ -350,8 +396,10 @@ class AppShellTest {
     void profilingFlameGraphContainerUsesScopedPadding() throws Exception {
         String css = appCss();
         String flameContainer = cssBlock(css, ".profiling-flame-container");
+        String callGraphContainer = cssBlock(css, ".profiling-call-graph-container");
 
         assertTrue(flameContainer.contains("-fx-padding: 12px"));
+        assertTrue(callGraphContainer.contains("-fx-padding: 12px"));
     }
 
     @Test

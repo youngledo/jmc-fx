@@ -9,6 +9,7 @@
 <?import javafx.scene.control.RadioButton?>
 <?import javafx.scene.control.ScrollPane?>
 <?import javafx.scene.control.SplitPane?>
+<?import javafx.scene.control.Spinner?>
 <?import javafx.scene.control.Tab?>
 <?import javafx.scene.control.TabPane?>
 <?import javafx.scene.control.TableView?>
@@ -243,6 +244,18 @@
                     <TableView fx:id="profilingTable" styleClass="dense-table" prefHeight="300"/>
                     <TabPane fx:id="profilingTreeTabs" prefHeight="300">
                         <tabs>
+                            <Tab fx:id="profilingCallGraphTab" closable="false">
+                                <VBox spacing="8">
+                                    <HBox fx:id="profilingCallGraphToolbar" styleClass="page-toolbar" spacing="8">
+                                        <ComboBox fx:id="profilingCallGraphDirectionCombo" prefWidth="150"/>
+                                        <Label fx:id="profilingCallGraphDepthLabel"/>
+                                        <Spinner fx:id="profilingCallGraphDepthSpinner" prefWidth="110"/>
+                                    </HBox>
+                                    <ScrollPane fitToWidth="true" fitToHeight="true" VBox.vgrow="ALWAYS">
+                                        <VBox fx:id="profilingCallGraphContainer" styleClass="profiling-call-graph-container"/>
+                                    </ScrollPane>
+                                </VBox>
+                            </Tab>
                             <Tab fx:id="profilingCallersFlameTab" closable="false">
                                 <ScrollPane fitToWidth="true" fitToHeight="true">
                                     <VBox fx:id="profilingCallersFlameContainer" styleClass="profiling-flame-container"/>

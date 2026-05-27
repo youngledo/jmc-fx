@@ -139,6 +139,10 @@ import com.youngledo.jmcfx.ui.util.DisplayFormats;
 import com.youngledo.jmcfx.ui.util.HtmlToTextFlow;
 import com.youngledo.jmcfx.ui.overview.OverviewViewModel;
 import com.youngledo.jmcfx.ui.preferences.AppTheme;
+import com.youngledo.jmcfx.ui.profiling.CallGraphDirection;
+import com.youngledo.jmcfx.ui.profiling.CallGraphLayout;
+import com.youngledo.jmcfx.ui.profiling.CallGraphLayoutBuilder;
+import com.youngledo.jmcfx.ui.profiling.CallGraphView;
 import com.youngledo.jmcfx.ui.profiling.FlameGraphLayout;
 import com.youngledo.jmcfx.ui.profiling.FlameGraphView;
 import com.youngledo.jmcfx.ui.profiling.ProfilingViewModel;
@@ -167,6 +171,8 @@ import javafx.scene.control.TextArea;
 import javafx.scene.control.RadioButton;
 import javafx.scene.control.ProgressBar;
 import javafx.scene.control.SplitPane;
+import javafx.scene.control.Spinner;
+import javafx.scene.control.SpinnerValueFactory;
 import javafx.scene.control.Tab;
 import javafx.scene.control.TableCell;
 import javafx.scene.control.TableColumn;
@@ -183,6 +189,7 @@ import javafx.scene.layout.HBox;
 import javafx.scene.layout.Region;
 import javafx.scene.layout.VBox;
 import javafx.stage.FileChooser;
+import javafx.util.StringConverter;
 import org.kordamp.ikonli.Ikon;
 import org.kordamp.ikonli.javafx.FontIcon;
 import org.kordamp.ikonli.material2.Material2AL;
@@ -398,6 +405,12 @@ public class AppShellController {
     @FXML private Label profilingTitleLabel;
     @FXML private TableView<HotMethod> profilingTable;
     @FXML private TabPane profilingTreeTabs;
+    @FXML private Tab profilingCallGraphTab;
+    @FXML private HBox profilingCallGraphToolbar;
+    @FXML private ComboBox<CallGraphDirection> profilingCallGraphDirectionCombo;
+    @FXML private Label profilingCallGraphDepthLabel;
+    @FXML private Spinner<Integer> profilingCallGraphDepthSpinner;
+    @FXML private VBox profilingCallGraphContainer;
     @FXML private Tab profilingCallersFlameTab;
     @FXML private VBox profilingCallersFlameContainer;
     @FXML private Tab profilingCalleesFlameTab;
@@ -406,12 +419,15 @@ public class AppShellController {
     @FXML private TreeView<StackTreeNode> profilingCallersTree;
     @FXML private Tab profilingCalleesTab;
     @FXML private TreeView<StackTreeNode> profilingCalleesTree;
+    private CallGraphView profilingCallGraphView;
     private FlameGraphView profilingCallersFlameGraphView;
     private FlameGraphView profilingCalleesFlameGraphView;
     private final ChangeListener<StackTreeNode> callersTreeListener =
             (observable, oldValue, newValue) -> rebuildStackTree(profilingCallersTree, newValue);
     private final ChangeListener<StackTreeNode> calleesTreeListener =
             (observable, oldValue, newValue) -> rebuildStackTree(profilingCalleesTree, newValue);
+    private final ChangeListener<CallGraphLayout> callGraphListener =
+            (observable, oldValue, newValue) -> profilingCallGraphView.setLayout(newValue);
     private final ChangeListener<FlameGraphLayout> callersFlameGraphListener =
             (observable, oldValue, newValue) -> profilingCallersFlameGraphView.setLayout(newValue);
     private final ChangeListener<FlameGraphLayout> calleesFlameGraphListener =
@@ -1738,12 +1754,43 @@ public class AppShellController {
 
     private void configureProfilingTable() {
         profilingTable.setPlaceholder(localizedTablePlaceholder("profiling.empty"));
+        profilingCallGraphView = new CallGraphView();
         profilingCallersFlameGraphView = new FlameGraphView();
         profilingCalleesFlameGraphView = new FlameGraphView();
+        profilingCallGraphView.emptyTextProperty().bind(i18n.text("profiling.callGraph.empty"));
         profilingCallersFlameGraphView.emptyTextProperty().bind(i18n.text("profiling.flame.empty"));
         profilingCalleesFlameGraphView.emptyTextProperty().bind(i18n.text("profiling.flame.empty"));
+        profilingCallGraphContainer.getChildren().setAll(profilingCallGraphView);
         profilingCallersFlameContainer.getChildren().setAll(profilingCallersFlameGraphView);
         profilingCalleesFlameContainer.getChildren().setAll(profilingCalleesFlameGraphView);
+        profilingCallGraphDirectionCombo.setItems(FXCollections.observableArrayList(CallGraphDirection.values()));
+        profilingCallGraphDirectionCombo.setConverter(new StringConverter<>() {
+            @Override
+            public String toString(CallGraphDirection direction) {
+                return formatCallGraphDirection(direction);
+            }
+
+            @Override
+            public CallGraphDirection fromString(String value) {
+                return null;
+            }
+        });
+        profilingCallGraphDirectionCombo.getSelectionModel().select(CallGraphDirection.CALLEES);
+        profilingCallGraphDirectionCombo.getSelectionModel().selectedItemProperty()
+                .addListener((obs, old, val) -> {
+                    if (profilingViewModel != null && val != null) {
+                        profilingViewModel.setCallGraphDirection(val);
+                    }
+                });
+        profilingCallGraphDepthSpinner.setValueFactory(
+                new SpinnerValueFactory.IntegerSpinnerValueFactory(
+                        1, 6, CallGraphLayoutBuilder.DEFAULT_MAX_DEPTH));
+        profilingCallGraphDepthSpinner.valueProperty()
+                .addListener((obs, old, val) -> {
+                    if (profilingViewModel != null && val != null) {
+                        profilingViewModel.setCallGraphMaxDepth(val);
+                    }
+                });
 
         TableColumn<HotMethod, String> methodCol = new TableColumn<>();
         methodCol.textProperty().bind(i18n.text("profiling.column.method"));
@@ -2177,6 +2224,7 @@ public class AppShellController {
     private void bindProfiling(ProfilingViewModel nextViewModel) {
         ProfilingViewModel currentProfilingViewModel = profilingViewModel;
         if (currentProfilingViewModel != null) {
+            currentProfilingViewModel.callGraphProperty().removeListener(callGraphListener);
             currentProfilingViewModel.callersTreeProperty().removeListener(callersTreeListener);
             currentProfilingViewModel.calleesTreeProperty().removeListener(calleesTreeListener);
             currentProfilingViewModel.callersFlameGraphProperty().removeListener(callersFlameGraphListener);
@@ -2185,6 +2233,7 @@ public class AppShellController {
         profilingTable.setItems(FXCollections.emptyObservableList());
         profilingCallersTree.setRoot(new TreeItem<>());
         profilingCalleesTree.setRoot(new TreeItem<>());
+        profilingCallGraphView.setLayout(null);
         profilingCallersFlameGraphView.setLayout(null);
         profilingCalleesFlameGraphView.setLayout(null);
         profilingViewModel = nextViewModel;
@@ -2192,14 +2241,18 @@ public class AppShellController {
             return;
         }
         profilingTable.setItems(nextViewModel.hotMethodsProperty());
+        nextViewModel.callGraphProperty().addListener(callGraphListener);
         nextViewModel.callersTreeProperty().addListener(callersTreeListener);
         nextViewModel.calleesTreeProperty().addListener(calleesTreeListener);
         nextViewModel.callersFlameGraphProperty().addListener(callersFlameGraphListener);
         nextViewModel.calleesFlameGraphProperty().addListener(calleesFlameGraphListener);
         rebuildStackTree(profilingCallersTree, nextViewModel.callersTreeProperty().get());
         rebuildStackTree(profilingCalleesTree, nextViewModel.calleesTreeProperty().get());
+        profilingCallGraphView.setLayout(nextViewModel.callGraphProperty().get());
         profilingCallersFlameGraphView.setLayout(nextViewModel.callersFlameGraphProperty().get());
         profilingCalleesFlameGraphView.setLayout(nextViewModel.calleesFlameGraphProperty().get());
+        profilingCallGraphDirectionCombo.getSelectionModel().select(nextViewModel.callGraphDirectionProperty().get());
+        profilingCallGraphDepthSpinner.getValueFactory().setValue(nextViewModel.callGraphMaxDepthProperty().get());
     }
 
     private void bindExceptions(ExceptionViewModel nextViewModel) {
@@ -2541,6 +2594,16 @@ public class AppShellController {
         return item;
     }
 
+    private String formatCallGraphDirection(CallGraphDirection direction) {
+        if (direction == null) {
+            return "";
+        }
+        return switch (direction) {
+            case CALLERS -> i18n.text("profiling.callGraph.direction.callers").get();
+            case CALLEES -> i18n.text("profiling.callGraph.direction.callees").get();
+        };
+    }
+
     private void bindLocalizedText() {
         homeKickerLabel.textProperty().bind(i18n.text("home.kicker"));
         homeTitleLabel.textProperty().bind(i18n.text("home.title"));
@@ -2597,6 +2660,9 @@ public class AppShellController {
         jvmsRemoveTriggerButton.textProperty().bind(i18n.text("jvms.triggers.remove"));
         jvmsEvaluateTriggersButton.textProperty().bind(i18n.text("jvms.triggers.evaluate"));
         profilingTitleLabel.textProperty().bind(i18n.text("profiling.title"));
+        profilingCallGraphTab.textProperty().bind(i18n.text("profiling.tab.callGraph"));
+        profilingCallGraphDirectionCombo.promptTextProperty().bind(i18n.text("profiling.callGraph.direction"));
+        profilingCallGraphDepthLabel.textProperty().bind(i18n.text("profiling.callGraph.depth"));
         profilingCallersFlameTab.textProperty().bind(i18n.text("profiling.tab.callersFlame"));
         profilingCalleesFlameTab.textProperty().bind(i18n.text("profiling.tab.calleesFlame"));
         profilingCallersTab.textProperty().bind(i18n.text("profiling.tab.callers"));
