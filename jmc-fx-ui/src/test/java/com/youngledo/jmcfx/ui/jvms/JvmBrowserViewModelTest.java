@@ -37,6 +37,7 @@ import com.youngledo.jmcfx.domain.model.MBeanOperationRequest;
 import com.youngledo.jmcfx.domain.model.MBeanOperationResult;
 import com.youngledo.jmcfx.domain.model.TriggerActionType;
 import com.youngledo.jmcfx.domain.model.TriggerEvent;
+import com.youngledo.jmcfx.domain.model.TriggerOperator;
 import com.youngledo.jmcfx.testsupport.FakeDiagnosticCommandService;
 import com.youngledo.jmcfx.testsupport.FakeFlightRecordingService;
 import com.youngledo.jmcfx.testsupport.FakeJmxConnectionService;
@@ -920,7 +921,7 @@ class JvmBrowserViewModelTest {
     }
 
     @Test
-    void clearingSelectedSessionClearsSelectedTriggerCommand() {
+    void clearingSelectedSessionClearsSelectedTriggerEditorState() {
         FakeJmxConnectionService jmx = new FakeJmxConnectionService();
         FakeDiagnosticCommandService diagnostics = new FakeDiagnosticCommandService();
         FakeLiveMetricService metrics = new FakeLiveMetricService();
@@ -934,11 +935,16 @@ class JvmBrowserViewModelTest {
         diagnostics.setCommands(connected.id(), List.of(threadPrint));
         viewModel.selectedConnectionProperty().set(connected);
         viewModel.selectedTriggerCommandProperty().set(threadPrint);
+        viewModel.selectedTriggerOperatorProperty().set(TriggerOperator.LESS_THAN);
+        viewModel.selectedTriggerActionTypeProperty().set(TriggerActionType.DIAGNOSTIC_COMMAND);
 
         viewModel.selectedConnectionProperty().set(null);
 
         assertNull(viewModel.selectedSessionProperty().get());
         assertNull(viewModel.selectedTriggerCommandProperty().get());
+        assertEquals(TriggerOperator.GREATER_THAN_OR_EQUAL,
+                viewModel.selectedTriggerOperatorProperty().get());
+        assertEquals(TriggerActionType.NOTIFY, viewModel.selectedTriggerActionTypeProperty().get());
     }
 
     private static JvmBrowserViewModel viewModel(FakeJvmDiscoveryService discovery, FakeJmxConnectionService jmx) {
