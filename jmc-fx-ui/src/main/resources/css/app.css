@@ -441,6 +441,32 @@
     -fx-background-color: -color-bg-default;
 }
 
+/* Event heatmap */
+.event-heatmap-view {
+    -fx-spacing: 8px;
+}
+.event-heatmap-grid {
+    -fx-hgap: 2px;
+    -fx-vgap: 2px;
+}
+.event-heatmap-header {
+    -fx-font-size: 11px;
+    -fx-opacity: 0.78;
+}
+.event-heatmap-row-label {
+    -fx-font-size: 12px;
+    -fx-padding: 0 8px 0 0;
+}
+.event-heatmap-cell {
+    -fx-background-color: -color-accent-emphasis;
+    -fx-background-radius: 2px;
+    -fx-border-radius: 2px;
+}
+.event-heatmap-cell-selected {
+    -fx-border-color: -color-fg-default;
+    -fx-border-width: 1px;
+}
+
 /* Aggregate viewer */
 .aggregate-viewer {
     -fx-padding: 12px;
