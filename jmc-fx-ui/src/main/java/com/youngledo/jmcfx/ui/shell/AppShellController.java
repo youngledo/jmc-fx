@@ -1105,11 +1105,13 @@ public class AppShellController {
 
         TableColumn<TriggerRule, String> conditionCol = localizedColumn("jvms.triggers.rule.condition");
         conditionCol.setPrefWidth(320);
-        conditionCol.setCellValueFactory(cell -> new ReadOnlyStringWrapper(formatTriggerCondition(cell.getValue())));
+        conditionCol.setCellValueFactory(cell -> Bindings.createStringBinding(
+                () -> formatTriggerCondition(cell.getValue()), i18n.localeProperty()));
 
         TableColumn<TriggerRule, String> actionCol = localizedColumn("jvms.triggers.rule.action");
         actionCol.setPrefWidth(260);
-        actionCol.setCellValueFactory(cell -> new ReadOnlyStringWrapper(formatTriggerAction(cell.getValue())));
+        actionCol.setCellValueFactory(cell -> Bindings.createStringBinding(
+                () -> formatTriggerAction(cell.getValue()), i18n.localeProperty()));
 
         jvmsTriggerRulesTable.getColumns().setAll(List.of(ruleNameCol, conditionCol, actionCol));
 
@@ -1351,6 +1353,9 @@ public class AppShellController {
         var triggerMetricsUnavailable = Bindings.isEmpty(jvmBrowserViewModel.liveMetricDefinitionsProperty());
         var diagnosticCommandTriggerSelected = jvmBrowserViewModel.selectedTriggerActionTypeProperty()
                 .isEqualTo(TriggerActionType.DIAGNOSTIC_COMMAND);
+        var diagnosticCommandTriggerUnavailable = diagnosticCommandTriggerSelected
+                .and(jvmBrowserViewModel.diagnosticCommandsAvailableProperty().not()
+                        .or(jvmBrowserViewModel.selectedTriggerCommandProperty().isNull()));
         jvmsTriggerNameField.disableProperty().bind(jvmBrowserViewModel.triggerLoadingProperty()
                 .or(triggerMetricsUnavailable));
         jvmsTriggerMetricCombo.disableProperty().bind(jvmBrowserViewModel.triggerLoadingProperty()
@@ -1366,7 +1371,8 @@ public class AppShellController {
                 .or(jvmBrowserViewModel.diagnosticCommandsAvailableProperty().not()));
         jvmsAddTriggerButton.disableProperty().bind(jvmBrowserViewModel.triggerLoadingProperty()
                 .or(triggerMetricsUnavailable)
-                .or(jvmBrowserViewModel.selectedTriggerMetricProperty().isNull()));
+                .or(jvmBrowserViewModel.selectedTriggerMetricProperty().isNull())
+                .or(diagnosticCommandTriggerUnavailable));
         jvmsRemoveTriggerButton.disableProperty().bind(jvmBrowserViewModel.triggerLoadingProperty()
                 .or(jvmsTriggerRulesTable.getSelectionModel().selectedItemProperty().isNull()));
         jvmsEvaluateTriggersButton.disableProperty().bind(jvmBrowserViewModel.triggerLoadingProperty()
@@ -1479,15 +1485,20 @@ public class AppShellController {
         if (file == null) {
             return;
         }
-        try {
-            Files.writeString(file.toPath(), jvmBrowserViewModel.diagnosticCommandOutputProperty().get(),
-                    StandardCharsets.UTF_8);
-        } catch (java.io.IOException exception) {
-            LOGGER.error("Unable to save Diagnostic Command output", exception);
-            jvmBrowserViewModel.diagnosticCommandErrorProperty().set(true);
-            jvmBrowserViewModel.diagnosticCommandErrorMessageProperty().set(
-                    exception.getMessage() == null ? exception.getClass().getSimpleName() : exception.getMessage());
-        }
+        String output = jvmBrowserViewModel.diagnosticCommandOutputProperty().get();
+        Thread.ofVirtual().name("jmc-fx-save-diagnostic-output").start(() -> {
+            try {
+                Files.writeString(file.toPath(), output, StandardCharsets.UTF_8);
+            } catch (java.io.IOException exception) {
+                LOGGER.error("Unable to save Diagnostic Command output", exception);
+                Platform.runLater(() -> {
+                    jvmBrowserViewModel.diagnosticCommandErrorProperty().set(true);
+                    jvmBrowserViewModel.diagnosticCommandErrorMessageProperty().set(
+                            exception.getMessage() == null ? exception.getClass().getSimpleName()
+                                    : exception.getMessage());
+                });
+            }
+        });
     }
 
     private void removeSelectedTriggerRule() {

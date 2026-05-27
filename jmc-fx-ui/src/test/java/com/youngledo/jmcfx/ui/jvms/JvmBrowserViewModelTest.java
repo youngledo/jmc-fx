@@ -950,6 +950,25 @@ class JvmBrowserViewModelTest {
     }
 
     @Test
+    void diagnosticCommandTriggerRequiresSelectedCommand() {
+        FakeJmxConnectionService jmx = new FakeJmxConnectionService();
+        FakeLiveMetricService metrics = new FakeLiveMetricService();
+        FakeDiagnosticCommandService diagnostics = new FakeDiagnosticCommandService();
+        JvmBrowserViewModel viewModel = viewModel(new FakeJvmDiscoveryService(), jmx, diagnostics, metrics);
+        LiveMetricDefinition threads = new LiveMetricDefinition(
+                LiveMetricKind.THREAD_COUNT, "Threads", "threads", 250.0);
+        viewModel.selectedTriggerMetricProperty().set(threads);
+        viewModel.triggerThresholdProperty().set("250");
+        viewModel.selectedTriggerActionTypeProperty().set(TriggerActionType.DIAGNOSTIC_COMMAND);
+
+        viewModel.addTriggerRule();
+
+        assertTrue(viewModel.triggerErrorProperty().get());
+        assertEquals("Select a Diagnostic Command for this trigger.", viewModel.triggerErrorMessageProperty().get());
+        assertTrue(viewModel.triggerRulesProperty().isEmpty());
+    }
+
+    @Test
     void clearingSelectedSessionClearsSelectedTriggerEditorState() {
         FakeJmxConnectionService jmx = new FakeJmxConnectionService();
         FakeDiagnosticCommandService diagnostics = new FakeDiagnosticCommandService();

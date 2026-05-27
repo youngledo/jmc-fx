@@ -604,6 +604,11 @@ public class JvmBrowserViewModel implements AutoCloseable {
             failTrigger("Select a metric for the trigger.");
             return;
         }
+        if (selectedTriggerActionType.get() == TriggerActionType.DIAGNOSTIC_COMMAND
+                && (!diagnosticCommandsAvailable.get() || selectedTriggerCommand.get() == null)) {
+            failTrigger("Select a Diagnostic Command for this trigger.");
+            return;
+        }
 
         double threshold;
         try {
