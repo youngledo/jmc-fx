@@ -12,6 +12,7 @@ import org.junit.jupiter.api.Test;
 import com.youngledo.jmcfx.domain.model.DiagnosticCommandInfo;
 import com.youngledo.jmcfx.domain.model.DiagnosticCommandRequest;
 import com.youngledo.jmcfx.domain.model.DiagnosticCommandResult;
+import com.youngledo.jmcfx.domain.model.EventHeatmap;
 import com.youngledo.jmcfx.domain.model.JvmCapability;
 import com.youngledo.jmcfx.domain.model.JvmCapabilitySnapshot;
 import com.youngledo.jmcfx.domain.model.JvmCapabilityStatus;
@@ -211,7 +212,22 @@ class FakeJvmServicesTest {
         assertEquals(List.of(snapshot), service.snapshot(connection));
     }
 
+    @Test
+    void fakeAdvancedJfrAnalysisServiceReturnsConfiguredHeatmap() {
+        FakeAdvancedJfrAnalysisService service = new FakeAdvancedJfrAnalysisService();
+        EventHeatmap heatmap = new EventHeatmap(Instant.EPOCH, Instant.EPOCH.plusSeconds(1), 1, List.of());
+        service.setHeatmap(heatmap);
+
+        assertEquals(heatmap, service.loadEventHeatmap(recording(), 1, 1));
+    }
+
     private static JvmConnection local(String pid, String name) {
         return JvmConnection.local(pid, name, "26.0.1", true);
+    }
+
+    private static com.youngledo.jmcfx.domain.model.RecordingSummary recording() {
+        return new com.youngledo.jmcfx.domain.model.RecordingSummary("rec",
+                java.nio.file.Path.of("sample.jfr"), "sample.jfr",
+                Instant.EPOCH, Instant.EPOCH.plusSeconds(1), 1000, 1024);
     }
 }

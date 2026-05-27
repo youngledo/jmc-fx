@@ -1,0 +1,76 @@
+package com.youngledo.jmcfx.ui.advanced;
+
+import com.youngledo.jmcfx.domain.model.EventHeatmap;
+import com.youngledo.jmcfx.domain.model.EventHeatmapCell;
+import com.youngledo.jmcfx.domain.model.RecordingSummary;
+import com.youngledo.jmcfx.domain.service.AdvancedJfrAnalysisService;
+import com.youngledo.jmcfx.ui.util.DisplayFormats;
+import com.youngledo.jmcfx.ui.util.FxDispatch;
+
+import javafx.beans.property.ObjectProperty;
+import javafx.beans.property.SimpleObjectProperty;
+import javafx.beans.property.SimpleStringProperty;
+import javafx.beans.property.StringProperty;
+
+public class AdvancedJfrViewModel {
+
+    public static final int DEFAULT_BUCKET_COUNT = 20;
+    public static final int DEFAULT_MAX_EVENT_TYPES = 12;
+
+    private final AdvancedJfrAnalysisService service;
+    private final ObjectProperty<EventHeatmap> heatmap = new SimpleObjectProperty<>();
+    private final ObjectProperty<EventHeatmapCell> selectedCell = new SimpleObjectProperty<>();
+    private final StringProperty summary = new SimpleStringProperty("");
+    private final StringProperty selectedEventType = new SimpleStringProperty("");
+    private final StringProperty selectedCount = new SimpleStringProperty("");
+
+    public AdvancedJfrViewModel(AdvancedJfrAnalysisService service) {
+        this.service = service;
+    }
+
+    public ObjectProperty<EventHeatmap> heatmapProperty() {
+        return heatmap;
+    }
+
+    public ObjectProperty<EventHeatmapCell> selectedCellProperty() {
+        return selectedCell;
+    }
+
+    public StringProperty summaryProperty() {
+        return summary;
+    }
+
+    public StringProperty selectedEventTypeProperty() {
+        return selectedEventType;
+    }
+
+    public StringProperty selectedCountProperty() {
+        return selectedCount;
+    }
+
+    public void load(RecordingSummary recording) {
+        EventHeatmap loaded = service.loadEventHeatmap(recording, DEFAULT_BUCKET_COUNT, DEFAULT_MAX_EVENT_TYPES);
+        FxDispatch.run(() -> {
+            heatmap.set(loaded);
+            clearSelection();
+            long total = loaded.rows().stream().mapToLong(row -> row.totalCount()).sum();
+            summary.set(loaded.rows().size() + " event types, " + DisplayFormats.formatInteger(total) + " events");
+        });
+    }
+
+    public void selectCell(EventHeatmapCell cell) {
+        selectedCell.set(cell);
+        if (cell == null) {
+            clearSelection();
+            return;
+        }
+        selectedEventType.set(cell.eventTypeId());
+        selectedCount.set(DisplayFormats.formatInteger(cell.count()));
+    }
+
+    private void clearSelection() {
+        selectedCell.set(null);
+        selectedEventType.set("");
+        selectedCount.set("");
+    }
+}
