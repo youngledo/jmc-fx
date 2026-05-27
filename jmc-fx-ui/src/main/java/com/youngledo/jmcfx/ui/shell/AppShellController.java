@@ -2,6 +2,8 @@ package com.youngledo.jmcfx.ui.shell;
 
 import java.time.ZoneId;
 import java.time.format.DateTimeFormatter;
+import java.nio.charset.StandardCharsets;
+import java.nio.file.Files;
 import java.util.List;
 import java.util.StringJoiner;
 import java.nio.file.Path;
@@ -18,6 +20,7 @@ import com.youngledo.jmcfx.domain.model.CodeCacheSweep;
 import com.youngledo.jmcfx.domain.model.CompilationEvent;
 import com.youngledo.jmcfx.domain.model.ConstantPoolEntry;
 import com.youngledo.jmcfx.domain.model.ConstantPoolType;
+import com.youngledo.jmcfx.domain.model.DiagnosticCommandInfo;
 import com.youngledo.jmcfx.domain.model.EnvironmentVariable;
 import com.youngledo.jmcfx.domain.model.EventColumn;
 import com.youngledo.jmcfx.domain.model.EventDetails;
@@ -55,6 +58,7 @@ import com.youngledo.jmcfx.domain.model.JvmFlagChange;
 import com.youngledo.jmcfx.domain.model.JvmSessionSnapshot;
 import com.youngledo.jmcfx.domain.model.LeakCandidate;
 import com.youngledo.jmcfx.domain.model.LeakReferenceNode;
+import com.youngledo.jmcfx.domain.model.LiveMetricDefinition;
 import com.youngledo.jmcfx.domain.model.LockGrouping;
 import com.youngledo.jmcfx.domain.model.LockHistogram;
 import com.youngledo.jmcfx.domain.model.MBeanAttributeInfo;
@@ -71,6 +75,10 @@ import com.youngledo.jmcfx.domain.model.SystemProperty;
 import com.youngledo.jmcfx.domain.model.ThreadDumpEntry;
 import com.youngledo.jmcfx.domain.model.ThreadHistogramRow;
 import com.youngledo.jmcfx.domain.model.ThreadSummary;
+import com.youngledo.jmcfx.domain.model.TriggerActionType;
+import com.youngledo.jmcfx.domain.model.TriggerEvent;
+import com.youngledo.jmcfx.domain.model.TriggerOperator;
+import com.youngledo.jmcfx.domain.model.TriggerRule;
 import com.youngledo.jmcfx.domain.model.NativeLibraryEntry;
 import com.youngledo.jmcfx.domain.model.TlabAllocation;
 import com.youngledo.jmcfx.domain.model.VmOperationEvent;
@@ -140,6 +148,7 @@ import javafx.collections.FXCollections;
 import javafx.collections.ListChangeListener;
 import javafx.fxml.FXML;
 import javafx.scene.control.Button;
+import javafx.scene.control.ComboBox;
 import javafx.scene.control.ContentDisplay;
 import javafx.scene.control.ContextMenu;
 import javafx.scene.control.MenuItem;
@@ -326,6 +335,8 @@ public class AppShellController {
     @FXML private TabPane jvmsLiveTabs;
     @FXML private Tab jvmsSessionTab;
     @FXML private Tab jvmsMBeanTab;
+    @FXML private Tab jvmsDiagnosticsTab;
+    @FXML private Tab jvmsTriggersTab;
     @FXML private Label jvmsSessionTitleLabel;
     @FXML private Label jvmsRuntimeSummaryLabel;
     @FXML private ListView<JvmCapabilitySnapshot> jvmsCapabilitiesList;
@@ -342,6 +353,24 @@ public class AppShellController {
     @FXML private Button jvmsInvokeMBeanOperationButton;
     @FXML private Label jvmsMBeanResultLabel;
     @FXML private Label jvmsMBeanErrorLabel;
+    @FXML private TableView<DiagnosticCommandInfo> jvmsDiagnosticCommandsTable;
+    @FXML private TextField jvmsDiagnosticArgumentsField;
+    @FXML private Button jvmsExecuteDiagnosticCommandButton;
+    @FXML private Button jvmsSaveDiagnosticOutputButton;
+    @FXML private TextArea jvmsDiagnosticOutputArea;
+    @FXML private Label jvmsDiagnosticErrorLabel;
+    @FXML private TextField jvmsTriggerNameField;
+    @FXML private ComboBox<LiveMetricDefinition> jvmsTriggerMetricCombo;
+    @FXML private ComboBox<TriggerOperator> jvmsTriggerOperatorCombo;
+    @FXML private TextField jvmsTriggerThresholdField;
+    @FXML private ComboBox<TriggerActionType> jvmsTriggerActionCombo;
+    @FXML private ComboBox<DiagnosticCommandInfo> jvmsTriggerCommandCombo;
+    @FXML private Button jvmsAddTriggerButton;
+    @FXML private Button jvmsRemoveTriggerButton;
+    @FXML private Button jvmsEvaluateTriggersButton;
+    @FXML private TableView<TriggerRule> jvmsTriggerRulesTable;
+    @FXML private TableView<TriggerEvent> jvmsTriggerEventsTable;
+    @FXML private Label jvmsTriggerErrorLabel;
     @FXML private Label profilingTitleLabel;
     @FXML private TableView<HotMethod> profilingTable;
     @FXML private TabPane profilingTreeTabs;
@@ -761,6 +790,8 @@ public class AppShellController {
         configureJvmBrowserTable();
         configureJvmRecordingsTable();
         configureMBeanBrowser();
+        configureDiagnosticCommands();
+        configureTriggers();
         bindJvmBrowser();
         viewModel.selectedSectionProperty().addListener((observable, oldValue, newValue) -> {
             if ("jvms".equals(newValue)) {
@@ -982,6 +1013,126 @@ public class AppShellController {
                 List.of(operationNameCol, operationSignatureCol, operationReturnTypeCol));
     }
 
+    private void configureDiagnosticCommands() {
+        jvmsDiagnosticCommandsTable.setPlaceholder(emptyTablePlaceholder());
+
+        TableColumn<DiagnosticCommandInfo, String> nameCol =
+                localizedColumn("jvms.diagnostics.column.name");
+        nameCol.setPrefWidth(220);
+        nameCol.setCellValueFactory(cell -> new ReadOnlyStringWrapper(
+                displayDiagnosticCommandName(cell.getValue())));
+
+        TableColumn<DiagnosticCommandInfo, String> descriptionCol =
+                localizedColumn("jvms.diagnostics.column.description");
+        descriptionCol.setPrefWidth(420);
+        descriptionCol.setCellValueFactory(cell -> new ReadOnlyStringWrapper(cell.getValue().description()));
+
+        TableColumn<DiagnosticCommandInfo, String> parametersCol =
+                localizedColumn("jvms.diagnostics.column.parameters");
+        parametersCol.setPrefWidth(260);
+        parametersCol.setCellValueFactory(cell -> new ReadOnlyStringWrapper(
+                formatDiagnosticCommandParameters(cell.getValue())));
+
+        jvmsDiagnosticCommandsTable.getColumns().setAll(List.of(nameCol, descriptionCol, parametersCol));
+    }
+
+    private void configureTriggers() {
+        jvmsTriggerRulesTable.setPlaceholder(localizedTablePlaceholder("jvms.triggers.rules.empty"));
+        jvmsTriggerEventsTable.setPlaceholder(localizedTablePlaceholder("jvms.triggers.events.empty"));
+
+        jvmsTriggerMetricCombo.setCellFactory(combo -> new javafx.scene.control.ListCell<>() {
+            @Override
+            protected void updateItem(LiveMetricDefinition item, boolean empty) {
+                super.updateItem(item, empty);
+                setText(empty || item == null ? null : item.label());
+            }
+        });
+        jvmsTriggerMetricCombo.setButtonCell(new javafx.scene.control.ListCell<>() {
+            @Override
+            protected void updateItem(LiveMetricDefinition item, boolean empty) {
+                super.updateItem(item, empty);
+                setText(empty || item == null ? null : item.label());
+            }
+        });
+        jvmsTriggerOperatorCombo.setItems(FXCollections.observableArrayList(TriggerOperator.values()));
+        jvmsTriggerOperatorCombo.setCellFactory(combo -> new javafx.scene.control.ListCell<>() {
+            @Override
+            protected void updateItem(TriggerOperator item, boolean empty) {
+                super.updateItem(item, empty);
+                setText(empty || item == null ? null : item.symbol());
+            }
+        });
+        jvmsTriggerOperatorCombo.setButtonCell(new javafx.scene.control.ListCell<>() {
+            @Override
+            protected void updateItem(TriggerOperator item, boolean empty) {
+                super.updateItem(item, empty);
+                setText(empty || item == null ? null : item.symbol());
+            }
+        });
+        jvmsTriggerActionCombo.setItems(FXCollections.observableArrayList(TriggerActionType.values()));
+        jvmsTriggerActionCombo.setCellFactory(combo -> new javafx.scene.control.ListCell<>() {
+            @Override
+            protected void updateItem(TriggerActionType item, boolean empty) {
+                super.updateItem(item, empty);
+                setText(empty || item == null ? null : formatTriggerActionType(item));
+            }
+        });
+        jvmsTriggerActionCombo.setButtonCell(new javafx.scene.control.ListCell<>() {
+            @Override
+            protected void updateItem(TriggerActionType item, boolean empty) {
+                super.updateItem(item, empty);
+                setText(empty || item == null ? null : formatTriggerActionType(item));
+            }
+        });
+        jvmsTriggerCommandCombo.setCellFactory(combo -> new javafx.scene.control.ListCell<>() {
+            @Override
+            protected void updateItem(DiagnosticCommandInfo item, boolean empty) {
+                super.updateItem(item, empty);
+                setText(empty || item == null ? null : displayDiagnosticCommandName(item));
+            }
+        });
+        jvmsTriggerCommandCombo.setButtonCell(new javafx.scene.control.ListCell<>() {
+            @Override
+            protected void updateItem(DiagnosticCommandInfo item, boolean empty) {
+                super.updateItem(item, empty);
+                setText(empty || item == null ? null : displayDiagnosticCommandName(item));
+            }
+        });
+
+        TableColumn<TriggerRule, String> ruleNameCol = localizedColumn("jvms.triggers.rule.name");
+        ruleNameCol.setPrefWidth(220);
+        ruleNameCol.setCellValueFactory(cell -> new ReadOnlyStringWrapper(cell.getValue().name()));
+
+        TableColumn<TriggerRule, String> conditionCol = localizedColumn("jvms.triggers.rule.condition");
+        conditionCol.setPrefWidth(320);
+        conditionCol.setCellValueFactory(cell -> new ReadOnlyStringWrapper(formatTriggerCondition(cell.getValue())));
+
+        TableColumn<TriggerRule, String> actionCol = localizedColumn("jvms.triggers.rule.action");
+        actionCol.setPrefWidth(260);
+        actionCol.setCellValueFactory(cell -> new ReadOnlyStringWrapper(formatTriggerAction(cell.getValue())));
+
+        jvmsTriggerRulesTable.getColumns().setAll(List.of(ruleNameCol, conditionCol, actionCol));
+
+        TableColumn<TriggerEvent, String> eventTimeCol = localizedColumn("jvms.triggers.event.time");
+        eventTimeCol.setPrefWidth(180);
+        eventTimeCol.setCellValueFactory(cell -> new ReadOnlyStringWrapper(
+                formatEventTimeForDisplay(cell.getValue().firedAt(), ZoneId.systemDefault())));
+
+        TableColumn<TriggerEvent, String> eventRuleCol = localizedColumn("jvms.triggers.event.rule");
+        eventRuleCol.setPrefWidth(220);
+        eventRuleCol.setCellValueFactory(cell -> new ReadOnlyStringWrapper(cell.getValue().ruleName()));
+
+        TableColumn<TriggerEvent, String> eventValueCol = localizedColumn("jvms.triggers.event.value");
+        eventValueCol.setPrefWidth(120);
+        eventValueCol.setCellValueFactory(cell -> new ReadOnlyStringWrapper(formatTriggerEventValue(cell.getValue())));
+
+        TableColumn<TriggerEvent, String> eventMessageCol = localizedColumn("jvms.triggers.event.message");
+        eventMessageCol.setPrefWidth(440);
+        eventMessageCol.setCellValueFactory(cell -> new ReadOnlyStringWrapper(cell.getValue().message()));
+
+        jvmsTriggerEventsTable.getColumns().setAll(List.of(eventTimeCol, eventRuleCol, eventValueCol, eventMessageCol));
+    }
+
     private void bindJvmBrowser() {
         if (jvmBrowserViewModel == null) {
             jvmsTable.setItems(FXCollections.emptyObservableList());
@@ -998,6 +1149,31 @@ public class AppShellController {
             jvmsMBeanOperationArgumentsField.setDisable(true);
             jvmsRefreshMBeanButton.setDisable(true);
             jvmsInvokeMBeanOperationButton.setDisable(true);
+            jvmsDiagnosticCommandsTable.setItems(FXCollections.emptyObservableList());
+            jvmsDiagnosticArgumentsField.setDisable(true);
+            jvmsExecuteDiagnosticCommandButton.setDisable(true);
+            jvmsSaveDiagnosticOutputButton.setDisable(true);
+            jvmsDiagnosticOutputArea.setText("");
+            jvmsDiagnosticOutputArea.setDisable(true);
+            jvmsDiagnosticErrorLabel.setVisible(false);
+            jvmsDiagnosticErrorLabel.setManaged(false);
+            jvmsTriggerRulesTable.setItems(FXCollections.emptyObservableList());
+            jvmsTriggerEventsTable.setItems(FXCollections.emptyObservableList());
+            jvmsTriggerMetricCombo.setItems(FXCollections.emptyObservableList());
+            jvmsTriggerOperatorCombo.setItems(FXCollections.observableArrayList(TriggerOperator.values()));
+            jvmsTriggerActionCombo.setItems(FXCollections.observableArrayList(TriggerActionType.values()));
+            jvmsTriggerCommandCombo.setItems(FXCollections.emptyObservableList());
+            jvmsTriggerNameField.setDisable(true);
+            jvmsTriggerMetricCombo.setDisable(true);
+            jvmsTriggerOperatorCombo.setDisable(true);
+            jvmsTriggerThresholdField.setDisable(true);
+            jvmsTriggerActionCombo.setDisable(true);
+            jvmsTriggerCommandCombo.setDisable(true);
+            jvmsAddTriggerButton.setDisable(true);
+            jvmsRemoveTriggerButton.setDisable(true);
+            jvmsEvaluateTriggersButton.setDisable(true);
+            jvmsTriggerErrorLabel.setVisible(false);
+            jvmsTriggerErrorLabel.setManaged(false);
             jvmsSessionDetailPane.setVisible(false);
             jvmsSessionDetailPane.setManaged(false);
             return;
@@ -1073,6 +1249,8 @@ public class AppShellController {
                 jvmBrowserViewModel.recordingErrorMessageProperty(),
                 jvmBrowserViewModel.recordingStatusMessageProperty()));
         bindMBeanBrowser();
+        bindDiagnosticCommands();
+        bindTriggers();
 
         jvmsRefreshButton.setOnAction(event -> refreshJvmBrowser());
         jvmsConnectButton.setOnAction(event -> jvmBrowserViewModel.connectSelectedOrManual());
@@ -1081,6 +1259,11 @@ public class AppShellController {
         jvmsStopRecordingButton.setOnAction(event -> saveSelectedFlightRecording());
         jvmsRefreshMBeanButton.setOnAction(event -> jvmBrowserViewModel.refreshSelectedMBeanAttributes());
         jvmsInvokeMBeanOperationButton.setOnAction(event -> jvmBrowserViewModel.invokeSelectedMBeanOperation());
+        jvmsExecuteDiagnosticCommandButton.setOnAction(event -> jvmBrowserViewModel.executeSelectedDiagnosticCommand());
+        jvmsSaveDiagnosticOutputButton.setOnAction(event -> saveDiagnosticCommandOutput());
+        jvmsAddTriggerButton.setOnAction(event -> jvmBrowserViewModel.addTriggerRule());
+        jvmsRemoveTriggerButton.setOnAction(event -> removeSelectedTriggerRule());
+        jvmsEvaluateTriggersButton.setOnAction(event -> jvmBrowserViewModel.evaluateTriggersNow());
         jvmsTable.setOnMouseClicked(event -> {
             if (event.getButton() == MouseButton.PRIMARY && event.getClickCount() == 2) {
                 jvmBrowserViewModel.connectSelected();
@@ -1122,6 +1305,72 @@ public class AppShellController {
         jvmsInvokeMBeanOperationButton.disableProperty().bind(jvmBrowserViewModel.mbeanBrowserAvailableProperty().not()
                 .or(jvmBrowserViewModel.selectedMBeanOperationProperty().isNull())
                 .or(jvmBrowserViewModel.mbeanLoadingProperty()));
+    }
+
+    private void bindDiagnosticCommands() {
+        jvmsDiagnosticCommandsTable.setItems(jvmBrowserViewModel.diagnosticCommandsProperty());
+        jvmsDiagnosticCommandsTable.getSelectionModel().selectedItemProperty()
+                .addListener((observable, oldValue, newValue) ->
+                        jvmBrowserViewModel.selectedDiagnosticCommandProperty().set(newValue));
+        jvmBrowserViewModel.selectedDiagnosticCommandProperty().addListener((observable, oldValue, newValue) ->
+                jvmsDiagnosticCommandsTable.getSelectionModel().select(newValue));
+        jvmsDiagnosticArgumentsField.textProperty().bindBidirectional(
+                jvmBrowserViewModel.diagnosticCommandArgumentsProperty());
+        jvmsDiagnosticOutputArea.textProperty().bind(jvmBrowserViewModel.diagnosticCommandOutputProperty());
+        jvmsDiagnosticErrorLabel.textProperty().bind(jvmBrowserViewModel.diagnosticCommandErrorMessageProperty());
+        jvmsDiagnosticErrorLabel.visibleProperty().bind(jvmBrowserViewModel.diagnosticCommandErrorProperty());
+        jvmsDiagnosticErrorLabel.managedProperty().bind(jvmsDiagnosticErrorLabel.visibleProperty());
+
+        jvmsDiagnosticCommandsTable.disableProperty().bind(jvmBrowserViewModel.diagnosticCommandsAvailableProperty().not());
+        jvmsDiagnosticArgumentsField.disableProperty().bind(jvmBrowserViewModel.diagnosticCommandsAvailableProperty().not()
+                .or(jvmBrowserViewModel.diagnosticCommandLoadingProperty())
+                .or(jvmBrowserViewModel.selectedDiagnosticCommandProperty().isNull()));
+        jvmsExecuteDiagnosticCommandButton.disableProperty().bind(jvmBrowserViewModel.diagnosticCommandsAvailableProperty().not()
+                .or(jvmBrowserViewModel.diagnosticCommandLoadingProperty())
+                .or(jvmBrowserViewModel.selectedDiagnosticCommandProperty().isNull()));
+        jvmsSaveDiagnosticOutputButton.disableProperty().bind(jvmBrowserViewModel.diagnosticCommandOutputProperty().isEmpty()
+                .or(jvmBrowserViewModel.diagnosticCommandLoadingProperty()));
+        jvmsDiagnosticOutputArea.disableProperty().bind(jvmBrowserViewModel.diagnosticCommandsAvailableProperty().not());
+    }
+
+    private void bindTriggers() {
+        jvmsTriggerRulesTable.setItems(jvmBrowserViewModel.triggerRulesProperty());
+        jvmsTriggerEventsTable.setItems(jvmBrowserViewModel.triggerEventsProperty());
+        jvmsTriggerMetricCombo.setItems(jvmBrowserViewModel.liveMetricDefinitionsProperty());
+        jvmsTriggerCommandCombo.setItems(jvmBrowserViewModel.diagnosticCommandsProperty());
+        jvmsTriggerMetricCombo.valueProperty().bindBidirectional(jvmBrowserViewModel.selectedTriggerMetricProperty());
+        jvmsTriggerOperatorCombo.valueProperty().bindBidirectional(jvmBrowserViewModel.selectedTriggerOperatorProperty());
+        jvmsTriggerActionCombo.valueProperty().bindBidirectional(jvmBrowserViewModel.selectedTriggerActionTypeProperty());
+        jvmsTriggerCommandCombo.valueProperty().bindBidirectional(jvmBrowserViewModel.selectedTriggerCommandProperty());
+        jvmsTriggerNameField.textProperty().bindBidirectional(jvmBrowserViewModel.triggerNameProperty());
+        jvmsTriggerThresholdField.textProperty().bindBidirectional(jvmBrowserViewModel.triggerThresholdProperty());
+        jvmsTriggerErrorLabel.textProperty().bind(jvmBrowserViewModel.triggerErrorMessageProperty());
+        jvmsTriggerErrorLabel.visibleProperty().bind(jvmBrowserViewModel.triggerErrorProperty());
+        jvmsTriggerErrorLabel.managedProperty().bind(jvmsTriggerErrorLabel.visibleProperty());
+
+        var triggerMetricsUnavailable = Bindings.isEmpty(jvmBrowserViewModel.liveMetricDefinitionsProperty());
+        var diagnosticCommandTriggerSelected = jvmBrowserViewModel.selectedTriggerActionTypeProperty()
+                .isEqualTo(TriggerActionType.DIAGNOSTIC_COMMAND);
+        jvmsTriggerNameField.disableProperty().bind(jvmBrowserViewModel.triggerLoadingProperty()
+                .or(triggerMetricsUnavailable));
+        jvmsTriggerMetricCombo.disableProperty().bind(jvmBrowserViewModel.triggerLoadingProperty()
+                .or(triggerMetricsUnavailable));
+        jvmsTriggerOperatorCombo.disableProperty().bind(jvmBrowserViewModel.triggerLoadingProperty()
+                .or(triggerMetricsUnavailable));
+        jvmsTriggerThresholdField.disableProperty().bind(jvmBrowserViewModel.triggerLoadingProperty()
+                .or(triggerMetricsUnavailable));
+        jvmsTriggerActionCombo.disableProperty().bind(jvmBrowserViewModel.triggerLoadingProperty()
+                .or(triggerMetricsUnavailable));
+        jvmsTriggerCommandCombo.disableProperty().bind(jvmBrowserViewModel.triggerLoadingProperty()
+                .or(diagnosticCommandTriggerSelected.not())
+                .or(jvmBrowserViewModel.diagnosticCommandsAvailableProperty().not()));
+        jvmsAddTriggerButton.disableProperty().bind(jvmBrowserViewModel.triggerLoadingProperty()
+                .or(triggerMetricsUnavailable)
+                .or(jvmBrowserViewModel.selectedTriggerMetricProperty().isNull()));
+        jvmsRemoveTriggerButton.disableProperty().bind(jvmBrowserViewModel.triggerLoadingProperty()
+                .or(jvmsTriggerRulesTable.getSelectionModel().selectedItemProperty().isNull()));
+        jvmsEvaluateTriggersButton.disableProperty().bind(jvmBrowserViewModel.triggerLoadingProperty()
+                .or(Bindings.isEmpty(jvmBrowserViewModel.triggerRulesProperty())));
     }
 
     private void rebuildMBeanTree() {
@@ -1216,6 +1465,39 @@ public class AppShellController {
         }
     }
 
+    private void saveDiagnosticCommandOutput() {
+        if (jvmBrowserViewModel == null || root == null || root.getScene() == null
+                || jvmBrowserViewModel.diagnosticCommandOutputProperty().get().isBlank()) {
+            return;
+        }
+        FileChooser chooser = new FileChooser();
+        chooser.setTitle(i18n.get("fileChooser.saveDiagnosticOutput.title"));
+        chooser.getExtensionFilters().add(new FileChooser.ExtensionFilter(
+                i18n.get("fileChooser.textFiles"), "*.txt"));
+        chooser.setInitialFileName("diagnostic-command-output.txt");
+        java.io.File file = chooser.showSaveDialog(root.getScene().getWindow());
+        if (file == null) {
+            return;
+        }
+        try {
+            Files.writeString(file.toPath(), jvmBrowserViewModel.diagnosticCommandOutputProperty().get(),
+                    StandardCharsets.UTF_8);
+        } catch (java.io.IOException exception) {
+            LOGGER.error("Unable to save Diagnostic Command output", exception);
+            jvmBrowserViewModel.diagnosticCommandErrorProperty().set(true);
+            jvmBrowserViewModel.diagnosticCommandErrorMessageProperty().set(
+                    exception.getMessage() == null ? exception.getClass().getSimpleName() : exception.getMessage());
+        }
+    }
+
+    private void removeSelectedTriggerRule() {
+        if (jvmBrowserViewModel == null) {
+            return;
+        }
+        jvmBrowserViewModel.removeSelectedTriggerRule(
+                jvmsTriggerRulesTable.getSelectionModel().getSelectedItem());
+    }
+
     private void refreshJvmBrowser() {
         if (jvmBrowserViewModel != null) {
             jvmBrowserViewModel.refresh();
@@ -1248,6 +1530,59 @@ public class AppShellController {
         return operation.parameters().stream()
                 .map(parameter -> parameter.name() + ": " + parameter.type())
                 .collect(java.util.stream.Collectors.joining(", "));
+    }
+
+    private static String displayDiagnosticCommandName(DiagnosticCommandInfo command) {
+        if (command == null) {
+            return "";
+        }
+        return command.displayName().isBlank() ? command.name() : command.displayName();
+    }
+
+    private static String formatDiagnosticCommandParameters(DiagnosticCommandInfo command) {
+        if (command == null || command.parameters().isEmpty()) {
+            return "";
+        }
+        return command.parameters().stream()
+                .map(parameter -> parameter.name() + ": " + parameter.type()
+                        + (parameter.required() ? " *" : ""))
+                .collect(java.util.stream.Collectors.joining(", "));
+    }
+
+    private String formatTriggerCondition(TriggerRule rule) {
+        if (rule == null) {
+            return "";
+        }
+        String metricName = jvmBrowserViewModel == null ? rule.metric().name()
+                : jvmBrowserViewModel.liveMetricDefinitionsProperty().stream()
+                        .filter(definition -> definition.kind() == rule.metric())
+                        .findFirst()
+                        .map(LiveMetricDefinition::label)
+                        .filter(label -> !label.isBlank())
+                        .orElse(rule.metric().name());
+        return metricName + " " + rule.operator().symbol() + " " + rule.threshold();
+    }
+
+    private String formatTriggerAction(TriggerRule rule) {
+        if (rule == null || rule.action() == null) {
+            return "";
+        }
+        if (rule.action().type() != TriggerActionType.DIAGNOSTIC_COMMAND) {
+            return i18n.get("jvms.triggers.action.notify");
+        }
+        return i18n.format("jvms.triggers.action.diagnosticCommand", rule.action().commandName());
+    }
+
+    private String formatTriggerActionType(TriggerActionType actionType) {
+        return i18n.get("jvms.triggers.actionType."
+                + actionType.name().toLowerCase(java.util.Locale.ROOT));
+    }
+
+    private static String formatTriggerEventValue(TriggerEvent event) {
+        if (event == null) {
+            return "";
+        }
+        return event.unit().isBlank() ? String.valueOf(event.value()) : event.value() + " " + event.unit();
     }
 
     private String formatJvmRuntime(JvmSessionSnapshot snapshot) {
@@ -2131,9 +2466,23 @@ public class AppShellController {
         jvmsDisconnectButton.textProperty().bind(i18n.text("jvms.disconnect"));
         jvmsSessionTab.textProperty().bind(i18n.text("jvms.session.tab"));
         jvmsMBeanTab.textProperty().bind(i18n.text("jvms.mbeans.tab"));
+        jvmsDiagnosticsTab.textProperty().bind(i18n.text("jvms.diagnostics.tab"));
+        jvmsTriggersTab.textProperty().bind(i18n.text("jvms.triggers.tab"));
         jvmsRefreshMBeanButton.textProperty().bind(i18n.text("jvms.mbeans.refresh"));
         jvmsInvokeMBeanOperationButton.textProperty().bind(i18n.text("jvms.mbeans.invoke"));
         jvmsMBeanOperationArgumentsField.promptTextProperty().bind(i18n.text("jvms.mbeans.arguments"));
+        jvmsDiagnosticArgumentsField.promptTextProperty().bind(i18n.text("jvms.diagnostics.arguments"));
+        jvmsExecuteDiagnosticCommandButton.textProperty().bind(i18n.text("jvms.diagnostics.execute"));
+        jvmsSaveDiagnosticOutputButton.textProperty().bind(i18n.text("jvms.diagnostics.saveOutput"));
+        jvmsTriggerNameField.promptTextProperty().bind(i18n.text("jvms.triggers.name"));
+        jvmsTriggerMetricCombo.promptTextProperty().bind(i18n.text("jvms.triggers.metric"));
+        jvmsTriggerOperatorCombo.promptTextProperty().bind(i18n.text("jvms.triggers.operator"));
+        jvmsTriggerThresholdField.promptTextProperty().bind(i18n.text("jvms.triggers.threshold"));
+        jvmsTriggerActionCombo.promptTextProperty().bind(i18n.text("jvms.triggers.action"));
+        jvmsTriggerCommandCombo.promptTextProperty().bind(i18n.text("jvms.triggers.command"));
+        jvmsAddTriggerButton.textProperty().bind(i18n.text("jvms.triggers.add"));
+        jvmsRemoveTriggerButton.textProperty().bind(i18n.text("jvms.triggers.remove"));
+        jvmsEvaluateTriggersButton.textProperty().bind(i18n.text("jvms.triggers.evaluate"));
         profilingTitleLabel.textProperty().bind(i18n.text("profiling.title"));
         profilingCallersTab.textProperty().bind(i18n.text("profiling.tab.callers"));
         profilingCalleesTab.textProperty().bind(i18n.text("profiling.tab.callees"));

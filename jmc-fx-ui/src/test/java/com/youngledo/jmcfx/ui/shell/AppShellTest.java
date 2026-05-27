@@ -145,6 +145,14 @@ class AppShellTest {
         assertEquals("Button", elementByFxId(document, "jvmsInvokeMBeanOperationButton").getTagName());
         assertEquals("Label", elementByFxId(document, "jvmsMBeanResultLabel").getTagName());
         assertEquals("Label", elementByFxId(document, "jvmsMBeanErrorLabel").getTagName());
+        assertEquals("Tab", elementByFxId(document, "jvmsDiagnosticsTab").getTagName());
+        assertEquals("TableView", elementByFxId(document, "jvmsDiagnosticCommandsTable").getTagName());
+        assertEquals("Button", elementByFxId(document, "jvmsExecuteDiagnosticCommandButton").getTagName());
+        assertEquals("TextArea", elementByFxId(document, "jvmsDiagnosticOutputArea").getTagName());
+        assertEquals("Tab", elementByFxId(document, "jvmsTriggersTab").getTagName());
+        assertEquals("TableView", elementByFxId(document, "jvmsTriggerRulesTable").getTagName());
+        assertEquals("Button", elementByFxId(document, "jvmsEvaluateTriggersButton").getTagName());
+        assertEquals("TableView", elementByFxId(document, "jvmsTriggerEventsTable").getTagName());
         assertEquals(0, elementCountWithFxId(document, "statusLabel"));
         assertEquals(0, elementCountWithFxId(document, "taskSummaryLabel"));
         assertEquals("tlabTimelineContainer", elementByFxId(document, "tlabTimelineContainer").getAttribute("fx:id"));
