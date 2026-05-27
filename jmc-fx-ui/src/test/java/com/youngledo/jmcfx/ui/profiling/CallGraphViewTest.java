@@ -2,6 +2,7 @@ package com.youngledo.jmcfx.ui.profiling;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertNull;
+import static org.junit.jupiter.api.Assertions.assertSame;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 
 import java.io.IOException;
@@ -131,6 +132,69 @@ class CallGraphViewTest {
         assertEquals(1, countByStyleClass(view, "call-graph-edge"));
     }
 
+
+    @Test
+    void graphUsesScrollableCanvasLargerThanViewport() {
+        CallGraphView view = new CallGraphView();
+        view.setLayout(wideLayout());
+        view.resize(320, 160);
+
+        view.layout();
+
+        assertTrue(view.prefWidth(-1) > 320);
+        assertTrue(view.prefHeight(-1) > 220);
+    }
+
+    @Test
+    void zoomControlsScaleGraphCanvas() {
+        CallGraphView view = new CallGraphView();
+        view.setLayout(sampleLayout());
+
+        view.zoomIn();
+
+        assertTrue(view.zoomScaleProperty().get() > 1.0);
+        assertTrue(view.prefWidth(-1) > 0);
+
+        view.zoomOut();
+        view.resetZoom();
+
+        assertEquals(1.0, view.zoomScaleProperty().get(), DELTA);
+    }
+
+    @Test
+    void proportionalZoomScalesGraphCanvasForGestures() {
+        CallGraphView view = new CallGraphView();
+        view.setLayout(sampleLayout());
+        double basePrefWidth = view.prefWidth(-1);
+        double basePrefHeight = view.prefHeight(-1);
+
+        view.zoomBy(1.5);
+
+        assertEquals(1.5, view.zoomScaleProperty().get(), DELTA);
+        assertEquals(basePrefWidth * 1.5, view.prefWidth(-1), DELTA);
+        assertEquals(basePrefHeight * 1.5, view.prefHeight(-1), DELTA);
+
+        view.zoomBy(0);
+
+        assertEquals(1.5, view.zoomScaleProperty().get(), DELTA);
+    }
+
+    @Test
+    void fitToWidthScalesLargeGraphDownWithoutUpscaling() {
+        CallGraphView view = new CallGraphView();
+        view.setLayout(wideLayout());
+
+        view.fitToWidth(360);
+
+        assertTrue(view.zoomScaleProperty().get() < 1.0);
+
+        CallGraphView small = new CallGraphView();
+        small.setLayout(sampleLayout());
+        small.fitToWidth(2000);
+
+        assertEquals(1.0, small.zoomScaleProperty().get(), DELTA);
+    }
+
     @Test
     void cssDefinesCallGraphClasses() throws IOException {
         String css = appCss();
@@ -141,6 +205,8 @@ class CallGraphViewTest {
         assertTrue(css.contains(".call-graph-node-label"));
         assertTrue(css.contains(".call-graph-edge"));
         assertTrue(css.contains(".call-graph-empty"));
+        assertTrue(css.contains(".profiling-graph-tab-content"));
+        assertTrue(css.contains(".profiling-graph-toolbar"));
     }
 
     private CallGraphLayout sampleLayout() {
@@ -148,6 +214,23 @@ class CallGraphViewTest {
                 new CallGraphNode("selected", "com.example.Service.run", 100, 100, 0, 0.25, 0, true),
                 new CallGraphNode("node-1", "com.example.Repository.find", 40, 40, 1, 0.75, 1, false));
         return new CallGraphLayout(nodes, List.of(new CallGraphEdge("selected", "node-1", 40, 40)), 1);
+    }
+
+
+    private CallGraphLayout wideLayout() {
+        List<CallGraphNode> nodes = List.of(
+                new CallGraphNode("selected", "selected", 100, 100, 0, 0.5, 0, true),
+                new CallGraphNode("node-1", "a", 80, 80, 1, 0.1, 0.5, false),
+                new CallGraphNode("node-2", "b", 70, 70, 1, 0.5, 0.5, false),
+                new CallGraphNode("node-3", "c", 60, 60, 1, 0.9, 0.5, false),
+                new CallGraphNode("node-4", "d", 50, 50, 2, 0.2, 1, false),
+                new CallGraphNode("node-5", "e", 40, 40, 2, 0.8, 1, false));
+        return new CallGraphLayout(nodes, List.of(
+                new CallGraphEdge("selected", "node-1", 80, 80),
+                new CallGraphEdge("selected", "node-2", 70, 70),
+                new CallGraphEdge("selected", "node-3", 60, 60),
+                new CallGraphEdge("node-1", "node-4", 50, 50),
+                new CallGraphEdge("node-3", "node-5", 40, 40)), 2);
     }
 
     private int countByStyleClass(Node root, String styleClass) {

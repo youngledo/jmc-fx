@@ -46,6 +46,7 @@ import com.youngledo.jmcfx.domain.model.TriggerOperator;
 import com.youngledo.jmcfx.domain.model.TriggerRule;
 import com.youngledo.jmcfx.domain.service.DiagnosticCommandService;
 import com.youngledo.jmcfx.domain.service.FlightRecordingService;
+import com.youngledo.jmcfx.domain.service.JmcFxException;
 import com.youngledo.jmcfx.domain.service.JmxConnectionService;
 import com.youngledo.jmcfx.domain.service.JvmDiscoveryService;
 import com.youngledo.jmcfx.domain.service.LiveMetricService;
@@ -828,9 +829,7 @@ public class JvmBrowserViewModel implements AutoCloseable {
                     sessionLoading.set(false);
                 });
             } catch (RuntimeException exception) {
-                LOGGER.atError()
-                        .withThrowable(exception)
-                        .log("Unable to load JVM session for {}", connection.displayName());
+                logActionFailure("Unable to load JVM session for " + connection.displayName(), exception);
                 runOnFx(() -> {
                     if (!isCurrentSessionLoad(generation, connection)) {
                         return;
@@ -868,9 +867,8 @@ public class JvmBrowserViewModel implements AutoCloseable {
             recordingControlAvailable.set(true);
             clearRecordingError();
         } catch (RuntimeException exception) {
-            LOGGER.atError()
-                    .withThrowable(exception)
-                    .log("Unable to load Flight Recorder state for {}", snapshot.connection().displayName());
+            logActionFailure("Unable to load Flight Recorder state for " + snapshot.connection().displayName(),
+                    exception);
             clearRecordingControl();
             recordingError.set(true);
             recordingErrorMessage.set(exception.getMessage() == null
@@ -1201,7 +1199,7 @@ public class JvmBrowserViewModel implements AutoCloseable {
     }
 
     private void failRecording(RuntimeException exception) {
-        LOGGER.error("Flight Recorder action failed", exception);
+        logActionFailure("Flight Recorder action failed", exception);
         runOnFx(() -> {
             recordingError.set(true);
             recordingErrorMessage.set(exception.getMessage() == null ? exception.getClass().getSimpleName()
@@ -1212,7 +1210,7 @@ public class JvmBrowserViewModel implements AutoCloseable {
 
     private void failMBean(long generation, JvmSessionSnapshot snapshot, MBeanNode node,
             MBeanOperationInfo operation, RuntimeException exception) {
-        LOGGER.error("MBean browser action failed", exception);
+        logActionFailure("MBean browser action failed", exception);
         runOnFx(() -> {
             if (node == null) {
                 if (!isCurrentMBeanSessionRequest(generation, snapshot)) {
@@ -1232,7 +1230,7 @@ public class JvmBrowserViewModel implements AutoCloseable {
 
     private void failDiagnosticCommand(long generation, JvmSessionSnapshot snapshot,
             DiagnosticCommandInfo command, RuntimeException exception) {
-        LOGGER.error("Diagnostic Command action failed", exception);
+        logActionFailure("Diagnostic Command action failed", exception);
         runOnFx(() -> {
             if (command == null) {
                 if (!isCurrentDiagnosticCommandSessionRequest(generation, snapshot)) {
@@ -1249,7 +1247,7 @@ public class JvmBrowserViewModel implements AutoCloseable {
     }
 
     private void failTrigger(long generation, JvmSessionSnapshot snapshot, RuntimeException exception) {
-        LOGGER.error("Trigger action failed", exception);
+        logActionFailure("Trigger action failed", exception);
         runOnFx(() -> {
             if (!isCurrentTriggerEvaluation(generation, snapshot)) {
                 return;
@@ -1262,13 +1260,26 @@ public class JvmBrowserViewModel implements AutoCloseable {
     }
 
     private void fail(RuntimeException exception) {
-        LOGGER.error("JVM browser action failed", exception);
+        logActionFailure("JVM browser action failed", exception);
         runOnFx(() -> {
             finishWork();
             error.set(true);
             errorMessage.set(exception.getMessage() == null ? exception.getClass().getSimpleName()
                     : exception.getMessage());
         });
+    }
+
+    private static void logActionFailure(String action, RuntimeException exception) {
+        if (exception instanceof JmcFxException) {
+            LOGGER.warn("{}: {}", action, displayMessage(exception));
+            LOGGER.debug(action, exception);
+            return;
+        }
+        LOGGER.error(action, exception);
+    }
+
+    private static String displayMessage(RuntimeException exception) {
+        return exception.getMessage() == null ? exception.getClass().getSimpleName() : exception.getMessage();
     }
 
     private void runOnFx(Runnable runnable) {

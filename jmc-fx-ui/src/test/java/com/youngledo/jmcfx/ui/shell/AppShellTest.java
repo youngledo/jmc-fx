@@ -78,6 +78,18 @@ class AppShellTest {
     }
 
     @Test
+    void callGraphZoomKeepsViewportAnchorStable() {
+        assertEquals(0.5, AppShellController.scrollValueAfterZoom(
+                0.5, 1000, 2000, 200, 100), 0.000001);
+        assertEquals(0, AppShellController.scrollValueAfterZoom(
+                0, 1000, 2000, 200, 0), 0.000001);
+        assertEquals(1, AppShellController.scrollValueAfterZoom(
+                1, 1000, 2000, 200, 200), 0.000001);
+        assertEquals(0, AppShellController.scrollValueAfterZoom(
+                0.5, 1000, 150, 200, 100), 0.000001);
+    }
+
+    @Test
     void uiPomIncludesMaterialIconPack() throws Exception {
         Document document = pom("pom.xml");
 
@@ -202,12 +214,17 @@ class AppShellTest {
         Element callGraphToolbar = elementByFxId(document, "profilingCallGraphToolbar");
         assertEquals("HBox", callGraphToolbar.getTagName());
         assertTrue(hasStyleClass(callGraphToolbar, "page-toolbar"));
+        assertEquals("CENTER_LEFT", callGraphToolbar.getAttribute("alignment"));
         assertEquals("ComboBox", elementByFxId(document, "profilingCallGraphDirectionCombo").getTagName());
         assertEquals("Label", elementByFxId(document, "profilingCallGraphDepthLabel").getTagName());
         assertEquals("Spinner", elementByFxId(document, "profilingCallGraphDepthSpinner").getTagName());
         Element callGraphContainer = elementByFxId(document, "profilingCallGraphContainer");
         assertEquals("VBox", callGraphContainer.getTagName());
         assertTrue(hasStyleClass(callGraphContainer, "profiling-call-graph-container"));
+        Element callGraphScrollPane = (Element) callGraphContainer.getParentNode();
+        assertEquals("true", callGraphScrollPane.getAttribute("pannable"));
+        assertEquals("false", callGraphScrollPane.getAttribute("fitToWidth"));
+        assertEquals("false", callGraphScrollPane.getAttribute("fitToHeight"));
 
         assertFlameGraphTab(document, "profilingCallersFlameContainer");
         assertFlameGraphTab(document, "profilingCalleesFlameContainer");
@@ -230,11 +247,17 @@ class AppShellTest {
         assertTrue(controller.contains("@FXML private ComboBox<CallGraphDirection> profilingCallGraphDirectionCombo;"));
         assertTrue(controller.contains("@FXML private Label profilingCallGraphDepthLabel;"));
         assertTrue(controller.contains("@FXML private Spinner<Integer> profilingCallGraphDepthSpinner;"));
+        assertTrue(controller.contains("@FXML private Button profilingCallGraphZoomOutButton;"));
+        assertTrue(controller.contains("@FXML private Button profilingCallGraphResetZoomButton;"));
+        assertTrue(controller.contains("@FXML private Button profilingCallGraphZoomInButton;"));
+        assertTrue(controller.contains("@FXML private Button profilingCallGraphFitButton;"));
         assertTrue(controller.contains("@FXML private VBox profilingCallGraphContainer;"));
         assertTrue(controller.contains("private CallGraphView profilingCallGraphView;"));
         assertTrue(controller.contains("@FXML private Tab profilingCallersFlameTab;"));
+        assertTrue(controller.contains("@FXML private Button profilingCallersFlameOrientationButton;"));
         assertTrue(controller.contains("@FXML private VBox profilingCallersFlameContainer;"));
         assertTrue(controller.contains("@FXML private Tab profilingCalleesFlameTab;"));
+        assertTrue(controller.contains("@FXML private Button profilingCalleesFlameOrientationButton;"));
         assertTrue(controller.contains("@FXML private VBox profilingCalleesFlameContainer;"));
         assertTrue(controller.contains("private FlameGraphView profilingCallersFlameGraphView;"));
         assertTrue(controller.contains("private FlameGraphView profilingCalleesFlameGraphView;"));
@@ -273,8 +296,33 @@ class AppShellTest {
         assertTrue(controller.contains("profilingCalleesFlameTab.textProperty().bind(i18n.text(\"profiling.tab.calleesFlame\"))"));
         assertTrue(controller.contains("profilingCallersFlameGraphView.emptyTextProperty().bind(i18n.text(\"profiling.flame.empty\"))"));
         assertTrue(controller.contains("profilingCalleesFlameGraphView.emptyTextProperty().bind(i18n.text(\"profiling.flame.empty\"))"));
+        assertTrue(controller.contains("configureGraphZoomButtons(profilingCallGraphView"));
+        assertTrue(controller.contains("configureFlameGraphButtons(profilingCallersFlameGraphView"));
+        assertTrue(controller.contains("toggleFlameGraphOrientation"));
+        assertTrue(controller.contains("bindFlameGraphToolbarVisibility(profilingCallersFlameToolbar"));
+        assertTrue(controller.contains("bindFlameGraphToolbarVisibility(profilingCalleesFlameToolbar"));
+        assertTrue(controller.contains("toolbar.visibleProperty().bind(graphView.hasFramesProperty())"));
+        assertTrue(controller.contains("toolbar.managedProperty().bind(toolbar.visibleProperty())"));
+        assertTrue(controller.contains("graphView.fitToWidth(graphViewportWidth(graphView))"));
+        assertTrue(controller.contains("configureCallGraphGestures"));
+        assertTrue(controller.contains("addEventFilter(ScrollEvent.SCROLL"));
+        assertTrue(controller.contains("addEventFilter(ZoomEvent.ZOOM_STARTED"));
+        assertTrue(controller.contains("zoomCallGraphAt"));
+        assertTrue(controller.contains("scrollValueAfterZoom"));
+        assertTrue(controller.contains("addEventFilter(ZoomEvent.ZOOM_FINISHED"));
+        assertFalse(controller.contains("PauseTransition"));
+        assertTrue(controller.contains("panCallGraphViewport"));
+        assertTrue(controller.contains("scrollPane.setHvalue"));
+        assertTrue(controller.contains("scrollPane.setVvalue"));
+        assertTrue(controller.contains("addEventFilter(ZoomEvent.ZOOM"));
+        assertTrue(controller.contains("addEventFilter(MouseEvent.MOUSE_CLICKED"));
+        assertTrue(controller.contains("event.isShortcutDown()"));
+        assertTrue(controller.contains("graphView.zoomBy"));
 
         assertTrue(css.contains(".profiling-call-graph-container"));
+        assertTrue(css.contains(".profiling-graph-tab-content"));
+        assertTrue(css.contains(".profiling-graph-toolbar"));
+        assertTrue(css.contains(".profiling-graph-tool-button"));
         assertTrue(english.contains("profiling.tab.callGraph=Call Graph"));
         assertTrue(english.contains("profiling.tab.callersFlame=Caller Flame Graph"));
         assertTrue(english.contains("profiling.tab.calleesFlame=Callee Flame Graph"));
@@ -283,7 +331,14 @@ class AppShellTest {
         assertTrue(english.contains("profiling.callGraph.direction.callers=Callers"));
         assertTrue(english.contains("profiling.callGraph.direction.callees=Callees"));
         assertTrue(english.contains("profiling.callGraph.depth=Depth"));
-        assertTrue(english.contains("profiling.flame.empty=Select a method to view the flame graph."));
+        assertTrue(english.contains("profiling.graph.zoomIn=Zoom in"));
+        assertTrue(english.contains("profiling.graph.zoomOut=Zoom out"));
+        assertTrue(english.contains("profiling.graph.resetZoom=Reset zoom"));
+        assertTrue(english.contains("profiling.graph.fit=Fit to width"));
+        assertTrue(english.contains("profiling.flame.empty=Select a method to view the graph."));
+        assertTrue(english.contains("profiling.flame.orientation=Switch flame/icicle orientation"));
+        assertTrue(english.contains("profiling.flame.orientation.icicle=Icicle"));
+        assertTrue(english.contains("profiling.flame.orientation.flame=Flame"));
         assertTrue(chinese.contains("profiling.tab.callGraph=调用图"));
         assertTrue(chinese.contains("profiling.tab.callersFlame=调用者火焰图"));
         assertTrue(chinese.contains("profiling.tab.calleesFlame=被调用者火焰图"));
@@ -292,7 +347,14 @@ class AppShellTest {
         assertTrue(chinese.contains("profiling.callGraph.direction.callers=调用者"));
         assertTrue(chinese.contains("profiling.callGraph.direction.callees=被调用者"));
         assertTrue(chinese.contains("profiling.callGraph.depth=深度"));
-        assertTrue(chinese.contains("profiling.flame.empty=选择一个方法查看火焰图。"));
+        assertTrue(chinese.contains("profiling.graph.zoomIn=放大"));
+        assertTrue(chinese.contains("profiling.graph.zoomOut=缩小"));
+        assertTrue(chinese.contains("profiling.graph.resetZoom=重置缩放"));
+        assertTrue(chinese.contains("profiling.graph.fit=适应宽度"));
+        assertTrue(chinese.contains("profiling.flame.empty=选择一个方法查看图表。"));
+        assertTrue(chinese.contains("profiling.flame.orientation=切换火焰图/冰柱图方向"));
+        assertTrue(chinese.contains("profiling.flame.orientation.icicle=冰柱图"));
+        assertTrue(chinese.contains("profiling.flame.orientation.flame=火焰图"));
     }
 
     @Test
@@ -399,11 +461,15 @@ class AppShellTest {
     @Test
     void profilingFlameGraphContainerUsesScopedPadding() throws Exception {
         String css = appCss();
+        String tabContent = cssBlock(css, ".profiling-graph-tab-content");
+        String toolbar = cssBlock(css, ".profiling-graph-toolbar");
         String flameContainer = cssBlock(css, ".profiling-flame-container");
         String callGraphContainer = cssBlock(css, ".profiling-call-graph-container");
 
-        assertTrue(flameContainer.contains("-fx-padding: 12px"));
-        assertTrue(callGraphContainer.contains("-fx-padding: 12px"));
+        assertTrue(tabContent.contains("-fx-padding: 12px 14px 14px 14px"));
+        assertTrue(toolbar.contains("-fx-spacing: 8px"));
+        assertTrue(flameContainer.contains("-fx-padding: 8px 0 0 0"));
+        assertTrue(callGraphContainer.contains("-fx-padding: 8px 0 0 0"));
     }
 
     @Test
@@ -1222,6 +1288,12 @@ class AppShellTest {
         assertEquals("ScrollPane", scrollPane.getTagName());
         assertEquals("true", scrollPane.getAttribute("fitToWidth"));
         assertEquals("true", scrollPane.getAttribute("fitToHeight"));
+        Element tabContent = (Element) scrollPane.getParentNode();
+        assertEquals("VBox", tabContent.getTagName());
+        assertTrue(hasStyleClass(tabContent, "profiling-graph-tab-content"));
+        Element toolbar = childElements(tabContent, "HBox").getFirst();
+        assertTrue(hasStyleClass(toolbar, "profiling-graph-toolbar"));
+        assertEquals("CENTER_LEFT", toolbar.getAttribute("alignment"));
     }
 
     private static int elementCountWithStyleClass(Document document, String styleClass) {

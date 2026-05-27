@@ -114,6 +114,20 @@ class JmcJmxConnectionServiceTest {
     }
 
     @Test
+    void connectLocalExplainsMissingManagementAgentModule() {
+        RecordingLocalConnectorResolver resolver = new RecordingLocalConnectorResolver(
+                new IOException("java.lang.module.FindException: Module jdk.management.agent not found"));
+        JmcJmxConnectionService service = new JmcJmxConnectionService(resolver, new RecordingJmxConnectorFactory());
+
+        JmcFxException exception = assertThrows(JmcFxException.class,
+                () -> service.connectLocal(JvmConnection.local("42", "demo.Main", "26.0.1", true)));
+
+        assertEquals("Unable to start local management agent for JVM 42. The target JVM/runtime lacks "
+                + "jdk.management.agent. Use a full JDK runtime for the target process or connect with a remote "
+                + "JMX service URL.", exception.getMessage());
+    }
+
+    @Test
     void localConnectorResolverUsesExistingAddressWhenAvailable() throws IOException {
         RecordingAttachVirtualMachine vm = new RecordingAttachVirtualMachine(
                 "service:jmx:rmi:///jndi/rmi://127.0.0.1:0/jmxrmi", "service:jmx:local://42");
@@ -174,15 +188,25 @@ class JmcJmxConnectionServiceTest {
     private static final class RecordingLocalConnectorResolver
             implements JmcJmxConnectionService.LocalConnectorAddressResolver {
         private final String address;
+        private final IOException failure;
         private String resolvedPid = "";
 
         private RecordingLocalConnectorResolver(String address) {
             this.address = address;
+            this.failure = null;
+        }
+
+        private RecordingLocalConnectorResolver(IOException failure) {
+            this.address = "";
+            this.failure = failure;
         }
 
         @Override
         public JMXServiceURL resolve(String pid) throws IOException {
             resolvedPid = pid;
+            if (failure != null) {
+                throw failure;
+            }
             return new JMXServiceURL(address);
         }
     }

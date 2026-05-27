@@ -88,7 +88,14 @@ public class JmcJmxConnectionService implements JmxConnectionService, JmxConnect
                 closeQuietly(connector);
                 throw exception;
             }
+        } catch (JmcFxException exception) {
+            throw exception;
         } catch (IOException | RuntimeException exception) {
+            if (isMissingManagementAgentModule(exception)) {
+                throw new JmcFxException("Unable to start local management agent for JVM " + localConnection.pid()
+                        + ". The target JVM/runtime lacks jdk.management.agent. Use a full JDK runtime for the "
+                        + "target process or connect with a remote JMX service URL.", exception);
+            }
             throw new JmcFxException("Unable to connect to local JVM " + localConnection.pid()
                     + ": " + exception.getMessage(), exception);
         }
@@ -154,6 +161,18 @@ public class JmcJmxConnectionService implements JmxConnectionService, JmxConnect
                 && connection.source() == JvmConnectionSource.LOCAL
                 && connection.attachable()
                 && !connection.pid().isBlank();
+    }
+
+    private static boolean isMissingManagementAgentModule(Throwable throwable) {
+        for (Throwable current = throwable; current != null; current = current.getCause()) {
+            String message = current.getMessage();
+            if (message != null && message.contains("jdk.management.agent")
+                    && (message.contains("FindException")
+                            || message.contains("Module jdk.management.agent not found"))) {
+                return true;
+            }
+        }
+        return false;
     }
 
     private static JvmRuntimeSnapshot runtimeSnapshot(MBeanServerConnection server) throws IOException {

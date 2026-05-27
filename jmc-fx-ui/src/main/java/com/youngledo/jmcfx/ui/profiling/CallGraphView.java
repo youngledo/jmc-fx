@@ -3,7 +3,9 @@ package com.youngledo.jmcfx.ui.profiling;
 import java.util.HashMap;
 import java.util.Map;
 
+import javafx.beans.property.DoubleProperty;
 import javafx.beans.property.SimpleStringProperty;
+import javafx.beans.property.SimpleDoubleProperty;
 import javafx.beans.property.StringProperty;
 import javafx.scene.Node;
 import javafx.scene.control.Label;
@@ -17,16 +19,33 @@ public class CallGraphView extends Pane {
     private static final double MIN_HEIGHT = 220;
     private static final double NODE_WIDTH = 180;
     private static final double NODE_HEIGHT = 34;
+    private static final double HORIZONTAL_MARGIN = 32;
+    private static final double VERTICAL_MARGIN = 28;
+    private static final double DEPTH_WIDTH = 240;
+    private static final double ROW_HEIGHT = 72;
+    private static final double MIN_ZOOM = 0.25;
+    private static final double MAX_ZOOM = 3.0;
+    private static final double ZOOM_STEP = 1.2;
 
     private CallGraphLayout layout = CallGraphLayout.EMPTY;
     private final Label emptyLabel = new Label();
     private final StringProperty emptyText = new SimpleStringProperty(this, "emptyText", "");
+    private final DoubleProperty zoomScale = new SimpleDoubleProperty(this, "zoomScale", 1.0);
 
     public CallGraphView() {
         getStyleClass().add("call-graph-view");
         emptyLabel.getStyleClass().add("call-graph-empty");
         emptyLabel.setManaged(false);
         emptyLabel.setMouseTransparent(true);
+        zoomScale.addListener((obs, old, val) -> {
+            double zoom = clampZoom(val.doubleValue());
+            if (Double.compare(zoom, val.doubleValue()) != 0) {
+                zoomScale.set(zoom);
+                return;
+            }
+            updateScaledSize();
+            requestLayout();
+        });
         emptyText.addListener((obs, old, val) -> {
             rebuildChildren();
             requestLayout();
@@ -37,6 +56,7 @@ public class CallGraphView extends Pane {
     public void setLayout(CallGraphLayout layout) {
         this.layout = layout == null ? CallGraphLayout.EMPTY : layout;
         rebuildChildren();
+        updateScaledSize();
         requestLayout();
     }
 
@@ -58,6 +78,43 @@ public class CallGraphView extends Pane {
 
     public int edgeCount() {
         return layout.edges().size();
+    }
+
+    public DoubleProperty zoomScaleProperty() {
+        return zoomScale;
+    }
+
+    public void zoomIn() {
+        setZoomScale(zoomScale.get() * ZOOM_STEP);
+    }
+
+    public void zoomOut() {
+        setZoomScale(zoomScale.get() / ZOOM_STEP);
+    }
+
+    public void zoomBy(double factor) {
+        if (factor <= 0 || Double.isNaN(factor)) {
+            return;
+        }
+        setZoomScale(zoomScale.get() * factor);
+    }
+
+    public void resetZoom() {
+        setZoomScale(1.0);
+    }
+
+    public void fitToWidth(double viewportWidth) {
+        double contentWidth = computeBaseWidth();
+        double availableWidth = viewportWidth <= 0 ? 0 : viewportWidth;
+        if (contentWidth <= 0 || availableWidth <= 0 || contentWidth <= availableWidth) {
+            setZoomScale(1.0);
+            return;
+        }
+        setZoomScale(availableWidth / contentWidth);
+    }
+
+    private void setZoomScale(double zoom) {
+        zoomScale.set(clampZoom(zoom));
     }
 
     private void rebuildChildren() {
@@ -84,18 +141,18 @@ public class CallGraphView extends Pane {
     protected void layoutChildren() {
         double left = snappedLeftInset();
         double top = snappedTopInset();
-        double contentWidth = Math.max(0, getWidth() - left - snappedRightInset());
-        double contentHeight = Math.max(MIN_HEIGHT, getHeight() - top - snappedBottomInset());
+        double contentWidth = Math.max(computeScaledBaseWidth(), getWidth() - left - snappedRightInset());
+        double contentHeight = Math.max(computeScaledBaseHeight(), getHeight() - top - snappedBottomInset());
         if (layout.nodes().isEmpty()) {
             if (getChildren().contains(emptyLabel)) {
-                emptyLabel.resizeRelocate(left, top, contentWidth, snapSizeY(NODE_HEIGHT));
+                emptyLabel.resizeRelocate(left, top, contentWidth, snapSizeY(NODE_HEIGHT * zoomScale.get()));
             }
             return;
         }
 
         Map<String, Bounds> nodeBounds = new HashMap<>();
-        double nodeWidth = snapSizeX(NODE_WIDTH);
-        double nodeHeight = snapSizeY(NODE_HEIGHT);
+        double nodeWidth = snapSizeX(NODE_WIDTH * zoomScale.get());
+        double nodeHeight = snapSizeY(NODE_HEIGHT * zoomScale.get());
         double xRange = Math.max(0, contentWidth - nodeWidth);
         double yRange = Math.max(0, contentHeight - nodeHeight);
 
@@ -128,8 +185,52 @@ public class CallGraphView extends Pane {
     }
 
     @Override
+    protected double computePrefWidth(double height) {
+        return computeScaledBaseWidth() + snappedLeftInset() + snappedRightInset();
+    }
+
+    @Override
     protected double computePrefHeight(double width) {
-        return MIN_HEIGHT + snappedTopInset() + snappedBottomInset();
+        return computeScaledBaseHeight() + snappedTopInset() + snappedBottomInset();
+    }
+
+    private double computeBaseWidth() {
+        if (layout.nodes().isEmpty()) {
+            return NODE_WIDTH + (HORIZONTAL_MARGIN * 2);
+        }
+        return Math.max(NODE_WIDTH + (HORIZONTAL_MARGIN * 2),
+                NODE_WIDTH + (HORIZONTAL_MARGIN * 2) + (layout.maxDepth() * DEPTH_WIDTH));
+    }
+
+    private double computeBaseHeight() {
+        if (layout.nodes().isEmpty()) {
+            return MIN_HEIGHT;
+        }
+        long largestLevel = layout.nodes().stream()
+                .collect(java.util.stream.Collectors.groupingBy(
+                        CallGraphNode::depth,
+                        java.util.stream.Collectors.counting()))
+                .values()
+                .stream()
+                .mapToLong(Long::longValue)
+                .max()
+                .orElse(1);
+        double levelHeight = VERTICAL_MARGIN * 2 + NODE_HEIGHT + Math.max(0, largestLevel - 1) * ROW_HEIGHT;
+        double depthHeight = VERTICAL_MARGIN * 2 + NODE_HEIGHT + Math.max(0, layout.maxDepth()) * ROW_HEIGHT;
+        return Math.max(MIN_HEIGHT, Math.max(levelHeight, depthHeight));
+    }
+
+    private double computeScaledBaseWidth() {
+        return computeBaseWidth() * zoomScale.get();
+    }
+
+    private double computeScaledBaseHeight() {
+        return computeBaseHeight() * zoomScale.get();
+    }
+
+    private void updateScaledSize() {
+        setPrefWidth(computePrefWidth(-1));
+        setPrefHeight(computePrefHeight(-1));
     }
 
     private StackPane nodeView(CallGraphNode graphNode) {
@@ -148,6 +249,10 @@ public class CallGraphView extends Pane {
         label.setMouseTransparent(true);
         node.getChildren().add(label);
         return node;
+    }
+
+    private double clampZoom(double zoom) {
+        return Math.max(MIN_ZOOM, Math.min(MAX_ZOOM, zoom));
     }
 
     private record Bounds(double centerX, double centerY) {

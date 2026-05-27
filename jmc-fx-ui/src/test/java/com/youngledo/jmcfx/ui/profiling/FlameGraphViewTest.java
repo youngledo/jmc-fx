@@ -2,6 +2,7 @@ package com.youngledo.jmcfx.ui.profiling;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertTrue;
+import static org.junit.jupiter.api.Assertions.assertNotNull;
 
 import java.io.IOException;
 import java.io.InputStream;
@@ -15,6 +16,7 @@ import javafx.scene.Node;
 import javafx.scene.Parent;
 import javafx.scene.control.Label;
 import javafx.scene.control.OverrunStyle;
+import javafx.scene.transform.Scale;
 
 import org.junit.jupiter.api.BeforeAll;
 import org.junit.jupiter.api.Test;
@@ -38,6 +40,7 @@ class FlameGraphViewTest {
         view.setLayout(sampleLayout());
 
         assertEquals(2, view.frameCount());
+        assertTrue(view.hasFramesProperty().get());
         assertTrue(view.getStyleClass().contains("flame-graph-view"));
     }
 
@@ -61,6 +64,7 @@ class FlameGraphViewTest {
         view.setLayout(null);
 
         assertEquals(0, view.frameCount());
+        assertTrue(!view.hasFramesProperty().get());
         assertTrue(view.getChildren().isEmpty());
     }
 
@@ -116,6 +120,68 @@ class FlameGraphViewTest {
         assertEquals(100, secondFrame.prefWidth(-1), 0.000001);
     }
 
+
+    @Test
+    void zoomControlsScaleFlameGraphCanvas() {
+        FlameGraphView view = new FlameGraphView();
+        view.setLayout(sampleLayout());
+
+        view.zoomIn();
+
+        assertTrue(view.zoomScaleProperty().get() > 1.0);
+        assertEquals(view.zoomScaleProperty().get(), graphScale(view).getX(), 0.000001);
+
+        view.zoomOut();
+        view.resetZoom();
+
+        assertEquals(1.0, view.zoomScaleProperty().get(), 0.000001);
+    }
+
+    @Test
+    void fitToWidthScalesWideFlameGraphWithoutUpscaling() {
+        FlameGraphView view = new FlameGraphView();
+        view.setLayout(new FlameGraphLayout(List.of(
+                new FlameGraphFrame("wide", 100, 100, 0, 0, 1)), 1));
+
+        view.fitToWidth(320);
+
+        assertTrue(view.zoomScaleProperty().get() < 1.0);
+
+        view.fitToWidth(2000);
+
+        assertEquals(1.0, view.zoomScaleProperty().get(), 0.000001);
+    }
+
+    @Test
+    void canSwitchBetweenIcicleAndFlameOrientation() {
+        FlameGraphView view = new FlameGraphView();
+        view.setLayout(new FlameGraphLayout(List.of(
+                new FlameGraphFrame("root", 100, 100, 0, 0, 1),
+                new FlameGraphFrame("child", 50, 50, 1, 0, 0.5)), 2));
+        view.resize(400, view.prefHeight(-1));
+        view.layout();
+        double icicleChildY = view.getChildren().get(1).getLayoutY();
+
+        view.setOrientation(FlameGraphView.Orientation.FLAME);
+        view.layout();
+
+        assertTrue(view.getChildren().get(1).getLayoutY() < icicleChildY);
+        assertEquals(FlameGraphView.Orientation.FLAME, view.orientationProperty().get());
+    }
+
+    @Test
+    void framesExposeAccessibleTextWithMethodCountAndPercentage() {
+        FlameGraphView view = new FlameGraphView();
+        view.setLayout(sampleLayout());
+
+        String accessibleText = view.getChildren().getFirst().getAccessibleText();
+
+        assertNotNull(accessibleText);
+        assertTrue(accessibleText.contains("A"));
+        assertTrue(accessibleText.contains("60"));
+        assertTrue(accessibleText.contains("60.0%"));
+    }
+
     @Test
     void cssDefinesFlameGraphClasses() throws IOException {
         String css = appCss();
@@ -124,12 +190,23 @@ class FlameGraphViewTest {
         assertTrue(css.contains(".flame-graph-frame"));
         assertTrue(css.contains(".flame-graph-frame-label"));
         assertTrue(css.contains(".flame-graph-empty"));
+        assertTrue(css.contains(".profiling-graph-tab-content"));
+        assertTrue(css.contains(".profiling-graph-toolbar"));
     }
 
     private FlameGraphLayout sampleLayout() {
         return new FlameGraphLayout(List.of(
                 new FlameGraphFrame("A", 60, 60, 0, 0, 0.5),
                 new FlameGraphFrame("B", 40, 40, 0, 0.5, 0.5)), 1);
+    }
+
+
+    private Scale graphScale(FlameGraphView view) {
+        return view.getTransforms().stream()
+                .filter(Scale.class::isInstance)
+                .map(Scale.class::cast)
+                .findFirst()
+                .orElseThrow();
     }
 
     private Node firstByStyleClass(Node root, String styleClass) {

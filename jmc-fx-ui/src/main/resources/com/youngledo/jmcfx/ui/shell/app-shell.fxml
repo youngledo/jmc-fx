@@ -245,26 +245,48 @@
                     <TabPane fx:id="profilingTreeTabs" prefHeight="300">
                         <tabs>
                             <Tab fx:id="profilingCallGraphTab" closable="false">
-                                <VBox spacing="8">
-                                    <HBox fx:id="profilingCallGraphToolbar" styleClass="page-toolbar" spacing="8">
+                                <VBox styleClass="profiling-graph-tab-content" spacing="8">
+                                    <HBox fx:id="profilingCallGraphToolbar" styleClass="page-toolbar profiling-graph-toolbar" spacing="8" alignment="CENTER_LEFT">
                                         <ComboBox fx:id="profilingCallGraphDirectionCombo" prefWidth="150"/>
                                         <Label fx:id="profilingCallGraphDepthLabel"/>
                                         <Spinner fx:id="profilingCallGraphDepthSpinner" prefWidth="110"/>
+                                        <Button fx:id="profilingCallGraphZoomOutButton" styleClass="profiling-graph-tool-button"/>
+                                        <Button fx:id="profilingCallGraphResetZoomButton" styleClass="profiling-graph-tool-button"/>
+                                        <Button fx:id="profilingCallGraphZoomInButton" styleClass="profiling-graph-tool-button"/>
+                                        <Button fx:id="profilingCallGraphFitButton" styleClass="profiling-graph-tool-button"/>
                                     </HBox>
-                                    <ScrollPane fitToWidth="true" fitToHeight="true" VBox.vgrow="ALWAYS">
+                                    <ScrollPane fx:id="profilingCallGraphScrollPane" fitToWidth="false" fitToHeight="false" pannable="true" VBox.vgrow="ALWAYS">
                                         <VBox fx:id="profilingCallGraphContainer" styleClass="profiling-call-graph-container"/>
                                     </ScrollPane>
                                 </VBox>
                             </Tab>
                             <Tab fx:id="profilingCallersFlameTab" closable="false">
-                                <ScrollPane fitToWidth="true" fitToHeight="true">
-                                    <VBox fx:id="profilingCallersFlameContainer" styleClass="profiling-flame-container"/>
-                                </ScrollPane>
+                                <VBox styleClass="profiling-graph-tab-content" spacing="8">
+                                    <HBox fx:id="profilingCallersFlameToolbar" styleClass="page-toolbar profiling-graph-toolbar" spacing="8" alignment="CENTER_LEFT">
+                                        <Button fx:id="profilingCallersFlameOrientationButton" styleClass="profiling-graph-tool-button"/>
+                                        <Button fx:id="profilingCallersFlameZoomOutButton" styleClass="profiling-graph-tool-button"/>
+                                        <Button fx:id="profilingCallersFlameResetZoomButton" styleClass="profiling-graph-tool-button"/>
+                                        <Button fx:id="profilingCallersFlameZoomInButton" styleClass="profiling-graph-tool-button"/>
+                                        <Button fx:id="profilingCallersFlameFitButton" styleClass="profiling-graph-tool-button"/>
+                                    </HBox>
+                                    <ScrollPane fitToWidth="true" fitToHeight="true" VBox.vgrow="ALWAYS">
+                                        <VBox fx:id="profilingCallersFlameContainer" styleClass="profiling-flame-container"/>
+                                    </ScrollPane>
+                                </VBox>
                             </Tab>
                             <Tab fx:id="profilingCalleesFlameTab" closable="false">
-                                <ScrollPane fitToWidth="true" fitToHeight="true">
-                                    <VBox fx:id="profilingCalleesFlameContainer" styleClass="profiling-flame-container"/>
-                                </ScrollPane>
+                                <VBox styleClass="profiling-graph-tab-content" spacing="8">
+                                    <HBox fx:id="profilingCalleesFlameToolbar" styleClass="page-toolbar profiling-graph-toolbar" spacing="8" alignment="CENTER_LEFT">
+                                        <Button fx:id="profilingCalleesFlameOrientationButton" styleClass="profiling-graph-tool-button"/>
+                                        <Button fx:id="profilingCalleesFlameZoomOutButton" styleClass="profiling-graph-tool-button"/>
+                                        <Button fx:id="profilingCalleesFlameResetZoomButton" styleClass="profiling-graph-tool-button"/>
+                                        <Button fx:id="profilingCalleesFlameZoomInButton" styleClass="profiling-graph-tool-button"/>
+                                        <Button fx:id="profilingCalleesFlameFitButton" styleClass="profiling-graph-tool-button"/>
+                                    </HBox>
+                                    <ScrollPane fitToWidth="true" fitToHeight="true" VBox.vgrow="ALWAYS">
+                                        <VBox fx:id="profilingCalleesFlameContainer" styleClass="profiling-flame-container"/>
+                                    </ScrollPane>
+                                </VBox>
                             </Tab>
                             <Tab fx:id="profilingCallersTab" closable="false">
                                 <TreeView fx:id="profilingCallersTree"/>

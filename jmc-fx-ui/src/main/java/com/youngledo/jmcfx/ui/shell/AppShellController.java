@@ -159,6 +159,7 @@ import javafx.beans.value.ChangeListener;
 import javafx.collections.FXCollections;
 import javafx.collections.ListChangeListener;
 import javafx.fxml.FXML;
+import javafx.scene.Node;
 import javafx.scene.control.Button;
 import javafx.scene.control.ComboBox;
 import javafx.scene.control.ContentDisplay;
@@ -171,6 +172,7 @@ import javafx.scene.control.MenuButton;
 import javafx.scene.control.TextArea;
 import javafx.scene.control.RadioButton;
 import javafx.scene.control.ProgressBar;
+import javafx.scene.control.ScrollPane;
 import javafx.scene.control.SplitPane;
 import javafx.scene.control.Spinner;
 import javafx.scene.control.SpinnerValueFactory;
@@ -185,6 +187,9 @@ import javafx.scene.control.ToggleGroup;
 import javafx.scene.control.TreeItem;
 import javafx.scene.control.TreeView;
 import javafx.scene.input.MouseButton;
+import javafx.scene.input.MouseEvent;
+import javafx.scene.input.ScrollEvent;
+import javafx.scene.input.ZoomEvent;
 import javafx.scene.layout.BorderPane;
 import javafx.scene.layout.HBox;
 import javafx.scene.layout.Region;
@@ -411,10 +416,27 @@ public class AppShellController {
     @FXML private ComboBox<CallGraphDirection> profilingCallGraphDirectionCombo;
     @FXML private Label profilingCallGraphDepthLabel;
     @FXML private Spinner<Integer> profilingCallGraphDepthSpinner;
+    @FXML private Button profilingCallGraphZoomOutButton;
+    @FXML private Button profilingCallGraphResetZoomButton;
+    @FXML private Button profilingCallGraphZoomInButton;
+    @FXML private Button profilingCallGraphFitButton;
+    @FXML private ScrollPane profilingCallGraphScrollPane;
     @FXML private VBox profilingCallGraphContainer;
     @FXML private Tab profilingCallersFlameTab;
+    @FXML private HBox profilingCallersFlameToolbar;
+    @FXML private Button profilingCallersFlameOrientationButton;
+    @FXML private Button profilingCallersFlameZoomOutButton;
+    @FXML private Button profilingCallersFlameResetZoomButton;
+    @FXML private Button profilingCallersFlameZoomInButton;
+    @FXML private Button profilingCallersFlameFitButton;
     @FXML private VBox profilingCallersFlameContainer;
     @FXML private Tab profilingCalleesFlameTab;
+    @FXML private HBox profilingCalleesFlameToolbar;
+    @FXML private Button profilingCalleesFlameOrientationButton;
+    @FXML private Button profilingCalleesFlameZoomOutButton;
+    @FXML private Button profilingCalleesFlameResetZoomButton;
+    @FXML private Button profilingCalleesFlameZoomInButton;
+    @FXML private Button profilingCalleesFlameFitButton;
     @FXML private VBox profilingCalleesFlameContainer;
     @FXML private Tab profilingCallersTab;
     @FXML private TreeView<StackTreeNode> profilingCallersTree;
@@ -423,6 +445,7 @@ public class AppShellController {
     private CallGraphView profilingCallGraphView;
     private FlameGraphView profilingCallersFlameGraphView;
     private FlameGraphView profilingCalleesFlameGraphView;
+    private boolean callGraphZoomGestureActive;
     private final ChangeListener<StackTreeNode> callersTreeListener =
             (observable, oldValue, newValue) -> rebuildStackTree(profilingCallersTree, newValue);
     private final ChangeListener<StackTreeNode> calleesTreeListener =
@@ -1795,6 +1818,26 @@ public class AppShellController {
                         profilingViewModel.setCallGraphMaxDepth(val);
                     }
                 });
+        configureGraphZoomButtons(profilingCallGraphView,
+                profilingCallGraphZoomOutButton,
+                profilingCallGraphResetZoomButton,
+                profilingCallGraphZoomInButton,
+                profilingCallGraphFitButton);
+        configureCallGraphGestures(profilingCallGraphView, profilingCallGraphScrollPane);
+        configureFlameGraphButtons(profilingCallersFlameGraphView,
+                profilingCallersFlameOrientationButton,
+                profilingCallersFlameZoomOutButton,
+                profilingCallersFlameResetZoomButton,
+                profilingCallersFlameZoomInButton,
+                profilingCallersFlameFitButton);
+        bindFlameGraphToolbarVisibility(profilingCallersFlameToolbar, profilingCallersFlameGraphView);
+        configureFlameGraphButtons(profilingCalleesFlameGraphView,
+                profilingCalleesFlameOrientationButton,
+                profilingCalleesFlameZoomOutButton,
+                profilingCalleesFlameResetZoomButton,
+                profilingCalleesFlameZoomInButton,
+                profilingCalleesFlameFitButton);
+        bindFlameGraphToolbarVisibility(profilingCalleesFlameToolbar, profilingCalleesFlameGraphView);
 
         TableColumn<HotMethod, String> methodCol = new TableColumn<>();
         methodCol.textProperty().bind(i18n.text("profiling.column.method"));
@@ -2623,6 +2666,149 @@ public class AppShellController {
                 setText(empty ? null : formatCallGraphDirection(direction));
             }
         };
+    }
+
+    private void configureGraphZoomButtons(CallGraphView graphView, Button zoomOutButton,
+            Button resetZoomButton, Button zoomInButton, Button fitButton) {
+        configureIconButton(zoomOutButton, Material2MZ.ZOOM_OUT, "profiling.graph.zoomOut");
+        configureIconButton(resetZoomButton, Material2MZ.REFRESH, "profiling.graph.resetZoom");
+        configureIconButton(zoomInButton, Material2MZ.ZOOM_IN, "profiling.graph.zoomIn");
+        configureIconButton(fitButton, Material2MZ.ZOOM_OUT_MAP, "profiling.graph.fit");
+        zoomOutButton.setOnAction(event -> graphView.zoomOut());
+        resetZoomButton.setOnAction(event -> graphView.resetZoom());
+        zoomInButton.setOnAction(event -> graphView.zoomIn());
+        fitButton.setOnAction(event -> graphView.fitToWidth(graphViewportWidth(graphView)));
+    }
+
+    private void configureCallGraphGestures(CallGraphView graphView, ScrollPane scrollPane) {
+        scrollPane.addEventFilter(ScrollEvent.SCROLL, event -> {
+            if (callGraphZoomGestureActive) {
+                event.consume();
+                return;
+            }
+            if (event.isShortcutDown()) {
+                zoomCallGraphAt(graphView, scrollPane, event.getX(), event.getY(),
+                        event.getDeltaY() > 0 ? 1.1 : 1 / 1.1);
+                event.consume();
+                return;
+            }
+            panCallGraphViewport(scrollPane, event.getDeltaX(), event.getDeltaY());
+            event.consume();
+        });
+        scrollPane.addEventFilter(ZoomEvent.ZOOM_STARTED, event -> {
+            callGraphZoomGestureActive = true;
+            event.consume();
+        });
+        scrollPane.addEventFilter(ZoomEvent.ZOOM, event -> {
+            zoomCallGraphAt(graphView, scrollPane, event.getX(), event.getY(), event.getZoomFactor());
+            event.consume();
+        });
+        scrollPane.addEventFilter(ZoomEvent.ZOOM_FINISHED, event -> {
+            callGraphZoomGestureActive = false;
+            event.consume();
+        });
+        scrollPane.addEventFilter(MouseEvent.MOUSE_CLICKED, event -> {
+            if (event.getButton() == MouseButton.PRIMARY && event.getClickCount() == 2) {
+                zoomCallGraphAt(graphView, scrollPane, event.getX(), event.getY(), 1.1);
+                event.consume();
+            }
+        });
+    }
+
+    private void zoomCallGraphAt(CallGraphView graphView, ScrollPane scrollPane,
+            double viewportX, double viewportY, double factor) {
+        double oldContentWidth = scrollContentWidth(scrollPane);
+        double oldContentHeight = scrollContentHeight(scrollPane);
+        double viewportWidth = scrollPane.getViewportBounds().getWidth();
+        double viewportHeight = scrollPane.getViewportBounds().getHeight();
+
+        graphView.zoomBy(factor);
+
+        double newContentWidth = scrollContentWidth(scrollPane);
+        double newContentHeight = scrollContentHeight(scrollPane);
+        scrollPane.setHvalue(scrollValueAfterZoom(scrollPane.getHvalue(),
+                oldContentWidth, newContentWidth, viewportWidth, viewportX));
+        scrollPane.setVvalue(scrollValueAfterZoom(scrollPane.getVvalue(),
+                oldContentHeight, newContentHeight, viewportHeight, viewportY));
+    }
+
+    private double scrollContentWidth(ScrollPane scrollPane) {
+        return Math.max(scrollPane.getContent().getBoundsInLocal().getWidth(),
+                scrollPane.getContent().prefWidth(-1));
+    }
+
+    private double scrollContentHeight(ScrollPane scrollPane) {
+        return Math.max(scrollPane.getContent().getBoundsInLocal().getHeight(),
+                scrollPane.getContent().prefHeight(-1));
+    }
+
+    static double scrollValueAfterZoom(double currentValue, double oldContentSize, double newContentSize,
+            double viewportSize, double viewportCoordinate) {
+        double oldScrollableSize = Math.max(0, oldContentSize - viewportSize);
+        double newScrollableSize = Math.max(0, newContentSize - viewportSize);
+        if (oldContentSize <= 0 || viewportSize <= 0 || newScrollableSize <= 0) {
+            return 0;
+        }
+        double anchorInViewport = Math.clamp(viewportCoordinate, 0, viewportSize);
+        double anchorInContent = (Math.clamp(currentValue, 0, 1) * oldScrollableSize) + anchorInViewport;
+        double scaledAnchorInContent = anchorInContent * (newContentSize / oldContentSize);
+        return Math.clamp((scaledAnchorInContent - anchorInViewport) / newScrollableSize, 0, 1);
+    }
+
+    private void panCallGraphViewport(ScrollPane scrollPane, double deltaX, double deltaY) {
+        double horizontalRange = Math.max(0, scrollPane.getContent().getBoundsInLocal().getWidth()
+                - scrollPane.getViewportBounds().getWidth());
+        double verticalRange = Math.max(0, scrollPane.getContent().getBoundsInLocal().getHeight()
+                - scrollPane.getViewportBounds().getHeight());
+        if (horizontalRange > 0) {
+            scrollPane.setHvalue(Math.clamp(scrollPane.getHvalue() - deltaX / horizontalRange,
+                    scrollPane.getHmin(), scrollPane.getHmax()));
+        }
+        if (verticalRange > 0) {
+            scrollPane.setVvalue(Math.clamp(scrollPane.getVvalue() - deltaY / verticalRange,
+                    scrollPane.getVmin(), scrollPane.getVmax()));
+        }
+    }
+
+    private void configureFlameGraphButtons(FlameGraphView graphView, Button orientationButton,
+            Button zoomOutButton, Button resetZoomButton, Button zoomInButton, Button fitButton) {
+        configureIconButton(orientationButton, Material2MZ.SWAP_VERT, "profiling.flame.orientation");
+        configureIconButton(zoomOutButton, Material2MZ.ZOOM_OUT, "profiling.graph.zoomOut");
+        configureIconButton(resetZoomButton, Material2MZ.REFRESH, "profiling.graph.resetZoom");
+        configureIconButton(zoomInButton, Material2MZ.ZOOM_IN, "profiling.graph.zoomIn");
+        configureIconButton(fitButton, Material2MZ.ZOOM_OUT_MAP, "profiling.graph.fit");
+        orientationButton.setOnAction(event -> toggleFlameGraphOrientation(graphView));
+        zoomOutButton.setOnAction(event -> graphView.zoomOut());
+        resetZoomButton.setOnAction(event -> graphView.resetZoom());
+        zoomInButton.setOnAction(event -> graphView.zoomIn());
+        fitButton.setOnAction(event -> graphView.fitToWidth(graphViewportWidth(graphView)));
+    }
+
+    private void bindFlameGraphToolbarVisibility(HBox toolbar, FlameGraphView graphView) {
+        toolbar.visibleProperty().bind(graphView.hasFramesProperty());
+        toolbar.managedProperty().bind(toolbar.visibleProperty());
+    }
+
+    private void toggleFlameGraphOrientation(FlameGraphView graphView) {
+        graphView.setOrientation(graphView.getOrientation() == FlameGraphView.Orientation.ICICLE
+                ? FlameGraphView.Orientation.FLAME
+                : FlameGraphView.Orientation.ICICLE);
+    }
+
+    private double graphViewportWidth(Region graphView) {
+        for (Node parent = graphView.getParent(); parent != null; parent = parent.getParent()) {
+            if (parent instanceof ScrollPane scrollPane) {
+                return scrollPane.getViewportBounds().getWidth();
+            }
+        }
+        return graphView.getWidth();
+    }
+
+    private void configureIconButton(Button button, Ikon icon, String tooltipKey) {
+        button.setGraphic(new FontIcon(icon));
+        button.setContentDisplay(ContentDisplay.GRAPHIC_ONLY);
+        button.setTooltip(i18n.tooltip(tooltipKey));
+        button.accessibleTextProperty().bind(i18n.text(tooltipKey));
     }
 
     private void bindLocalizedText() {

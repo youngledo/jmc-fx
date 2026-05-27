@@ -12,6 +12,14 @@ import java.util.ArrayList;
 import java.util.List;
 import java.util.Queue;
 
+import org.apache.logging.log4j.Level;
+import org.apache.logging.log4j.LogManager;
+import org.apache.logging.log4j.core.Filter;
+import org.apache.logging.log4j.core.Layout;
+import org.apache.logging.log4j.core.LogEvent;
+import org.apache.logging.log4j.core.Logger;
+import org.apache.logging.log4j.core.appender.AbstractAppender;
+import org.apache.logging.log4j.core.config.Property;
 import org.junit.jupiter.api.Test;
 
 import com.youngledo.jmcfx.domain.model.DiagnosticCommandInfo;
@@ -38,6 +46,7 @@ import com.youngledo.jmcfx.domain.model.MBeanOperationResult;
 import com.youngledo.jmcfx.domain.model.TriggerActionType;
 import com.youngledo.jmcfx.domain.model.TriggerEvent;
 import com.youngledo.jmcfx.domain.model.TriggerOperator;
+import com.youngledo.jmcfx.domain.service.JmcFxException;
 import com.youngledo.jmcfx.testsupport.FakeDiagnosticCommandService;
 import com.youngledo.jmcfx.testsupport.FakeFlightRecordingService;
 import com.youngledo.jmcfx.testsupport.FakeJmxConnectionService;
@@ -88,6 +97,32 @@ class JvmBrowserViewModelTest {
 
         assertFalse(viewModel.refreshCompletedProperty().get());
         assertTrue(viewModel.errorProperty().get());
+    }
+
+    @Test
+    void expectedDomainFailureLogsWarningWithoutThrowable() {
+        FakeJvmDiscoveryService discovery = new FakeJvmDiscoveryService();
+        discovery.add(localConnection("42", "demo.Main"));
+        FakeJmxConnectionService jmx = new FakeJmxConnectionService();
+        jmx.failWith(new JmcFxException("target runtime lacks jdk.management.agent"));
+        JvmBrowserViewModel viewModel = viewModel(discovery, jmx);
+        RecordingAppender appender = attachRecordingAppender();
+        try {
+            viewModel.refresh();
+            viewModel.connectSelectedOrManual();
+
+            assertEquals("target runtime lacks jdk.management.agent", viewModel.errorMessageProperty().get());
+            assertEquals(2, appender.events.size());
+            assertEquals(Level.WARN, appender.events.getFirst().getLevel());
+            assertEquals("JVM browser action failed: target runtime lacks jdk.management.agent",
+                    appender.events.getFirst().getMessage().getFormattedMessage());
+            assertNull(appender.events.getFirst().getThrown());
+            assertEquals(Level.DEBUG, appender.events.getLast().getLevel());
+            assertEquals("JVM browser action failed", appender.events.getLast().getMessage().getFormattedMessage());
+            assertEquals(JmcFxException.class, appender.events.getLast().getThrown().getClass());
+        } finally {
+            detachRecordingAppender(appender);
+        }
     }
 
     @Test
@@ -1115,6 +1150,41 @@ class JvmBrowserViewModelTest {
 
         private boolean isEmpty() {
             return queue.isEmpty();
+        }
+    }
+
+    private static RecordingAppender attachRecordingAppender() {
+        Logger logger = (Logger) LogManager.getLogger(JvmBrowserViewModel.class);
+        RecordingAppender appender = new RecordingAppender(logger.getLevel(), logger.isAdditive());
+        appender.start();
+        logger.addAppender(appender);
+        logger.setLevel(Level.DEBUG);
+        logger.setAdditive(false);
+        return appender;
+    }
+
+    private static void detachRecordingAppender(RecordingAppender appender) {
+        Logger logger = (Logger) LogManager.getLogger(JvmBrowserViewModel.class);
+        logger.removeAppender(appender);
+        logger.setLevel(appender.previousLevel);
+        logger.setAdditive(appender.previousAdditive);
+        appender.stop();
+    }
+
+    private static final class RecordingAppender extends AbstractAppender {
+        private final List<LogEvent> events = new ArrayList<>();
+        private final Level previousLevel;
+        private final boolean previousAdditive;
+
+        private RecordingAppender(Level previousLevel, boolean previousAdditive) {
+            super("recording", (Filter) null, (Layout<?>) null, false, Property.EMPTY_ARRAY);
+            this.previousLevel = previousLevel;
+            this.previousAdditive = previousAdditive;
+        }
+
+        @Override
+        public void append(LogEvent event) {
+            events.add(event.toImmutable());
         }
     }
 

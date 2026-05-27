@@ -480,11 +480,28 @@
     -fx-border-color: -color-fg-default;
     -fx-border-width: 1px;
 }
-.profiling-flame-container {
-    -fx-padding: 12px;
+.profiling-graph-tab-content {
+    -fx-padding: 12px 14px 14px 14px;
+    -fx-spacing: 8px;
 }
+
+.profiling-graph-toolbar {
+    -fx-spacing: 8px;
+    -fx-alignment: center-left;
+}
+
+.profiling-graph-tool-button {
+    -fx-min-width: 30px;
+    -fx-pref-width: 30px;
+    -fx-max-width: 30px;
+}
+
 .profiling-call-graph-container {
-    -fx-padding: 12px;
+    -fx-padding: 8px 0 0 0;
+}
+
+.profiling-flame-container {
+    -fx-padding: 8px 0 0 0;
 }
 .flame-graph-view {
     -fx-padding: 4px 0;
