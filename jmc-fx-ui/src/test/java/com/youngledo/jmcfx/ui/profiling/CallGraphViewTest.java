@@ -1,7 +1,6 @@
 package com.youngledo.jmcfx.ui.profiling;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
-import static org.junit.jupiter.api.Assertions.assertNotEquals;
 import static org.junit.jupiter.api.Assertions.assertNull;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 
@@ -23,6 +22,8 @@ import org.junit.jupiter.api.BeforeAll;
 import org.junit.jupiter.api.Test;
 
 class CallGraphViewTest {
+
+    private static final double DELTA = 0.000001;
 
     @BeforeAll
     static void initToolkit() throws InterruptedException {
@@ -63,6 +64,19 @@ class CallGraphViewTest {
     }
 
     @Test
+    void nullLayoutShowsEmptyLabelWhenEmptyTextIsBlank() {
+        CallGraphView view = new CallGraphView();
+
+        view.setLayout(null);
+
+        Label label = (Label) firstByStyleClass(view, "call-graph-empty");
+        assertEquals("", label.getText());
+        assertEquals(1, view.getChildren().size());
+        assertEquals(0, countByStyleClass(view, "call-graph-node"));
+        assertEquals(0, countByStyleClass(view, "call-graph-edge"));
+    }
+
+    @Test
     void labelsUseEllipsis() {
         CallGraphView view = new CallGraphView();
 
@@ -90,16 +104,18 @@ class CallGraphViewTest {
     void layoutChildrenConnectsEdgeBetweenNodeCenters() {
         CallGraphView view = new CallGraphView();
         view.setLayout(sampleLayout());
-        view.resize(420, 260);
+        view.resize(400, 260);
 
         view.layout();
 
         Line edge = (Line) firstByStyleClass(view, "call-graph-edge");
-        assertTrue(edge.getStartX() > 0);
-        assertTrue(edge.getStartY() > 0);
-        assertTrue(edge.getEndX() > 0);
-        assertTrue(edge.getEndY() > 0);
-        assertNotEquals(edge.getStartX(), edge.getEndX());
+        Node source = graphNodeById(view, "selected");
+        Node target = graphNodeById(view, "node-1");
+
+        assertEquals(centerX(source), edge.getStartX(), DELTA);
+        assertEquals(centerY(source), edge.getStartY(), DELTA);
+        assertEquals(centerX(target), edge.getEndX(), DELTA);
+        assertEquals(centerY(target), edge.getEndY(), DELTA);
     }
 
     @Test
@@ -122,6 +138,7 @@ class CallGraphViewTest {
         assertTrue(css.contains(".call-graph-view"));
         assertTrue(css.contains(".call-graph-node"));
         assertTrue(css.contains(".call-graph-node-primary"));
+        assertTrue(css.contains(".call-graph-node-label"));
         assertTrue(css.contains(".call-graph-edge"));
         assertTrue(css.contains(".call-graph-empty"));
     }
@@ -156,6 +173,29 @@ class CallGraphViewTest {
             }
         }
         return null;
+    }
+
+    private Node graphNodeById(Node root, String id) {
+        if (root.getUserData() instanceof CallGraphNode graphNode && graphNode.id().equals(id)) {
+            return root;
+        }
+        if (root instanceof Parent parent) {
+            for (Node child : parent.getChildrenUnmodifiable()) {
+                Node match = graphNodeById(child, id);
+                if (match != null) {
+                    return match;
+                }
+            }
+        }
+        return null;
+    }
+
+    private double centerX(Node node) {
+        return node.getLayoutX() + (node.getLayoutBounds().getWidth() / 2);
+    }
+
+    private double centerY(Node node) {
+        return node.getLayoutY() + (node.getLayoutBounds().getHeight() / 2);
     }
 
     private String appCss() throws IOException {

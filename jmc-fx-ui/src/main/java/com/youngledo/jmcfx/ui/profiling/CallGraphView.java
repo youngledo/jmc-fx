@@ -63,10 +63,8 @@ public class CallGraphView extends Pane {
     private void rebuildChildren() {
         getChildren().clear();
         if (layout.nodes().isEmpty()) {
-            if (!getEmptyText().isBlank()) {
-                emptyLabel.setText(getEmptyText());
-                getChildren().add(emptyLabel);
-            }
+            emptyLabel.setText(getEmptyText());
+            getChildren().add(emptyLabel);
             return;
         }
         for (CallGraphEdge edge : layout.edges()) {
