@@ -8,8 +8,25 @@ import java.time.Clock;
 import java.time.Instant;
 import java.time.ZoneOffset;
 import java.util.List;
+import java.util.Map;
 
+import javax.management.Attribute;
+import javax.management.AttributeList;
+import javax.management.AttributeNotFoundException;
+import javax.management.DynamicMBean;
+import javax.management.InvalidAttributeValueException;
+import javax.management.MBeanAttributeInfo;
+import javax.management.MBeanException;
+import javax.management.MBeanInfo;
 import javax.management.MBeanServer;
+import javax.management.MBeanServerFactory;
+import javax.management.ObjectName;
+import javax.management.ReflectionException;
+import javax.management.openmbean.CompositeData;
+import javax.management.openmbean.CompositeDataSupport;
+import javax.management.openmbean.CompositeType;
+import javax.management.openmbean.OpenDataException;
+import javax.management.openmbean.SimpleType;
 
 import org.junit.jupiter.api.Test;
 
@@ -41,8 +58,26 @@ class JmcLiveMetricServiceTest {
     }
 
     @Test
-    void snapshotReturnsNumericMetrics() {
-        List<LiveMetricSnapshot> snapshots = service.snapshot(CONNECTION);
+    void snapshotConvertsMBeanAttributesToNumericMetrics() throws Exception {
+        MBeanServer controlledServer = MBeanServerFactory.newMBeanServer();
+        controlledServer.registerMBean(
+                new AttributesMBean(Map.of("HeapMemoryUsage", heapMemoryUsage(25L, 100L))),
+                objectName("java.lang:type=Memory"));
+        controlledServer.registerMBean(
+                new AttributesMBean(Map.of("ThreadCount", 7)),
+                objectName("java.lang:type=Threading"));
+        controlledServer.registerMBean(
+                new AttributesMBean(Map.of("LoadedClassCount", 42)),
+                objectName("java.lang:type=ClassLoading"));
+        controlledServer.registerMBean(
+                new AttributesMBean(Map.of("ProcessCpuLoad", 0.5)),
+                objectName("java.lang:type=OperatingSystem"));
+
+        JmcLiveMetricService controlledService = new JmcLiveMetricService(
+                connection -> controlledServer,
+                Clock.fixed(OBSERVED_AT, ZoneOffset.UTC));
+
+        List<LiveMetricSnapshot> snapshots = controlledService.snapshot(CONNECTION);
 
         assertEquals(List.of(
                 LiveMetricKind.HEAP_USED_PERCENT,
@@ -54,7 +89,94 @@ class JmcLiveMetricServiceTest {
                 snapshots.stream().map(LiveMetricSnapshot::unit).toList());
         assertEquals(List.of(OBSERVED_AT, OBSERVED_AT, OBSERVED_AT, OBSERVED_AT),
                 snapshots.stream().map(LiveMetricSnapshot::observedAt).toList());
+        assertEquals(List.of(25.0, 7.0, 42.0, 50.0),
+                snapshots.stream().map(LiveMetricSnapshot::value).toList());
+    }
+
+    @Test
+    void platformSnapshotReturnsFiniteNumericMetrics() {
+        List<LiveMetricSnapshot> snapshots = service.snapshot(CONNECTION);
+
         assertFalse(snapshots.stream().mapToDouble(LiveMetricSnapshot::value).anyMatch(Double::isNaN));
         assertFalse(snapshots.stream().mapToDouble(LiveMetricSnapshot::value).anyMatch(Double::isInfinite));
+    }
+
+    private static CompositeData heapMemoryUsage(long used, long max) throws OpenDataException {
+        CompositeType type = new CompositeType(
+                "HeapMemoryUsage",
+                "Heap memory usage",
+                new String[] { "used", "max" },
+                new String[] { "used", "max" },
+                new SimpleType<?>[] { SimpleType.LONG, SimpleType.LONG });
+        return new CompositeDataSupport(type, Map.of("used", used, "max", max));
+    }
+
+    private static ObjectName objectName(String name) throws Exception {
+        return new ObjectName(name);
+    }
+
+    private static final class AttributesMBean implements DynamicMBean {
+        private final Map<String, Object> attributes;
+
+        private AttributesMBean(Map<String, Object> attributes) {
+            this.attributes = attributes;
+        }
+
+        @Override
+        public Object getAttribute(String attribute) throws AttributeNotFoundException {
+            if (!attributes.containsKey(attribute)) {
+                throw new AttributeNotFoundException(attribute);
+            }
+            return attributes.get(attribute);
+        }
+
+        @Override
+        public void setAttribute(Attribute attribute)
+                throws AttributeNotFoundException, InvalidAttributeValueException, MBeanException, ReflectionException {
+            throw new AttributeNotFoundException(attribute == null ? null : attribute.getName());
+        }
+
+        @Override
+        public AttributeList getAttributes(String[] names) {
+            AttributeList list = new AttributeList();
+            for (String name : names) {
+                if (attributes.containsKey(name)) {
+                    list.add(new Attribute(name, attributes.get(name)));
+                }
+            }
+            return list;
+        }
+
+        @Override
+        public AttributeList setAttributes(AttributeList attributes) {
+            return new AttributeList();
+        }
+
+        @Override
+        public Object invoke(String actionName, Object[] params, String[] signature)
+                throws MBeanException, ReflectionException {
+            throw new ReflectionException(new NoSuchMethodException(actionName));
+        }
+
+        @Override
+        public MBeanInfo getMBeanInfo() {
+            MBeanAttributeInfo[] infos = attributes.entrySet().stream()
+                    .map(entry -> new MBeanAttributeInfo(
+                            entry.getKey(),
+                            attributeType(entry.getValue()),
+                            entry.getKey(),
+                            true,
+                            false,
+                            false))
+                    .toArray(MBeanAttributeInfo[]::new);
+            return new MBeanInfo(getClass().getName(), "Test attributes", infos, null, null, null);
+        }
+
+        private static String attributeType(Object value) {
+            if (value instanceof CompositeData) {
+                return CompositeData.class.getName();
+            }
+            return value.getClass().getName();
+        }
     }
 }
