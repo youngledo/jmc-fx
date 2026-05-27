@@ -1,8 +1,10 @@
 package com.youngledo.jmcfx.ui.profiling;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertSame;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 
+import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.List;
 
@@ -11,6 +13,54 @@ import org.junit.jupiter.api.Test;
 import com.youngledo.jmcfx.domain.model.StackTreeNode;
 
 class CallGraphLayoutBuilderTest {
+
+    @Test
+    void callGraphNodeNormalizesNullDefaultsAndBounds() {
+        CallGraphNode node = new CallGraphNode(null, null, -1, -2, -3, -0.5, 1.5, false);
+
+        assertEquals("", node.id());
+        assertEquals("", node.label());
+        assertEquals(0, node.count());
+        assertEquals(0, node.percentage());
+        assertEquals(0, node.depth());
+        assertEquals(0, node.x());
+        assertEquals(1, node.y());
+    }
+
+    @Test
+    void callGraphEdgeNormalizesNullDefaultsAndNonNegativeValues() {
+        CallGraphEdge edge = new CallGraphEdge(null, null, -1, -2);
+
+        assertEquals("", edge.sourceId());
+        assertEquals("", edge.targetId());
+        assertEquals(0, edge.count());
+        assertEquals(0, edge.percentage());
+    }
+
+    @Test
+    void callGraphLayoutNormalizesNullListsDefensivelyCopiesAndClampsDepth() {
+        CallGraphLayout nullLayout = new CallGraphLayout(null, null, -1);
+
+        assertTrue(nullLayout.nodes().isEmpty());
+        assertTrue(nullLayout.edges().isEmpty());
+        assertEquals(0, nullLayout.maxDepth());
+
+        List<CallGraphNode> nodes = new ArrayList<>();
+        nodes.add(new CallGraphNode("selected", "selected", 1, 1, 0, 0.5, 0.5, true));
+        List<CallGraphEdge> edges = new ArrayList<>();
+        edges.add(new CallGraphEdge("selected", "node-1", 1, 1));
+        CallGraphLayout copiedLayout = new CallGraphLayout(nodes, edges, 2);
+
+        nodes.clear();
+        edges.clear();
+
+        assertEquals(1, copiedLayout.nodes().size());
+        assertEquals(1, copiedLayout.edges().size());
+        assertEquals(2, copiedLayout.maxDepth());
+        assertSame(CallGraphLayout.EMPTY, CallGraphLayout.EMPTY);
+        assertTrue(CallGraphLayout.EMPTY.nodes().isEmpty());
+        assertTrue(CallGraphLayout.EMPTY.edges().isEmpty());
+    }
 
     @Test
     void callersGraphConnectsCallerToSelectedMethod() {
@@ -40,6 +90,70 @@ class CallGraphLayoutBuilderTest {
         assertEquals("selected", edge.sourceId());
         assertEquals("node-1", edge.targetId());
         assertEquals(60, edge.count());
+    }
+
+    @Test
+    void blankOrNullSelectedMethodUsesSelectedPlaceholder() {
+        StackTreeNode root = node("root", 100);
+
+        CallGraphLayout nullSelected = CallGraphLayoutBuilder.defaultBuilder()
+                .build(null, root, CallGraphDirection.CALLEES);
+        CallGraphLayout blankSelected = CallGraphLayoutBuilder.defaultBuilder()
+                .build("  ", root, CallGraphDirection.CALLEES);
+
+        assertEquals("<selected>", nullSelected.nodes().getFirst().label());
+        assertEquals("<selected>", blankSelected.nodes().getFirst().label());
+    }
+
+    @Test
+    void nullDirectionDefaultsToCallees() {
+        StackTreeNode root = node("root", 100, node("callee", 60));
+
+        CallGraphLayout layout = CallGraphLayoutBuilder.defaultBuilder()
+                .build("selected method", root, null);
+
+        CallGraphEdge edge = layout.edges().getFirst();
+        assertEquals("selected", edge.sourceId());
+        assertEquals("node-1", edge.targetId());
+    }
+
+    @Test
+    void constructorClampsMinimumDepthAndNodeCount() {
+        StackTreeNode root = node("root", 100, node("child", 50));
+
+        CallGraphLayout layout = new CallGraphLayoutBuilder(0, 0)
+                .build("selected", root, CallGraphDirection.CALLEES);
+
+        assertEquals(List.of("selected"), labels(layout));
+        assertEquals(0, layout.maxDepth());
+        assertTrue(layout.edges().isEmpty());
+    }
+
+    @Test
+    void sortsChildrenByCountDescending() {
+        StackTreeNode root = node("root", 100,
+                node("b", 20),
+                node("a", 40),
+                node("c", 30));
+
+        CallGraphLayout layout = CallGraphLayoutBuilder.defaultBuilder()
+                .build("selected", root, CallGraphDirection.CALLEES);
+
+        assertEquals(List.of("selected", "a", "c", "b"), labels(layout));
+    }
+
+    @Test
+    void keepsNodeCoordinatesWithinUnitBounds() {
+        StackTreeNode root = node("root", 100,
+                node("a", 40, node("a1", 20)),
+                node("b", 30),
+                node("c", 20));
+
+        CallGraphLayout layout = CallGraphLayoutBuilder.defaultBuilder()
+                .build("selected", root, CallGraphDirection.CALLEES);
+
+        assertTrue(layout.nodes().stream()
+                .allMatch(node -> node.x() >= 0 && node.x() <= 1 && node.y() >= 0 && node.y() <= 1));
     }
 
     @Test
