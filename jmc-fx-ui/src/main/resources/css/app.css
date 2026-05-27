@@ -502,6 +502,32 @@
     -fx-alignment: center;
     -fx-text-fill: -color-fg-muted;
 }
+.call-graph-view {
+    -fx-background-color: -color-bg-default;
+    -fx-min-height: 220px;
+}
+.call-graph-edge {
+    -fx-stroke: -color-border-default;
+    -fx-stroke-width: 1.25px;
+}
+.call-graph-node {
+    -fx-background-color: -color-bg-subtle;
+    -fx-background-radius: 5px;
+    -fx-border-color: -color-border-muted;
+    -fx-border-radius: 5px;
+    -fx-padding: 4px 8px;
+}
+.call-graph-node-primary {
+    -fx-background-color: -color-accent-subtle;
+    -fx-border-color: -color-accent-emphasis;
+}
+.call-graph-node-label {
+    -fx-font-size: 11px;
+}
+.call-graph-empty {
+    -fx-text-fill: -color-fg-muted;
+    -fx-padding: 4px 0;
+}
 
 /* Aggregate viewer */
 .aggregate-viewer {
