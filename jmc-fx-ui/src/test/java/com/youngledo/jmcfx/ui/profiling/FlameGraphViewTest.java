@@ -65,6 +65,33 @@ class FlameGraphViewTest {
     }
 
     @Test
+    void emptyLayoutShowsPlaceholderWithoutCountingFrameNodes() {
+        FlameGraphView view = new FlameGraphView();
+        view.setEmptyText("Select a method to view the flame graph.");
+
+        view.setLayout(null);
+
+        assertEquals(0, view.frameCount());
+        assertEquals(1, view.getChildren().size());
+        Label label = (Label) firstByStyleClass(view, "flame-graph-empty");
+        assertEquals("Select a method to view the flame graph.", label.getText());
+        assertTrue(label.getStyleClass().contains("flame-graph-empty"));
+    }
+
+    @Test
+    void frameLayoutRemovesPlaceholder() {
+        FlameGraphView view = new FlameGraphView();
+        view.setEmptyText("Select a method to view the flame graph.");
+        view.setLayout(null);
+
+        view.setLayout(sampleLayout());
+
+        assertEquals(2, view.frameCount());
+        assertEquals(2, view.getChildren().size());
+        assertEquals(null, firstByStyleClass(view, "flame-graph-empty"));
+    }
+
+    @Test
     void labelsUseEllipsisToAvoidOverflow() {
         FlameGraphView view = new FlameGraphView();
         view.setLayout(new FlameGraphLayout(List.of(
@@ -96,6 +123,7 @@ class FlameGraphViewTest {
         assertTrue(css.contains(".flame-graph-view"));
         assertTrue(css.contains(".flame-graph-frame"));
         assertTrue(css.contains(".flame-graph-frame-label"));
+        assertTrue(css.contains(".flame-graph-empty"));
     }
 
     private FlameGraphLayout sampleLayout() {

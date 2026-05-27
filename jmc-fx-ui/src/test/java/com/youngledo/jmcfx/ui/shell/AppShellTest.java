@@ -234,6 +234,8 @@ class AppShellTest {
         assertTrue(controller.contains("nextViewModel.calleesFlameGraphProperty().get()"));
         assertTrue(controller.contains("profilingCallersFlameTab.textProperty().bind(i18n.text(\"profiling.tab.callersFlame\"))"));
         assertTrue(controller.contains("profilingCalleesFlameTab.textProperty().bind(i18n.text(\"profiling.tab.calleesFlame\"))"));
+        assertTrue(controller.contains("profilingCallersFlameGraphView.emptyTextProperty().bind(i18n.text(\"profiling.flame.empty\"))"));
+        assertTrue(controller.contains("profilingCalleesFlameGraphView.emptyTextProperty().bind(i18n.text(\"profiling.flame.empty\"))"));
 
         assertTrue(english.contains("profiling.tab.callersFlame=Caller Flame Graph"));
         assertTrue(english.contains("profiling.tab.calleesFlame=Callee Flame Graph"));
@@ -359,6 +361,17 @@ class AppShellTest {
 
         assertTrue(source.contains("Platform.runLater(this::showOpenRecordingChooser)"),
                 "native file chooser should open after the button action finishes so pressed styling can clear");
+    }
+
+    @Test
+    void clearingProfilingSelectionPassesNullThroughToViewModel() throws Exception {
+        String source = java.nio.file.Files.readString(
+                java.nio.file.Path.of("src/main/java/com/youngledo/jmcfx/ui/shell/AppShellController.java"));
+
+        assertFalse(source.contains("profilingViewModel == null || method == null"),
+                "Clearing table selection must still clear profiling stack details");
+        assertTrue(source.contains("profilingViewModel.selectMethod(method == null ? null : method.method())"),
+                "Shell must pass null selection through to ProfilingViewModel");
     }
 
     @Test

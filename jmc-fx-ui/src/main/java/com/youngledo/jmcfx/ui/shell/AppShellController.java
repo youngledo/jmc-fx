@@ -1740,6 +1740,8 @@ public class AppShellController {
         profilingTable.setPlaceholder(localizedTablePlaceholder("profiling.empty"));
         profilingCallersFlameGraphView = new FlameGraphView();
         profilingCalleesFlameGraphView = new FlameGraphView();
+        profilingCallersFlameGraphView.emptyTextProperty().bind(i18n.text("profiling.flame.empty"));
+        profilingCalleesFlameGraphView.emptyTextProperty().bind(i18n.text("profiling.flame.empty"));
         profilingCallersFlameContainer.getChildren().setAll(profilingCallersFlameGraphView);
         profilingCalleesFlameContainer.getChildren().setAll(profilingCalleesFlameGraphView);
 
@@ -2506,10 +2508,10 @@ public class AppShellController {
     }
 
     private void selectProfilingMethod(HotMethod method) {
-        if (profilingViewModel == null || method == null) {
+        if (profilingViewModel == null) {
             return;
         }
-        profilingViewModel.selectMethod(method.method());
+        profilingViewModel.selectMethod(method == null ? null : method.method());
     }
 
     private void setExceptionGrouping(ExceptionGrouping grouping) {

@@ -498,6 +498,10 @@
     -fx-font-size: 11px;
     -fx-text-fill: -color-fg-on-emphasis;
 }
+.flame-graph-empty {
+    -fx-alignment: center;
+    -fx-text-fill: -color-fg-muted;
+}
 
 /* Aggregate viewer */
 .aggregate-viewer {
