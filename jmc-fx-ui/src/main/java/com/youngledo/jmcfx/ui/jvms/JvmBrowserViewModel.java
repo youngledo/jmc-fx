@@ -1,6 +1,7 @@
 package com.youngledo.jmcfx.ui.jvms;
 
 import java.nio.file.Path;
+import java.time.Instant;
 import java.time.LocalDateTime;
 import java.time.ZoneOffset;
 import java.time.format.DateTimeFormatter;
@@ -29,12 +30,20 @@ import com.youngledo.jmcfx.domain.model.JvmCapabilityStatus;
 import com.youngledo.jmcfx.domain.model.JvmConnection;
 import com.youngledo.jmcfx.domain.model.JvmConnectionSource;
 import com.youngledo.jmcfx.domain.model.JvmSessionSnapshot;
+import com.youngledo.jmcfx.domain.model.LiveMetricDefinition;
+import com.youngledo.jmcfx.domain.model.LiveMetricKind;
+import com.youngledo.jmcfx.domain.model.LiveMetricSnapshot;
 import com.youngledo.jmcfx.domain.model.MBeanAttributeInfo;
 import com.youngledo.jmcfx.domain.model.MBeanNode;
 import com.youngledo.jmcfx.domain.model.MBeanOperationInfo;
 import com.youngledo.jmcfx.domain.model.MBeanOperationParameter;
 import com.youngledo.jmcfx.domain.model.MBeanOperationRequest;
 import com.youngledo.jmcfx.domain.model.MBeanOperationResult;
+import com.youngledo.jmcfx.domain.model.TriggerAction;
+import com.youngledo.jmcfx.domain.model.TriggerActionType;
+import com.youngledo.jmcfx.domain.model.TriggerEvent;
+import com.youngledo.jmcfx.domain.model.TriggerOperator;
+import com.youngledo.jmcfx.domain.model.TriggerRule;
 import com.youngledo.jmcfx.domain.service.DiagnosticCommandService;
 import com.youngledo.jmcfx.domain.service.FlightRecordingService;
 import com.youngledo.jmcfx.domain.service.JmxConnectionService;
@@ -62,6 +71,7 @@ public class JvmBrowserViewModel implements AutoCloseable {
     private final FlightRecordingService flightRecordingService;
     private final MBeanBrowserService mBeanBrowserService;
     private final DiagnosticCommandService diagnosticCommandService;
+    private final LiveMetricService liveMetricService;
     private final JvmBrowserExecutor executor;
     private final Consumer<Runnable> fxRunner;
     private final Consumer<Path> savedRecordingHandler;
@@ -71,11 +81,20 @@ public class JvmBrowserViewModel implements AutoCloseable {
     private final ObservableList<MBeanAttributeInfo> mbeanAttributes = FXCollections.observableArrayList();
     private final ObservableList<MBeanOperationInfo> mbeanOperations = FXCollections.observableArrayList();
     private final ObservableList<DiagnosticCommandInfo> diagnosticCommands = FXCollections.observableArrayList();
+    private final ObservableList<LiveMetricDefinition> liveMetricDefinitions = FXCollections.observableArrayList();
+    private final ObservableList<TriggerRule> triggerRules = FXCollections.observableArrayList();
+    private final ObservableList<TriggerEvent> triggerEvents = FXCollections.observableArrayList();
     private final ObjectProperty<JvmConnection> selectedConnection = new SimpleObjectProperty<>();
     private final ObjectProperty<FlightRecordingInfo> selectedFlightRecording = new SimpleObjectProperty<>();
     private final ObjectProperty<MBeanNode> selectedMBean = new SimpleObjectProperty<>();
     private final ObjectProperty<MBeanOperationInfo> selectedMBeanOperation = new SimpleObjectProperty<>();
     private final ObjectProperty<DiagnosticCommandInfo> selectedDiagnosticCommand = new SimpleObjectProperty<>();
+    private final ObjectProperty<LiveMetricDefinition> selectedTriggerMetric = new SimpleObjectProperty<>();
+    private final ObjectProperty<TriggerOperator> selectedTriggerOperator =
+            new SimpleObjectProperty<>(TriggerOperator.GREATER_THAN_OR_EQUAL);
+    private final ObjectProperty<TriggerActionType> selectedTriggerActionType =
+            new SimpleObjectProperty<>(TriggerActionType.NOTIFY);
+    private final ObjectProperty<DiagnosticCommandInfo> selectedTriggerCommand = new SimpleObjectProperty<>();
     private final StringProperty manualConnectionUrl = new SimpleStringProperty("");
     private final StringProperty statusMessage = new SimpleStringProperty("");
     private final StringProperty errorMessage = new SimpleStringProperty("");
@@ -85,6 +104,9 @@ public class JvmBrowserViewModel implements AutoCloseable {
     private final StringProperty diagnosticCommandArguments = new SimpleStringProperty("");
     private final StringProperty diagnosticCommandOutput = new SimpleStringProperty("");
     private final StringProperty diagnosticCommandErrorMessage = new SimpleStringProperty("");
+    private final StringProperty triggerName = new SimpleStringProperty("");
+    private final StringProperty triggerThreshold = new SimpleStringProperty("");
+    private final StringProperty triggerErrorMessage = new SimpleStringProperty("");
     private final BooleanProperty loading = new SimpleBooleanProperty(false);
     private final BooleanProperty error = new SimpleBooleanProperty(false);
     private final BooleanProperty refreshCompleted = new SimpleBooleanProperty(false);
@@ -103,11 +125,15 @@ public class JvmBrowserViewModel implements AutoCloseable {
     private final BooleanProperty diagnosticCommandsAvailable = new SimpleBooleanProperty(false);
     private final BooleanProperty diagnosticCommandLoading = new SimpleBooleanProperty(false);
     private final BooleanProperty diagnosticCommandError = new SimpleBooleanProperty(false);
+    private final BooleanProperty triggerLoading = new SimpleBooleanProperty(false);
+    private final BooleanProperty triggerError = new SimpleBooleanProperty(false);
     private final Map<Long, JvmConnection> sessionStartedRecordings = new HashMap<>();
     private int pendingWorkCount;
     private long sessionLoadGeneration;
     private long mbeanRequestGeneration;
     private long diagnosticCommandRequestGeneration;
+    private long triggerRuleSequence;
+    private long triggerEvaluationGeneration;
 
     public JvmBrowserViewModel(JvmDiscoveryService discoveryService, JmxConnectionService connectionService) {
         this(discoveryService, connectionService, null, new VirtualThreadJvmBrowserExecutor(),
@@ -148,6 +174,7 @@ public class JvmBrowserViewModel implements AutoCloseable {
         this.flightRecordingService = flightRecordingService;
         this.mBeanBrowserService = mBeanBrowserService;
         this.diagnosticCommandService = diagnosticCommandService;
+        this.liveMetricService = liveMetricService;
         this.executor = Objects.requireNonNull(executor, "executor");
         this.fxRunner = Objects.requireNonNull(fxRunner, "fxRunner");
         this.savedRecordingHandler = Objects.requireNonNull(savedRecordingHandler, "savedRecordingHandler");
@@ -309,6 +336,54 @@ public class JvmBrowserViewModel implements AutoCloseable {
         return diagnosticCommandError;
     }
 
+    public ObservableList<LiveMetricDefinition> liveMetricDefinitionsProperty() {
+        return liveMetricDefinitions;
+    }
+
+    public ObservableList<TriggerRule> triggerRulesProperty() {
+        return triggerRules;
+    }
+
+    public ObservableList<TriggerEvent> triggerEventsProperty() {
+        return triggerEvents;
+    }
+
+    public ObjectProperty<LiveMetricDefinition> selectedTriggerMetricProperty() {
+        return selectedTriggerMetric;
+    }
+
+    public ObjectProperty<TriggerOperator> selectedTriggerOperatorProperty() {
+        return selectedTriggerOperator;
+    }
+
+    public ObjectProperty<TriggerActionType> selectedTriggerActionTypeProperty() {
+        return selectedTriggerActionType;
+    }
+
+    public ObjectProperty<DiagnosticCommandInfo> selectedTriggerCommandProperty() {
+        return selectedTriggerCommand;
+    }
+
+    public StringProperty triggerNameProperty() {
+        return triggerName;
+    }
+
+    public StringProperty triggerThresholdProperty() {
+        return triggerThreshold;
+    }
+
+    public StringProperty triggerErrorMessageProperty() {
+        return triggerErrorMessage;
+    }
+
+    public BooleanProperty triggerLoadingProperty() {
+        return triggerLoading;
+    }
+
+    public BooleanProperty triggerErrorProperty() {
+        return triggerError;
+    }
+
     public FlightRecordingInfo selectedFlightRecording() {
         return selectedFlightRecording.get();
     }
@@ -371,6 +446,7 @@ public class JvmBrowserViewModel implements AutoCloseable {
                     selectedSession.set(null);
                     clearRecordingControl();
                     clearDiagnosticCommands();
+                    clearTriggerSessionState();
                     clearSessionError();
                 });
             } catch (RuntimeException exception) {
@@ -522,6 +598,66 @@ public class JvmBrowserViewModel implements AutoCloseable {
         });
     }
 
+    public void addTriggerRule() {
+        LiveMetricDefinition metric = selectedTriggerMetric.get();
+        if (metric == null) {
+            failTrigger("Select a metric for the trigger.");
+            return;
+        }
+
+        double threshold;
+        try {
+            threshold = Double.parseDouble(Objects.requireNonNullElse(triggerThreshold.get(), "").trim());
+        } catch (NumberFormatException exception) {
+            failTrigger("Enter a numeric trigger threshold.");
+            return;
+        }
+
+        TriggerOperator operator = Objects.requireNonNullElse(selectedTriggerOperator.get(),
+                TriggerOperator.GREATER_THAN_OR_EQUAL);
+        String name = Objects.requireNonNullElse(triggerName.get(), "").trim();
+        if (name.isBlank()) {
+            name = metric.label().isBlank() ? "Trigger " + (triggerRuleSequence + 1)
+                    : metric.label() + " " + operator.symbol() + " " + threshold;
+        }
+        triggerRules.add(new TriggerRule("trigger-" + ++triggerRuleSequence, name, true, metric.kind(), operator,
+                threshold, selectedTriggerAction()));
+        clearTriggerError();
+    }
+
+    public void removeSelectedTriggerRule(TriggerRule rule) {
+        triggerRules.remove(rule);
+    }
+
+    public void evaluateTriggersNow() {
+        JvmSessionSnapshot snapshot = selectedSession.get();
+        if (snapshot == null || !snapshot.connection().connected() || liveMetricService == null
+                || triggerRules.isEmpty()) {
+            failTrigger("Add a trigger rule for a connected JVM.");
+            return;
+        }
+
+        long generation = nextTriggerEvaluationGeneration();
+        triggerLoading.set(true);
+        clearTriggerError();
+        executor.execute(() -> {
+            try {
+                List<LiveMetricSnapshot> samples = liveMetricService.snapshot(snapshot.connection());
+                List<TriggerEvent> events = evaluateTriggerRules(snapshot, samples);
+                runOnFx(() -> {
+                    if (!isCurrentTriggerEvaluation(generation, snapshot)) {
+                        return;
+                    }
+                    triggerEvents.addAll(events);
+                    triggerLoading.set(false);
+                    clearTriggerError();
+                });
+            } catch (RuntimeException exception) {
+                failTrigger(generation, snapshot, exception);
+            }
+        });
+    }
+
     @Override
     public void close() {
         discardSessionStartedRecordings();
@@ -663,6 +799,7 @@ public class JvmBrowserViewModel implements AutoCloseable {
         clearRecordingControl();
         clearMBeanBrowser();
         clearDiagnosticCommands();
+        clearTriggerSessionState();
         clearSessionError();
         if (connection == null || !connection.connected()) {
             sessionLoading.set(false);
@@ -681,6 +818,7 @@ public class JvmBrowserViewModel implements AutoCloseable {
                     loadRecordingControl(snapshot);
                     loadMBeanBrowser(snapshot);
                     loadDiagnosticCommands(snapshot);
+                    loadTriggerMetrics(snapshot);
                     sessionLoading.set(false);
                 });
             } catch (RuntimeException exception) {
@@ -695,6 +833,7 @@ public class JvmBrowserViewModel implements AutoCloseable {
                     clearRecordingControl();
                     clearMBeanBrowser();
                     clearDiagnosticCommands();
+                    clearTriggerSessionState();
                     sessionError.set(true);
                     sessionErrorMessage.set(exception.getMessage() == null
                             ? exception.getClass().getSimpleName() : exception.getMessage());
@@ -845,6 +984,87 @@ public class JvmBrowserViewModel implements AutoCloseable {
                 && snapshot.statusOf(JvmCapability.DIAGNOSTIC_COMMANDS) == JvmCapabilityStatus.AVAILABLE;
     }
 
+    private void loadTriggerMetrics(JvmSessionSnapshot snapshot) {
+        if (liveMetricService == null || snapshot == null) {
+            clearTriggerSessionState();
+            return;
+        }
+        long generation = nextTriggerEvaluationGeneration();
+        triggerLoading.set(true);
+        clearTriggerError();
+        liveMetricDefinitions.clear();
+        selectedTriggerMetric.set(null);
+        executor.execute(() -> {
+            try {
+                List<LiveMetricDefinition> definitions = liveMetricService.definitions(snapshot.connection());
+                runOnFx(() -> {
+                    if (!isCurrentTriggerEvaluation(generation, snapshot)) {
+                        return;
+                    }
+                    liveMetricDefinitions.setAll(definitions);
+                    selectedTriggerMetric.set(definitions.isEmpty() ? null : definitions.getFirst());
+                    triggerLoading.set(false);
+                    clearTriggerError();
+                });
+            } catch (RuntimeException exception) {
+                failTrigger(generation, snapshot, exception);
+            }
+        });
+    }
+
+    private TriggerAction selectedTriggerAction() {
+        TriggerActionType actionType = Objects.requireNonNullElse(selectedTriggerActionType.get(),
+                TriggerActionType.NOTIFY);
+        if (actionType != TriggerActionType.DIAGNOSTIC_COMMAND) {
+            return TriggerAction.notifyOnly();
+        }
+        DiagnosticCommandInfo command = selectedTriggerCommand.get();
+        return TriggerAction.diagnosticCommand(command == null ? "" : command.name(), List.of());
+    }
+
+    private List<TriggerEvent> evaluateTriggerRules(JvmSessionSnapshot snapshot, List<LiveMetricSnapshot> samples) {
+        Map<LiveMetricKind, LiveMetricSnapshot> byMetric = samples.stream()
+                .collect(Collectors.toMap(LiveMetricSnapshot::kind, sample -> sample, (first, second) -> second));
+        List<TriggerEvent> events = new ArrayList<>();
+        for (TriggerRule rule : List.copyOf(triggerRules)) {
+            LiveMetricSnapshot sample = byMetric.get(rule.metric());
+            if (rule.matches(sample)) {
+                events.add(triggerEvent(snapshot, rule, sample));
+            }
+        }
+        return events;
+    }
+
+    private TriggerEvent triggerEvent(JvmSessionSnapshot snapshot, TriggerRule rule, LiveMetricSnapshot sample) {
+        return new TriggerEvent(rule.id(), rule.name(), rule.metric(), sample.value(), sample.unit(),
+                Objects.requireNonNullElse(sample.observedAt(), Instant.now()),
+                triggerMessage(snapshot, rule, sample));
+    }
+
+    private String triggerMessage(JvmSessionSnapshot snapshot, TriggerRule rule, LiveMetricSnapshot sample) {
+        String notification = "Triggered at " + sample.value() + unitSuffix(sample.unit());
+        if (rule.action().type() != TriggerActionType.DIAGNOSTIC_COMMAND) {
+            return notification;
+        }
+        if (diagnosticCommandService == null || rule.action().commandName().isBlank()) {
+            return notification + ". Diagnostic command is not available.";
+        }
+        try {
+            DiagnosticCommandResult result = diagnosticCommandService.execute(new DiagnosticCommandRequest(
+                    snapshot.connection(), rule.action().commandName(), rule.action().arguments()));
+            String output = displayDiagnosticCommandResult(result);
+            return output.isBlank() ? notification : notification + ". " + output;
+        } catch (RuntimeException exception) {
+            String message = exception.getMessage() == null ? exception.getClass().getSimpleName()
+                    : exception.getMessage();
+            return notification + ". " + message;
+        }
+    }
+
+    private static String unitSuffix(String unit) {
+        return unit == null || unit.isBlank() ? "" : " " + unit;
+    }
+
     private void discardSessionStartedRecordings() {
         if (flightRecordingService == null || sessionStartedRecordings.isEmpty()) {
             return;
@@ -947,6 +1167,29 @@ public class JvmBrowserViewModel implements AutoCloseable {
         clearDiagnosticCommandError();
     }
 
+    private void clearTriggerSessionState() {
+        nextTriggerEvaluationGeneration();
+        liveMetricDefinitions.clear();
+        selectedTriggerMetric.set(null);
+        triggerRules.clear();
+        triggerEvents.clear();
+        triggerName.set("");
+        triggerThreshold.set("");
+        triggerLoading.set(false);
+        clearTriggerError();
+    }
+
+    private void clearTriggerError() {
+        triggerError.set(false);
+        triggerErrorMessage.set("");
+    }
+
+    private void failTrigger(String message) {
+        triggerError.set(true);
+        triggerErrorMessage.set(message);
+        triggerLoading.set(false);
+    }
+
     private void failRecording(RuntimeException exception) {
         LOGGER.error("Flight Recorder action failed", exception);
         runOnFx(() -> {
@@ -992,6 +1235,19 @@ public class JvmBrowserViewModel implements AutoCloseable {
             diagnosticCommandErrorMessage.set(exception.getMessage() == null ? exception.getClass().getSimpleName()
                     : exception.getMessage());
             diagnosticCommandLoading.set(false);
+        });
+    }
+
+    private void failTrigger(long generation, JvmSessionSnapshot snapshot, RuntimeException exception) {
+        LOGGER.error("Trigger action failed", exception);
+        runOnFx(() -> {
+            if (!isCurrentTriggerEvaluation(generation, snapshot)) {
+                return;
+            }
+            triggerError.set(true);
+            triggerErrorMessage.set(exception.getMessage() == null ? exception.getClass().getSimpleName()
+                    : exception.getMessage());
+            triggerLoading.set(false);
         });
     }
 
@@ -1048,6 +1304,14 @@ public class JvmBrowserViewModel implements AutoCloseable {
             DiagnosticCommandInfo command) {
         return isCurrentDiagnosticCommandSessionRequest(generation, snapshot)
                 && selectedDiagnosticCommand.get() == command;
+    }
+
+    private long nextTriggerEvaluationGeneration() {
+        return ++triggerEvaluationGeneration;
+    }
+
+    private boolean isCurrentTriggerEvaluation(long generation, JvmSessionSnapshot snapshot) {
+        return triggerEvaluationGeneration == generation && selectedSession.get() == snapshot;
     }
 
     private static List<String> parseMBeanArguments(String arguments) {

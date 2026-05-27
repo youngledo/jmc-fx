@@ -25,16 +25,22 @@ import com.youngledo.jmcfx.domain.model.JvmConnectionSource;
 import com.youngledo.jmcfx.domain.model.JvmConnectionState;
 import com.youngledo.jmcfx.domain.model.JvmRuntimeSnapshot;
 import com.youngledo.jmcfx.domain.model.JvmSessionSnapshot;
+import com.youngledo.jmcfx.domain.model.LiveMetricDefinition;
+import com.youngledo.jmcfx.domain.model.LiveMetricKind;
+import com.youngledo.jmcfx.domain.model.LiveMetricSnapshot;
 import com.youngledo.jmcfx.domain.model.MBeanAttributeInfo;
 import com.youngledo.jmcfx.domain.model.MBeanNode;
 import com.youngledo.jmcfx.domain.model.MBeanOperationInfo;
 import com.youngledo.jmcfx.domain.model.MBeanOperationParameter;
 import com.youngledo.jmcfx.domain.model.MBeanOperationRequest;
 import com.youngledo.jmcfx.domain.model.MBeanOperationResult;
+import com.youngledo.jmcfx.domain.model.TriggerActionType;
+import com.youngledo.jmcfx.domain.model.TriggerEvent;
 import com.youngledo.jmcfx.testsupport.FakeDiagnosticCommandService;
 import com.youngledo.jmcfx.testsupport.FakeFlightRecordingService;
 import com.youngledo.jmcfx.testsupport.FakeJmxConnectionService;
 import com.youngledo.jmcfx.testsupport.FakeJvmDiscoveryService;
+import com.youngledo.jmcfx.testsupport.FakeLiveMetricService;
 import com.youngledo.jmcfx.testsupport.FakeMBeanBrowserService;
 
 class JvmBrowserViewModelTest {
@@ -837,6 +843,81 @@ class JvmBrowserViewModelTest {
         assertEquals("permission denied", viewModel.diagnosticCommandOutputProperty().get());
     }
 
+    @Test
+    void connectedSessionLoadsMetricDefinitionsForTriggers() {
+        FakeJmxConnectionService jmx = new FakeJmxConnectionService();
+        FakeLiveMetricService metrics = new FakeLiveMetricService();
+        JvmBrowserViewModel viewModel = viewModel(new FakeJvmDiscoveryService(), jmx, metrics);
+        JvmConnection connected = connectedWithMBeans(viewModel, jmx);
+        LiveMetricDefinition heap = new LiveMetricDefinition(
+                LiveMetricKind.HEAP_USED_PERCENT, "Heap Used", "%", 80.0);
+        LiveMetricDefinition threads = new LiveMetricDefinition(
+                LiveMetricKind.THREAD_COUNT, "Threads", "threads", 250.0);
+        metrics.setDefinitions(connected.id(), List.of(heap, threads));
+
+        viewModel.selectedConnectionProperty().set(connected);
+
+        assertEquals(List.of(heap, threads), viewModel.liveMetricDefinitionsProperty());
+        assertEquals(heap, viewModel.selectedTriggerMetricProperty().get());
+        assertFalse(viewModel.triggerLoadingProperty().get());
+        assertFalse(viewModel.triggerErrorProperty().get());
+    }
+
+    @Test
+    void evaluateTriggersAppendsNotifyEventWhenThresholdMatches() {
+        FakeJmxConnectionService jmx = new FakeJmxConnectionService();
+        FakeLiveMetricService metrics = new FakeLiveMetricService();
+        JvmBrowserViewModel viewModel = viewModel(new FakeJvmDiscoveryService(), jmx, metrics);
+        JvmConnection connected = connectedWithMBeans(viewModel, jmx);
+        LiveMetricDefinition heap = new LiveMetricDefinition(
+                LiveMetricKind.HEAP_USED_PERCENT, "Heap Used", "%", 80.0);
+        metrics.setDefinitions(connected.id(), List.of(heap));
+        metrics.setSnapshot(connected.id(), List.of(new LiveMetricSnapshot(
+                LiveMetricKind.HEAP_USED_PERCENT, 91.0, "%", Instant.EPOCH)));
+        viewModel.selectedConnectionProperty().set(connected);
+        viewModel.triggerNameProperty().set("Heap high");
+        viewModel.triggerThresholdProperty().set("80");
+        viewModel.addTriggerRule();
+
+        viewModel.evaluateTriggersNow();
+
+        assertEquals(1, viewModel.triggerEventsProperty().size());
+        TriggerEvent event = viewModel.triggerEventsProperty().getFirst();
+        assertEquals("Heap high", event.ruleName());
+        assertTrue(event.message().contains("91.0"));
+    }
+
+    @Test
+    void diagnosticCommandTriggerExecutesCommandWhenThresholdMatches() {
+        FakeJmxConnectionService jmx = new FakeJmxConnectionService();
+        FakeLiveMetricService metrics = new FakeLiveMetricService();
+        FakeDiagnosticCommandService diagnostics = new FakeDiagnosticCommandService();
+        JvmBrowserViewModel viewModel = viewModel(new FakeJvmDiscoveryService(), jmx, diagnostics, metrics);
+        JvmConnection connected = connectedWithDiagnosticCommands(viewModel, jmx);
+        LiveMetricDefinition threads = new LiveMetricDefinition(
+                LiveMetricKind.THREAD_COUNT, "Threads", "threads", 250.0);
+        DiagnosticCommandInfo threadPrint = new DiagnosticCommandInfo(
+                "threadPrint", "Thread Print", "Prints threads.", List.of());
+        metrics.setDefinitions(connected.id(), List.of(threads));
+        metrics.setSnapshot(connected.id(), List.of(new LiveMetricSnapshot(
+                LiveMetricKind.THREAD_COUNT, 300.0, "threads", Instant.EPOCH)));
+        diagnostics.setCommands(connected.id(), List.of(threadPrint));
+        diagnostics.setResult(connected.id(), threadPrint.name(),
+                new DiagnosticCommandResult(true, "dump", ""));
+        viewModel.selectedConnectionProperty().set(connected);
+        viewModel.triggerNameProperty().set("Thread count high");
+        viewModel.triggerThresholdProperty().set("250");
+        viewModel.selectedTriggerActionTypeProperty().set(TriggerActionType.DIAGNOSTIC_COMMAND);
+        viewModel.selectedTriggerCommandProperty().set(threadPrint);
+        viewModel.addTriggerRule();
+
+        viewModel.evaluateTriggersNow();
+
+        assertEquals("threadPrint", diagnostics.lastRequest().commandName());
+        assertEquals(1, viewModel.triggerEventsProperty().size());
+        assertTrue(viewModel.triggerEventsProperty().getFirst().message().contains("dump"));
+    }
+
     private static JvmBrowserViewModel viewModel(FakeJvmDiscoveryService discovery, FakeJmxConnectionService jmx) {
         return new JvmBrowserViewModel(discovery, jmx, new DirectJvmBrowserExecutor(), Runnable::run);
     }
@@ -855,6 +936,18 @@ class JvmBrowserViewModelTest {
     private static JvmBrowserViewModel viewModel(FakeJvmDiscoveryService discovery, FakeJmxConnectionService jmx,
             FakeDiagnosticCommandService diagnostics) {
         return new JvmBrowserViewModel(discovery, jmx, null, null, diagnostics, null,
+                new DirectJvmBrowserExecutor(), Runnable::run, path -> { });
+    }
+
+    private static JvmBrowserViewModel viewModel(FakeJvmDiscoveryService discovery, FakeJmxConnectionService jmx,
+            FakeLiveMetricService metrics) {
+        return new JvmBrowserViewModel(discovery, jmx, null, null, null, metrics,
+                new DirectJvmBrowserExecutor(), Runnable::run, path -> { });
+    }
+
+    private static JvmBrowserViewModel viewModel(FakeJvmDiscoveryService discovery, FakeJmxConnectionService jmx,
+            FakeDiagnosticCommandService diagnostics, FakeLiveMetricService metrics) {
+        return new JvmBrowserViewModel(discovery, jmx, null, null, diagnostics, metrics,
                 new DirectJvmBrowserExecutor(), Runnable::run, path -> { });
     }
 
