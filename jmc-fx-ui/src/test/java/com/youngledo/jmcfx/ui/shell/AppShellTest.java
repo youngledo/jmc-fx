@@ -262,6 +262,10 @@ class AppShellTest {
         assertTrue(controller.contains("setCallGraphMaxDepth"));
         assertTrue(controller.contains("profiling.callGraph.direction.callers"));
         assertTrue(controller.contains("profiling.callGraph.direction.callees"));
+        assertTrue(controller.contains("i18n.localeProperty().addListener"));
+        assertTrue(controller.contains("refreshProfilingCallGraphDirectionLabel"));
+        assertTrue(controller.contains("CallGraphDirection selectedDirection = profilingCallGraphDirectionCombo.getSelectionModel().getSelectedItem()"));
+        assertTrue(controller.contains("profilingCallGraphDirectionCombo.getSelectionModel().select(selectedDirection)"));
         assertTrue(controller.contains("profilingCallGraphTab.textProperty().bind(i18n.text(\"profiling.tab.callGraph\"))"));
         assertTrue(controller.contains("profilingCallGraphDirectionCombo.promptTextProperty().bind(i18n.text(\"profiling.callGraph.direction\"))"));
         assertTrue(controller.contains("profilingCallGraphDepthLabel.textProperty().bind(i18n.text(\"profiling.callGraph.depth\"))"));
