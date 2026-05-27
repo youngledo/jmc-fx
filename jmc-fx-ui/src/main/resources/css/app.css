@@ -480,6 +480,21 @@
     -fx-border-color: -color-fg-default;
     -fx-border-width: 1px;
 }
+.flame-graph-view {
+    -fx-padding: 4px 0;
+}
+.flame-graph-frame {
+    -fx-alignment: center-left;
+    -fx-background-color: -color-accent-emphasis;
+    -fx-background-radius: 3px;
+    -fx-border-color: -color-border-muted;
+    -fx-border-radius: 3px;
+}
+.flame-graph-frame-label {
+    -fx-padding: 0 8px;
+    -fx-font-size: 11px;
+    -fx-text-fill: -color-fg-on-emphasis;
+}
 
 /* Aggregate viewer */
 .aggregate-viewer {
