@@ -480,6 +480,9 @@
     -fx-border-color: -color-fg-default;
     -fx-border-width: 1px;
 }
+.profiling-flame-container {
+    -fx-padding: 12px;
+}
 .flame-graph-view {
     -fx-padding: 4px 0;
 }

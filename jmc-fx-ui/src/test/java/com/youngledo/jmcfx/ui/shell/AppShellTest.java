@@ -187,6 +187,63 @@ class AppShellTest {
     }
 
     @Test
+    void profilingPageContainsFlameGraphTabsBeforeTreeTabs() throws Exception {
+        Document document = appShellFxml();
+
+        Element profilingTreeTabs = elementByFxId(document, "profilingTreeTabs");
+        List<Element> tabs = childElements(childElement(profilingTreeTabs, "tabs"), "Tab");
+
+        assertEquals(List.of("profilingCallersFlameTab", "profilingCalleesFlameTab",
+                        "profilingCallersTab", "profilingCalleesTab"),
+                tabs.stream().map(tab -> tab.getAttribute("fx:id")).toList());
+
+        assertFlameGraphTab(document, "profilingCallersFlameContainer");
+        assertFlameGraphTab(document, "profilingCalleesFlameContainer");
+        assertEquals("TreeView", elementByFxId(document, "profilingCallersTree").getTagName());
+        assertEquals("TreeView", elementByFxId(document, "profilingCalleesTree").getTagName());
+    }
+
+    @Test
+    void profilingFlameGraphShellWiringUsesViewModelLayoutsAndI18n() throws Exception {
+        String controller = java.nio.file.Files.readString(
+                java.nio.file.Path.of("src/main/java/com/youngledo/jmcfx/ui/shell/AppShellController.java"));
+        String english = java.nio.file.Files.readString(
+                java.nio.file.Path.of("src/main/resources/com/youngledo/jmcfx/ui/i18n/messages.properties"));
+        String chinese = java.nio.file.Files.readString(
+                java.nio.file.Path.of("src/main/resources/com/youngledo/jmcfx/ui/i18n/messages_zh_CN.properties"));
+
+        assertTrue(controller.contains("@FXML private Tab profilingCallersFlameTab;"));
+        assertTrue(controller.contains("@FXML private VBox profilingCallersFlameContainer;"));
+        assertTrue(controller.contains("@FXML private Tab profilingCalleesFlameTab;"));
+        assertTrue(controller.contains("@FXML private VBox profilingCalleesFlameContainer;"));
+        assertTrue(controller.contains("private FlameGraphView profilingCallersFlameGraphView;"));
+        assertTrue(controller.contains("private FlameGraphView profilingCalleesFlameGraphView;"));
+        assertTrue(controller.contains("profilingCallersFlameContainer.getChildren().setAll(profilingCallersFlameGraphView)"));
+        assertTrue(controller.contains("profilingCalleesFlameContainer.getChildren().setAll(profilingCalleesFlameGraphView)"));
+        assertTrue(controller.contains("profilingCallersFlameGraphView.setLayout(null)"));
+        assertTrue(controller.contains("profilingCalleesFlameGraphView.setLayout(null)"));
+        assertTrue(controller.contains("currentProfilingViewModel.callersTreeProperty().removeListener(callersTreeListener)"));
+        assertTrue(controller.contains("currentProfilingViewModel.calleesTreeProperty().removeListener(calleesTreeListener)"));
+        assertTrue(controller.contains("currentProfilingViewModel.callersFlameGraphProperty().removeListener(callersFlameGraphListener)"));
+        assertTrue(controller.contains("currentProfilingViewModel.calleesFlameGraphProperty().removeListener(calleesFlameGraphListener)"));
+        assertTrue(controller.contains("nextViewModel.callersTreeProperty().addListener(callersTreeListener)"));
+        assertTrue(controller.contains("nextViewModel.calleesTreeProperty().addListener(calleesTreeListener)"));
+        assertTrue(controller.contains("nextViewModel.callersFlameGraphProperty().addListener(callersFlameGraphListener)"));
+        assertTrue(controller.contains("nextViewModel.calleesFlameGraphProperty().addListener(calleesFlameGraphListener)"));
+        assertTrue(controller.contains("nextViewModel.callersFlameGraphProperty().get()"));
+        assertTrue(controller.contains("nextViewModel.calleesFlameGraphProperty().get()"));
+        assertTrue(controller.contains("profilingCallersFlameTab.textProperty().bind(i18n.text(\"profiling.tab.callersFlame\"))"));
+        assertTrue(controller.contains("profilingCalleesFlameTab.textProperty().bind(i18n.text(\"profiling.tab.calleesFlame\"))"));
+
+        assertTrue(english.contains("profiling.tab.callersFlame=Caller Flame Graph"));
+        assertTrue(english.contains("profiling.tab.calleesFlame=Callee Flame Graph"));
+        assertTrue(english.contains("profiling.flame.empty=Select a method to view the flame graph."));
+        assertTrue(chinese.contains("profiling.tab.callersFlame=调用者火焰图"));
+        assertTrue(chinese.contains("profiling.tab.calleesFlame=被调用者火焰图"));
+        assertTrue(chinese.contains("profiling.flame.empty=选择一个方法查看火焰图。"));
+    }
+
+    @Test
     void appShellFxmlDoesNotHardcodeVisibleLocalizedText() throws Exception {
         Document document = appShellFxml();
 
@@ -285,6 +342,14 @@ class AppShellTest {
 
         assertTrue(tabContent.contains("-fx-padding: 10px 10px 0 0"));
         assertTrue(workspace.contains("-fx-padding: 0 0 0 8px"));
+    }
+
+    @Test
+    void profilingFlameGraphContainerUsesScopedPadding() throws Exception {
+        String css = appCss();
+        String flameContainer = cssBlock(css, ".profiling-flame-container");
+
+        assertTrue(flameContainer.contains("-fx-padding: 12px"));
     }
 
     @Test
@@ -1066,6 +1131,32 @@ class AppShellTest {
                 .map(Map.Entry::getValue)
                 .findFirst()
                 .orElseThrow(() -> new AssertionError("Missing styleClass " + styleClass));
+    }
+
+    private static Element childElement(Element parent, String tagName) {
+        return childElements(parent, tagName).stream()
+                .findFirst()
+                .orElseThrow(() -> new AssertionError("Missing child " + tagName + " in " + parent.getTagName()));
+    }
+
+    private static List<Element> childElements(Element parent, String tagName) {
+        List<Element> result = new java.util.ArrayList<>();
+        for (org.w3c.dom.Node node = parent.getFirstChild(); node != null; node = node.getNextSibling()) {
+            if (node instanceof Element element && tagName.equals(element.getTagName())) {
+                result.add(element);
+            }
+        }
+        return result;
+    }
+
+    private static void assertFlameGraphTab(Document document, String containerFxId) {
+        Element container = elementByFxId(document, containerFxId);
+        assertEquals("VBox", container.getTagName());
+        assertTrue(hasStyleClass(container, "profiling-flame-container"));
+        Element scrollPane = (Element) container.getParentNode();
+        assertEquals("ScrollPane", scrollPane.getTagName());
+        assertEquals("true", scrollPane.getAttribute("fitToWidth"));
+        assertEquals("true", scrollPane.getAttribute("fitToHeight"));
     }
 
     private static int elementCountWithStyleClass(Document document, String styleClass) {

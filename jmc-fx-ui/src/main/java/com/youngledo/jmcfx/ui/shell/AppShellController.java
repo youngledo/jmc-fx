@@ -139,6 +139,8 @@ import com.youngledo.jmcfx.ui.util.DisplayFormats;
 import com.youngledo.jmcfx.ui.util.HtmlToTextFlow;
 import com.youngledo.jmcfx.ui.overview.OverviewViewModel;
 import com.youngledo.jmcfx.ui.preferences.AppTheme;
+import com.youngledo.jmcfx.ui.profiling.FlameGraphLayout;
+import com.youngledo.jmcfx.ui.profiling.FlameGraphView;
 import com.youngledo.jmcfx.ui.profiling.ProfilingViewModel;
 import com.youngledo.jmcfx.ui.rules.RuleResultsViewModel;
 import com.youngledo.jmcfx.ui.socketio.SocketIOViewModel;
@@ -396,10 +398,24 @@ public class AppShellController {
     @FXML private Label profilingTitleLabel;
     @FXML private TableView<HotMethod> profilingTable;
     @FXML private TabPane profilingTreeTabs;
+    @FXML private Tab profilingCallersFlameTab;
+    @FXML private VBox profilingCallersFlameContainer;
+    @FXML private Tab profilingCalleesFlameTab;
+    @FXML private VBox profilingCalleesFlameContainer;
     @FXML private Tab profilingCallersTab;
     @FXML private TreeView<StackTreeNode> profilingCallersTree;
     @FXML private Tab profilingCalleesTab;
     @FXML private TreeView<StackTreeNode> profilingCalleesTree;
+    private FlameGraphView profilingCallersFlameGraphView;
+    private FlameGraphView profilingCalleesFlameGraphView;
+    private final ChangeListener<StackTreeNode> callersTreeListener =
+            (observable, oldValue, newValue) -> rebuildStackTree(profilingCallersTree, newValue);
+    private final ChangeListener<StackTreeNode> calleesTreeListener =
+            (observable, oldValue, newValue) -> rebuildStackTree(profilingCalleesTree, newValue);
+    private final ChangeListener<FlameGraphLayout> callersFlameGraphListener =
+            (observable, oldValue, newValue) -> profilingCallersFlameGraphView.setLayout(newValue);
+    private final ChangeListener<FlameGraphLayout> calleesFlameGraphListener =
+            (observable, oldValue, newValue) -> profilingCalleesFlameGraphView.setLayout(newValue);
     @FXML private Label exceptionsTitleLabel;
     @FXML private Button exceptionsGroupByClass;
     @FXML private Button exceptionsGroupByMessage;
@@ -1722,6 +1738,10 @@ public class AppShellController {
 
     private void configureProfilingTable() {
         profilingTable.setPlaceholder(localizedTablePlaceholder("profiling.empty"));
+        profilingCallersFlameGraphView = new FlameGraphView();
+        profilingCalleesFlameGraphView = new FlameGraphView();
+        profilingCallersFlameContainer.getChildren().setAll(profilingCallersFlameGraphView);
+        profilingCalleesFlameContainer.getChildren().setAll(profilingCalleesFlameGraphView);
 
         TableColumn<HotMethod, String> methodCol = new TableColumn<>();
         methodCol.textProperty().bind(i18n.text("profiling.column.method"));
@@ -2153,18 +2173,31 @@ public class AppShellController {
     }
 
     private void bindProfiling(ProfilingViewModel nextViewModel) {
+        ProfilingViewModel currentProfilingViewModel = profilingViewModel;
+        if (currentProfilingViewModel != null) {
+            currentProfilingViewModel.callersTreeProperty().removeListener(callersTreeListener);
+            currentProfilingViewModel.calleesTreeProperty().removeListener(calleesTreeListener);
+            currentProfilingViewModel.callersFlameGraphProperty().removeListener(callersFlameGraphListener);
+            currentProfilingViewModel.calleesFlameGraphProperty().removeListener(calleesFlameGraphListener);
+        }
         profilingTable.setItems(FXCollections.emptyObservableList());
         profilingCallersTree.setRoot(new TreeItem<>());
         profilingCalleesTree.setRoot(new TreeItem<>());
+        profilingCallersFlameGraphView.setLayout(null);
+        profilingCalleesFlameGraphView.setLayout(null);
         profilingViewModel = nextViewModel;
         if (nextViewModel == null) {
             return;
         }
         profilingTable.setItems(nextViewModel.hotMethodsProperty());
-        nextViewModel.callersTreeProperty().addListener((obs, old, val) -> rebuildStackTree(profilingCallersTree, val));
-        nextViewModel.calleesTreeProperty().addListener((obs, old, val) -> rebuildStackTree(profilingCalleesTree, val));
+        nextViewModel.callersTreeProperty().addListener(callersTreeListener);
+        nextViewModel.calleesTreeProperty().addListener(calleesTreeListener);
+        nextViewModel.callersFlameGraphProperty().addListener(callersFlameGraphListener);
+        nextViewModel.calleesFlameGraphProperty().addListener(calleesFlameGraphListener);
         rebuildStackTree(profilingCallersTree, nextViewModel.callersTreeProperty().get());
         rebuildStackTree(profilingCalleesTree, nextViewModel.calleesTreeProperty().get());
+        profilingCallersFlameGraphView.setLayout(nextViewModel.callersFlameGraphProperty().get());
+        profilingCalleesFlameGraphView.setLayout(nextViewModel.calleesFlameGraphProperty().get());
     }
 
     private void bindExceptions(ExceptionViewModel nextViewModel) {
@@ -2562,6 +2595,8 @@ public class AppShellController {
         jvmsRemoveTriggerButton.textProperty().bind(i18n.text("jvms.triggers.remove"));
         jvmsEvaluateTriggersButton.textProperty().bind(i18n.text("jvms.triggers.evaluate"));
         profilingTitleLabel.textProperty().bind(i18n.text("profiling.title"));
+        profilingCallersFlameTab.textProperty().bind(i18n.text("profiling.tab.callersFlame"));
+        profilingCalleesFlameTab.textProperty().bind(i18n.text("profiling.tab.calleesFlame"));
         profilingCallersTab.textProperty().bind(i18n.text("profiling.tab.callers"));
         profilingCalleesTab.textProperty().bind(i18n.text("profiling.tab.callees"));
         exceptionsTitleLabel.textProperty().bind(i18n.text("exceptions.title"));

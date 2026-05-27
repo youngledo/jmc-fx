@@ -243,6 +243,16 @@
                     <TableView fx:id="profilingTable" styleClass="dense-table" prefHeight="300"/>
                     <TabPane fx:id="profilingTreeTabs" prefHeight="300">
                         <tabs>
+                            <Tab fx:id="profilingCallersFlameTab" closable="false">
+                                <ScrollPane fitToWidth="true" fitToHeight="true">
+                                    <VBox fx:id="profilingCallersFlameContainer" styleClass="profiling-flame-container"/>
+                                </ScrollPane>
+                            </Tab>
+                            <Tab fx:id="profilingCalleesFlameTab" closable="false">
+                                <ScrollPane fitToWidth="true" fitToHeight="true">
+                                    <VBox fx:id="profilingCalleesFlameContainer" styleClass="profiling-flame-container"/>
+                                </ScrollPane>
+                            </Tab>
                             <Tab fx:id="profilingCallersTab" closable="false">
                                 <TreeView fx:id="profilingCallersTree"/>
                             </Tab>
