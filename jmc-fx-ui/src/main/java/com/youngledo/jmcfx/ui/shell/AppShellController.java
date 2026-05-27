@@ -84,6 +84,7 @@ import com.youngledo.jmcfx.domain.model.TlabAllocation;
 import com.youngledo.jmcfx.domain.model.VmOperationEvent;
 import com.youngledo.jmcfx.domain.model.VmOperationSummary;
 import com.youngledo.jmcfx.domain.model.X509CertificateEntry;
+import com.youngledo.jmcfx.domain.service.DiagnosticCommandService;
 import com.youngledo.jmcfx.domain.service.EnvironmentService;
 import com.youngledo.jmcfx.domain.service.EventQueryService;
 import com.youngledo.jmcfx.domain.service.ExceptionService;
@@ -95,6 +96,7 @@ import com.youngledo.jmcfx.domain.service.JavaAppService;
 import com.youngledo.jmcfx.domain.service.JmxConnectionService;
 import com.youngledo.jmcfx.domain.service.JvmDiscoveryService;
 import com.youngledo.jmcfx.domain.service.LeakSuspectsService;
+import com.youngledo.jmcfx.domain.service.LiveMetricService;
 import com.youngledo.jmcfx.domain.service.LockService;
 import com.youngledo.jmcfx.domain.service.MBeanBrowserService;
 import com.youngledo.jmcfx.domain.service.ProfilingService;
@@ -214,6 +216,8 @@ public class AppShellController {
     private final JmxConnectionService jmxConnectionService;
     private final FlightRecordingService flightRecordingService;
     private final MBeanBrowserService mBeanBrowserService;
+    private final DiagnosticCommandService diagnosticCommandService;
+    private final LiveMetricService liveMetricService;
     private final I18n i18n;
     private final RecordingOpenExecutor recordingOpenExecutor;
     private final ListChangeListener<EventTypeNode> eventTypeTreeListener = change -> rebuildEventTypeTree();
@@ -541,7 +545,7 @@ public class AppShellController {
                 fileIOService, socketIOService, lockService,
                 heapService, leakSuspectsService, tlabService,
                 jvmInternalsService, environmentService, javaAppService,
-                null, null, null, i18n,
+                null, null, null, null, null, null, i18n,
                 new VirtualThreadRecordingOpenExecutor());
     }
 
@@ -564,7 +568,7 @@ public class AppShellController {
                 fileIOService, socketIOService, lockService,
                 heapService, leakSuspectsService, tlabService,
                 jvmInternalsService, environmentService, javaAppService,
-                jvmDiscoveryService, jmxConnectionService, flightRecordingService, null, i18n);
+                jvmDiscoveryService, jmxConnectionService, flightRecordingService, null, null, null, i18n);
     }
 
     public AppShellController(AppShellViewModel viewModel, RecordingRepository recordingRepository,
@@ -587,7 +591,34 @@ public class AppShellController {
                 fileIOService, socketIOService, lockService,
                 heapService, leakSuspectsService, tlabService,
                 jvmInternalsService, environmentService, javaAppService,
-                jvmDiscoveryService, jmxConnectionService, flightRecordingService, mBeanBrowserService, i18n,
+                jvmDiscoveryService, jmxConnectionService, flightRecordingService, mBeanBrowserService, null, null,
+                i18n);
+    }
+
+    public AppShellController(AppShellViewModel viewModel, RecordingRepository recordingRepository,
+            EventQueryService eventQueryService, RuleAnalysisService ruleAnalysisService,
+            ProfilingService profilingService, ExceptionService exceptionService,
+            ThreadService threadService, FileIOService fileIOService,
+            SocketIOService socketIOService, LockService lockService,
+            HeapService heapService, LeakSuspectsService leakSuspectsService,
+            TlabService tlabService,
+            JvmInternalsService jvmInternalsService,
+            EnvironmentService environmentService,
+            JavaAppService javaAppService,
+            JvmDiscoveryService jvmDiscoveryService,
+            JmxConnectionService jmxConnectionService,
+            FlightRecordingService flightRecordingService,
+            MBeanBrowserService mBeanBrowserService,
+            DiagnosticCommandService diagnosticCommandService,
+            LiveMetricService liveMetricService,
+            I18n i18n) {
+        this(viewModel, recordingRepository, eventQueryService, ruleAnalysisService,
+                profilingService, exceptionService, threadService,
+                fileIOService, socketIOService, lockService,
+                heapService, leakSuspectsService, tlabService,
+                jvmInternalsService, environmentService, javaAppService,
+                jvmDiscoveryService, jmxConnectionService, flightRecordingService, mBeanBrowserService,
+                diagnosticCommandService, liveMetricService, i18n,
                 new VirtualThreadRecordingOpenExecutor());
     }
 
@@ -609,7 +640,7 @@ public class AppShellController {
                 fileIOService, socketIOService, lockService,
                 heapService, leakSuspectsService, tlabService,
                 jvmInternalsService, environmentService, javaAppService,
-                jvmDiscoveryService, jmxConnectionService, null, i18n,
+                jvmDiscoveryService, jmxConnectionService, null, null, null, null, i18n,
                 new VirtualThreadRecordingOpenExecutor());
     }
 
@@ -629,7 +660,7 @@ public class AppShellController {
                 fileIOService, socketIOService, lockService,
                 heapService, leakSuspectsService, tlabService,
                 jvmInternalsService, environmentService, javaAppService,
-                null, null, null, i18n, recordingOpenExecutor);
+                null, null, null, null, null, null, i18n, recordingOpenExecutor);
     }
 
     AppShellController(AppShellViewModel viewModel, RecordingRepository recordingRepository,
@@ -651,7 +682,8 @@ public class AppShellController {
                 fileIOService, socketIOService, lockService,
                 heapService, leakSuspectsService, tlabService,
                 jvmInternalsService, environmentService, javaAppService,
-                jvmDiscoveryService, jmxConnectionService, flightRecordingService, null, i18n, recordingOpenExecutor);
+                jvmDiscoveryService, jmxConnectionService, flightRecordingService, null, null, null, i18n,
+                recordingOpenExecutor);
     }
 
     AppShellController(AppShellViewModel viewModel, RecordingRepository recordingRepository,
@@ -667,6 +699,8 @@ public class AppShellController {
             JmxConnectionService jmxConnectionService,
             FlightRecordingService flightRecordingService,
             MBeanBrowserService mBeanBrowserService,
+            DiagnosticCommandService diagnosticCommandService,
+            LiveMetricService liveMetricService,
             I18n i18n,
             RecordingOpenExecutor recordingOpenExecutor) {
         this.viewModel = viewModel;
@@ -689,6 +723,8 @@ public class AppShellController {
         this.jmxConnectionService = jmxConnectionService;
         this.flightRecordingService = flightRecordingService;
         this.mBeanBrowserService = mBeanBrowserService;
+        this.diagnosticCommandService = diagnosticCommandService;
+        this.liveMetricService = liveMetricService;
         this.i18n = i18n;
         this.recordingOpenExecutor = recordingOpenExecutor;
     }
@@ -715,8 +751,9 @@ public class AppShellController {
         configureRecordingTabs();
         jvmBrowserViewModel = jvmDiscoveryService != null && jmxConnectionService != null
                 ? new JvmBrowserViewModel(jvmDiscoveryService, jmxConnectionService, flightRecordingService,
-                        mBeanBrowserService, new com.youngledo.jmcfx.ui.jvms.VirtualThreadJvmBrowserExecutor(),
-                        Platform::runLater, this::openRecordingInBackground) : null;
+                        mBeanBrowserService, diagnosticCommandService, liveMetricService,
+                        new com.youngledo.jmcfx.ui.jvms.VirtualThreadJvmBrowserExecutor(), Platform::runLater,
+                        this::openRecordingInBackground) : null;
         homePane.visibleProperty().bind(viewModel.selectedSectionProperty().isEqualTo("home"));
         homePane.managedProperty().bind(homePane.visibleProperty());
         overviewPane.visibleProperty().bind(viewModel.selectedSectionProperty().isEqualTo("overview"));

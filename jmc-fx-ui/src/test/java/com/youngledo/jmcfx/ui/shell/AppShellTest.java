@@ -444,6 +444,31 @@ class AppShellTest {
     }
 
     @Test
+    void appShellFactoryInjectsLiveDiagnosticsServices() throws Exception {
+        String factory = java.nio.file.Files.readString(
+                java.nio.file.Path.of("src/main/java/com/youngledo/jmcfx/ui/shell/AppShellFactory.java"));
+        String controller = java.nio.file.Files.readString(
+                java.nio.file.Path.of("src/main/java/com/youngledo/jmcfx/ui/shell/AppShellController.java"));
+        String app = java.nio.file.Files.readString(
+                java.nio.file.Path.of("../jmc-fx-app/src/main/java/com/youngledo/jmcfx/app/JmcFxApplication.java"));
+
+        assertTrue(factory.contains("DiagnosticCommandService diagnosticCommandService"),
+                "Factory should accept the Diagnostic Command port");
+        assertTrue(factory.contains("LiveMetricService liveMetricService"),
+                "Factory should accept the Live Metric port");
+        assertTrue(controller.contains("DiagnosticCommandService diagnosticCommandService"),
+                "Controller should inject the Diagnostic Command port");
+        assertTrue(controller.contains("LiveMetricService liveMetricService"),
+                "Controller should inject the Live Metric port");
+        assertTrue(controller.contains("mBeanBrowserService, diagnosticCommandService, liveMetricService"),
+                "Controller should pass diagnostics ports to JvmBrowserViewModel");
+        assertTrue(app.contains("new JmcDiagnosticCommandService(jmxConnectionService)"),
+                "Application assembly should reuse the existing JMX connection service for diagnostic commands");
+        assertTrue(app.contains("new JmcLiveMetricService(jmxConnectionService)"),
+                "Application assembly should reuse the existing JMX connection service for live metrics");
+    }
+
+    @Test
     void jvmRuntimeSummaryFormatsUptimeWithSharedDurationFormatter() throws Exception {
         String controller = java.nio.file.Files.readString(
                 java.nio.file.Path.of("src/main/java/com/youngledo/jmcfx/ui/shell/AppShellController.java"));
