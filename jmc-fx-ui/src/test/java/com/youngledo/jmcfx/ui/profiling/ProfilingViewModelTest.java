@@ -61,6 +61,99 @@ class ProfilingViewModelTest {
     }
 
     @Test
+    void selectMethodBuildsCallGraphFromCurrentDirection() {
+        FakeProfilingService service = new FakeProfilingService();
+        service.addHotMethod(new HotMethod("com.Foo.bar()", "JIT_COMPILED", 50, 50.0));
+        service.setCalleesTree(node("root", 100, node("callee", 70)));
+
+        ProfilingViewModel vm = new ProfilingViewModel(service);
+        vm.load(testRecording());
+        vm.selectMethod("com.Foo.bar()");
+
+        CallGraphLayout layout = vm.callGraphProperty().get();
+        assertEquals("com.Foo.bar()", layout.nodes().getFirst().label());
+        assertEquals("callee", layout.nodes().get(1).label());
+        assertEquals("selected", layout.edges().getFirst().sourceId());
+        assertEquals("node-1", layout.edges().getFirst().targetId());
+    }
+
+    @Test
+    void changingCallGraphDirectionRebuildsFromLoadedTrees() {
+        FakeProfilingService service = new FakeProfilingService();
+        service.addHotMethod(new HotMethod("com.Foo.bar()", "JIT_COMPILED", 50, 50.0));
+        service.setCallersTree(node("root", 100, node("caller", 60)));
+        service.setCalleesTree(node("root", 100, node("callee", 70)));
+
+        ProfilingViewModel vm = new ProfilingViewModel(service);
+        vm.load(testRecording());
+        vm.selectMethod("com.Foo.bar()");
+
+        vm.setCallGraphDirection(CallGraphDirection.CALLERS);
+
+        CallGraphLayout layout = vm.callGraphProperty().get();
+        assertEquals(CallGraphDirection.CALLERS, vm.callGraphDirectionProperty().get());
+        assertEquals("caller", layout.nodes().get(1).label());
+        assertEquals("node-1", layout.edges().getFirst().sourceId());
+        assertEquals("selected", layout.edges().getFirst().targetId());
+    }
+
+    @Test
+    void changingCallGraphDepthRebuildsWithNewLimit() {
+        FakeProfilingService service = new FakeProfilingService();
+        service.addHotMethod(new HotMethod("com.Foo.bar()", "JIT_COMPILED", 50, 50.0));
+        service.setCalleesTree(node("root", 100, node("callee", 70, node("deep callee", 40))));
+
+        ProfilingViewModel vm = new ProfilingViewModel(service);
+        vm.load(testRecording());
+        vm.selectMethod("com.Foo.bar()");
+
+        vm.setCallGraphMaxDepth(1);
+
+        CallGraphLayout layout = vm.callGraphProperty().get();
+        assertEquals(1, vm.callGraphMaxDepthProperty().get());
+        assertTrue(layout.maxDepth() <= 1);
+        assertEquals(List.of("com.Foo.bar()", "callee"), labels(layout));
+    }
+
+    @Test
+    void loadAndNullSelectionClearCallGraph() {
+        FakeProfilingService service = new FakeProfilingService();
+        service.addHotMethod(new HotMethod("com.Foo.bar()", "JIT_COMPILED", 50, 50.0));
+        service.setCalleesTree(node("root", 100, node("callee", 70)));
+
+        ProfilingViewModel vm = new ProfilingViewModel(service);
+        vm.load(testRecording());
+        vm.selectMethod("com.Foo.bar()");
+
+        assertFalse(vm.callGraphProperty().get().nodes().isEmpty());
+
+        vm.selectMethod(null);
+
+        assertSame(CallGraphLayout.EMPTY, vm.callGraphProperty().get());
+    }
+
+    @Test
+    void loadClearsCallGraphAndPreventsStaleRebuild() {
+        FakeProfilingService service = new FakeProfilingService();
+        service.addHotMethod(new HotMethod("com.Foo.bar()", "JIT_COMPILED", 50, 50.0));
+        service.setCallersTree(node("root", 100, node("caller", 60)));
+        service.setCalleesTree(node("root", 100, node("callee", 70)));
+
+        ProfilingViewModel vm = new ProfilingViewModel(service);
+        vm.load(testRecording());
+        vm.selectMethod("com.Foo.bar()");
+
+        assertFalse(vm.callGraphProperty().get().nodes().isEmpty());
+
+        vm.load(testRecording());
+        vm.setCallGraphDirection(CallGraphDirection.CALLERS);
+        vm.setCallGraphMaxDepth(1);
+
+        assertNull(vm.selectedMethodProperty().get());
+        assertSame(CallGraphLayout.EMPTY, vm.callGraphProperty().get());
+    }
+
+    @Test
     void loadClearsFlameGraphs() {
         FakeProfilingService service = new FakeProfilingService();
         service.addHotMethod(new HotMethod("com.Foo.bar()", "JIT_COMPILED", 50, 50.0));
@@ -172,5 +265,11 @@ class ProfilingViewModelTest {
 
     private StackTreeNode node(String method, int count, StackTreeNode... children) {
         return new StackTreeNode(method, count, 0, List.of(children));
+    }
+
+    private List<String> labels(CallGraphLayout layout) {
+        return layout.nodes().stream()
+                .map(CallGraphNode::label)
+                .toList();
     }
 }

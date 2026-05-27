@@ -27,7 +27,14 @@ public class ProfilingViewModel {
             new SimpleObjectProperty<>(FlameGraphLayout.EMPTY);
     private final ObjectProperty<FlameGraphLayout> calleesFlameGraph =
             new SimpleObjectProperty<>(FlameGraphLayout.EMPTY);
+    private final ObjectProperty<CallGraphDirection> callGraphDirection =
+            new SimpleObjectProperty<>(CallGraphDirection.CALLEES);
+    private final ObjectProperty<CallGraphLayout> callGraph =
+            new SimpleObjectProperty<>(CallGraphLayout.EMPTY);
+    private final ObjectProperty<Integer> callGraphMaxDepth =
+            new SimpleObjectProperty<>(CallGraphLayoutBuilder.DEFAULT_MAX_DEPTH);
     private RecordingSummary currentRecording;
+    private String selectedMethodName;
 
     public ProfilingViewModel(ProfilingService profilingService) {
         this.profilingService = profilingService;
@@ -57,13 +64,40 @@ public class ProfilingViewModel {
         return calleesFlameGraph;
     }
 
+    public ObjectProperty<CallGraphDirection> callGraphDirectionProperty() {
+        return callGraphDirection;
+    }
+
+    public ObjectProperty<CallGraphLayout> callGraphProperty() {
+        return callGraph;
+    }
+
+    public ObjectProperty<Integer> callGraphMaxDepthProperty() {
+        return callGraphMaxDepth;
+    }
+
     public void load(RecordingSummary recording) {
         currentRecording = recording;
         List<HotMethod> methods = profilingService.loadHotMethods(recording);
         FxDispatch.run(() -> {
             hotMethods.setAll(methods);
             selectedMethod.set(null);
+            selectedMethodName = null;
             clearStackDetails();
+        });
+    }
+
+    public void setCallGraphDirection(CallGraphDirection direction) {
+        FxDispatch.run(() -> {
+            callGraphDirection.set(direction == null ? CallGraphDirection.CALLEES : direction);
+            rebuildCallGraph();
+        });
+    }
+
+    public void setCallGraphMaxDepth(int maxDepth) {
+        FxDispatch.run(() -> {
+            callGraphMaxDepth.set(Math.max(1, maxDepth));
+            rebuildCallGraph();
         });
     }
 
@@ -72,7 +106,10 @@ public class ProfilingViewModel {
             return;
         }
         if (method == null) {
-            FxDispatch.run(this::clearStackDetails);
+            FxDispatch.run(() -> {
+                selectedMethodName = null;
+                clearStackDetails();
+            });
             return;
         }
         StackTreeNode callers = stackTreeOrEmpty(profilingService.loadStackTraceTree(currentRecording, method, true));
@@ -80,11 +117,14 @@ public class ProfilingViewModel {
         FlameGraphLayoutBuilder builder = FlameGraphLayoutBuilder.defaultBuilder();
         FlameGraphLayout callerFlameGraph = builder.build(callers);
         FlameGraphLayout calleeFlameGraph = builder.build(callees);
+        CallGraphLayout newCallGraph = buildCallGraph(method, callers, callees);
         FxDispatch.run(() -> {
+            selectedMethodName = method;
             callersTree.set(callers);
             calleesTree.set(callees);
             callersFlameGraph.set(callerFlameGraph);
             calleesFlameGraph.set(calleeFlameGraph);
+            callGraph.set(newCallGraph);
         });
     }
 
@@ -93,6 +133,23 @@ public class ProfilingViewModel {
         calleesTree.set(StackTreeNode.EMPTY);
         callersFlameGraph.set(FlameGraphLayout.EMPTY);
         calleesFlameGraph.set(FlameGraphLayout.EMPTY);
+        callGraph.set(CallGraphLayout.EMPTY);
+    }
+
+    private void rebuildCallGraph() {
+        if (selectedMethodName == null) {
+            callGraph.set(CallGraphLayout.EMPTY);
+            return;
+        }
+        callGraph.set(buildCallGraph(selectedMethodName, callersTree.get(), calleesTree.get()));
+    }
+
+    private CallGraphLayout buildCallGraph(String method, StackTreeNode callers, StackTreeNode callees) {
+        CallGraphDirection direction = callGraphDirection.get();
+        CallGraphDirection resolvedDirection = direction == null ? CallGraphDirection.CALLEES : direction;
+        StackTreeNode sourceTree = resolvedDirection == CallGraphDirection.CALLERS ? callers : callees;
+        return new CallGraphLayoutBuilder(callGraphMaxDepth.get(), CallGraphLayoutBuilder.DEFAULT_MAX_NODES)
+                .build(method, sourceTree, resolvedDirection);
     }
 
     private StackTreeNode stackTreeOrEmpty(StackTreeNode stackTree) {
