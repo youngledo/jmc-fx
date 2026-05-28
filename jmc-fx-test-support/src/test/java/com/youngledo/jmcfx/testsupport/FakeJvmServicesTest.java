@@ -4,6 +4,7 @@ import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertThrows;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 
+import java.time.Duration;
 import java.time.Instant;
 import java.util.List;
 
@@ -13,6 +14,7 @@ import com.youngledo.jmcfx.domain.model.DiagnosticCommandInfo;
 import com.youngledo.jmcfx.domain.model.DiagnosticCommandRequest;
 import com.youngledo.jmcfx.domain.model.DiagnosticCommandResult;
 import com.youngledo.jmcfx.domain.model.EventHeatmap;
+import com.youngledo.jmcfx.domain.model.JdpJvmAdvertisement;
 import com.youngledo.jmcfx.domain.model.JvmCapability;
 import com.youngledo.jmcfx.domain.model.JvmCapabilitySnapshot;
 import com.youngledo.jmcfx.domain.model.JvmCapabilityStatus;
@@ -34,6 +36,7 @@ import com.youngledo.jmcfx.domain.model.MemoryAnalysisReport;
 import com.youngledo.jmcfx.domain.model.MemoryIssue;
 import com.youngledo.jmcfx.domain.model.MemoryIssueCategory;
 import com.youngledo.jmcfx.domain.model.MemoryIssueSeverity;
+import com.youngledo.jmcfx.domain.model.SavedJvmTarget;
 import com.youngledo.jmcfx.domain.service.JmcFxException;
 
 class FakeJvmServicesTest {
@@ -46,6 +49,73 @@ class FakeJvmServicesTest {
 
         assertEquals(1, discovery.discoverLocalJvms().size());
         assertEquals("2", discovery.discoverLocalJvms().getFirst().pid());
+    }
+
+    @Test
+    void fakeSavedJvmTargetRepositoryStoresDeletesAndMarksConnected() {
+        FakeSavedJvmTargetRepository repository = new FakeSavedJvmTargetRepository();
+        SavedJvmTarget zeta = new SavedJvmTarget("zeta", "Zeta", "service:jmx:rmi:///zeta", null);
+        SavedJvmTarget alphaA = new SavedJvmTarget("alpha-a", "Alpha", "service:jmx:rmi:///a", null);
+        SavedJvmTarget alpha = new SavedJvmTarget("alpha", "alpha", "service:jmx:rmi:///alpha", null);
+
+        repository.save(zeta);
+        repository.save(alphaA);
+        repository.save(alpha);
+        repository.markConnected("zeta", Instant.EPOCH.plusSeconds(7));
+        repository.deleteById("alpha");
+
+        assertEquals(2, repository.findAll().size());
+        assertEquals(alphaA, repository.findAll().getFirst());
+        assertEquals(new SavedJvmTarget("zeta", "Zeta", "service:jmx:rmi:///zeta",
+                Instant.EPOCH.plusSeconds(7)), repository.findAll().get(1));
+    }
+
+    @Test
+    void fakeSavedJvmTargetRepositoryAssignsStableIdFromServiceUrl() {
+        FakeSavedJvmTargetRepository repository = new FakeSavedJvmTargetRepository();
+        SavedJvmTarget first = repository.save(new SavedJvmTarget("", "Demo",
+                "service:jmx:rmi:///jndi/rmi://localhost:9999/jmxrmi", null));
+        SavedJvmTarget second = repository.save(new SavedJvmTarget("", "Demo Updated",
+                "service:jmx:rmi:///jndi/rmi://localhost:9999/jmxrmi", null));
+
+        assertEquals(first.id(), second.id());
+        assertEquals(List.of(second), repository.findAll());
+    }
+
+    @Test
+    void fakeSavedJvmTargetRepositoryRejectsBlankServiceUrl() {
+        FakeSavedJvmTargetRepository repository = new FakeSavedJvmTargetRepository();
+
+        IllegalArgumentException exception = assertThrows(IllegalArgumentException.class,
+                () -> repository.save(new SavedJvmTarget("", "Missing URL", " ", null)));
+
+        assertEquals("Saved JVM target service URL must not be blank.", exception.getMessage());
+    }
+
+    @Test
+    void fakeJdpDiscoveryReturnsConfiguredAdvertisementsAndRecordsTimeout() {
+        FakeJdpDiscoveryService discovery = new FakeJdpDiscoveryService();
+        JdpJvmAdvertisement alpha = advertisement("alpha", "Alpha", "service:jmx:rmi:///alpha");
+        JdpJvmAdvertisement beta = advertisement("beta", "Beta", "service:jmx:rmi:///beta");
+
+        discovery.add(alpha);
+        discovery.setAdvertisements(List.of(beta, alpha));
+
+        assertEquals(List.of(beta, alpha), discovery.discover(Duration.ofSeconds(3)));
+        assertEquals(Duration.ofSeconds(3), discovery.lastTimeout());
+    }
+
+    @Test
+    void fakeJdpDiscoveryThrowsConfiguredFailure() {
+        FakeJdpDiscoveryService discovery = new FakeJdpDiscoveryService();
+        RuntimeException failure = new RuntimeException("jdp offline");
+        discovery.failWith(failure);
+
+        RuntimeException exception = assertThrows(RuntimeException.class,
+                () -> discovery.discover(Duration.ofMillis(250)));
+
+        assertEquals(failure, exception);
+        assertEquals(Duration.ofMillis(250), discovery.lastTimeout());
     }
 
     @Test
@@ -239,6 +309,10 @@ class FakeJvmServicesTest {
 
     private static JvmConnection local(String pid, String name) {
         return JvmConnection.local(pid, name, "26.0.1", true);
+    }
+
+    private static JdpJvmAdvertisement advertisement(String id, String name, String serviceUrl) {
+        return new JdpJvmAdvertisement(id, name, serviceUrl, "localhost", 7091, "26.0.1");
     }
 
     private static com.youngledo.jmcfx.domain.model.RecordingSummary recording() {
