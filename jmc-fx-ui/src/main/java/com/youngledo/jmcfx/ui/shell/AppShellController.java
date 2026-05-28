@@ -1783,17 +1783,38 @@ public class AppShellController {
         return i18n.get("jvms.source." + source.name().toLowerCase(java.util.Locale.ROOT));
     }
 
-    private String selectedConnectionStatusText(JvmConnection selectedConnection, String jdpStatusMessage) {
+    String selectedConnectionStatusText(JvmConnection selectedConnection, String jdpStatusMessage) {
         if (selectedConnection != null && !selectedConnection.statusMessage().isBlank()) {
-            return selectedConnection.statusMessage();
+            return localizedConnectionStatus(selectedConnection);
         }
         return localizedJdpStatus(jdpStatusMessage);
+    }
+
+    private String localizedConnectionStatus(JvmConnection selectedConnection) {
+        if (selectedConnection.connected() || selectedConnection.state() == JvmConnectionState.CONNECTED) {
+            return i18n.get("jvms.status.connected");
+        }
+        return switch (selectedConnection.source()) {
+            case LOCAL -> selectedConnection.attachable()
+                    ? i18n.get("jvms.status.attachableLocal")
+                    : i18n.get("jvms.status.localUnavailable");
+            case SAVED -> i18n.get("jvms.status.saved");
+            case JDP -> i18n.get("jvms.status.jdp");
+            case MANUAL -> selectedConnection.statusMessage();
+        };
     }
 
     private String localizedJdpStatus(String jdpStatusMessage) {
         String message = jdpStatusMessage == null ? "" : jdpStatusMessage.trim();
         if (message.equals("Refreshing JDP targets.")) {
             return i18n.get("jvms.jdp.status.refreshing");
+        }
+        if (message.equals("JDP discovery is not configured.")) {
+            return i18n.get("jvms.jdp.status.unconfigured");
+        }
+        if (message.startsWith("JDP discovery failed: ")) {
+            return i18n.format("jvms.jdp.status.failed",
+                    message.substring("JDP discovery failed: ".length()));
         }
         if (message.equals("No JDP targets found.")) {
             return i18n.get("jvms.jdp.status.none");

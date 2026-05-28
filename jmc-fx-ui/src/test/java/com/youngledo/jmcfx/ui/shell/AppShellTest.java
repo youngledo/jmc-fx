@@ -27,7 +27,10 @@ import org.xml.sax.SAXException;
 
 import com.youngledo.jmcfx.ui.util.DisplayFormats;
 import com.youngledo.jmcfx.domain.model.EventTypeSelection;
+import com.youngledo.jmcfx.domain.model.JdpJvmAdvertisement;
+import com.youngledo.jmcfx.domain.model.JvmConnection;
 import com.youngledo.jmcfx.domain.model.JvmConnectionSource;
+import com.youngledo.jmcfx.domain.model.SavedJvmTarget;
 import com.youngledo.jmcfx.domain.model.StackTreeNode;
 import com.youngledo.jmcfx.domain.model.RecordingSummary;
 import com.youngledo.jmcfx.domain.service.ProfilingService;
@@ -778,7 +781,14 @@ class AppShellTest {
                 "jvms.jdp.status.idle=JDP discovery is idle.",
                 "jvms.jdp.status.refreshing=Refreshing JDP advertisements...",
                 "jvms.jdp.status.none=No JDP advertisements found.",
-                "jvms.jdp.status.found=Found {0} JDP advertisement(s).");
+                "jvms.jdp.status.found=Found {0} JDP advertisement(s).",
+                "jvms.jdp.status.unconfigured=JDP discovery is not configured.",
+                "jvms.jdp.status.failed=JDP discovery failed: {0}",
+                "jvms.status.attachableLocal=Attachable local JVM.",
+                "jvms.status.localUnavailable=Local JVM is not attachable.",
+                "jvms.status.saved=Saved JMX target.",
+                "jvms.status.jdp=Discovered through JDP.",
+                "jvms.status.connected=Connected.");
         assertJvmBrowserJdpI18n(chinese, "jvms.manualNamePrompt=显示名称",
                 "jvms.saveTarget=保存目标",
                 "jvms.removeSavedTarget=移除保存项",
@@ -786,7 +796,14 @@ class AppShellTest {
                 "jvms.jdp.status.idle=JDP发现空闲。",
                 "jvms.jdp.status.refreshing=正在刷新JDP广播...",
                 "jvms.jdp.status.none=未发现JDP广播。",
-                "jvms.jdp.status.found=发现{0}个JDP广播。");
+                "jvms.jdp.status.found=发现{0}个JDP广播。",
+                "jvms.jdp.status.unconfigured=JDP 发现未配置。",
+                "jvms.jdp.status.failed=JDP 发现失败：{0}",
+                "jvms.status.attachableLocal=可连接的本地 JVM。",
+                "jvms.status.localUnavailable=本地 JVM 不可连接。",
+                "jvms.status.saved=已保存 JVM 目标。",
+                "jvms.status.jdp=通过 JDP 发现。",
+                "jvms.status.connected=已连接。");
     }
 
     @Test
@@ -798,6 +815,41 @@ class AppShellTest {
         assertTrue(controller.contains("formatJvmSource"), "Source column should use localized display labels");
         assertFalse(controller.contains("state().name()"), "State column must not show raw enum names");
         assertFalse(controller.contains("source().name()"), "Source column must not show raw enum names");
+    }
+
+    @Test
+    void jvmBrowserStatusTextIsLocalizedWithoutParsingEnglishDisplayText() {
+        I18n i18n = new I18n(Locale.SIMPLIFIED_CHINESE);
+        i18n.setLanguageMode(LanguageMode.CHINESE_SIMPLIFIED);
+        AppShellController controller = new AppShellController(
+                new AppShellViewModel(),
+                new FakeRecordingRepository(),
+                new FakeEventQueryService(),
+                new FakeRuleAnalysisService(),
+                null, null, null,
+                null, null, null,
+                null, null, null,
+                null, null, null,
+                i18n);
+
+        assertEquals("已保存 JVM 目标。", controller.selectedConnectionStatusText(
+                JvmConnection.saved(new SavedJvmTarget("saved-1", "prod",
+                        "service:jmx:rmi:///jndi/rmi://localhost:9010/jmxrmi", null)),
+                ""));
+        assertEquals("通过 JDP 发现。", controller.selectedConnectionStatusText(
+                JvmConnection.jdp(new JdpJvmAdvertisement("jdp-1", "demo.Main",
+                        "service:jmx:rmi:///jndi/rmi://localhost:9011/jmxrmi", "localhost", 9011,
+                        "26.0.1")),
+                ""));
+        assertEquals("已连接。", controller.selectedConnectionStatusText(
+                JvmConnection.saved(new SavedJvmTarget("saved-2", "dev",
+                        "service:jmx:rmi:///jndi/rmi://localhost:9012/jmxrmi", null))
+                        .asConnected("service:jmx:rmi:///jndi/rmi://localhost:9012/jmxrmi"),
+                ""));
+        assertEquals("JDP 发现未配置。", controller.selectedConnectionStatusText(null,
+                "JDP discovery is not configured."));
+        assertEquals("JDP 发现失败：network down", controller.selectedConnectionStatusText(null,
+                "JDP discovery failed: network down"));
     }
 
     @Test
