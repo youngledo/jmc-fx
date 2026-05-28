@@ -1,6 +1,7 @@
 package com.youngledo.jmcfx.ui.jvms;
 
 import java.nio.file.Path;
+import java.time.Duration;
 import java.time.Instant;
 import java.time.LocalDateTime;
 import java.time.ZoneOffset;
@@ -39,6 +40,7 @@ import com.youngledo.jmcfx.domain.model.MBeanOperationInfo;
 import com.youngledo.jmcfx.domain.model.MBeanOperationParameter;
 import com.youngledo.jmcfx.domain.model.MBeanOperationRequest;
 import com.youngledo.jmcfx.domain.model.MBeanOperationResult;
+import com.youngledo.jmcfx.domain.model.SavedJvmTarget;
 import com.youngledo.jmcfx.domain.model.TriggerAction;
 import com.youngledo.jmcfx.domain.model.TriggerActionType;
 import com.youngledo.jmcfx.domain.model.TriggerEvent;
@@ -48,9 +50,11 @@ import com.youngledo.jmcfx.domain.service.DiagnosticCommandService;
 import com.youngledo.jmcfx.domain.service.FlightRecordingService;
 import com.youngledo.jmcfx.domain.service.JmcFxException;
 import com.youngledo.jmcfx.domain.service.JmxConnectionService;
+import com.youngledo.jmcfx.domain.service.JdpDiscoveryService;
 import com.youngledo.jmcfx.domain.service.JvmDiscoveryService;
 import com.youngledo.jmcfx.domain.service.LiveMetricService;
 import com.youngledo.jmcfx.domain.service.MBeanBrowserService;
+import com.youngledo.jmcfx.domain.service.SavedJvmTargetRepository;
 
 import javafx.beans.property.BooleanProperty;
 import javafx.beans.property.ObjectProperty;
@@ -64,6 +68,7 @@ import javafx.collections.ObservableList;
 public class JvmBrowserViewModel implements AutoCloseable {
 
     private static final Logger LOGGER = LogManager.getLogger(JvmBrowserViewModel.class);
+    private static final Duration JDP_DISCOVERY_TIMEOUT = Duration.ofMillis(750);
     private static final DateTimeFormatter RECORDING_NAME_TIMESTAMP =
             DateTimeFormatter.ofPattern("yyyyMMddHHmmss");
 
@@ -73,6 +78,8 @@ public class JvmBrowserViewModel implements AutoCloseable {
     private final MBeanBrowserService mBeanBrowserService;
     private final DiagnosticCommandService diagnosticCommandService;
     private final LiveMetricService liveMetricService;
+    private final SavedJvmTargetRepository savedTargetRepository;
+    private final JdpDiscoveryService jdpDiscoveryService;
     private final JvmBrowserExecutor executor;
     private final Consumer<Runnable> fxRunner;
     private final Consumer<Path> savedRecordingHandler;
@@ -96,7 +103,10 @@ public class JvmBrowserViewModel implements AutoCloseable {
     private final ObjectProperty<TriggerActionType> selectedTriggerActionType =
             new SimpleObjectProperty<>(TriggerActionType.NOTIFY);
     private final ObjectProperty<DiagnosticCommandInfo> selectedTriggerCommand = new SimpleObjectProperty<>();
+    private final StringProperty manualConnectionName = new SimpleStringProperty("");
     private final StringProperty manualConnectionUrl = new SimpleStringProperty("");
+    private final BooleanProperty jdpRefreshInProgress = new SimpleBooleanProperty(false);
+    private final StringProperty jdpStatusMessage = new SimpleStringProperty("Idle.");
     private final StringProperty statusMessage = new SimpleStringProperty("");
     private final StringProperty errorMessage = new SimpleStringProperty("");
     private final StringProperty mbeanErrorMessage = new SimpleStringProperty("");
@@ -129,6 +139,7 @@ public class JvmBrowserViewModel implements AutoCloseable {
     private final BooleanProperty triggerLoading = new SimpleBooleanProperty(false);
     private final BooleanProperty triggerError = new SimpleBooleanProperty(false);
     private final Map<Long, JvmConnection> sessionStartedRecordings = new HashMap<>();
+    private final Map<String, JvmConnection> liveConnectionsByStableKey = new HashMap<>();
     private int pendingWorkCount;
     private long sessionLoadGeneration;
     private long mbeanRequestGeneration;
@@ -170,12 +181,23 @@ public class JvmBrowserViewModel implements AutoCloseable {
             FlightRecordingService flightRecordingService, MBeanBrowserService mBeanBrowserService,
             DiagnosticCommandService diagnosticCommandService, LiveMetricService liveMetricService,
             JvmBrowserExecutor executor, Consumer<Runnable> fxRunner, Consumer<Path> savedRecordingHandler) {
+        this(discoveryService, connectionService, flightRecordingService, mBeanBrowserService,
+                diagnosticCommandService, liveMetricService, null, null, executor, fxRunner, savedRecordingHandler);
+    }
+
+    public JvmBrowserViewModel(JvmDiscoveryService discoveryService, JmxConnectionService connectionService,
+            FlightRecordingService flightRecordingService, MBeanBrowserService mBeanBrowserService,
+            DiagnosticCommandService diagnosticCommandService, LiveMetricService liveMetricService,
+            SavedJvmTargetRepository savedTargetRepository, JdpDiscoveryService jdpDiscoveryService,
+            JvmBrowserExecutor executor, Consumer<Runnable> fxRunner, Consumer<Path> savedRecordingHandler) {
         this.discoveryService = Objects.requireNonNull(discoveryService, "discoveryService");
         this.connectionService = Objects.requireNonNull(connectionService, "connectionService");
         this.flightRecordingService = flightRecordingService;
         this.mBeanBrowserService = mBeanBrowserService;
         this.diagnosticCommandService = diagnosticCommandService;
         this.liveMetricService = liveMetricService;
+        this.savedTargetRepository = savedTargetRepository;
+        this.jdpDiscoveryService = jdpDiscoveryService;
         this.executor = Objects.requireNonNull(executor, "executor");
         this.fxRunner = Objects.requireNonNull(fxRunner, "fxRunner");
         this.savedRecordingHandler = Objects.requireNonNull(savedRecordingHandler, "savedRecordingHandler");
@@ -203,6 +225,18 @@ public class JvmBrowserViewModel implements AutoCloseable {
 
     public StringProperty manualConnectionUrlProperty() {
         return manualConnectionUrl;
+    }
+
+    public StringProperty manualConnectionNameProperty() {
+        return manualConnectionName;
+    }
+
+    public BooleanProperty jdpRefreshInProgressProperty() {
+        return jdpRefreshInProgress;
+    }
+
+    public StringProperty jdpStatusMessageProperty() {
+        return jdpStatusMessage;
     }
 
     public StringProperty statusMessageProperty() {
@@ -394,8 +428,15 @@ public class JvmBrowserViewModel implements AutoCloseable {
         executor.execute(() -> {
             try {
                 List<JvmConnection> discovered = discoveryService.discoverLocalJvms();
+                if (savedTargetRepository != null) {
+                    discovered = new ArrayList<>(discovered);
+                    discovered.addAll(savedTargetRepository.findAll().stream()
+                            .map(JvmConnection::saved)
+                            .toList());
+                }
+                List<JvmConnection> refreshed = discovered;
                 runOnFx(() -> {
-                    mergeDiscovered(discovered);
+                    mergeDiscovered(refreshed);
                     refreshCompleted.set(true);
                     statusMessage.set("");
                     clearError();
@@ -423,11 +464,95 @@ public class JvmBrowserViewModel implements AutoCloseable {
             errorMessage.set("Enter a JMX service URL or select an attachable JVM.");
             return;
         }
-        connectLocal(selected);
+        if (selected.source() == JvmConnectionSource.LOCAL) {
+            connectLocal(selected);
+        } else {
+            connectRemote(selected);
+        }
     }
 
     public void connectManual() {
         connectSelectedOrManual();
+    }
+
+    public void saveManualTarget() {
+        if (savedTargetRepository == null) {
+            error.set(true);
+            errorMessage.set("Saved JVM targets are not configured.");
+            return;
+        }
+        String url = Objects.requireNonNullElse(manualConnectionUrl.get(), "").trim();
+        if (url.isBlank()) {
+            error.set(true);
+            errorMessage.set("Enter a JMX service URL to save.");
+            return;
+        }
+        String name = Objects.requireNonNullElse(manualConnectionName.get(), "").trim();
+        if (name.isBlank()) {
+            name = url;
+        }
+        try {
+            SavedJvmTarget saved = savedTargetRepository.save(new SavedJvmTarget("", name, url, null));
+            JvmConnection savedConnection = JvmConnection.saved(saved);
+            replaceSavedCandidate(savedConnection);
+            manualConnectionName.set("");
+            manualConnectionUrl.set(url);
+            statusMessage.set("Saved " + savedConnection.displayName() + ".");
+            clearError();
+        } catch (RuntimeException exception) {
+            logActionFailure("Saved JVM target action failed", exception);
+            error.set(true);
+            errorMessage.set(displayMessage(exception));
+        }
+    }
+
+    public void removeSelectedSavedTarget() {
+        JvmConnection selected = selectedConnection.get();
+        if (savedTargetRepository == null || selected == null || selected.source() != JvmConnectionSource.SAVED
+                || selected.connected()) {
+            error.set(true);
+            errorMessage.set("Select a disconnected saved JVM target to remove.");
+            return;
+        }
+        try {
+            savedTargetRepository.deleteById(selected.id());
+            connections.remove(selected);
+            selectedConnection.set(connections.isEmpty() ? null : connections.getFirst());
+            statusMessage.set("Removed saved JVM target.");
+            clearError();
+        } catch (RuntimeException exception) {
+            logActionFailure("Saved JVM target action failed", exception);
+            error.set(true);
+            errorMessage.set(displayMessage(exception));
+        }
+    }
+
+    public void refreshJdp() {
+        if (jdpDiscoveryService == null) {
+            jdpRefreshInProgress.set(false);
+            jdpStatusMessage.set("JDP discovery is not configured.");
+            return;
+        }
+        jdpRefreshInProgress.set(true);
+        jdpStatusMessage.set("Refreshing JDP targets.");
+        executor.execute(() -> {
+            try {
+                List<JvmConnection> discovered = jdpDiscoveryService.discover(JDP_DISCOVERY_TIMEOUT).stream()
+                        .map(JvmConnection::jdp)
+                        .toList();
+                runOnFx(() -> {
+                    mergeJdp(discovered);
+                    jdpStatusMessage.set(jdpStatus(discovered.size()));
+                    jdpRefreshInProgress.set(false);
+                });
+            } catch (RuntimeException exception) {
+                logActionFailure("JDP discovery failed", exception);
+                runOnFx(() -> {
+                    jdpStatusMessage.set("JDP discovery failed: " + displayMessage(exception));
+                    jdpRefreshInProgress.set(false);
+                });
+            }
+        });
     }
 
     public void disconnectSelected() {
@@ -440,9 +565,10 @@ public class JvmBrowserViewModel implements AutoCloseable {
         beginWork();
         executor.execute(() -> {
             try {
-                connectionService.disconnect(selected);
+                connectionService.disconnect(liveConnectionFor(selected));
                 JvmConnection disconnected = selected.asDisconnected("Disconnected");
                 runOnFx(() -> {
+                    liveConnectionsByStableKey.remove(stableKey(selected));
                     replaceOrAdd(disconnected, "Disconnected.");
                     selectedSession.set(null);
                     clearRecordingControl();
@@ -672,8 +798,11 @@ public class JvmBrowserViewModel implements AutoCloseable {
     }
 
     public static boolean canConnectJvm(JvmConnection selected) {
-        return selected != null && !selected.connected() && selected.source() == JvmConnectionSource.LOCAL
-                && selected.attachable();
+        return selected != null && !selected.connected()
+                && ((selected.source() == JvmConnectionSource.LOCAL && selected.attachable())
+                        || ((selected.source() == JvmConnectionSource.SAVED
+                                || selected.source() == JvmConnectionSource.JDP)
+                                && !selected.connectionUrl().isBlank()));
     }
 
     private void connectManual(String url) {
@@ -707,6 +836,25 @@ public class JvmBrowserViewModel implements AutoCloseable {
         });
     }
 
+    private void connectRemote(JvmConnection selected) {
+        beginWork();
+        executor.execute(() -> {
+            try {
+                JvmConnection liveConnection = connectionService.connect(selected.connectionUrl());
+                JvmConnection connected = selected.asConnected(selected.connectionUrl());
+                if (selected.source() == JvmConnectionSource.SAVED && savedTargetRepository != null) {
+                    savedTargetRepository.markConnected(selected.id(), Instant.now());
+                }
+                runOnFx(() -> {
+                    liveConnectionsByStableKey.put(stableKey(connected), liveConnection);
+                    replaceOrAdd(connected, "Connected to " + selected.displayName() + ".");
+                });
+            } catch (RuntimeException exception) {
+                fail(exception);
+            }
+        });
+    }
+
     private void mergeDiscovered(List<JvmConnection> discovered) {
         JvmConnection selectedBefore = selectedConnection.get();
         String selectedKey = stableKey(selectedBefore);
@@ -718,7 +866,10 @@ public class JvmBrowserViewModel implements AutoCloseable {
         for (JvmConnection existing : connections) {
             if (existing.connected() || existing.source() == JvmConnectionSource.MANUAL) {
                 merged.add(existing);
-            } else if (existing.source() == JvmConnectionSource.LOCAL
+            } else if (existing.source() == JvmConnectionSource.JDP) {
+                merged.add(existing);
+            } else if ((existing.source() == JvmConnectionSource.LOCAL
+                    || existing.source() == JvmConnectionSource.SAVED)
                     && !discoveredKeys.contains(stableKey(existing))) {
                 selectedKey = clearSelectedIfRemoved(selectedKey, existing);
             }
@@ -743,6 +894,45 @@ public class JvmBrowserViewModel implements AutoCloseable {
         } else {
             selectedConnection.set(connections.isEmpty() ? null : connections.getFirst());
         }
+    }
+
+    private void mergeJdp(List<JvmConnection> discovered) {
+        JvmConnection selectedBefore = selectedConnection.get();
+        String selectedKey = stableKey(selectedBefore);
+        Set<String> discoveredKeys = discovered.stream()
+                .map(JvmBrowserViewModel::stableKey)
+                .collect(Collectors.toSet());
+        List<JvmConnection> merged = new ArrayList<>();
+
+        for (JvmConnection existing : connections) {
+            if (existing.connected() || existing.source() != JvmConnectionSource.JDP) {
+                merged.add(existing);
+            } else if (!discoveredKeys.contains(stableKey(existing))) {
+                selectedKey = clearSelectedIfRemoved(selectedKey, existing);
+            }
+        }
+
+        Set<String> protectedKeys = merged.stream().map(JvmBrowserViewModel::stableKey).collect(Collectors.toSet());
+        for (JvmConnection next : discovered) {
+            String nextKey = stableKey(next);
+            if (!protectedKeys.contains(nextKey)) {
+                merged.add(next);
+                protectedKeys.add(nextKey);
+            }
+        }
+
+        connections.setAll(merged);
+        restoreSelection(selectedKey);
+    }
+
+    private void replaceSavedCandidate(JvmConnection connection) {
+        int index = indexOfStable(connection);
+        if (index >= 0) {
+            connections.set(index, connection);
+        } else {
+            connections.add(connection);
+        }
+        selectedConnection.set(connection);
     }
 
     private static String clearSelectedIfRemoved(String selectedKey, JvmConnection removed) {
@@ -779,7 +969,35 @@ public class JvmBrowserViewModel implements AutoCloseable {
         if (connection.source() == JvmConnectionSource.LOCAL && !connection.pid().isBlank()) {
             return "local:" + connection.pid();
         }
-        return connection.source() + ":" + connection.id();
+        if (connection.source() == JvmConnectionSource.SAVED) {
+            return "saved:" + connection.id();
+        }
+        if (connection.source() == JvmConnectionSource.JDP) {
+            String id = connection.id().isBlank() ? connection.connectionUrl() : connection.id();
+            return "jdp:" + id;
+        }
+        return "manual:" + connection.id();
+    }
+
+    private void restoreSelection(String selectedKey) {
+        if (selectedKey != null) {
+            selectedConnection.set(connections.stream()
+                    .filter(connection -> selectedKey.equals(stableKey(connection)))
+                    .findFirst()
+                    .orElse(connections.isEmpty() ? null : connections.getFirst()));
+        } else {
+            selectedConnection.set(connections.isEmpty() ? null : connections.getFirst());
+        }
+    }
+
+    private static String jdpStatus(int count) {
+        if (count == 0) {
+            return "No JDP targets found.";
+        }
+        if (count == 1) {
+            return "Found 1 JDP target.";
+        }
+        return "Found " + count + " JDP targets.";
     }
 
     private void beginWork() {
@@ -815,7 +1033,7 @@ public class JvmBrowserViewModel implements AutoCloseable {
         sessionLoading.set(true);
         executor.execute(() -> {
             try {
-                JvmSessionSnapshot snapshot = connectionService.sessionSnapshot(connection);
+                JvmSessionSnapshot snapshot = connectionService.sessionSnapshot(liveConnectionFor(connection));
                 runOnFx(() -> {
                     if (!isCurrentSessionLoad(generation, connection)) {
                         return;
@@ -851,6 +1069,13 @@ public class JvmBrowserViewModel implements AutoCloseable {
     private void clearSessionError() {
         sessionError.set(false);
         sessionErrorMessage.set("");
+    }
+
+    private JvmConnection liveConnectionFor(JvmConnection connection) {
+        if (connection == null) {
+            return null;
+        }
+        return liveConnectionsByStableKey.getOrDefault(stableKey(connection), connection);
     }
 
     private void loadRecordingControl(JvmSessionSnapshot snapshot) {

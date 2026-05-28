@@ -6,6 +6,7 @@ import static org.junit.jupiter.api.Assertions.assertNull;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 
 import java.nio.file.Path;
+import java.time.Duration;
 import java.time.Instant;
 import java.util.ArrayDeque;
 import java.util.ArrayList;
@@ -34,6 +35,7 @@ import com.youngledo.jmcfx.domain.model.JvmConnectionSource;
 import com.youngledo.jmcfx.domain.model.JvmConnectionState;
 import com.youngledo.jmcfx.domain.model.JvmRuntimeSnapshot;
 import com.youngledo.jmcfx.domain.model.JvmSessionSnapshot;
+import com.youngledo.jmcfx.domain.model.JdpJvmAdvertisement;
 import com.youngledo.jmcfx.domain.model.LiveMetricDefinition;
 import com.youngledo.jmcfx.domain.model.LiveMetricKind;
 import com.youngledo.jmcfx.domain.model.LiveMetricSnapshot;
@@ -43,16 +45,19 @@ import com.youngledo.jmcfx.domain.model.MBeanOperationInfo;
 import com.youngledo.jmcfx.domain.model.MBeanOperationParameter;
 import com.youngledo.jmcfx.domain.model.MBeanOperationRequest;
 import com.youngledo.jmcfx.domain.model.MBeanOperationResult;
+import com.youngledo.jmcfx.domain.model.SavedJvmTarget;
 import com.youngledo.jmcfx.domain.model.TriggerActionType;
 import com.youngledo.jmcfx.domain.model.TriggerEvent;
 import com.youngledo.jmcfx.domain.model.TriggerOperator;
 import com.youngledo.jmcfx.domain.service.JmcFxException;
 import com.youngledo.jmcfx.testsupport.FakeDiagnosticCommandService;
 import com.youngledo.jmcfx.testsupport.FakeFlightRecordingService;
+import com.youngledo.jmcfx.testsupport.FakeJdpDiscoveryService;
 import com.youngledo.jmcfx.testsupport.FakeJmxConnectionService;
 import com.youngledo.jmcfx.testsupport.FakeJvmDiscoveryService;
 import com.youngledo.jmcfx.testsupport.FakeLiveMetricService;
 import com.youngledo.jmcfx.testsupport.FakeMBeanBrowserService;
+import com.youngledo.jmcfx.testsupport.FakeSavedJvmTargetRepository;
 
 class JvmBrowserViewModelTest {
 
@@ -207,6 +212,198 @@ class JvmBrowserViewModelTest {
         assertEquals(1, viewModel.connectionsProperty().size());
         assertEquals(JvmConnectionSource.MANUAL, viewModel.connectionsProperty().getFirst().source());
         assertTrue(viewModel.connectionsProperty().getFirst().connected());
+    }
+
+    @Test
+    void refreshIncludesSavedTargetsWithoutDroppingConnectedManualOrJdpRows() {
+        FakeJvmDiscoveryService discovery = new FakeJvmDiscoveryService();
+        discovery.setConnections(List.of(localConnection("42", "demo.Main")));
+        FakeSavedJvmTargetRepository savedTargets = new FakeSavedJvmTargetRepository();
+        savedTargets.save(new SavedJvmTarget("saved-1", "Production", "service:jmx:rmi:///prod", null));
+        FakeJdpDiscoveryService jdp = new FakeJdpDiscoveryService();
+        jdp.add(new JdpJvmAdvertisement("jdp-1", "Discovered", "service:jmx:rmi:///jdp", "host", 7091,
+                "26.0.1"));
+        JvmBrowserViewModel viewModel = viewModel(discovery, new FakeJmxConnectionService(), savedTargets, jdp);
+        viewModel.manualConnectionUrlProperty().set("service:jmx:rmi:///manual");
+        viewModel.connectSelectedOrManual();
+        viewModel.refreshJdp();
+
+        viewModel.refresh();
+
+        assertEquals(List.of(JvmConnectionSource.MANUAL, JvmConnectionSource.JDP, JvmConnectionSource.LOCAL,
+                JvmConnectionSource.SAVED), viewModel.connectionsProperty().stream()
+                        .map(JvmConnection::source)
+                        .toList());
+        assertTrue(viewModel.connectionsProperty().stream()
+                .anyMatch(connection -> connection.source() == JvmConnectionSource.MANUAL && connection.connected()));
+        assertTrue(viewModel.connectionsProperty().stream()
+                .anyMatch(connection -> connection.source() == JvmConnectionSource.SAVED
+                        && connection.id().equals("saved-1")));
+    }
+
+    @Test
+    void saveManualTargetAddsSavedCandidateClearsNameAndRejectsBlankUrl() {
+        FakeSavedJvmTargetRepository savedTargets = new FakeSavedJvmTargetRepository();
+        JvmBrowserViewModel viewModel = viewModel(new FakeJvmDiscoveryService(), new FakeJmxConnectionService(),
+                savedTargets, new FakeJdpDiscoveryService());
+        viewModel.manualConnectionNameProperty().set(" Production ");
+        viewModel.manualConnectionUrlProperty().set(" service:jmx:rmi:///prod ");
+
+        viewModel.saveManualTarget();
+
+        assertEquals(1, viewModel.connectionsProperty().size());
+        assertEquals(JvmConnectionSource.SAVED, viewModel.connectionsProperty().getFirst().source());
+        assertEquals("Production", viewModel.connectionsProperty().getFirst().displayName());
+        assertEquals("", viewModel.manualConnectionNameProperty().get());
+        assertEquals("service:jmx:rmi:///prod", viewModel.manualConnectionUrlProperty().get());
+
+        viewModel.manualConnectionUrlProperty().set(" ");
+        viewModel.saveManualTarget();
+
+        assertTrue(viewModel.errorProperty().get());
+        assertEquals("Enter a JMX service URL to save.", viewModel.errorMessageProperty().get());
+        assertEquals(1, savedTargets.findAll().size());
+    }
+
+    @Test
+    void saveManualTargetUsesUrlAsNameWhenNameIsBlank() {
+        FakeSavedJvmTargetRepository savedTargets = new FakeSavedJvmTargetRepository();
+        JvmBrowserViewModel viewModel = viewModel(new FakeJvmDiscoveryService(), new FakeJmxConnectionService(),
+                savedTargets, new FakeJdpDiscoveryService());
+        viewModel.manualConnectionUrlProperty().set("service:jmx:rmi:///prod");
+
+        viewModel.saveManualTarget();
+
+        assertEquals("service:jmx:rmi:///prod", viewModel.connectionsProperty().getFirst().displayName());
+        assertEquals("service:jmx:rmi:///prod", savedTargets.findAll().getFirst().displayName());
+    }
+
+    @Test
+    void removeSelectedSavedTargetRemovesOnlyDisconnectedSavedTarget() {
+        FakeSavedJvmTargetRepository savedTargets = new FakeSavedJvmTargetRepository();
+        savedTargets.save(new SavedJvmTarget("saved-1", "Production", "service:jmx:rmi:///prod", null));
+        JvmBrowserViewModel viewModel = viewModel(new FakeJvmDiscoveryService(), new FakeJmxConnectionService(),
+                savedTargets, new FakeJdpDiscoveryService());
+        viewModel.refresh();
+        JvmConnection saved = viewModel.connectionsProperty().getFirst();
+        viewModel.selectedConnectionProperty().set(null);
+
+        viewModel.removeSelectedSavedTarget();
+
+        assertEquals(1, savedTargets.findAll().size());
+
+        viewModel.selectedConnectionProperty().set(saved);
+        viewModel.removeSelectedSavedTarget();
+
+        assertTrue(viewModel.connectionsProperty().isEmpty());
+        assertTrue(savedTargets.findAll().isEmpty());
+    }
+
+    @Test
+    void removeSelectedSavedTargetDoesNotRemoveConnectedSavedTarget() {
+        FakeSavedJvmTargetRepository savedTargets = new FakeSavedJvmTargetRepository();
+        savedTargets.save(new SavedJvmTarget("saved-1", "Production", "service:jmx:rmi:///prod", null));
+        JvmBrowserViewModel viewModel = viewModel(new FakeJvmDiscoveryService(), new FakeJmxConnectionService(),
+                savedTargets, new FakeJdpDiscoveryService());
+        viewModel.refresh();
+        viewModel.connectSelected();
+
+        viewModel.removeSelectedSavedTarget();
+
+        assertEquals(1, viewModel.connectionsProperty().size());
+        assertEquals(1, savedTargets.findAll().size());
+        assertTrue(viewModel.errorProperty().get());
+        assertEquals("Select a disconnected saved JVM target to remove.", viewModel.errorMessageProperty().get());
+    }
+
+    @Test
+    void refreshJdpAddsCandidatesRecordsTimeoutAndClearsProgress() {
+        FakeJdpDiscoveryService jdp = new FakeJdpDiscoveryService();
+        jdp.add(new JdpJvmAdvertisement("jdp-1", "Discovered", "service:jmx:rmi:///jdp", "host", 7091,
+                "26.0.1"));
+        JvmBrowserViewModel viewModel = viewModel(new FakeJvmDiscoveryService(), new FakeJmxConnectionService(),
+                new FakeSavedJvmTargetRepository(), jdp);
+
+        viewModel.refreshJdp();
+
+        assertEquals(Duration.ofMillis(750), jdp.lastTimeout());
+        assertFalse(viewModel.jdpRefreshInProgressProperty().get());
+        assertEquals("Found 1 JDP target.", viewModel.jdpStatusMessageProperty().get());
+        assertEquals(JvmConnectionSource.JDP, viewModel.connectionsProperty().getFirst().source());
+    }
+
+    @Test
+    void refreshJdpHandlesNoServiceAndFailureAndClearsProgress() {
+        JvmBrowserViewModel noService = viewModel(new FakeJvmDiscoveryService(), new FakeJmxConnectionService(),
+                new FakeSavedJvmTargetRepository(), null);
+
+        noService.refreshJdp();
+
+        assertFalse(noService.jdpRefreshInProgressProperty().get());
+        assertEquals("JDP discovery is not configured.", noService.jdpStatusMessageProperty().get());
+
+        FakeJdpDiscoveryService failingJdp = new FakeJdpDiscoveryService();
+        failingJdp.failWith(new IllegalStateException("network unavailable"));
+        JvmBrowserViewModel failing = viewModel(new FakeJvmDiscoveryService(), new FakeJmxConnectionService(),
+                new FakeSavedJvmTargetRepository(), failingJdp);
+
+        failing.refreshJdp();
+
+        assertFalse(failing.jdpRefreshInProgressProperty().get());
+        assertEquals("JDP discovery failed: network unavailable", failing.jdpStatusMessageProperty().get());
+        assertTrue(failing.connectionsProperty().isEmpty());
+    }
+
+    @Test
+    void connectSelectedForSavedAndJdpUsesRemoteConnectAndMarksSavedTargetConnected() {
+        FakeSavedJvmTargetRepository savedTargets = new FakeSavedJvmTargetRepository();
+        savedTargets.save(new SavedJvmTarget("saved-1", "Production", "service:jmx:rmi:///prod", null));
+        FakeJdpDiscoveryService jdp = new FakeJdpDiscoveryService();
+        jdp.add(new JdpJvmAdvertisement("jdp-1", "Discovered", "service:jmx:rmi:///jdp", "host", 7091,
+                "26.0.1"));
+        CapturingRemoteJmxConnectionService jmx = new CapturingRemoteJmxConnectionService();
+        JvmBrowserViewModel viewModel = viewModel(new FakeJvmDiscoveryService(), jmx, savedTargets, jdp);
+        viewModel.refresh();
+        viewModel.refreshJdp();
+        JvmConnection saved = viewModel.connectionsProperty().stream()
+                .filter(connection -> connection.source() == JvmConnectionSource.SAVED)
+                .findFirst()
+                .orElseThrow();
+
+        viewModel.selectedConnectionProperty().set(saved);
+        viewModel.connectSelected();
+
+        assertEquals("service:jmx:rmi:///prod", jmx.remoteConnectionUrls.getFirst());
+        assertTrue(savedTargets.findAll().getFirst().lastConnectedAt() != null);
+
+        JvmConnection jdpConnection = viewModel.connectionsProperty().stream()
+                .filter(connection -> connection.source() == JvmConnectionSource.JDP)
+                .findFirst()
+                .orElseThrow();
+        viewModel.selectedConnectionProperty().set(jdpConnection);
+        viewModel.connectSelected();
+
+        assertEquals("service:jmx:rmi:///jdp", jmx.remoteConnectionUrls.getLast());
+    }
+
+    @Test
+    void savedConnectionLoadsSessionThroughRemoteConnectionReturnedByService() {
+        FakeSavedJvmTargetRepository savedTargets = new FakeSavedJvmTargetRepository();
+        savedTargets.save(new SavedJvmTarget("saved-1", "Production", "service:jmx:rmi:///prod", null));
+        CapturingRemoteJmxConnectionService jmx = new CapturingRemoteJmxConnectionService();
+        JvmBrowserViewModel viewModel = viewModel(new FakeJvmDiscoveryService(), jmx, savedTargets,
+                new FakeJdpDiscoveryService());
+        viewModel.refresh();
+        JvmConnection saved = viewModel.connectionsProperty().getFirst();
+        JvmConnection live = new JvmConnection("remote-live", "Production", saved.connectionUrl(), true,
+                JvmConnectionSource.MANUAL, JvmConnectionState.CONNECTED, "Connected");
+        jmx.connectedToReturn = live;
+        jmx.setSessionSnapshot("remote-live", sessionSnapshot(live));
+
+        viewModel.connectSelected();
+
+        assertEquals("OpenJDK 64-Bit Server VM", viewModel.selectedSessionProperty().get().runtime().vmName());
+        assertEquals("saved-1", viewModel.selectedConnectionProperty().get().id());
     }
 
     @Test
@@ -1063,6 +1260,12 @@ class JvmBrowserViewModelTest {
                 new DirectJvmBrowserExecutor(), Runnable::run, path -> { });
     }
 
+    private static JvmBrowserViewModel viewModel(FakeJvmDiscoveryService discovery, FakeJmxConnectionService jmx,
+            FakeSavedJvmTargetRepository savedTargets, FakeJdpDiscoveryService jdp) {
+        return new JvmBrowserViewModel(discovery, jmx, null, null, null, null, savedTargets, jdp,
+                new DirectJvmBrowserExecutor(), Runnable::run, path -> { });
+    }
+
     private static JvmConnection localConnection(String id, String name) {
         return JvmConnection.local(id, name, "26.0.1", true);
     }
@@ -1195,6 +1398,20 @@ class JvmBrowserViewModelTest {
         public MBeanOperationResult invoke(MBeanOperationRequest request) {
             lastRequest = request;
             return super.invoke(request);
+        }
+    }
+
+    private static final class CapturingRemoteJmxConnectionService extends FakeJmxConnectionService {
+        private final List<String> remoteConnectionUrls = new ArrayList<>();
+        private JvmConnection connectedToReturn;
+
+        @Override
+        public JvmConnection connect(String connectionUrl) {
+            remoteConnectionUrls.add(connectionUrl);
+            if (connectedToReturn != null) {
+                return connectedToReturn;
+            }
+            return super.connect(connectionUrl);
         }
     }
 }
