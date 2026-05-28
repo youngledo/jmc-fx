@@ -87,15 +87,26 @@ public class JmcAdvancedJfrAnalysisService implements AdvancedJfrAnalysisService
         aggregateOutsideTlabPressure(data.events(), issues);
         aggregateRetainedObjects(data.events(), issues);
 
-        List<MemoryIssue> allIssues = issues.values().stream()
+        return memoryAnalysisReport(issues.values().stream()
                 .map(MemoryIssueAccumulator::toIssue)
+                .toList(), issueLimit);
+    }
+
+    MemoryAnalysisReport memoryAnalysisReport(List<MemoryIssue> issues, int issueLimit) {
+        List<MemoryIssue> allIssues = issues.stream()
                 .sorted(Comparator.comparingInt((MemoryIssue issue) -> severityRank(issue.severity())).reversed()
                         .thenComparing(Comparator.comparingLong(MemoryIssue::estimatedBytes).reversed())
                         .thenComparing(Comparator.comparingLong(MemoryIssue::count).reversed())
                         .thenComparing(MemoryIssue::subject))
                 .toList();
-        long totalEstimatedBytes = allIssues.stream().mapToLong(MemoryIssue::estimatedBytes).sum();
-        long totalCount = allIssues.stream().mapToLong(MemoryIssue::count).sum();
+        long totalEstimatedBytes = allIssues.stream()
+                .filter(JmcAdvancedJfrAnalysisService::contributesToMemoryTotals)
+                .mapToLong(MemoryIssue::estimatedBytes)
+                .sum();
+        long totalCount = allIssues.stream()
+                .filter(JmcAdvancedJfrAnalysisService::contributesToMemoryTotals)
+                .mapToLong(MemoryIssue::count)
+                .sum();
         return new MemoryAnalysisReport(totalEstimatedBytes, totalCount,
                 allIssues.stream().limit(issueLimit).toList());
     }
@@ -176,9 +187,25 @@ public class JmcAdvancedJfrAnalysisService implements AdvancedJfrAnalysisService
 
     private void aggregateRetainedObjects(IItemCollection events,
             Map<MemoryIssueKey, MemoryIssueAccumulator> issues) {
-        aggregateByType(events, ItemFilters.type(JdkTypeIDs.OLD_OBJECT_SAMPLE), JdkAttributes.OLD_OBJECT_CLASS,
-                JdkAttributes.SAMPLE_WEIGHT, MemoryIssueCategory.RETAINED_OBJECT,
-                "Retained old-object samples", "Inspect retaining paths for this object type.", issues);
+        IItemCollection filtered = events.apply(ItemFilters.type(JdkTypeIDs.OLD_OBJECT_SAMPLE));
+        for (IItemIterable iterable : filtered) {
+            IMemberAccessor<IMCType, IItem> subjectAccessor = JdkAttributes.OLD_OBJECT_CLASS.getAccessor(
+                    iterable.getType());
+            IMemberAccessor<IQuantity, IItem> byteAccessor = JdkAttributes.SAMPLE_WEIGHT.getAccessor(
+                    iterable.getType());
+            if (subjectAccessor == null) {
+                continue;
+            }
+            for (IItem item : iterable) {
+                String subject = subject(subjectAccessor.getMember(item));
+                IQuantity weight = byteAccessor == null ? null : byteAccessor.getMember(item);
+                long bytes = bytes(weight);
+                MemoryIssueKey key = new MemoryIssueKey(MemoryIssueCategory.RETAINED_OBJECT, subject);
+                issues.computeIfAbsent(key, ignored -> new MemoryIssueAccumulator(MemoryIssueCategory.RETAINED_OBJECT,
+                        subject, "Retained old-object samples", "Inspect retaining paths for this object type."))
+                        .addRetainedSample(bytes, weight != null && bytes > 0);
+            }
+        }
     }
 
     private <S> void aggregateByType(IItemCollection events, IItemFilter filter,
@@ -248,6 +275,19 @@ public class JmcAdvancedJfrAnalysisService implements AdvancedJfrAnalysisService
         return Math.min(59, bytes * 60.0 / WARNING_BYTES);
     }
 
+    MemoryIssue retainedObjectIssue(String subject, long estimatedBytes, long sampleCount) {
+        MemoryIssueAccumulator accumulator = new MemoryIssueAccumulator(MemoryIssueCategory.RETAINED_OBJECT,
+                subject, "Retained old-object samples", "Inspect retaining paths for this object type.");
+        for (long i = 0; i < sampleCount; i++) {
+            accumulator.addRetainedSample(i == 0 ? estimatedBytes : 0, estimatedBytes > 0);
+        }
+        return accumulator.toIssue();
+    }
+
+    private static boolean contributesToMemoryTotals(MemoryIssue issue) {
+        return issue.category() != MemoryIssueCategory.OUTSIDE_TLAB;
+    }
+
     private record EventSample(String eventTypeId, String label, List<String> categoryPath, Instant startTime) {
     }
 
@@ -261,6 +301,7 @@ public class JmcAdvancedJfrAnalysisService implements AdvancedJfrAnalysisService
         private final String recommendation;
         private long estimatedBytes;
         private long count;
+        private boolean bytesKnown = true;
 
         MemoryIssueAccumulator(MemoryIssueCategory category, String subject, String evidencePrefix,
                 String recommendation) {
@@ -275,11 +316,26 @@ public class JmcAdvancedJfrAnalysisService implements AdvancedJfrAnalysisService
             count++;
         }
 
+        void addRetainedSample(long bytes, boolean sampleBytesKnown) {
+            estimatedBytes += bytes;
+            count++;
+            bytesKnown &= sampleBytesKnown;
+        }
+
         MemoryIssue toIssue() {
             return new MemoryIssue(category, severity(estimatedBytes), subject, estimatedBytes, count,
-                    score(estimatedBytes), evidencePrefix + ": " + count + " events, "
-                            + estimatedBytes + " estimated bytes.",
+                    score(estimatedBytes), evidence(),
                     recommendation);
+        }
+
+        private String evidence() {
+            if (category == MemoryIssueCategory.RETAINED_OBJECT) {
+                if (!bytesKnown || estimatedBytes == 0) {
+                    return evidencePrefix + ": " + count + " samples, estimated bytes unknown.";
+                }
+                return evidencePrefix + ": " + count + " samples, " + estimatedBytes + " estimated bytes.";
+            }
+            return evidencePrefix + ": " + count + " events, " + estimatedBytes + " estimated bytes.";
         }
     }
 

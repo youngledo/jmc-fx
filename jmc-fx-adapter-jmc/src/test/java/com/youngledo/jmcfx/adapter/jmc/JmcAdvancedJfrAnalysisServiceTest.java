@@ -21,6 +21,7 @@ import com.youngledo.jmcfx.domain.model.EventHeatmapRow;
 import com.youngledo.jmcfx.domain.model.MemoryAnalysisReport;
 import com.youngledo.jmcfx.domain.model.MemoryIssue;
 import com.youngledo.jmcfx.domain.model.MemoryIssueCategory;
+import com.youngledo.jmcfx.domain.model.MemoryIssueSeverity;
 import com.youngledo.jmcfx.domain.model.RecordingSummary;
 import com.youngledo.jmcfx.domain.service.JmcFxException;
 
@@ -84,6 +85,38 @@ class JmcAdvancedJfrAnalysisServiceTest {
         assertTrue(issue.count() > 0);
         assertTrue(issue.estimatedBytes() > 0);
         assertTrue(!issue.subject().isBlank());
+    }
+
+    @Test
+    void memoryAnalysisTotalsExcludeSecondaryOutsideTlabIssues() {
+        JmcAdvancedJfrAnalysisService service = new JmcAdvancedJfrAnalysisService();
+        MemoryIssue allocationHotspot = new MemoryIssue(MemoryIssueCategory.ALLOCATION_HOTSPOT,
+                MemoryIssueSeverity.INFO, "byte[]", 100, 4, 10, "primary", "review");
+        MemoryIssue outsideTlab = new MemoryIssue(MemoryIssueCategory.OUTSIDE_TLAB,
+                MemoryIssueSeverity.INFO, "main", 100, 4, 10, "secondary", "review");
+        MemoryIssue retainedObject = new MemoryIssue(MemoryIssueCategory.RETAINED_OBJECT,
+                MemoryIssueSeverity.INFO, "java.lang.Object", 7, 1, 1, "retained", "inspect");
+
+        MemoryAnalysisReport report = service.memoryAnalysisReport(
+                List.of(allocationHotspot, outsideTlab, retainedObject), 10);
+
+        assertEquals(107, report.totalEstimatedBytes());
+        assertEquals(5, report.totalCount());
+        assertEquals(3, report.issues().size());
+    }
+
+    @Test
+    void retainedObjectIssueWithUnknownBytesUsesSampleEvidenceAndInfoSeverity() {
+        JmcAdvancedJfrAnalysisService service = new JmcAdvancedJfrAnalysisService();
+
+        MemoryIssue issue = service.retainedObjectIssue("demo.Retained", 0, 3);
+
+        assertEquals(MemoryIssueCategory.RETAINED_OBJECT, issue.category());
+        assertEquals(MemoryIssueSeverity.INFO, issue.severity());
+        assertEquals(0, issue.estimatedBytes());
+        assertEquals(3, issue.count());
+        assertTrue(issue.evidence().contains("3 samples"));
+        assertTrue(issue.evidence().contains("estimated bytes unknown"));
     }
 
     private RecordingSummary customRecording() throws Exception {
