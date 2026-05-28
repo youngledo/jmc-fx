@@ -30,6 +30,10 @@ import com.youngledo.jmcfx.domain.model.MBeanOperationInfo;
 import com.youngledo.jmcfx.domain.model.MBeanOperationParameter;
 import com.youngledo.jmcfx.domain.model.MBeanOperationRequest;
 import com.youngledo.jmcfx.domain.model.MBeanOperationResult;
+import com.youngledo.jmcfx.domain.model.MemoryAnalysisReport;
+import com.youngledo.jmcfx.domain.model.MemoryIssue;
+import com.youngledo.jmcfx.domain.model.MemoryIssueCategory;
+import com.youngledo.jmcfx.domain.model.MemoryIssueSeverity;
 import com.youngledo.jmcfx.domain.service.JmcFxException;
 
 class FakeJvmServicesTest {
@@ -219,6 +223,18 @@ class FakeJvmServicesTest {
         service.setHeatmap(heatmap);
 
         assertEquals(heatmap, service.loadEventHeatmap(recording(), 1, 1));
+    }
+
+    @Test
+    void fakeAdvancedJfrAnalysisServiceReturnsConfiguredMemoryAnalysisAndCapturesLimit() {
+        FakeAdvancedJfrAnalysisService service = new FakeAdvancedJfrAnalysisService();
+        MemoryIssue issue = new MemoryIssue(MemoryIssueCategory.ALLOCATION_HOTSPOT,
+                MemoryIssueSeverity.WARNING, "byte[]", 64, 2, 50, "2 samples", "Review allocation rate.");
+        MemoryAnalysisReport report = new MemoryAnalysisReport(64, 2, List.of(issue));
+        service.setMemoryAnalysisReport(report);
+
+        assertEquals(report, service.loadMemoryAnalysis(recording(), 12));
+        assertEquals(12, service.lastMaxMemoryIssues());
     }
 
     private static JvmConnection local(String pid, String name) {
