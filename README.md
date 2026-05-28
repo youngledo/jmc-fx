@@ -27,6 +27,26 @@ sdk env
 ./mvnw verify
 ```
 
+## Native Package
+
+Build the current platform's native installer with the `native-package` profile:
+
+```bash
+sdk env
+./mvnw -pl jmc-fx-app -am -Pnative-package package
+```
+
+The installer is written to `jmc-fx-app/target/jpackage/`. On macOS, the
+default output is `JMC FX-1.0.0.dmg`.
+
+`jpackage` requires platform-specific package versions. The default package
+version is `1.0.0` because macOS rejects versions whose first number is `0`.
+Override it for releases with:
+
+```bash
+./mvnw -pl jmc-fx-app -am -Pnative-package -Djmcfx.package.version=1.2.3 package
+```
+
 ## Run
 
 ```bash

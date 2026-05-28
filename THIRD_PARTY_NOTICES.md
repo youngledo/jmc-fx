@@ -28,6 +28,12 @@ Ikonli dependencies must be reviewed when runtime packaging is added.
 TestFX is used for testing and must be reviewed if test artifacts are
 redistributed.
 
+## JPackage Maven Plugin
+
+The `org.panteleyev:jpackage-maven-plugin` Maven plugin is used at build time to
+invoke `jpackage` for native application installers. Review its license and
+notices before distributing generated packages.
+
 ## SLF4J
 
 SLF4J is used as the logging API. Review its license terms before redistributing
