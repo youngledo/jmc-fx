@@ -38,8 +38,10 @@ import com.youngledo.jmcfx.ui.i18n.LanguageMode;
 import com.youngledo.jmcfx.ui.overview.OverviewViewModel;
 import com.youngledo.jmcfx.ui.rules.RuleResultsViewModel;
 import com.youngledo.jmcfx.testsupport.FakeEventQueryService;
+import com.youngledo.jmcfx.testsupport.FakeJdpDiscoveryService;
 import com.youngledo.jmcfx.testsupport.FakeRecordingRepository;
 import com.youngledo.jmcfx.testsupport.FakeRuleAnalysisService;
+import com.youngledo.jmcfx.testsupport.FakeSavedJvmTargetRepository;
 
 import javafx.scene.layout.Region;
 
@@ -62,6 +64,22 @@ class AppShellTest {
         Object controller = factory.controllerFor(AppShellController.class, new AppShellViewModel());
 
         assertEquals(AppShellController.class, controller.getClass());
+    }
+
+    @Test
+    void factoryPassesSavedTargetsAndJdpDiscoveryToShellController() {
+        FakeSavedJvmTargetRepository savedTargets = new FakeSavedJvmTargetRepository();
+        FakeJdpDiscoveryService jdpDiscovery = new FakeJdpDiscoveryService();
+        AppShellFactory factory = new AppShellFactory(new FakeRecordingRepository(), new FakeEventQueryService(),
+                new FakeRuleAnalysisService(), null, null, null, null, null, null, null, null, null, null,
+                null, null, null, null, null, null, null, null, null, savedTargets, jdpDiscovery,
+                new I18n(Locale.ENGLISH));
+
+        AppShellController controller = (AppShellController) factory.controllerFor(AppShellController.class,
+                new AppShellViewModel());
+
+        assertEquals(savedTargets, controller.savedTargetRepository());
+        assertEquals(jdpDiscovery, controller.jdpDiscoveryService());
     }
 
     @Test

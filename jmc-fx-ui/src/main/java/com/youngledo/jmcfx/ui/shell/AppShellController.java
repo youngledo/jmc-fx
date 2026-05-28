@@ -97,6 +97,7 @@ import com.youngledo.jmcfx.domain.service.FlightRecordingService;
 import com.youngledo.jmcfx.domain.service.HeapService;
 import com.youngledo.jmcfx.domain.service.JvmInternalsService;
 import com.youngledo.jmcfx.domain.service.JavaAppService;
+import com.youngledo.jmcfx.domain.service.JdpDiscoveryService;
 import com.youngledo.jmcfx.domain.service.JmxConnectionService;
 import com.youngledo.jmcfx.domain.service.JvmDiscoveryService;
 import com.youngledo.jmcfx.domain.service.LeakSuspectsService;
@@ -106,6 +107,7 @@ import com.youngledo.jmcfx.domain.service.MBeanBrowserService;
 import com.youngledo.jmcfx.domain.service.ProfilingService;
 import com.youngledo.jmcfx.domain.service.RecordingRepository;
 import com.youngledo.jmcfx.domain.service.RuleAnalysisService;
+import com.youngledo.jmcfx.domain.service.SavedJvmTargetRepository;
 import com.youngledo.jmcfx.domain.service.SocketIOService;
 import com.youngledo.jmcfx.domain.service.ThreadService;
 import com.youngledo.jmcfx.domain.service.TlabService;
@@ -240,6 +242,8 @@ public class AppShellController {
     private final DiagnosticCommandService diagnosticCommandService;
     private final LiveMetricService liveMetricService;
     private final AdvancedJfrAnalysisService advancedJfrAnalysisService;
+    private final SavedJvmTargetRepository savedTargetRepository;
+    private final JdpDiscoveryService jdpDiscoveryService;
     private final I18n i18n;
     private final RecordingOpenExecutor recordingOpenExecutor;
     private final ListChangeListener<EventTypeNode> eventTypeTreeListener = change -> rebuildEventTypeTree();
@@ -634,7 +638,7 @@ public class AppShellController {
                 fileIOService, socketIOService, lockService,
                 heapService, leakSuspectsService, tlabService,
                 jvmInternalsService, environmentService, javaAppService,
-                null, null, null, null, null, null, null, i18n,
+                null, null, null, null, null, null, null, null, null, i18n,
                 new VirtualThreadRecordingOpenExecutor());
     }
 
@@ -657,8 +661,8 @@ public class AppShellController {
                 fileIOService, socketIOService, lockService,
                 heapService, leakSuspectsService, tlabService,
                 jvmInternalsService, environmentService, javaAppService,
-                jvmDiscoveryService, jmxConnectionService, flightRecordingService, null, null, null, null, i18n,
-                new VirtualThreadRecordingOpenExecutor());
+                jvmDiscoveryService, jmxConnectionService, flightRecordingService, null, null, null, null,
+                null, null, i18n, new VirtualThreadRecordingOpenExecutor());
     }
 
     public AppShellController(AppShellViewModel viewModel, RecordingRepository recordingRepository,
@@ -682,7 +686,7 @@ public class AppShellController {
                 heapService, leakSuspectsService, tlabService,
                 jvmInternalsService, environmentService, javaAppService,
                 jvmDiscoveryService, jmxConnectionService, flightRecordingService, mBeanBrowserService, null, null, null,
-                i18n, new VirtualThreadRecordingOpenExecutor());
+                null, null, i18n, new VirtualThreadRecordingOpenExecutor());
     }
 
     public AppShellController(AppShellViewModel viewModel, RecordingRepository recordingRepository,
@@ -709,8 +713,38 @@ public class AppShellController {
                 heapService, leakSuspectsService, tlabService,
                 jvmInternalsService, environmentService, javaAppService,
                 jvmDiscoveryService, jmxConnectionService, flightRecordingService, mBeanBrowserService,
-                diagnosticCommandService, liveMetricService, advancedJfrAnalysisService, i18n,
+                diagnosticCommandService, liveMetricService, advancedJfrAnalysisService, null, null, i18n,
                 new VirtualThreadRecordingOpenExecutor());
+    }
+
+    public AppShellController(AppShellViewModel viewModel, RecordingRepository recordingRepository,
+            EventQueryService eventQueryService, RuleAnalysisService ruleAnalysisService,
+            ProfilingService profilingService, ExceptionService exceptionService,
+            ThreadService threadService, FileIOService fileIOService,
+            SocketIOService socketIOService, LockService lockService,
+            HeapService heapService, LeakSuspectsService leakSuspectsService,
+            TlabService tlabService,
+            JvmInternalsService jvmInternalsService,
+            EnvironmentService environmentService,
+            JavaAppService javaAppService,
+            JvmDiscoveryService jvmDiscoveryService,
+            JmxConnectionService jmxConnectionService,
+            FlightRecordingService flightRecordingService,
+            MBeanBrowserService mBeanBrowserService,
+            DiagnosticCommandService diagnosticCommandService,
+            LiveMetricService liveMetricService,
+            AdvancedJfrAnalysisService advancedJfrAnalysisService,
+            SavedJvmTargetRepository savedTargetRepository,
+            JdpDiscoveryService jdpDiscoveryService,
+            I18n i18n) {
+        this(viewModel, recordingRepository, eventQueryService, ruleAnalysisService,
+                profilingService, exceptionService, threadService,
+                fileIOService, socketIOService, lockService,
+                heapService, leakSuspectsService, tlabService,
+                jvmInternalsService, environmentService, javaAppService,
+                jvmDiscoveryService, jmxConnectionService, flightRecordingService, mBeanBrowserService,
+                diagnosticCommandService, liveMetricService, advancedJfrAnalysisService,
+                savedTargetRepository, jdpDiscoveryService, i18n, new VirtualThreadRecordingOpenExecutor());
     }
 
     public AppShellController(AppShellViewModel viewModel, RecordingRepository recordingRepository,
@@ -731,7 +765,7 @@ public class AppShellController {
                 fileIOService, socketIOService, lockService,
                 heapService, leakSuspectsService, tlabService,
                 jvmInternalsService, environmentService, javaAppService,
-                jvmDiscoveryService, jmxConnectionService, null, null, null, null, null, i18n,
+                jvmDiscoveryService, jmxConnectionService, null, null, null, null, null, null, null, i18n,
                 new VirtualThreadRecordingOpenExecutor());
     }
 
@@ -751,7 +785,7 @@ public class AppShellController {
                 fileIOService, socketIOService, lockService,
                 heapService, leakSuspectsService, tlabService,
                 jvmInternalsService, environmentService, javaAppService,
-                null, null, null, null, null, null, null, i18n, recordingOpenExecutor);
+                null, null, null, null, null, null, null, null, null, i18n, recordingOpenExecutor);
     }
 
     AppShellController(AppShellViewModel viewModel, RecordingRepository recordingRepository,
@@ -773,8 +807,8 @@ public class AppShellController {
                 fileIOService, socketIOService, lockService,
                 heapService, leakSuspectsService, tlabService,
                 jvmInternalsService, environmentService, javaAppService,
-                jvmDiscoveryService, jmxConnectionService, flightRecordingService, null, null, null, null, i18n,
-                recordingOpenExecutor);
+                jvmDiscoveryService, jmxConnectionService, flightRecordingService, null, null, null, null,
+                null, null, i18n, recordingOpenExecutor);
     }
 
     AppShellController(AppShellViewModel viewModel, RecordingRepository recordingRepository,
@@ -793,6 +827,8 @@ public class AppShellController {
             DiagnosticCommandService diagnosticCommandService,
             LiveMetricService liveMetricService,
             AdvancedJfrAnalysisService advancedJfrAnalysisService,
+            SavedJvmTargetRepository savedTargetRepository,
+            JdpDiscoveryService jdpDiscoveryService,
             I18n i18n,
             RecordingOpenExecutor recordingOpenExecutor) {
         this.viewModel = viewModel;
@@ -818,12 +854,22 @@ public class AppShellController {
         this.diagnosticCommandService = diagnosticCommandService;
         this.liveMetricService = liveMetricService;
         this.advancedJfrAnalysisService = advancedJfrAnalysisService;
+        this.savedTargetRepository = savedTargetRepository;
+        this.jdpDiscoveryService = jdpDiscoveryService;
         this.i18n = i18n;
         this.recordingOpenExecutor = recordingOpenExecutor;
     }
 
     I18n i18n() {
         return i18n;
+    }
+
+    SavedJvmTargetRepository savedTargetRepository() {
+        return savedTargetRepository;
+    }
+
+    JdpDiscoveryService jdpDiscoveryService() {
+        return jdpDiscoveryService;
     }
 
     @FXML
@@ -845,6 +891,7 @@ public class AppShellController {
         jvmBrowserViewModel = jvmDiscoveryService != null && jmxConnectionService != null
                 ? new JvmBrowserViewModel(jvmDiscoveryService, jmxConnectionService, flightRecordingService,
                         mBeanBrowserService, diagnosticCommandService, liveMetricService,
+                        savedTargetRepository, jdpDiscoveryService,
                         new com.youngledo.jmcfx.ui.jvms.VirtualThreadJvmBrowserExecutor(), Platform::runLater,
                         this::openRecordingInBackground) : null;
         homePane.visibleProperty().bind(viewModel.selectedSectionProperty().isEqualTo("home"));

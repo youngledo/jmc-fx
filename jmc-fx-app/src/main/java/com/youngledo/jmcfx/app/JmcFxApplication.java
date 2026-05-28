@@ -14,6 +14,7 @@ import com.youngledo.jmcfx.adapter.jmc.JmcHeapService;
 import com.youngledo.jmcfx.adapter.jmc.JmcJvmInternalsService;
 import com.youngledo.jmcfx.adapter.jmc.JmcJmxConnectionService;
 import com.youngledo.jmcfx.adapter.jmc.JmcJvmDiscoveryService;
+import com.youngledo.jmcfx.adapter.jmc.JmcJdpDiscoveryService;
 import com.youngledo.jmcfx.adapter.jmc.JmcLeakSuspectsService;
 import com.youngledo.jmcfx.adapter.jmc.JmcLiveMetricService;
 import com.youngledo.jmcfx.adapter.jmc.JmcLockService;
@@ -24,6 +25,7 @@ import com.youngledo.jmcfx.adapter.jmc.JmcRuleAnalysisService;
 import com.youngledo.jmcfx.adapter.jmc.JmcSocketIOService;
 import com.youngledo.jmcfx.adapter.jmc.JmcThreadService;
 import com.youngledo.jmcfx.adapter.jmc.JmcTlabService;
+import com.youngledo.jmcfx.ui.preferences.JavaSavedJvmTargetRepository;
 import com.youngledo.jmcfx.ui.shell.AppShell;
 import com.youngledo.jmcfx.ui.shell.AppShellFactory;
 import javafx.application.Application;
@@ -70,6 +72,8 @@ public class JmcFxApplication extends Application {
                 new JmcDiagnosticCommandService(jmxConnectionService),
                 new JmcLiveMetricService(jmxConnectionService),
                 new JmcAdvancedJfrAnalysisService(),
+                new JavaSavedJvmTargetRepository(),
+                new JmcJdpDiscoveryService(),
                 new com.youngledo.jmcfx.ui.i18n.I18n(systemLocale)).create();
         Scene scene = new Scene(shell.root(), 1280, 800);
         scene.getStylesheets().add(getClass().getResource("/css/app.css").toExternalForm());
