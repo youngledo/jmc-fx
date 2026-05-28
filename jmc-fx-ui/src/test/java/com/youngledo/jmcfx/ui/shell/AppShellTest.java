@@ -168,8 +168,23 @@ class AppShellTest {
                 "Home action buttons should keep JavaFX's default button style class; add local hooks in controller");
         assertFalse(elementByFxId(document, "homeConnectJvmButton").hasAttribute("disable"),
                 "Connect JVM should be enabled now that the JVM browser page exists");
+        Element jvmsToolbar = (Element) elementByFxId(document, "jvmsRefreshButton").getParentNode();
+        assertEquals("FlowPane", jvmsToolbar.getTagName());
+        assertTrue(hasStyleClass(jvmsToolbar, "page-toolbar"));
+        assertEquals("8", jvmsToolbar.getAttribute("hgap"));
+        assertEquals("8", jvmsToolbar.getAttribute("vgap"));
         assertEquals("Button", elementByFxId(document, "jvmsRefreshButton").getTagName());
         assertEquals("TextField", elementByFxId(document, "jvmsManualUrlField").getTagName());
+        assertEquals("360", elementByFxId(document, "jvmsManualUrlField").getAttribute("prefWidth"));
+        assertEquals("TextField", elementByFxId(document, "jvmsManualNameField").getTagName());
+        assertEquals("160", elementByFxId(document, "jvmsManualNameField").getAttribute("prefWidth"));
+        assertEquals("Button", elementByFxId(document, "jvmsSaveTargetButton").getTagName());
+        assertEquals("Button", elementByFxId(document, "jvmsRemoveSavedTargetButton").getTagName());
+        assertEquals("Button", elementByFxId(document, "jvmsRefreshJdpButton").getTagName());
+        assertEquals("Label", elementByFxId(document, "jvmsSelectedConnectionStatusLabel").getTagName());
+        assertEquals("true", elementByFxId(document, "jvmsSelectedConnectionStatusLabel").getAttribute("wrapText"));
+        assertTrue(hasStyleClass(elementByFxId(document, "jvmsSelectedConnectionStatusLabel"),
+                "event-window-status"));
         assertEquals("Button", elementByFxId(document, "jvmsConnectButton").getTagName());
         assertEquals("Button", elementByFxId(document, "jvmsDisconnectButton").getTagName());
         assertEquals("TableView", elementByFxId(document, "jvmsTable").getTagName());
@@ -700,6 +715,60 @@ class AppShellTest {
         assertFalse(fxml.contains("jvmsStatusLabel"), "Bottom JVM status label should be removed");
         assertFalse(controller.contains("jvmsStatusLabel.textProperty()"),
                 "Controller should not bind a removed bottom status label");
+    }
+
+    @Test
+    void jvmBrowserShellExposesSavedTargetsJdpAndSelectedStatus() throws Exception {
+        String controller = java.nio.file.Files.readString(
+                java.nio.file.Path.of("src/main/java/com/youngledo/jmcfx/ui/shell/AppShellController.java"));
+        String english = java.nio.file.Files.readString(
+                java.nio.file.Path.of("src/main/resources/com/youngledo/jmcfx/ui/i18n/messages.properties"));
+        String chinese = java.nio.file.Files.readString(
+                java.nio.file.Path.of("src/main/resources/com/youngledo/jmcfx/ui/i18n/messages_zh_CN.properties"));
+
+        assertTrue(controller.contains("@FXML private TextField jvmsManualNameField;"));
+        assertTrue(controller.contains("@FXML private Button jvmsSaveTargetButton;"));
+        assertTrue(controller.contains("@FXML private Button jvmsRemoveSavedTargetButton;"));
+        assertTrue(controller.contains("@FXML private Button jvmsRefreshJdpButton;"));
+        assertTrue(controller.contains("@FXML private Label jvmsSelectedConnectionStatusLabel;"));
+        assertTrue(controller.contains("jvmsManualNameField.textProperty().bindBidirectional("));
+        assertTrue(controller.contains("jvmBrowserViewModel.manualConnectionNameProperty()"));
+        assertTrue(controller.contains("jvmsRefreshJdpButton.setOnAction(event -> jvmBrowserViewModel.refreshJdp())"));
+        assertTrue(controller.contains("jvmsSaveTargetButton.setOnAction(event -> jvmBrowserViewModel.saveManualTarget())"));
+        assertTrue(controller.contains("jvmsRemoveSavedTargetButton.setOnAction(event ->"));
+        assertTrue(controller.contains("jvmBrowserViewModel.removeSelectedSavedTarget()"));
+        assertTrue(controller.contains("jvmsRefreshJdpButton.disableProperty().bind("));
+        assertTrue(controller.contains("jvmBrowserViewModel.loadingProperty().or(jvmBrowserViewModel.jdpRefreshInProgressProperty())"));
+        assertTrue(controller.contains("jvmsSaveTargetButton.disableProperty().bind(jvmBrowserViewModel.loadingProperty()"));
+        assertTrue(controller.contains("jvmBrowserViewModel.manualConnectionUrlProperty().get().trim().isEmpty()"));
+        assertTrue(controller.contains("jvmsRemoveSavedTargetButton.disableProperty().bind(jvmBrowserViewModel.loadingProperty()"));
+        assertTrue(controller.contains("selected == null || selected.source() != JvmConnectionSource.SAVED"));
+        assertTrue(controller.contains("selected.connected()"));
+        assertTrue(controller.contains("jvmsSelectedConnectionStatusLabel.textProperty().bind("));
+        assertTrue(controller.contains("selectedConnectionStatusText("));
+        assertTrue(controller.contains("jvmBrowserViewModel.jdpStatusMessageProperty()"));
+        assertTrue(controller.contains("jvmsManualNameField.setDisable(true);"));
+        assertTrue(controller.contains("jvmsSaveTargetButton.setDisable(true);"));
+        assertTrue(controller.contains("jvmsRemoveSavedTargetButton.setDisable(true);"));
+        assertTrue(controller.contains("jvmsRefreshJdpButton.setDisable(true);"));
+        assertTrue(controller.contains("jvmsSelectedConnectionStatusLabel.textProperty().bind(i18n.text(\"jvms.jdp.status.idle\"))"));
+
+        assertJvmBrowserJdpI18n(english, "jvms.manualNamePrompt=Display name",
+                "jvms.saveTarget=Save Target",
+                "jvms.removeSavedTarget=Remove Saved",
+                "jvms.refreshJdp=Refresh JDP",
+                "jvms.jdp.status.idle=JDP discovery is idle.",
+                "jvms.jdp.status.refreshing=Refreshing JDP advertisements...",
+                "jvms.jdp.status.none=No JDP advertisements found.",
+                "jvms.jdp.status.found=Found {0} JDP advertisement(s).");
+        assertJvmBrowserJdpI18n(chinese, "jvms.manualNamePrompt=显示名称",
+                "jvms.saveTarget=保存目标",
+                "jvms.removeSavedTarget=移除保存项",
+                "jvms.refreshJdp=刷新JDP",
+                "jvms.jdp.status.idle=JDP发现空闲。",
+                "jvms.jdp.status.refreshing=正在刷新JDP广播...",
+                "jvms.jdp.status.none=未发现JDP广播。",
+                "jvms.jdp.status.found=发现{0}个JDP广播。");
     }
 
     @Test
@@ -1410,6 +1479,12 @@ class AppShellTest {
         Element toolbar = childElements(tabContent, "HBox").getFirst();
         assertTrue(hasStyleClass(toolbar, "profiling-graph-toolbar"));
         assertEquals("CENTER_LEFT", toolbar.getAttribute("alignment"));
+    }
+
+    private static void assertJvmBrowserJdpI18n(String bundle, String... expectedLines) {
+        for (String expectedLine : expectedLines) {
+            assertTrue(bundle.contains(expectedLine), () -> "Missing i18n line: " + expectedLine);
+        }
     }
 
     private static int elementCountWithStyleClass(Document document, String styleClass) {

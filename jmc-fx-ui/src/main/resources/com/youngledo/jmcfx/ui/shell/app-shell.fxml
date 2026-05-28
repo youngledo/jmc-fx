@@ -179,12 +179,17 @@
             </VBox>
             <VBox fx:id="jvmsPane" spacing="8">
                 <Label fx:id="jvmsTitleLabel" styleClass="view-title"/>
-                <HBox styleClass="page-toolbar" spacing="8">
+                <FlowPane styleClass="page-toolbar" hgap="8" vgap="8">
                     <Button fx:id="jvmsRefreshButton"/>
-                    <TextField fx:id="jvmsManualUrlField" HBox.hgrow="ALWAYS"/>
+                    <TextField fx:id="jvmsManualUrlField" prefWidth="360"/>
+                    <TextField fx:id="jvmsManualNameField" prefWidth="160"/>
+                    <Button fx:id="jvmsSaveTargetButton"/>
+                    <Button fx:id="jvmsRemoveSavedTargetButton"/>
+                    <Button fx:id="jvmsRefreshJdpButton"/>
                     <Button fx:id="jvmsConnectButton"/>
                     <Button fx:id="jvmsDisconnectButton"/>
-                </HBox>
+                    <Label fx:id="jvmsSelectedConnectionStatusLabel" styleClass="event-window-status" wrapText="true"/>
+                </FlowPane>
                 <SplitPane orientation="VERTICAL" VBox.vgrow="ALWAYS" DividerPositions="0.62">
                     <items>
                         <TableView fx:id="jvmsTable" styleClass="dense-table"/>

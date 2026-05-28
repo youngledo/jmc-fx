@@ -375,8 +375,13 @@ public class AppShellController {
     @FXML private Label jvmsTitleLabel;
     @FXML private Button jvmsRefreshButton;
     @FXML private TextField jvmsManualUrlField;
+    @FXML private TextField jvmsManualNameField;
+    @FXML private Button jvmsSaveTargetButton;
+    @FXML private Button jvmsRemoveSavedTargetButton;
+    @FXML private Button jvmsRefreshJdpButton;
     @FXML private Button jvmsConnectButton;
     @FXML private Button jvmsDisconnectButton;
+    @FXML private Label jvmsSelectedConnectionStatusLabel;
     @FXML private TableView<JvmConnection> jvmsTable;
     @FXML private VBox jvmsSessionDetailPane;
     @FXML private TabPane jvmsLiveTabs;
@@ -1315,8 +1320,13 @@ public class AppShellController {
             jvmsTable.setItems(FXCollections.emptyObservableList());
             jvmsRefreshButton.setDisable(true);
             jvmsManualUrlField.setDisable(true);
+            jvmsManualNameField.setDisable(true);
+            jvmsSaveTargetButton.setDisable(true);
+            jvmsRemoveSavedTargetButton.setDisable(true);
+            jvmsRefreshJdpButton.setDisable(true);
             jvmsConnectButton.setDisable(true);
             jvmsDisconnectButton.setDisable(true);
+            jvmsSelectedConnectionStatusLabel.textProperty().bind(i18n.text("jvms.jdp.status.idle"));
             jvmsStartRecordingButton.setDisable(true);
             jvmsStopRecordingButton.setDisable(true);
             jvmsRecordingsTable.setItems(FXCollections.emptyObservableList());
@@ -1371,8 +1381,25 @@ public class AppShellController {
         jvmBrowserViewModel.selectedConnectionProperty().addListener((observable, oldValue, newValue) ->
                 jvmsTable.getSelectionModel().select(newValue));
         jvmsManualUrlField.textProperty().bindBidirectional(jvmBrowserViewModel.manualConnectionUrlProperty());
+        jvmsManualNameField.textProperty().bindBidirectional(
+                jvmBrowserViewModel.manualConnectionNameProperty());
         jvmsRefreshButton.disableProperty().bind(jvmBrowserViewModel.loadingProperty());
         jvmsManualUrlField.disableProperty().bind(jvmBrowserViewModel.loadingProperty());
+        jvmsManualNameField.disableProperty().bind(jvmBrowserViewModel.loadingProperty());
+        jvmsRefreshJdpButton.disableProperty().bind(
+                jvmBrowserViewModel.loadingProperty().or(jvmBrowserViewModel.jdpRefreshInProgressProperty()));
+        jvmsSaveTargetButton.disableProperty().bind(jvmBrowserViewModel.loadingProperty()
+                .or(Bindings.createBooleanBinding(
+                        () -> jvmBrowserViewModel.manualConnectionUrlProperty().get().trim().isEmpty(),
+                        jvmBrowserViewModel.manualConnectionUrlProperty())));
+        jvmsRemoveSavedTargetButton.disableProperty().bind(jvmBrowserViewModel.loadingProperty()
+                .or(Bindings.createBooleanBinding(
+                        () -> {
+                            JvmConnection selected = jvmBrowserViewModel.selectedConnectionProperty().get();
+                            return selected == null || selected.source() != JvmConnectionSource.SAVED
+                                    || selected.connected();
+                        },
+                        jvmBrowserViewModel.selectedConnectionProperty())));
         jvmsConnectButton.disableProperty().bind(jvmBrowserViewModel.loadingProperty()
                 .or(Bindings.createBooleanBinding(
                         () -> jvmBrowserViewModel.manualConnectionUrlProperty().get().trim().isEmpty()
@@ -1384,6 +1411,13 @@ public class AppShellController {
                 .or(Bindings.createBooleanBinding(
                         () -> !canDisconnectJvm(jvmBrowserViewModel.selectedConnectionProperty().get()),
                         jvmBrowserViewModel.selectedConnectionProperty())));
+        jvmsSelectedConnectionStatusLabel.textProperty().bind(Bindings.createStringBinding(
+                () -> selectedConnectionStatusText(
+                        jvmBrowserViewModel.selectedConnectionProperty().get(),
+                        jvmBrowserViewModel.jdpStatusMessageProperty().get()),
+                jvmBrowserViewModel.selectedConnectionProperty(),
+                jvmBrowserViewModel.jdpStatusMessageProperty(),
+                i18n.localeProperty()));
         jvmsSessionDetailPane.visibleProperty().bind(jvmBrowserViewModel.selectedSessionProperty().isNotNull()
                 .or(jvmBrowserViewModel.sessionErrorProperty()));
         jvmsSessionDetailPane.managedProperty().bind(jvmsSessionDetailPane.visibleProperty());
@@ -1430,6 +1464,10 @@ public class AppShellController {
         bindTriggers();
 
         jvmsRefreshButton.setOnAction(event -> refreshJvmBrowser());
+        jvmsRefreshJdpButton.setOnAction(event -> jvmBrowserViewModel.refreshJdp());
+        jvmsSaveTargetButton.setOnAction(event -> jvmBrowserViewModel.saveManualTarget());
+        jvmsRemoveSavedTargetButton.setOnAction(event ->
+                jvmBrowserViewModel.removeSelectedSavedTarget());
         jvmsConnectButton.setOnAction(event -> jvmBrowserViewModel.connectSelectedOrManual());
         jvmsDisconnectButton.setOnAction(event -> jvmBrowserViewModel.disconnectSelected());
         jvmsStartRecordingButton.setOnAction(event -> jvmBrowserViewModel.startFlightRecording());
@@ -1696,6 +1734,35 @@ public class AppShellController {
 
     private String formatJvmSource(JvmConnectionSource source) {
         return i18n.get("jvms.source." + source.name().toLowerCase(java.util.Locale.ROOT));
+    }
+
+    private String selectedConnectionStatusText(JvmConnection selectedConnection, String jdpStatusMessage) {
+        if (selectedConnection != null && !selectedConnection.statusMessage().isBlank()) {
+            return selectedConnection.statusMessage();
+        }
+        return localizedJdpStatus(jdpStatusMessage);
+    }
+
+    private String localizedJdpStatus(String jdpStatusMessage) {
+        String message = jdpStatusMessage == null ? "" : jdpStatusMessage.trim();
+        if (message.equals("Refreshing JDP targets.")) {
+            return i18n.get("jvms.jdp.status.refreshing");
+        }
+        if (message.equals("No JDP targets found.")) {
+            return i18n.get("jvms.jdp.status.none");
+        }
+        if (message.equals("Found 1 JDP target.")) {
+            return i18n.format("jvms.jdp.status.found", 1);
+        }
+        if (message.startsWith("Found ") && message.endsWith(" JDP targets.")) {
+            try {
+                int count = Integer.parseInt(message.substring(6, message.indexOf(" JDP targets.")));
+                return i18n.format("jvms.jdp.status.found", count);
+            } catch (NumberFormatException exception) {
+                return message;
+            }
+        }
+        return message.isBlank() || message.equals("Idle.") ? i18n.get("jvms.jdp.status.idle") : message;
     }
 
     private String formatFlightRecordingState(com.youngledo.jmcfx.domain.model.FlightRecordingState state) {
@@ -2903,6 +2970,10 @@ public class AppShellController {
         jvmsTitleLabel.textProperty().bind(i18n.text("jvms.title"));
         jvmsRefreshButton.textProperty().bind(i18n.text("jvms.refresh"));
         jvmsManualUrlField.promptTextProperty().bind(i18n.text("jvms.manualUrlPrompt"));
+        jvmsManualNameField.promptTextProperty().bind(i18n.text("jvms.manualNamePrompt"));
+        jvmsSaveTargetButton.textProperty().bind(i18n.text("jvms.saveTarget"));
+        jvmsRemoveSavedTargetButton.textProperty().bind(i18n.text("jvms.removeSavedTarget"));
+        jvmsRefreshJdpButton.textProperty().bind(i18n.text("jvms.refreshJdp"));
         jvmsConnectButton.textProperty().bind(i18n.text("jvms.connect"));
         jvmsDisconnectButton.textProperty().bind(i18n.text("jvms.disconnect"));
         jvmsSessionTab.textProperty().bind(i18n.text("jvms.session.tab"));
