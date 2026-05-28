@@ -11,8 +11,10 @@ import java.time.Instant;
 import java.time.ZoneId;
 import java.util.ArrayDeque;
 import java.util.List;
+import java.util.Locale;
 import java.util.Map;
 import java.util.Queue;
+import java.util.ResourceBundle;
 import java.util.concurrent.atomic.AtomicInteger;
 
 import javax.xml.parsers.DocumentBuilderFactory;
@@ -25,6 +27,7 @@ import org.xml.sax.SAXException;
 
 import com.youngledo.jmcfx.ui.util.DisplayFormats;
 import com.youngledo.jmcfx.domain.model.EventTypeSelection;
+import com.youngledo.jmcfx.domain.model.JvmConnectionSource;
 import com.youngledo.jmcfx.domain.model.StackTreeNode;
 import com.youngledo.jmcfx.domain.model.RecordingSummary;
 import com.youngledo.jmcfx.domain.service.ProfilingService;
@@ -75,6 +78,19 @@ class AppShellTest {
                 new I18n(java.util.Locale.SIMPLIFIED_CHINESE));
 
         assertEquals(java.util.Locale.ENGLISH, controller.i18n().localeProperty().get());
+    }
+
+    @Test
+    void sourceLabelsCoverEveryJvmConnectionSource() {
+        ResourceBundle english = ResourceBundle.getBundle("com.youngledo.jmcfx.ui.i18n.messages", Locale.ENGLISH);
+        ResourceBundle chinese = ResourceBundle.getBundle("com.youngledo.jmcfx.ui.i18n.messages", Locale.SIMPLIFIED_CHINESE);
+
+        for (JvmConnectionSource source : JvmConnectionSource.values()) {
+            String key = "jvms.source." + source.name().toLowerCase(Locale.ROOT);
+
+            assertTrue(english.containsKey(key), () -> "Missing English source label: " + key);
+            assertTrue(chinese.containsKey(key), () -> "Missing Simplified Chinese source label: " + key);
+        }
     }
 
     @Test
