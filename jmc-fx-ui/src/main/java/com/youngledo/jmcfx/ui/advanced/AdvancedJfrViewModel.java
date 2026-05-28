@@ -31,9 +31,6 @@ public class AdvancedJfrViewModel {
     private final StringProperty summary = new SimpleStringProperty("");
     private final StringProperty selectedEventType = new SimpleStringProperty("");
     private final StringProperty selectedCount = new SimpleStringProperty("");
-    private final StringProperty memorySummary = new SimpleStringProperty("");
-    private final StringProperty selectedMemoryIssueTitle = new SimpleStringProperty("");
-    private final StringProperty selectedMemoryIssueDetails = new SimpleStringProperty("");
 
     public AdvancedJfrViewModel(AdvancedJfrAnalysisService service) {
         this.service = service;
@@ -71,18 +68,6 @@ public class AdvancedJfrViewModel {
         return selectedMemoryIssue;
     }
 
-    public StringProperty memorySummaryProperty() {
-        return memorySummary;
-    }
-
-    public StringProperty selectedMemoryIssueTitleProperty() {
-        return selectedMemoryIssueTitle;
-    }
-
-    public StringProperty selectedMemoryIssueDetailsProperty() {
-        return selectedMemoryIssueDetails;
-    }
-
     public void load(RecordingSummary recording) {
         EventHeatmap loaded = service.loadEventHeatmap(recording, DEFAULT_BUCKET_COUNT, DEFAULT_MAX_EVENT_TYPES);
         MemoryAnalysisReport loadedMemoryReport = service.loadMemoryAnalysis(recording, DEFAULT_MAX_MEMORY_ISSUES);
@@ -94,7 +79,6 @@ public class AdvancedJfrViewModel {
             clearMemoryIssueSelection();
             long total = loaded.rows().stream().mapToLong(row -> row.totalCount()).sum();
             summary.set(loaded.rows().size() + " event types, " + DisplayFormats.formatInteger(total) + " events");
-            memorySummary.set(formatMemorySummary(loadedMemoryReport));
         });
     }
 
@@ -112,10 +96,7 @@ public class AdvancedJfrViewModel {
         selectedMemoryIssue.set(issue);
         if (issue == null) {
             clearMemoryIssueSelection();
-            return;
         }
-        selectedMemoryIssueTitle.set(issue.severity() + " - " + issue.subject());
-        selectedMemoryIssueDetails.set(formatMemoryIssueDetails(issue));
     }
 
     private void clearSelection() {
@@ -126,33 +107,5 @@ public class AdvancedJfrViewModel {
 
     private void clearMemoryIssueSelection() {
         selectedMemoryIssue.set(null);
-        selectedMemoryIssueTitle.set("");
-        selectedMemoryIssueDetails.set("");
-    }
-
-    private String formatMemorySummary(MemoryAnalysisReport report) {
-        return report.issues().size() + " " + issueLabel(report.issues().size())
-                + ", " + DisplayFormats.formatFileSize(report.totalEstimatedBytes()) + " estimated"
-                + ", " + DisplayFormats.formatInteger(report.totalCount()) + " events";
-    }
-
-    private String issueLabel(int issueCount) {
-        return issueCount == 1 ? "issue" : "issues";
-    }
-
-    private String formatMemoryIssueDetails(MemoryIssue issue) {
-        return """
-                Category: %s
-                Estimated bytes: %s
-                Count: %s
-                Score: %s
-                Evidence: %s
-                Recommendation: %s"""
-                .formatted(issue.category(),
-                        DisplayFormats.formatFileSize(issue.estimatedBytes()),
-                        DisplayFormats.formatInteger(issue.count()),
-                        DisplayFormats.formatPercent(issue.score()),
-                        issue.evidence(),
-                        issue.recommendation());
     }
 }

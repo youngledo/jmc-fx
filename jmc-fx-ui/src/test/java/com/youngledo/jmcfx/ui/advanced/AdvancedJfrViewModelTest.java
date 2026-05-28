@@ -49,7 +49,6 @@ class AdvancedJfrViewModelTest {
 
         assertEquals(10 * 1024 * 1024, viewModel.memoryReportProperty().get().totalEstimatedBytes());
         assertEquals(List.of(first, second), viewModel.memoryIssues().stream().toList());
-        assertEquals("2 issues, 10.0 MB estimated, 12 events", viewModel.memorySummaryProperty().get());
         assertEquals(AdvancedJfrViewModel.DEFAULT_MAX_MEMORY_ISSUES, service.lastMaxMemoryIssues());
     }
 
@@ -82,7 +81,7 @@ class AdvancedJfrViewModelTest {
     }
 
     @Test
-    void selectingMemoryIssuePopulatesTitleAndDetails() {
+    void selectingMemoryIssueStoresRawIssueOnly() {
         AdvancedJfrViewModel viewModel = new AdvancedJfrViewModel(new FakeAdvancedJfrAnalysisService());
         MemoryIssue issue = memoryIssue(MemoryIssueSeverity.WARNING, "java.lang.String",
                 10 * 1024 * 1024, 12, 87.5);
@@ -90,15 +89,6 @@ class AdvancedJfrViewModelTest {
         viewModel.selectMemoryIssue(issue);
 
         assertEquals(issue, viewModel.selectedMemoryIssueProperty().get());
-        assertEquals("WARNING - java.lang.String", viewModel.selectedMemoryIssueTitleProperty().get());
-        String details = viewModel.selectedMemoryIssueDetailsProperty().get();
-        assertEquals("""
-                Category: ALLOCATION_HOTSPOT
-                Estimated bytes: 10.0 MB
-                Count: 12
-                Score: 87.5%
-                Evidence: Allocation stack dominated by java.lang.String
-                Recommendation: Inspect allocation pressure""", details);
     }
 
     @Test
@@ -110,8 +100,6 @@ class AdvancedJfrViewModelTest {
         viewModel.selectMemoryIssue(null);
 
         assertNull(viewModel.selectedMemoryIssueProperty().get());
-        assertEquals("", viewModel.selectedMemoryIssueTitleProperty().get());
-        assertEquals("", viewModel.selectedMemoryIssueDetailsProperty().get());
     }
 
     @Test
@@ -126,8 +114,6 @@ class AdvancedJfrViewModelTest {
         viewModel.load(recording());
 
         assertNull(viewModel.selectedMemoryIssueProperty().get());
-        assertEquals("", viewModel.selectedMemoryIssueTitleProperty().get());
-        assertEquals("", viewModel.selectedMemoryIssueDetailsProperty().get());
     }
 
     private EventHeatmap sampleHeatmap() {

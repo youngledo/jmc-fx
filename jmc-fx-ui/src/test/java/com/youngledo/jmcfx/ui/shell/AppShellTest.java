@@ -386,6 +386,7 @@ class AppShellTest {
         assertTrue(controller.contains("@FXML private TableView<MemoryIssue> advancedJfrMemoryTable;"));
         assertTrue(controller.contains("@FXML private Label advancedJfrMemoryDetailTitleLabel;"));
         assertTrue(controller.contains("@FXML private TextArea advancedJfrMemoryDetailArea;"));
+        assertTrue(controller.contains("private boolean rebindingAdvancedJfrMemory;"));
         assertTrue(controller.contains("configureAdvancedJfrMemoryTable();"));
         assertTrue(controller.contains("advancedJfrHeatmapTab.textProperty().bind(i18n.text(\"advancedJfr.heatmap.tab\"))"));
         assertTrue(controller.contains("advancedJfrMemoryTab.textProperty().bind(i18n.text(\"advancedJfr.memory.tab\"))"));
@@ -397,10 +398,20 @@ class AppShellTest {
         assertTrue(controller.contains("localizedColumn(\"advancedJfr.memory.column.count\")"));
         assertTrue(controller.contains("localizedColumn(\"advancedJfr.memory.column.score\")"));
         assertTrue(controller.contains("advancedJfrMemoryTable.setItems(nextViewModel.memoryIssues())"));
+        assertTrue(controller.contains("if (!rebindingAdvancedJfrMemory && advancedJfrViewModel != null)"));
         assertTrue(controller.contains("advancedJfrViewModel.selectMemoryIssue(issue)"));
-        assertTrue(controller.contains("advancedJfrMemorySummaryLabel.textProperty().bind(nextViewModel.memorySummaryProperty())"));
-        assertTrue(controller.contains("advancedJfrMemoryDetailTitleLabel.textProperty().bind(nextViewModel.selectedMemoryIssueTitleProperty())"));
-        assertTrue(controller.contains("advancedJfrMemoryDetailArea.textProperty().bind(nextViewModel.selectedMemoryIssueDetailsProperty())"));
+        assertTrue(controller.contains("rebindingAdvancedJfrMemory = true;"));
+        assertTrue(controller.contains("rebindingAdvancedJfrMemory = false;"));
+        assertTrue(controller.contains("bindAdvancedJfrMemoryText(nextViewModel)"));
+        assertTrue(controller.contains("formatAdvancedJfrMemorySummary"));
+        assertTrue(controller.contains("formatAdvancedJfrMemoryIssueTitle"));
+        assertTrue(controller.contains("formatAdvancedJfrMemoryIssueDetails"));
+        assertTrue(controller.contains("i18n.format(\"advancedJfr.memory.summary.format\""));
+        assertTrue(controller.contains("i18n.format(\"advancedJfr.memory.detail.category\""));
+        assertTrue(controller.contains("i18n.format(\"advancedJfr.memory.detail.recommendation\""));
+        assertFalse(controller.contains("memorySummaryProperty()"));
+        assertFalse(controller.contains("selectedMemoryIssueTitleProperty()"));
+        assertFalse(controller.contains("selectedMemoryIssueDetailsProperty()"));
         assertTrue(controller.contains("advancedJfrMemoryTable.setItems(FXCollections.emptyObservableList())"));
         assertTrue(controller.contains("advancedJfrMemoryTable.getSelectionModel().clearSelection()"));
 
@@ -410,6 +421,7 @@ class AppShellTest {
         assertTrue(english.contains("advancedJfr.heatmap.tab=Heatmap"));
         assertTrue(english.contains("advancedJfr.memory.tab=Memory Analysis"));
         assertTrue(english.contains("advancedJfr.memory.summary=Open a recording to load memory analysis."));
+        assertTrue(english.contains("advancedJfr.memory.summary.format={0} {0,choice,1#issue|1<issues}, {1} estimated, {2} events"));
         assertTrue(english.contains("advancedJfr.memory.empty=No memory issues for this recording."));
         assertTrue(english.contains("advancedJfr.memory.column.severity=Severity"));
         assertTrue(english.contains("advancedJfr.memory.column.category=Category"));
@@ -417,10 +429,18 @@ class AppShellTest {
         assertTrue(english.contains("advancedJfr.memory.column.estimatedBytes=Estimated Bytes"));
         assertTrue(english.contains("advancedJfr.memory.column.count=Count"));
         assertTrue(english.contains("advancedJfr.memory.column.score=Score"));
+        assertTrue(english.contains("advancedJfr.memory.detail.title={0} - {1}"));
+        assertTrue(english.contains("advancedJfr.memory.detail.category=Category: {0}"));
+        assertTrue(english.contains("advancedJfr.memory.detail.estimatedBytes=Estimated bytes: {0}"));
+        assertTrue(english.contains("advancedJfr.memory.detail.count=Count: {0}"));
+        assertTrue(english.contains("advancedJfr.memory.detail.score=Score: {0}"));
+        assertTrue(english.contains("advancedJfr.memory.detail.evidence=Evidence: {0}"));
+        assertTrue(english.contains("advancedJfr.memory.detail.recommendation=Recommendation: {0}"));
 
         assertTrue(chinese.contains("advancedJfr.heatmap.tab=热力图"));
         assertTrue(chinese.contains("advancedJfr.memory.tab=内存分析"));
         assertTrue(chinese.contains("advancedJfr.memory.summary=打开JFR记录后加载内存分析。"));
+        assertTrue(chinese.contains("advancedJfr.memory.summary.format={0} 个问题，估算 {1}，{2} 个事件"));
         assertTrue(chinese.contains("advancedJfr.memory.empty=此记录没有内存问题。"));
         assertTrue(chinese.contains("advancedJfr.memory.column.severity=严重程度"));
         assertTrue(chinese.contains("advancedJfr.memory.column.category=类别"));
@@ -428,6 +448,13 @@ class AppShellTest {
         assertTrue(chinese.contains("advancedJfr.memory.column.estimatedBytes=估算字节"));
         assertTrue(chinese.contains("advancedJfr.memory.column.count=数量"));
         assertTrue(chinese.contains("advancedJfr.memory.column.score=分数"));
+        assertTrue(chinese.contains("advancedJfr.memory.detail.title={0} - {1}"));
+        assertTrue(chinese.contains("advancedJfr.memory.detail.category=类别：{0}"));
+        assertTrue(chinese.contains("advancedJfr.memory.detail.estimatedBytes=估算字节：{0}"));
+        assertTrue(chinese.contains("advancedJfr.memory.detail.count=数量：{0}"));
+        assertTrue(chinese.contains("advancedJfr.memory.detail.score=分数：{0}"));
+        assertTrue(chinese.contains("advancedJfr.memory.detail.evidence=证据：{0}"));
+        assertTrue(chinese.contains("advancedJfr.memory.detail.recommendation=建议：{0}"));
     }
 
     @Test
