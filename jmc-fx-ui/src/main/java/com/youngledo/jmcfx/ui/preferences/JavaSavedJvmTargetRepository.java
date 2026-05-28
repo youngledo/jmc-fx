@@ -62,11 +62,11 @@ public final class JavaSavedJvmTargetRepository implements SavedJvmTargetReposit
                         target.lastConnectedAt())
                 : target;
         List<String> ids = readIds();
+        writeTarget(targetToSave);
         if (!ids.contains(targetToSave.id())) {
             ids.add(targetToSave.id());
             writeIds(ids);
         }
-        writeTarget(targetToSave);
         return targetToSave;
     }
 
@@ -140,7 +140,7 @@ public final class JavaSavedJvmTargetRepository implements SavedJvmTargetReposit
     }
 
     private static String targetKey(String id) {
-        return TARGET_PREFIX + encodeField(id);
+        return TARGET_PREFIX + stableId(id);
     }
 
     private static Optional<SavedJvmTarget> decode(String entry) {

@@ -38,8 +38,8 @@ class JavaSavedJvmTargetRepositoryTest {
     void ignoresMalformedPerTargetEntries() {
         JavaSavedJvmTargetRepository repository = JavaSavedJvmTargetRepository.inMemory();
         repository.putRaw("targetIds", encoded("bad") + "\n" + encoded("valid"));
-        repository.putRaw("target." + encoded("bad"), "not-base64|fields");
-        repository.putRaw("target." + encoded("valid"), encodedEntry(
+        repository.putRaw(targetKey("bad"), "not-base64|fields");
+        repository.putRaw(targetKey("valid"), encodedEntry(
                 "valid", "Valid", "service:jmx:rmi:///valid", ""));
 
         assertEquals(List.of(new SavedJvmTarget("valid", "Valid", "service:jmx:rmi:///valid", null)),
@@ -111,11 +111,37 @@ class JavaSavedJvmTargetRepositoryTest {
         }
     }
 
+    @Test
+    void savesFindsAndDeletesExplicitLongId() {
+        JavaSavedJvmTargetRepository repository = new JavaSavedJvmTargetRepository();
+        SavedJvmTarget target = new SavedJvmTarget("target-" + "x".repeat(200), "Long Id",
+                "service:jmx:rmi:///long-id-" + UUID.randomUUID(), null);
+
+        try {
+            assertEquals(target, repository.save(target));
+            assertEquals(List.of(target), repository.findAll().stream()
+                    .filter(saved -> saved.id().equals(target.id()))
+                    .toList());
+
+            repository.deleteById(target.id());
+
+            assertEquals(List.of(), repository.findAll().stream()
+                    .filter(saved -> saved.id().equals(target.id()))
+                    .toList());
+        } finally {
+            repository.deleteById(target.id());
+        }
+    }
+
     private static String encodedEntry(String id, String displayName, String serviceUrl, String lastConnectedAt) {
         return String.join("|", encoded(id), encoded(displayName), encoded(serviceUrl), encoded(lastConnectedAt));
     }
 
     private static String encoded(String value) {
         return Base64.getUrlEncoder().encodeToString(value.getBytes(StandardCharsets.UTF_8));
+    }
+
+    private static String targetKey(String id) {
+        return "target." + UUID.nameUUIDFromBytes(id.getBytes(StandardCharsets.UTF_8));
     }
 }
