@@ -255,7 +255,7 @@ class JvmBrowserViewModelTest {
         assertEquals(JvmConnectionSource.SAVED, viewModel.connectionsProperty().getFirst().source());
         assertEquals("Production", viewModel.connectionsProperty().getFirst().displayName());
         assertEquals("", viewModel.manualConnectionNameProperty().get());
-        assertEquals("service:jmx:rmi:///prod", viewModel.manualConnectionUrlProperty().get());
+        assertEquals("", viewModel.manualConnectionUrlProperty().get());
 
         viewModel.manualConnectionUrlProperty().set(" ");
         viewModel.saveManualTarget();
@@ -404,6 +404,24 @@ class JvmBrowserViewModelTest {
 
         assertEquals("OpenJDK 64-Bit Server VM", viewModel.selectedSessionProperty().get().runtime().vmName());
         assertEquals("saved-1", viewModel.selectedConnectionProperty().get().id());
+    }
+
+    @Test
+    void saveManualTargetClearsUrlSoConnectSelectedOrManualUsesSelectedSavedTarget() {
+        FakeSavedJvmTargetRepository savedTargets = new FakeSavedJvmTargetRepository();
+        CapturingRemoteJmxConnectionService jmx = new CapturingRemoteJmxConnectionService();
+        JvmBrowserViewModel viewModel = viewModel(new FakeJvmDiscoveryService(), jmx, savedTargets,
+                new FakeJdpDiscoveryService());
+        viewModel.manualConnectionNameProperty().set("Production");
+        viewModel.manualConnectionUrlProperty().set("service:jmx:rmi:///prod");
+
+        viewModel.saveManualTarget();
+        viewModel.connectSelectedOrManual();
+
+        assertEquals("", viewModel.manualConnectionUrlProperty().get());
+        assertEquals(List.of("service:jmx:rmi:///prod"), jmx.remoteConnectionUrls);
+        assertEquals(JvmConnectionSource.SAVED, viewModel.selectedConnectionProperty().get().source());
+        assertTrue(savedTargets.findAll().getFirst().lastConnectedAt() != null);
     }
 
     @Test
@@ -590,6 +608,31 @@ class JvmBrowserViewModelTest {
         viewModel.selectedConnectionProperty().set(connected);
 
         assertTrue(viewModel.recordingControlAvailableProperty().get());
+        assertEquals(1, viewModel.flightRecordingsProperty().size());
+        assertEquals(FlightRecordingState.RUNNING, viewModel.flightRecordingsProperty().getFirst().state());
+    }
+
+    @Test
+    void savedConnectionWithFlightRecorderStartsRecordingUsingLiveConnection() {
+        FakeSavedJvmTargetRepository savedTargets = new FakeSavedJvmTargetRepository();
+        savedTargets.save(new SavedJvmTarget("saved-1", "Production", "service:jmx:rmi:///prod", null));
+        CapturingRemoteJmxConnectionService jmx = new CapturingRemoteJmxConnectionService();
+        FakeFlightRecordingService recordings = new FakeFlightRecordingService();
+        JvmBrowserViewModel viewModel = new JvmBrowserViewModel(new FakeJvmDiscoveryService(), jmx, recordings,
+                null, null, null, savedTargets, new FakeJdpDiscoveryService(), new DirectJvmBrowserExecutor(),
+                Runnable::run, path -> { });
+        viewModel.refresh();
+        JvmConnection saved = viewModel.connectionsProperty().getFirst();
+        JvmConnection live = new JvmConnection("remote-live", "Production", saved.connectionUrl(), true,
+                JvmConnectionSource.MANUAL, JvmConnectionState.CONNECTED, "Connected");
+        jmx.connectedToReturn = live;
+        jmx.setSessionSnapshot("remote-live", flightRecorderSessionSnapshot(live));
+        recordings.setAvailable("remote-live", true);
+
+        viewModel.connectSelected();
+        viewModel.startFlightRecording();
+
+        assertEquals("remote-live", recordings.lastStartRequest().connection().id());
         assertEquals(1, viewModel.flightRecordingsProperty().size());
         assertEquals(FlightRecordingState.RUNNING, viewModel.flightRecordingsProperty().getFirst().state());
     }

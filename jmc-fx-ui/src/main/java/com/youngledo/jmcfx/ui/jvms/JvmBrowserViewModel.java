@@ -496,7 +496,7 @@ public class JvmBrowserViewModel implements AutoCloseable {
             JvmConnection savedConnection = JvmConnection.saved(saved);
             replaceSavedCandidate(savedConnection);
             manualConnectionName.set("");
-            manualConnectionUrl.set(url);
+            manualConnectionUrl.set("");
             statusMessage.set("Saved " + savedConnection.displayName() + ".");
             clearError();
         } catch (RuntimeException exception) {
@@ -593,11 +593,12 @@ public class JvmBrowserViewModel implements AutoCloseable {
         clearRecordingError();
         executor.execute(() -> {
             try {
-                FlightRecordingStartRequest request = new FlightRecordingStartRequest(selected,
+                JvmConnection liveConnection = liveConnectionFor(selected);
+                FlightRecordingStartRequest request = new FlightRecordingStartRequest(liveConnection,
                         recordingName(selected), FlightRecordingTemplate.profile());
                 FlightRecordingInfo started = flightRecordingService.startRecording(request);
-                sessionStartedRecordings.put(started.id(), selected);
-                List<FlightRecordingInfo> updated = flightRecordingService.recordings(selected);
+                sessionStartedRecordings.put(started.id(), liveConnection);
+                List<FlightRecordingInfo> updated = flightRecordingService.recordings(liveConnection);
                 runOnFx(() -> {
                     flightRecordings.setAll(updated);
                     selectedFlightRecording.set(updated.isEmpty() ? null : updated.getLast());
@@ -622,10 +623,11 @@ public class JvmBrowserViewModel implements AutoCloseable {
         clearRecordingError();
         executor.execute(() -> {
             try {
+                JvmConnection liveConnection = liveConnectionFor(selectedConnection);
                 Path saved = flightRecordingService.stopAndSaveRecording(new FlightRecordingStopRequest(
-                        selectedConnection, selectedRecording.id(), destinationFile));
+                        liveConnection, selectedRecording.id(), destinationFile));
                 sessionStartedRecordings.remove(selectedRecording.id());
-                List<FlightRecordingInfo> updated = flightRecordingService.recordings(selectedConnection);
+                List<FlightRecordingInfo> updated = flightRecordingService.recordings(liveConnection);
                 runOnFx(() -> {
                     flightRecordings.setAll(updated);
                     selectedFlightRecording.set(updated.isEmpty() ? null : updated.getFirst());
