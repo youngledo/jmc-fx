@@ -21,9 +21,11 @@ import com.youngledo.jmcfx.domain.service.SavedJvmTargetRepository;
 
 public final class JavaSavedJvmTargetRepository implements SavedJvmTargetRepository {
 
-    private static final String TARGETS = "targets";
+    private static final String TARGET_IDS = "targetIds";
+    private static final String TARGET_PREFIX = "target.";
     private static final String FIELD_SEPARATOR = "\\|";
     private static final String ENTRY_SEPARATOR = "\n";
+    private static final String BLANK_SERVICE_URL_MESSAGE = "Saved JVM target service URL must not be blank.";
     private static final Comparator<SavedJvmTarget> DISPLAY_ORDER = Comparator
             .comparing((SavedJvmTarget target) -> target.displayName().toLowerCase(Locale.ROOT))
             .thenComparing(SavedJvmTarget::serviceUrl);
@@ -52,14 +54,19 @@ public final class JavaSavedJvmTargetRepository implements SavedJvmTargetReposit
     @Override
     public SavedJvmTarget save(SavedJvmTarget target) {
         Objects.requireNonNull(target, "target");
+        if (target.serviceUrl().isBlank()) {
+            throw new IllegalArgumentException(BLANK_SERVICE_URL_MESSAGE);
+        }
         SavedJvmTarget targetToSave = target.id().isBlank()
                 ? new SavedJvmTarget(stableId(target.serviceUrl()), target.displayName(), target.serviceUrl(),
                         target.lastConnectedAt())
                 : target;
-        List<SavedJvmTarget> targets = readTargets();
-        targets.removeIf(existing -> existing.id().equals(targetToSave.id()));
-        targets.add(targetToSave);
-        writeTargets(targets);
+        List<String> ids = readIds();
+        if (!ids.contains(targetToSave.id())) {
+            ids.add(targetToSave.id());
+            writeIds(ids);
+        }
+        writeTarget(targetToSave);
         return targetToSave;
     }
 
@@ -68,9 +75,10 @@ public final class JavaSavedJvmTargetRepository implements SavedJvmTargetReposit
         if (id == null || id.isBlank()) {
             return;
         }
-        List<SavedJvmTarget> targets = readTargets();
-        targets.removeIf(target -> target.id().equals(id));
-        writeTargets(targets);
+        List<String> ids = readIds();
+        ids.removeIf(existing -> existing.equals(id));
+        writeIds(ids);
+        preferences.remove(targetKey(id));
     }
 
     @Override
@@ -78,18 +86,7 @@ public final class JavaSavedJvmTargetRepository implements SavedJvmTargetReposit
         if (id == null || id.isBlank()) {
             return;
         }
-        List<SavedJvmTarget> targets = readTargets();
-        boolean changed = false;
-        for (int index = 0; index < targets.size(); index++) {
-            SavedJvmTarget target = targets.get(index);
-            if (target.id().equals(id)) {
-                targets.set(index, target.withLastConnectedAt(connectedAt));
-                changed = true;
-            }
-        }
-        if (changed) {
-            writeTargets(targets);
-        }
+        readTarget(id).ifPresent(target -> writeTarget(target.withLastConnectedAt(connectedAt)));
     }
 
     void putRaw(String key, String value) {
@@ -97,22 +94,53 @@ public final class JavaSavedJvmTargetRepository implements SavedJvmTargetReposit
     }
 
     private List<SavedJvmTarget> readTargets() {
-        String persisted = preferences.get(TARGETS, "");
-        if (persisted.isBlank()) {
-            return new ArrayList<>();
-        }
         List<SavedJvmTarget> targets = new ArrayList<>();
-        for (String entry : persisted.split(ENTRY_SEPARATOR)) {
-            decode(entry).ifPresent(targets::add);
+        for (String id : readIds()) {
+            readTarget(id).ifPresent(targets::add);
         }
         return targets;
     }
 
-    private void writeTargets(List<SavedJvmTarget> targets) {
-        preferences.put(TARGETS, targets.stream()
-                .map(JavaSavedJvmTargetRepository::encode)
+    private List<String> readIds() {
+        String persisted = preferences.get(TARGET_IDS, "");
+        if (persisted.isBlank()) {
+            return new ArrayList<>();
+        }
+        List<String> ids = new ArrayList<>();
+        for (String encodedId : persisted.split(ENTRY_SEPARATOR)) {
+            try {
+                String id = decodeField(encodedId);
+                if (!id.isBlank() && !ids.contains(id)) {
+                    ids.add(id);
+                }
+            } catch (IllegalArgumentException exception) {
+                // Ignore malformed index entries so one bad id does not hide the whole repository.
+            }
+        }
+        return ids;
+    }
+
+    private void writeIds(List<String> ids) {
+        preferences.put(TARGET_IDS, ids.stream()
+                .map(JavaSavedJvmTargetRepository::encodeField)
                 .reduce((first, second) -> first + ENTRY_SEPARATOR + second)
                 .orElse(""));
+    }
+
+    private Optional<SavedJvmTarget> readTarget(String id) {
+        String persisted = preferences.get(targetKey(id), "");
+        if (persisted.isBlank()) {
+            return Optional.empty();
+        }
+        return decode(persisted);
+    }
+
+    private void writeTarget(SavedJvmTarget target) {
+        preferences.put(targetKey(target.id()), encode(target));
+    }
+
+    private static String targetKey(String id) {
+        return TARGET_PREFIX + encodeField(id);
     }
 
     private static Optional<SavedJvmTarget> decode(String entry) {

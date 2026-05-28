@@ -2,11 +2,14 @@ package com.youngledo.jmcfx.ui.preferences;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertFalse;
+import static org.junit.jupiter.api.Assertions.assertThrows;
 
 import java.nio.charset.StandardCharsets;
 import java.time.Instant;
+import java.util.ArrayList;
 import java.util.Base64;
 import java.util.List;
+import java.util.UUID;
 
 import com.youngledo.jmcfx.domain.model.SavedJvmTarget;
 import org.junit.jupiter.api.Test;
@@ -32,10 +35,11 @@ class JavaSavedJvmTargetRepositoryTest {
     }
 
     @Test
-    void ignoresMalformedEntries() {
+    void ignoresMalformedPerTargetEntries() {
         JavaSavedJvmTargetRepository repository = JavaSavedJvmTargetRepository.inMemory();
-        repository.save(new SavedJvmTarget("valid", "Valid", "service:jmx:rmi:///valid", null));
-        repository.putRaw("targets", "not-base64|fields\n" + encodedEntry(
+        repository.putRaw("targetIds", encoded("bad") + "\n" + encoded("valid"));
+        repository.putRaw("target." + encoded("bad"), "not-base64|fields");
+        repository.putRaw("target." + encoded("valid"), encodedEntry(
                 "valid", "Valid", "service:jmx:rmi:///valid", ""));
 
         assertEquals(List.of(new SavedJvmTarget("valid", "Valid", "service:jmx:rmi:///valid", null)),
@@ -68,6 +72,43 @@ class JavaSavedJvmTargetRepositoryTest {
         assertFalse(first.id().isBlank());
         assertEquals(first.id(), second.id());
         assertEquals(List.of(first), firstRepository.findAll());
+    }
+
+    @Test
+    void rejectsBlankServiceUrl() {
+        JavaSavedJvmTargetRepository repository = JavaSavedJvmTargetRepository.inMemory();
+
+        IllegalArgumentException exception = assertThrows(IllegalArgumentException.class,
+                () -> repository.save(new SavedJvmTarget("", "Local Process", " ", null)));
+
+        assertEquals("Saved JVM target service URL must not be blank.", exception.getMessage());
+    }
+
+    @Test
+    void storesManyLongUrlsWithoutSingleOversizedPreferenceValue() {
+        JavaSavedJvmTargetRepository repository = new JavaSavedJvmTargetRepository();
+        String prefix = "jmc-fx-test-" + UUID.randomUUID();
+        List<SavedJvmTarget> targets = new ArrayList<>();
+        for (int index = 0; index < 9; index++) {
+            targets.add(new SavedJvmTarget(prefix + "-" + index, "Long " + index,
+                    "service:jmx:rmi:///jndi/rmi://localhost:" + (17_000 + index)
+                            + "/jmxrmi?token=" + "x".repeat(850),
+                    null));
+        }
+
+        try {
+            for (SavedJvmTarget target : targets) {
+                repository.save(target);
+            }
+
+            assertEquals(targets, repository.findAll().stream()
+                    .filter(target -> target.id().startsWith(prefix))
+                    .toList());
+        } finally {
+            for (SavedJvmTarget target : targets) {
+                repository.deleteById(target.id());
+            }
+        }
     }
 
     private static String encodedEntry(String id, String displayName, String serviceUrl, String lastConnectedAt) {
