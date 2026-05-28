@@ -65,6 +65,7 @@ import com.youngledo.jmcfx.domain.model.LockHistogram;
 import com.youngledo.jmcfx.domain.model.MBeanAttributeInfo;
 import com.youngledo.jmcfx.domain.model.MBeanNode;
 import com.youngledo.jmcfx.domain.model.MBeanOperationInfo;
+import com.youngledo.jmcfx.domain.model.MemoryIssue;
 import com.youngledo.jmcfx.domain.model.RecordingSummary;
 import com.youngledo.jmcfx.domain.model.RuleResult;
 import com.youngledo.jmcfx.domain.model.Severity;
@@ -356,12 +357,19 @@ public class AppShellController {
     @FXML private TextArea analysisDetailExplanation;
     @FXML private Label advancedJfrTitleLabel;
     @FXML private Label advancedJfrSummaryLabel;
+    @FXML private TabPane advancedJfrTabs;
+    @FXML private Tab advancedJfrHeatmapTab;
+    @FXML private Tab advancedJfrMemoryTab;
     @FXML private VBox advancedJfrHeatmapContainer;
     @FXML private Label advancedJfrSelectionTitleLabel;
     @FXML private Label advancedJfrSelectedEventTypeCaptionLabel;
     @FXML private Label advancedJfrSelectedEventTypeLabel;
     @FXML private Label advancedJfrSelectedCountCaptionLabel;
     @FXML private Label advancedJfrSelectedCountLabel;
+    @FXML private Label advancedJfrMemorySummaryLabel;
+    @FXML private TableView<MemoryIssue> advancedJfrMemoryTable;
+    @FXML private Label advancedJfrMemoryDetailTitleLabel;
+    @FXML private TextArea advancedJfrMemoryDetailArea;
     @FXML private Label jvmsTitleLabel;
     @FXML private Button jvmsRefreshButton;
     @FXML private TextField jvmsManualUrlField;
@@ -904,6 +912,7 @@ public class AppShellController {
         bindOverview(null);
         bindEvents();
         configureAnalysisTable();
+        configureAdvancedJfrMemoryTable();
         configureJvmBrowserTable();
         configureJvmRecordingsTable();
         configureMBeanBrowser();
@@ -1053,6 +1062,51 @@ public class AppShellController {
         analysisTable.getColumns().setAll(List.of(severityCol, nameCol, scoreCol, summaryCol));
         analysisTable.getSelectionModel().selectedItemProperty()
                 .addListener((obs, old, val) -> showAnalysisDetail(val));
+    }
+
+    private void configureAdvancedJfrMemoryTable() {
+        advancedJfrMemoryTable.setPlaceholder(localizedTablePlaceholder("advancedJfr.memory.empty"));
+
+        TableColumn<MemoryIssue, String> severityCol = localizedColumn("advancedJfr.memory.column.severity");
+        severityCol.setPrefWidth(110);
+        severityCol.setCellValueFactory(cell -> new ReadOnlyStringWrapper(cell.getValue().severity().name()));
+
+        TableColumn<MemoryIssue, String> categoryCol = localizedColumn("advancedJfr.memory.column.category");
+        categoryCol.setPrefWidth(180);
+        categoryCol.setCellValueFactory(cell -> new ReadOnlyStringWrapper(cell.getValue().category().name()));
+
+        TableColumn<MemoryIssue, String> subjectCol = localizedColumn("advancedJfr.memory.column.subject");
+        subjectCol.setPrefWidth(360);
+        subjectCol.setCellValueFactory(cell -> new ReadOnlyStringWrapper(cell.getValue().subject()));
+
+        TableColumn<MemoryIssue, String> estimatedBytesCol =
+                localizedColumn("advancedJfr.memory.column.estimatedBytes");
+        estimatedBytesCol.setPrefWidth(140);
+        estimatedBytesCol.setCellValueFactory(cell ->
+                new ReadOnlyStringWrapper(DisplayFormats.formatFileSize(cell.getValue().estimatedBytes())));
+
+        TableColumn<MemoryIssue, String> countLabelCol =
+                localizedColumn("advancedJfr.memory.column.count");
+        TableColumn<MemoryIssue, Number> countCol = new TableColumn<>();
+        countCol.textProperty().bind(countLabelCol.textProperty());
+        countCol.setPrefWidth(100);
+        countCol.setCellValueFactory(cell ->
+                new javafx.beans.property.SimpleLongProperty(cell.getValue().count()));
+        useFormattedIntegerCells(countCol);
+
+        TableColumn<MemoryIssue, String> scoreCol = localizedColumn("advancedJfr.memory.column.score");
+        scoreCol.setPrefWidth(90);
+        scoreCol.setCellValueFactory(cell ->
+                new ReadOnlyStringWrapper(DisplayFormats.formatPercent(cell.getValue().score())));
+
+        advancedJfrMemoryTable.getColumns().setAll(List.of(severityCol, categoryCol, subjectCol,
+                estimatedBytesCol, countCol, scoreCol));
+        advancedJfrMemoryTable.getSelectionModel().selectedItemProperty()
+                .addListener((observable, oldIssue, issue) -> {
+                    if (advancedJfrViewModel != null) {
+                        advancedJfrViewModel.selectMemoryIssue(issue);
+                    }
+                });
     }
 
     private void configureJvmBrowserTable() {
@@ -2839,6 +2893,8 @@ public class AppShellController {
         eventStackTraceTab.textProperty().bind(i18n.text("events.details.stackTrace"));
         analysisTitleLabel.textProperty().bind(i18n.text("analysis.title"));
         advancedJfrTitleLabel.textProperty().bind(i18n.text("advancedJfr.title"));
+        advancedJfrHeatmapTab.textProperty().bind(i18n.text("advancedJfr.heatmap.tab"));
+        advancedJfrMemoryTab.textProperty().bind(i18n.text("advancedJfr.memory.tab"));
         advancedJfrSelectionTitleLabel.textProperty().bind(i18n.text("advancedJfr.selection"));
         advancedJfrSelectedEventTypeCaptionLabel.textProperty().bind(i18n.text("advancedJfr.selectedEventType"));
         advancedJfrSelectedCountCaptionLabel.textProperty().bind(i18n.text("advancedJfr.selectedCount"));
@@ -3195,19 +3251,31 @@ public class AppShellController {
         advancedJfrSummaryLabel.textProperty().unbind();
         advancedJfrSelectedEventTypeLabel.textProperty().unbind();
         advancedJfrSelectedCountLabel.textProperty().unbind();
+        advancedJfrMemorySummaryLabel.textProperty().unbind();
+        advancedJfrMemoryDetailTitleLabel.textProperty().unbind();
+        advancedJfrMemoryDetailArea.textProperty().unbind();
         advancedJfrViewModel = nextViewModel;
         advancedJfrHeatmapView.setHeatmap(null);
         advancedJfrHeatmapView.setOnCellSelected(cell -> { });
+        advancedJfrMemoryTable.setItems(FXCollections.emptyObservableList());
+        advancedJfrMemoryTable.getSelectionModel().clearSelection();
+        advancedJfrMemoryDetailTitleLabel.setText("");
+        advancedJfrMemoryDetailArea.setText("");
         if (nextViewModel == null) {
             advancedJfrSummaryLabel.setText(i18n.get("advancedJfr.summary"));
             advancedJfrSelectedEventTypeLabel.setText("");
             advancedJfrSelectedCountLabel.setText("");
+            advancedJfrMemorySummaryLabel.setText(i18n.get("advancedJfr.memory.summary"));
             return;
         }
         nextViewModel.heatmapProperty().addListener(advancedHeatmapListener);
         advancedJfrSummaryLabel.textProperty().bind(nextViewModel.summaryProperty());
         advancedJfrSelectedEventTypeLabel.textProperty().bind(nextViewModel.selectedEventTypeProperty());
         advancedJfrSelectedCountLabel.textProperty().bind(nextViewModel.selectedCountProperty());
+        advancedJfrMemoryTable.setItems(nextViewModel.memoryIssues());
+        advancedJfrMemorySummaryLabel.textProperty().bind(nextViewModel.memorySummaryProperty());
+        advancedJfrMemoryDetailTitleLabel.textProperty().bind(nextViewModel.selectedMemoryIssueTitleProperty());
+        advancedJfrMemoryDetailArea.textProperty().bind(nextViewModel.selectedMemoryIssueDetailsProperty());
         advancedJfrHeatmapView.setOnCellSelected(nextViewModel::selectCell);
         advancedJfrHeatmapView.setHeatmap(nextViewModel.heatmapProperty().get());
     }

@@ -456,6 +456,9 @@
     -fx-border-color: -color-border-muted;
     -fx-border-radius: 6px;
 }
+.advanced-jfr-memory-content {
+    -fx-padding: 10px 10px 0 0;
+}
 .event-heatmap-view {
     -fx-spacing: 8px;
 }
@@ -577,8 +580,12 @@
 
 /* Analysis detail */
 .analysis-detail {
-    -fx-padding: 12px;
+    -fx-padding: 12px 0 0 0;
     -fx-spacing: 8px;
+}
+.advanced-jfr-memory-detail.analysis-detail {
+    -fx-padding: 16px 0 0 0;
+    -fx-spacing: 12px;
 }
 .analysis-detail-title {
     -fx-font-weight: bold;

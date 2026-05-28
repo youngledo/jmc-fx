@@ -128,12 +128,23 @@ class AppShellTest {
         assertEquals("VBox", elementByFxId(document, "advancedJfrPane").getTagName());
         assertEquals("Label", elementByFxId(document, "advancedJfrTitleLabel").getTagName());
         assertEquals("Label", elementByFxId(document, "advancedJfrSummaryLabel").getTagName());
+        assertEquals("TabPane", elementByFxId(document, "advancedJfrTabs").getTagName());
+        List<Element> advancedJfrTabs = childElements(childElement(elementByFxId(document, "advancedJfrTabs"), "tabs"), "Tab");
+        assertEquals(List.of("advancedJfrHeatmapTab", "advancedJfrMemoryTab"),
+                advancedJfrTabs.stream().map(tab -> tab.getAttribute("fx:id")).toList());
         assertEquals("VBox", elementByFxId(document, "advancedJfrHeatmapContainer").getTagName());
         assertEquals(0, elementCountWithFxId(document, "advancedJfrSplitPane"));
         assertTrue(hasStyleClass(elementByFxId(document, "advancedJfrSelectionPane"), "advanced-jfr-selection-pane"));
         assertEquals("HBox", elementByFxId(document, "advancedJfrSelectionValues").getTagName());
         assertEquals("Label", elementByFxId(document, "advancedJfrSelectedEventTypeLabel").getTagName());
         assertEquals("Label", elementByFxId(document, "advancedJfrSelectedCountLabel").getTagName());
+        assertEquals("Label", elementByFxId(document, "advancedJfrMemorySummaryLabel").getTagName());
+        assertEquals("TableView", elementByFxId(document, "advancedJfrMemoryTable").getTagName());
+        assertTrue(hasStyleClass(elementByFxId(document, "advancedJfrMemoryTable"), "dense-table"));
+        assertEquals("Label", elementByFxId(document, "advancedJfrMemoryDetailTitleLabel").getTagName());
+        assertEquals("TextArea", elementByFxId(document, "advancedJfrMemoryDetailArea").getTagName());
+        assertEquals("false", elementByFxId(document, "advancedJfrMemoryDetailArea").getAttribute("editable"));
+        assertEquals("true", elementByFxId(document, "advancedJfrMemoryDetailArea").getAttribute("wrapText"));
         assertEquals("homeOpenRecordingButton", elementByFxId(document, "homeOpenRecordingButton").getAttribute("fx:id"));
         assertFalse(elementByFxId(document, "homeOpenRecordingButton").hasAttribute("styleClass"),
                 "Home action buttons should keep JavaFX's default button style class; add local hooks in controller");
@@ -355,6 +366,68 @@ class AppShellTest {
         assertTrue(chinese.contains("profiling.flame.orientation=切换火焰图/冰柱图方向"));
         assertTrue(chinese.contains("profiling.flame.orientation.icicle=冰柱图"));
         assertTrue(chinese.contains("profiling.flame.orientation.flame=火焰图"));
+    }
+
+    @Test
+    void advancedJfrShellUsesTabbedHeatmapAndMemoryBindings() throws Exception {
+        String controller = java.nio.file.Files.readString(
+                java.nio.file.Path.of("src/main/java/com/youngledo/jmcfx/ui/shell/AppShellController.java"));
+        String english = java.nio.file.Files.readString(
+                java.nio.file.Path.of("src/main/resources/com/youngledo/jmcfx/ui/i18n/messages.properties"));
+        String chinese = java.nio.file.Files.readString(
+                java.nio.file.Path.of("src/main/resources/com/youngledo/jmcfx/ui/i18n/messages_zh_CN.properties"));
+        String css = appCss();
+
+        assertTrue(controller.contains("import com.youngledo.jmcfx.domain.model.MemoryIssue;"));
+        assertTrue(controller.contains("@FXML private TabPane advancedJfrTabs;"));
+        assertTrue(controller.contains("@FXML private Tab advancedJfrHeatmapTab;"));
+        assertTrue(controller.contains("@FXML private Tab advancedJfrMemoryTab;"));
+        assertTrue(controller.contains("@FXML private Label advancedJfrMemorySummaryLabel;"));
+        assertTrue(controller.contains("@FXML private TableView<MemoryIssue> advancedJfrMemoryTable;"));
+        assertTrue(controller.contains("@FXML private Label advancedJfrMemoryDetailTitleLabel;"));
+        assertTrue(controller.contains("@FXML private TextArea advancedJfrMemoryDetailArea;"));
+        assertTrue(controller.contains("configureAdvancedJfrMemoryTable();"));
+        assertTrue(controller.contains("advancedJfrHeatmapTab.textProperty().bind(i18n.text(\"advancedJfr.heatmap.tab\"))"));
+        assertTrue(controller.contains("advancedJfrMemoryTab.textProperty().bind(i18n.text(\"advancedJfr.memory.tab\"))"));
+        assertTrue(controller.contains("advancedJfrMemoryTable.setPlaceholder(localizedTablePlaceholder(\"advancedJfr.memory.empty\"))"));
+        assertTrue(controller.contains("localizedColumn(\"advancedJfr.memory.column.severity\")"));
+        assertTrue(controller.contains("localizedColumn(\"advancedJfr.memory.column.category\")"));
+        assertTrue(controller.contains("localizedColumn(\"advancedJfr.memory.column.subject\")"));
+        assertTrue(controller.contains("localizedColumn(\"advancedJfr.memory.column.estimatedBytes\")"));
+        assertTrue(controller.contains("localizedColumn(\"advancedJfr.memory.column.count\")"));
+        assertTrue(controller.contains("localizedColumn(\"advancedJfr.memory.column.score\")"));
+        assertTrue(controller.contains("advancedJfrMemoryTable.setItems(nextViewModel.memoryIssues())"));
+        assertTrue(controller.contains("advancedJfrViewModel.selectMemoryIssue(issue)"));
+        assertTrue(controller.contains("advancedJfrMemorySummaryLabel.textProperty().bind(nextViewModel.memorySummaryProperty())"));
+        assertTrue(controller.contains("advancedJfrMemoryDetailTitleLabel.textProperty().bind(nextViewModel.selectedMemoryIssueTitleProperty())"));
+        assertTrue(controller.contains("advancedJfrMemoryDetailArea.textProperty().bind(nextViewModel.selectedMemoryIssueDetailsProperty())"));
+        assertTrue(controller.contains("advancedJfrMemoryTable.setItems(FXCollections.emptyObservableList())"));
+        assertTrue(controller.contains("advancedJfrMemoryTable.getSelectionModel().clearSelection()"));
+
+        assertTrue(css.contains(".advanced-jfr-memory-content"));
+        assertTrue(css.contains(".advanced-jfr-memory-detail"));
+
+        assertTrue(english.contains("advancedJfr.heatmap.tab=Heatmap"));
+        assertTrue(english.contains("advancedJfr.memory.tab=Memory Analysis"));
+        assertTrue(english.contains("advancedJfr.memory.summary=Open a recording to load memory analysis."));
+        assertTrue(english.contains("advancedJfr.memory.empty=No memory issues for this recording."));
+        assertTrue(english.contains("advancedJfr.memory.column.severity=Severity"));
+        assertTrue(english.contains("advancedJfr.memory.column.category=Category"));
+        assertTrue(english.contains("advancedJfr.memory.column.subject=Subject"));
+        assertTrue(english.contains("advancedJfr.memory.column.estimatedBytes=Estimated Bytes"));
+        assertTrue(english.contains("advancedJfr.memory.column.count=Count"));
+        assertTrue(english.contains("advancedJfr.memory.column.score=Score"));
+
+        assertTrue(chinese.contains("advancedJfr.heatmap.tab=热力图"));
+        assertTrue(chinese.contains("advancedJfr.memory.tab=内存分析"));
+        assertTrue(chinese.contains("advancedJfr.memory.summary=打开JFR记录后加载内存分析。"));
+        assertTrue(chinese.contains("advancedJfr.memory.empty=此记录没有内存问题。"));
+        assertTrue(chinese.contains("advancedJfr.memory.column.severity=严重程度"));
+        assertTrue(chinese.contains("advancedJfr.memory.column.category=类别"));
+        assertTrue(chinese.contains("advancedJfr.memory.column.subject=对象"));
+        assertTrue(chinese.contains("advancedJfr.memory.column.estimatedBytes=估算字节"));
+        assertTrue(chinese.contains("advancedJfr.memory.column.count=数量"));
+        assertTrue(chinese.contains("advancedJfr.memory.column.score=分数"));
     }
 
     @Test

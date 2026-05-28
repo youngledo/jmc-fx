@@ -16,6 +16,7 @@
 <?import javafx.scene.control.TextField?>
 <?import javafx.scene.control.ToggleGroup?>
 <?import javafx.scene.control.TreeView?>
+<?import javafx.geometry.Insets?>
 <?import javafx.scene.layout.BorderPane?>
 <?import javafx.scene.layout.FlowPane?>
 <?import javafx.scene.layout.HBox?>
@@ -131,22 +132,50 @@
             <VBox fx:id="advancedJfrPane" spacing="8" visible="false" managed="false">
                 <Label fx:id="advancedJfrTitleLabel" styleClass="view-title"/>
                 <Label fx:id="advancedJfrSummaryLabel" styleClass="event-window-status" wrapText="true"/>
-                <ScrollPane styleClass="advanced-jfr-heatmap-scroll" fitToWidth="true" fitToHeight="true" VBox.vgrow="ALWAYS">
-                    <VBox fx:id="advancedJfrHeatmapContainer" styleClass="advanced-jfr-heatmap-content" spacing="8"/>
-                </ScrollPane>
-                <VBox fx:id="advancedJfrSelectionPane" styleClass="advanced-jfr-selection-pane" spacing="6">
-                    <Label fx:id="advancedJfrSelectionTitleLabel" styleClass="detail-title"/>
-                    <HBox fx:id="advancedJfrSelectionValues" spacing="16">
-                        <VBox spacing="2" HBox.hgrow="ALWAYS">
-                            <Label fx:id="advancedJfrSelectedEventTypeCaptionLabel" styleClass="recording-card-label"/>
-                            <Label fx:id="advancedJfrSelectedEventTypeLabel" wrapText="true"/>
-                        </VBox>
-                        <VBox spacing="2">
-                            <Label fx:id="advancedJfrSelectedCountCaptionLabel" styleClass="recording-card-label"/>
-                            <Label fx:id="advancedJfrSelectedCountLabel"/>
-                        </VBox>
-                    </HBox>
-                </VBox>
+                <TabPane fx:id="advancedJfrTabs" VBox.vgrow="ALWAYS">
+                    <tabs>
+                        <Tab fx:id="advancedJfrHeatmapTab" closable="false">
+                            <VBox spacing="8">
+                                <ScrollPane styleClass="advanced-jfr-heatmap-scroll" fitToWidth="true" fitToHeight="true" VBox.vgrow="ALWAYS">
+                                    <VBox fx:id="advancedJfrHeatmapContainer" styleClass="advanced-jfr-heatmap-content" spacing="8"/>
+                                </ScrollPane>
+                                <VBox fx:id="advancedJfrSelectionPane" styleClass="advanced-jfr-selection-pane" spacing="6">
+                                    <Label fx:id="advancedJfrSelectionTitleLabel" styleClass="detail-title"/>
+                                    <HBox fx:id="advancedJfrSelectionValues" spacing="16">
+                                        <VBox spacing="2" HBox.hgrow="ALWAYS">
+                                            <Label fx:id="advancedJfrSelectedEventTypeCaptionLabel" styleClass="recording-card-label"/>
+                                            <Label fx:id="advancedJfrSelectedEventTypeLabel" wrapText="true"/>
+                                        </VBox>
+                                        <VBox spacing="2">
+                                            <Label fx:id="advancedJfrSelectedCountCaptionLabel" styleClass="recording-card-label"/>
+                                            <Label fx:id="advancedJfrSelectedCountLabel"/>
+                                        </VBox>
+                                    </HBox>
+                                </VBox>
+                            </VBox>
+                        </Tab>
+                        <Tab fx:id="advancedJfrMemoryTab" closable="false">
+                            <VBox styleClass="advanced-jfr-memory-content" spacing="8">
+                                <Label fx:id="advancedJfrMemorySummaryLabel" styleClass="event-window-status" wrapText="true"/>
+                                <SplitPane orientation="VERTICAL" VBox.vgrow="ALWAYS" DividerPositions="0.62">
+                                    <items>
+                                        <TableView fx:id="advancedJfrMemoryTable" styleClass="dense-table"/>
+                                        <VBox styleClass="advanced-jfr-memory-detail analysis-detail">
+                                            <children>
+                                                <Label fx:id="advancedJfrMemoryDetailTitleLabel" styleClass="analysis-detail-title">
+                                                    <VBox.margin>
+                                                        <Insets top="6" bottom="8"/>
+                                                    </VBox.margin>
+                                                </Label>
+                                                <TextArea fx:id="advancedJfrMemoryDetailArea" styleClass="analysis-detail-explanation" wrapText="true" editable="false" VBox.vgrow="ALWAYS"/>
+                                            </children>
+                                        </VBox>
+                                    </items>
+                                </SplitPane>
+                            </VBox>
+                        </Tab>
+                    </tabs>
+                </TabPane>
             </VBox>
             <VBox fx:id="jvmsPane" spacing="8">
                 <Label fx:id="jvmsTitleLabel" styleClass="view-title"/>
