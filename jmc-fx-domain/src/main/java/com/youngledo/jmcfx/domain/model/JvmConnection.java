@@ -47,6 +47,20 @@ public record JvmConnection(
                 normalizedPid, javaVersion, attachable);
     }
 
+    public static JvmConnection saved(SavedJvmTarget target) {
+        Objects.requireNonNull(target, "target");
+        String name = target.displayName().isBlank() ? target.serviceUrl() : target.displayName();
+        return new JvmConnection(target.id(), name, target.serviceUrl(), false, JvmConnectionSource.SAVED,
+                JvmConnectionState.DISCONNECTED, "Saved JMX target.", "", "", false);
+    }
+
+    public static JvmConnection jdp(JdpJvmAdvertisement advertisement) {
+        Objects.requireNonNull(advertisement, "advertisement");
+        String name = advertisement.displayName().isBlank() ? advertisement.serviceUrl() : advertisement.displayName();
+        return new JvmConnection(advertisement.id(), name, advertisement.serviceUrl(), false, JvmConnectionSource.JDP,
+                JvmConnectionState.DISCOVERED, "Discovered through JDP.", "", advertisement.javaVersion(), false);
+    }
+
     public JvmConnection asConnected(String connectedUrl) {
         return new JvmConnection(id, displayName, connectedUrl, true, source,
                 JvmConnectionState.CONNECTED, "Connected", pid, javaVersion, attachable);
