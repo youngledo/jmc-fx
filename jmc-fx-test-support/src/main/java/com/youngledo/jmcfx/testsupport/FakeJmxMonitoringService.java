@@ -35,7 +35,9 @@ public class FakeJmxMonitoringService implements JmxMonitoringService {
 
     @Override
     public JmxSubscriptionSample sampleAttribute(JvmConnection connection, JmxAttributeSubscription subscription) {
-        Key key = new Key(connectionId(connection), subscriptionId(subscription));
+        Objects.requireNonNull(connection, "connection");
+        Objects.requireNonNull(subscription, "subscription");
+        Key key = new Key(connection.id(), subscription.id());
         JmxSubscriptionSample sample = samples.get(key);
         if (sample == null) {
             throw new JmcFxException("No fake JMX sample for " + key.connectionId() + " " + key.subscriptionId());
@@ -48,28 +50,23 @@ public class FakeJmxMonitoringService implements JmxMonitoringService {
             JvmConnection connection,
             JmxNotificationSubscription subscription,
             Consumer<JmxNotificationEvent> eventSink) {
-        List<JmxNotificationEvent> events = notificationEvents
-                .getOrDefault(new Key(connectionId(connection), subscriptionId(subscription)), List.of());
-        Consumer<JmxNotificationEvent> sink = eventSink == null ? ignored -> { } : eventSink;
-        events.forEach(sink);
+        Objects.requireNonNull(connection, "connection");
+        Objects.requireNonNull(subscription, "subscription");
+        Objects.requireNonNull(eventSink, "eventSink");
+        Key key = new Key(connection.id(), subscription.id());
+        List<JmxNotificationEvent> events = notificationEvents.get(key);
+        if (events == null) {
+            throw new JmcFxException("No fake JMX notification events for "
+                    + key.connectionId() + " " + key.subscriptionId());
+        }
+        events.forEach(eventSink);
         return List.copyOf(events);
     }
 
     @Override
     public void stopNotifications(JvmConnection connection, String subscriptionId) {
-        stoppedNotificationIds.add(Objects.requireNonNullElse(subscriptionId, ""));
-    }
-
-    private static String connectionId(JvmConnection connection) {
-        return connection == null ? "" : connection.id();
-    }
-
-    private static String subscriptionId(JmxAttributeSubscription subscription) {
-        return subscription == null ? "" : subscription.id();
-    }
-
-    private static String subscriptionId(JmxNotificationSubscription subscription) {
-        return subscription == null ? "" : subscription.id();
+        Objects.requireNonNull(connection, "connection");
+        stoppedNotificationIds.add(Objects.requireNonNull(subscriptionId, "subscriptionId"));
     }
 
     private record Key(String connectionId, String subscriptionId) {

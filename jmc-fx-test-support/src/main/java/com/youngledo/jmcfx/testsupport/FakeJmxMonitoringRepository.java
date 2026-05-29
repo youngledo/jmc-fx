@@ -43,7 +43,12 @@ public class FakeJmxMonitoringRepository implements JmxMonitoringRepository {
 
     @Override
     public void appendSample(JmxSubscriptionSample sample) {
-        samples.computeIfAbsent(sample.subscriptionId(), ignored -> new ArrayList<>()).add(sample);
+        List<JmxSubscriptionSample> rows = samples.computeIfAbsent(sample.subscriptionId(), ignored -> new ArrayList<>());
+        rows.add(sample);
+        JmxAttributeSubscription subscription = attributeSubscriptions.get(sample.subscriptionId());
+        if (subscription != null) {
+            trimToNewest(rows, subscription.maxSamples());
+        }
     }
 
     @Override
@@ -71,6 +76,18 @@ public class FakeJmxMonitoringRepository implements JmxMonitoringRepository {
 
     @Override
     public void appendNotificationEvent(JmxNotificationEvent event) {
-        notificationEvents.computeIfAbsent(event.subscriptionId(), ignored -> new ArrayList<>()).add(event);
+        List<JmxNotificationEvent> events = notificationEvents
+                .computeIfAbsent(event.subscriptionId(), ignored -> new ArrayList<>());
+        events.add(event);
+        JmxNotificationSubscription subscription = notificationSubscriptions.get(event.subscriptionId());
+        if (subscription != null) {
+            trimToNewest(events, subscription.maxEvents());
+        }
+    }
+
+    private static <T> void trimToNewest(List<T> rows, int maxSize) {
+        while (rows.size() > maxSize) {
+            rows.removeFirst();
+        }
     }
 }

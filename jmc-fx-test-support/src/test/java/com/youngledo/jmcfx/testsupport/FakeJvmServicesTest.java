@@ -280,18 +280,138 @@ class FakeJvmServicesTest {
     }
 
     @Test
+    void fakeJmxMonitoringServiceRequiresConfiguredNotificationsAndNonNullArguments() {
+        FakeJmxMonitoringService service = new FakeJmxMonitoringService();
+        JvmConnection connection = local("42", "demo.Main").asConnected("service:jmx:local://42");
+        JmxAttributeSubscription subscription = new JmxAttributeSubscription(
+                "sub-1", connection.id(), "java.lang:type=Memory", "HeapMemoryUsage",
+                "Heap", "%", Duration.ofSeconds(2), 10, true, false);
+        JmxNotificationSubscription notificationSubscription = new JmxNotificationSubscription(
+                "notif-1", connection.id(), "demo:type=Notifier", "Notifier", 20, true, false);
+
+        JmcFxException exception = assertThrows(JmcFxException.class,
+                () -> service.startNotifications(connection, notificationSubscription, ignored -> { }));
+        assertEquals("No fake JMX notification events for 42 notif-1", exception.getMessage());
+
+        assertThrows(NullPointerException.class, () -> service.sampleAttribute(null, subscription));
+        assertThrows(NullPointerException.class, () -> service.sampleAttribute(connection, null));
+        assertThrows(NullPointerException.class,
+                () -> service.startNotifications(null, notificationSubscription, ignored -> { }));
+        assertThrows(NullPointerException.class,
+                () -> service.startNotifications(connection, null, ignored -> { }));
+        assertThrows(NullPointerException.class,
+                () -> service.startNotifications(connection, notificationSubscription, null));
+        assertThrows(NullPointerException.class, () -> service.stopNotifications(null, notificationSubscription.id()));
+        assertThrows(NullPointerException.class, () -> service.stopNotifications(connection, null));
+
+        service.setNotificationEvents(connection.id(), notificationSubscription.id(), List.of());
+        assertEquals(List.of(), service.startNotifications(connection, notificationSubscription, ignored -> { }));
+    }
+
+    @Test
     void fakeJmxMonitoringRepositoryPersistsSubscriptionsAndEvents() {
         FakeJmxMonitoringRepository repository = new FakeJmxMonitoringRepository();
         JmxAttributeSubscription subscription = new JmxAttributeSubscription(
                 "sub-1", "42", "java.lang:type=Memory", "HeapMemoryUsage",
                 "Heap", "%", Duration.ofSeconds(1), 3, true, true);
         JmxSubscriptionSample sample = new JmxSubscriptionSample("sub-1", Instant.EPOCH, 1.0, "1", "%", true);
+        JmxNotificationSubscription notificationSubscription = new JmxNotificationSubscription(
+                "notif-1", "42", "demo:type=Notifier", "Notifier", 2, true, true);
+        JmxNotificationEvent event = new JmxNotificationEvent(
+                "notif-1", Instant.EPOCH, "demo.type", "demo:type=Notifier", 1, "changed", "");
 
         repository.saveAttributeSubscription(subscription);
         repository.appendSample(sample);
+        repository.saveNotificationSubscription(notificationSubscription);
+        repository.appendNotificationEvent(event);
 
         assertEquals(List.of(subscription), repository.findAttributeSubscriptions("42"));
         assertEquals(List.of(sample), repository.findSamples("sub-1"));
+        assertEquals(List.of(notificationSubscription), repository.findNotificationSubscriptions("42"));
+        assertEquals(List.of(event), repository.findNotificationEvents("notif-1"));
+
+        assertThrows(UnsupportedOperationException.class,
+                () -> repository.findAttributeSubscriptions("42").add(subscription));
+        assertThrows(UnsupportedOperationException.class, () -> repository.findSamples("sub-1").add(sample));
+        assertThrows(UnsupportedOperationException.class,
+                () -> repository.findNotificationSubscriptions("42").add(notificationSubscription));
+        assertThrows(UnsupportedOperationException.class,
+                () -> repository.findNotificationEvents("notif-1").add(event));
+    }
+
+    @Test
+    void fakeJmxMonitoringRepositoryDeletesSubscriptionsAndTheirEvents() {
+        FakeJmxMonitoringRepository repository = new FakeJmxMonitoringRepository();
+        JmxAttributeSubscription attributeSubscription = new JmxAttributeSubscription(
+                "sub-1", "42", "java.lang:type=Memory", "HeapMemoryUsage",
+                "Heap", "%", Duration.ofSeconds(1), 3, true, true);
+        JmxSubscriptionSample sample = new JmxSubscriptionSample("sub-1", Instant.EPOCH, 1.0, "1", "%", true);
+        JmxNotificationSubscription notificationSubscription = new JmxNotificationSubscription(
+                "notif-1", "42", "demo:type=Notifier", "Notifier", 2, true, true);
+        JmxNotificationEvent event = new JmxNotificationEvent(
+                "notif-1", Instant.EPOCH, "demo.type", "demo:type=Notifier", 1, "changed", "");
+
+        repository.saveAttributeSubscription(attributeSubscription);
+        repository.appendSample(sample);
+        repository.saveNotificationSubscription(notificationSubscription);
+        repository.appendNotificationEvent(event);
+
+        repository.deleteAttributeSubscription(attributeSubscription.id());
+        repository.deleteNotificationSubscription(notificationSubscription.id());
+
+        assertEquals(List.of(), repository.findAttributeSubscriptions("42"));
+        assertEquals(List.of(), repository.findSamples("sub-1"));
+        assertEquals(List.of(), repository.findNotificationSubscriptions("42"));
+        assertEquals(List.of(), repository.findNotificationEvents("notif-1"));
+    }
+
+    @Test
+    void fakeJmxMonitoringRepositoryKeepsNewestSamplesAndEventsWhenSubscriptionLimitsExist() {
+        FakeJmxMonitoringRepository repository = new FakeJmxMonitoringRepository();
+        JmxAttributeSubscription attributeSubscription = new JmxAttributeSubscription(
+                "sub-1", "42", "java.lang:type=Memory", "HeapMemoryUsage",
+                "Heap", "%", Duration.ofSeconds(1), 2, true, true);
+        JmxNotificationSubscription notificationSubscription = new JmxNotificationSubscription(
+                "notif-1", "42", "demo:type=Notifier", "Notifier", 2, true, true);
+        JmxSubscriptionSample firstSample = sample("sub-1", 1);
+        JmxSubscriptionSample secondSample = sample("sub-1", 2);
+        JmxSubscriptionSample thirdSample = sample("sub-1", 3);
+        JmxNotificationEvent firstEvent = notificationEvent("notif-1", 1);
+        JmxNotificationEvent secondEvent = notificationEvent("notif-1", 2);
+        JmxNotificationEvent thirdEvent = notificationEvent("notif-1", 3);
+
+        repository.saveAttributeSubscription(attributeSubscription);
+        repository.appendSample(firstSample);
+        repository.appendSample(secondSample);
+        repository.appendSample(thirdSample);
+        repository.saveNotificationSubscription(notificationSubscription);
+        repository.appendNotificationEvent(firstEvent);
+        repository.appendNotificationEvent(secondEvent);
+        repository.appendNotificationEvent(thirdEvent);
+
+        assertEquals(List.of(secondSample, thirdSample), repository.findSamples("sub-1"));
+        assertEquals(List.of(secondEvent, thirdEvent), repository.findNotificationEvents("notif-1"));
+    }
+
+    @Test
+    void fakeJmxMonitoringRepositoryDoesNotTrimSamplesAndEventsWithoutSavedSubscriptions() {
+        FakeJmxMonitoringRepository repository = new FakeJmxMonitoringRepository();
+        JmxSubscriptionSample firstSample = sample("sub-1", 1);
+        JmxSubscriptionSample secondSample = sample("sub-1", 2);
+        JmxSubscriptionSample thirdSample = sample("sub-1", 3);
+        JmxNotificationEvent firstEvent = notificationEvent("notif-1", 1);
+        JmxNotificationEvent secondEvent = notificationEvent("notif-1", 2);
+        JmxNotificationEvent thirdEvent = notificationEvent("notif-1", 3);
+
+        repository.appendSample(firstSample);
+        repository.appendSample(secondSample);
+        repository.appendSample(thirdSample);
+        repository.appendNotificationEvent(firstEvent);
+        repository.appendNotificationEvent(secondEvent);
+        repository.appendNotificationEvent(thirdEvent);
+
+        assertEquals(List.of(firstSample, secondSample, thirdSample), repository.findSamples("sub-1"));
+        assertEquals(List.of(firstEvent, secondEvent, thirdEvent), repository.findNotificationEvents("notif-1"));
     }
 
     @Test
@@ -361,5 +481,15 @@ class FakeJvmServicesTest {
         return new com.youngledo.jmcfx.domain.model.RecordingSummary("rec",
                 java.nio.file.Path.of("sample.jfr"), "sample.jfr",
                 Instant.EPOCH, Instant.EPOCH.plusSeconds(1), 1000, 1024);
+    }
+
+    private static JmxSubscriptionSample sample(String subscriptionId, int sequence) {
+        return new JmxSubscriptionSample(subscriptionId, Instant.EPOCH.plusSeconds(sequence), sequence,
+                Integer.toString(sequence), "%", true);
+    }
+
+    private static JmxNotificationEvent notificationEvent(String subscriptionId, long sequence) {
+        return new JmxNotificationEvent(subscriptionId, Instant.EPOCH.plusSeconds(sequence), "demo.type",
+                "demo:type=Notifier", sequence, "changed-" + sequence, "");
     }
 }
