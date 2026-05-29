@@ -36,6 +36,9 @@ import com.youngledo.jmcfx.domain.model.JvmConnectionState;
 import com.youngledo.jmcfx.domain.model.JvmRuntimeSnapshot;
 import com.youngledo.jmcfx.domain.model.JvmSessionSnapshot;
 import com.youngledo.jmcfx.domain.model.JdpJvmAdvertisement;
+import com.youngledo.jmcfx.domain.model.JmcAgentPreset;
+import com.youngledo.jmcfx.domain.model.JmcAgentStatus;
+import com.youngledo.jmcfx.domain.model.JmcAgentTransform;
 import com.youngledo.jmcfx.domain.model.LiveMetricDefinition;
 import com.youngledo.jmcfx.domain.model.LiveMetricKind;
 import com.youngledo.jmcfx.domain.model.LiveMetricSnapshot;
@@ -53,6 +56,7 @@ import com.youngledo.jmcfx.domain.service.JmcFxException;
 import com.youngledo.jmcfx.testsupport.FakeDiagnosticCommandService;
 import com.youngledo.jmcfx.testsupport.FakeFlightRecordingService;
 import com.youngledo.jmcfx.testsupport.FakeJdpDiscoveryService;
+import com.youngledo.jmcfx.testsupport.FakeJmcAgentService;
 import com.youngledo.jmcfx.testsupport.FakeJmxConnectionService;
 import com.youngledo.jmcfx.testsupport.FakeJvmDiscoveryService;
 import com.youngledo.jmcfx.testsupport.FakeLiveMetricService;
@@ -1080,6 +1084,90 @@ class JvmBrowserViewModelTest {
     }
 
     @Test
+    void connectedSessionLoadsJmcAgentStatusAndPresets() {
+        FakeJmxConnectionService jmx = new FakeJmxConnectionService();
+        FakeJmcAgentService agent = new FakeJmcAgentService();
+        JvmBrowserViewModel viewModel = viewModel(new FakeJvmDiscoveryService(), jmx, agent);
+        JvmConnection connected = connectedWithMBeans(viewModel, jmx);
+        JmcAgentPreset preset = new JmcAgentPreset("blank", "Blank", "Clear probes",
+                "<jfragent><events/></jfragent>");
+        JmcAgentStatus status = new JmcAgentStatus(true, "JMC Agent is available.",
+                "<jfragent/>", List.of(new JmcAgentTransform("probe", "demo.Service", "run", "()V")));
+        agent.setPresets(List.of(preset));
+        agent.setStatus(connected.id(), status);
+
+        viewModel.selectedConnectionProperty().set(connected);
+
+        assertTrue(viewModel.jmcAgentAvailableProperty().get());
+        assertEquals("JMC Agent is available.", viewModel.jmcAgentStatusMessageProperty().get());
+        assertEquals("<jfragent/>", viewModel.jmcAgentConfigurationProperty().get());
+        assertEquals(List.of(new JmcAgentTransform("probe", "demo.Service", "run", "()V")),
+                viewModel.jmcAgentTransformsProperty());
+        assertEquals(List.of(preset), viewModel.jmcAgentPresetsProperty());
+        assertEquals(preset, viewModel.selectedJmcAgentPresetProperty().get());
+        assertFalse(viewModel.jmcAgentLoadingProperty().get());
+        assertFalse(viewModel.jmcAgentErrorProperty().get());
+    }
+
+    @Test
+    void unavailableJmcAgentKeepsConfigurationActionsDisabledWithReason() {
+        FakeJmxConnectionService jmx = new FakeJmxConnectionService();
+        FakeJmcAgentService agent = new FakeJmcAgentService();
+        JvmBrowserViewModel viewModel = viewModel(new FakeJvmDiscoveryService(), jmx, agent);
+        JvmConnection connected = connectedWithMBeans(viewModel, jmx);
+        agent.setStatus(connected.id(), JmcAgentStatus.unavailable("JMC Agent MXBean is not registered."));
+
+        viewModel.selectedConnectionProperty().set(connected);
+
+        assertFalse(viewModel.jmcAgentAvailableProperty().get());
+        assertEquals("JMC Agent MXBean is not registered.", viewModel.jmcAgentStatusMessageProperty().get());
+        assertEquals("", viewModel.jmcAgentConfigurationProperty().get());
+        assertTrue(viewModel.jmcAgentTransformsProperty().isEmpty());
+        assertFalse(viewModel.jmcAgentLoadingProperty().get());
+        assertFalse(viewModel.jmcAgentErrorProperty().get());
+    }
+
+    @Test
+    void loadingSelectedJmcAgentPresetCopiesXmlIntoEditor() {
+        FakeJmxConnectionService jmx = new FakeJmxConnectionService();
+        FakeJmcAgentService agent = new FakeJmcAgentService();
+        JvmBrowserViewModel viewModel = viewModel(new FakeJvmDiscoveryService(), jmx, agent);
+        JmcAgentPreset preset = new JmcAgentPreset("template", "Template", "", "<jfragent/>");
+        agent.setPresets(List.of(preset));
+        JvmConnection connected = connectedWithMBeans(viewModel, jmx);
+        agent.setStatus(connected.id(), JmcAgentStatus.unavailable("JMC Agent MXBean is not registered."));
+        viewModel.selectedConnectionProperty().set(connected);
+
+        viewModel.loadSelectedJmcAgentPreset();
+
+        assertEquals("<jfragent/>", viewModel.jmcAgentConfigurationProperty().get());
+    }
+
+    @Test
+    void applyingJmcAgentConfigurationRefreshesStatusAndTransforms() {
+        FakeJmxConnectionService jmx = new FakeJmxConnectionService();
+        FakeJmcAgentService agent = new FakeJmcAgentService();
+        JvmBrowserViewModel viewModel = viewModel(new FakeJvmDiscoveryService(), jmx, agent);
+        JvmConnection connected = connectedWithMBeans(viewModel, jmx);
+        agent.setStatus(connected.id(), new JmcAgentStatus(true, "JMC Agent is available.",
+                "<old/>", List.of()));
+        viewModel.selectedConnectionProperty().set(connected);
+        viewModel.jmcAgentConfigurationProperty().set("<new/>");
+        agent.setStatus(connected.id(), new JmcAgentStatus(true, "JMC Agent is available.",
+                "<new/>", List.of(new JmcAgentTransform("next", "demo.Next", "call", "()V"))));
+
+        viewModel.applyJmcAgentConfiguration();
+
+        assertEquals(connected.id(), agent.lastAppliedConnectionId());
+        assertEquals("<new/>", agent.lastAppliedXml());
+        assertEquals("<new/>", viewModel.jmcAgentConfigurationProperty().get());
+        assertEquals(List.of(new JmcAgentTransform("next", "demo.Next", "call", "()V")),
+                viewModel.jmcAgentTransformsProperty());
+        assertFalse(viewModel.jmcAgentLoadingProperty().get());
+        assertFalse(viewModel.jmcAgentErrorProperty().get());
+    }
+
+    @Test
     void executeSelectedDiagnosticCommandStoresOutput() {
         FakeJmxConnectionService jmx = new FakeJmxConnectionService();
         FakeDiagnosticCommandService diagnostics = new FakeDiagnosticCommandService();
@@ -1294,6 +1382,12 @@ class JvmBrowserViewModelTest {
     private static JvmBrowserViewModel viewModel(FakeJvmDiscoveryService discovery, FakeJmxConnectionService jmx,
             FakeLiveMetricService metrics) {
         return new JvmBrowserViewModel(discovery, jmx, null, null, null, metrics,
+                new DirectJvmBrowserExecutor(), Runnable::run, path -> { });
+    }
+
+    private static JvmBrowserViewModel viewModel(FakeJvmDiscoveryService discovery, FakeJmxConnectionService jmx,
+            FakeJmcAgentService agent) {
+        return new JvmBrowserViewModel(discovery, jmx, null, null, null, null, agent,
                 new DirectJvmBrowserExecutor(), Runnable::run, path -> { });
     }
 

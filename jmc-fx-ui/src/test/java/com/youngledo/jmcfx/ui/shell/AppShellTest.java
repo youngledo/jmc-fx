@@ -91,7 +91,7 @@ class AppShellTest {
         FakeJdpDiscoveryService jdpDiscovery = new FakeJdpDiscoveryService();
         AppShellFactory factory = new AppShellFactory(new FakeRecordingRepository(), new FakeEventQueryService(),
                 new FakeRuleAnalysisService(), null, null, null, null, null, null, null, null, null, null,
-                null, null, null, null, null, null, null, null, null, savedTargets, jdpDiscovery,
+                null, null, null, null, null, null, null, null, null, null, savedTargets, jdpDiscovery, null,
                 new I18n(Locale.ENGLISH));
 
         AppShellController controller = (AppShellController) factory.controllerFor(AppShellController.class,
@@ -261,6 +261,8 @@ class AppShellTest {
         assertEquals("Button", elementByFxId(document, "jvmsDisconnectButton").getTagName());
         assertEquals("TableView", elementByFxId(document, "jvmsTable").getTagName());
         assertEquals("VBox", elementByFxId(document, "jvmsSessionDetailPane").getTagName());
+        assertTrue(hasStyleClass(elementByFxId(document, "jvmsSessionDetailPane"), "summary-panel"));
+        assertTrue(hasStyleClass(elementByFxId(document, "jvmsSessionDetailPane"), "jvms-session-detail"));
         assertEquals("Label", elementByFxId(document, "jvmsSessionTitleLabel").getTagName());
         assertEquals("Label", elementByFxId(document, "jvmsRuntimeSummaryLabel").getTagName());
         assertEquals("ListView", elementByFxId(document, "jvmsCapabilitiesList").getTagName());
@@ -307,6 +309,25 @@ class AppShellTest {
         assertEquals("Button", elementByFxId(document, "jvmsEvaluateTriggersButton").getTagName());
         assertEquals("TableView", elementByFxId(document, "jvmsTriggerEventsTable").getTagName());
         assertEquals("Label", elementByFxId(document, "jvmsTriggerErrorLabel").getTagName());
+        assertEquals("Tab", elementByFxId(document, "jvmsAgentTab").getTagName());
+        assertTrue(hasStyleClass(elementByFxId(document, "jvmsAgentContent"), "jvms-live-tab-content"));
+        assertTrue(hasStyleClass(elementByFxId(document, "jvmsAgentToolbar"), "page-toolbar"));
+        assertEquals("ComboBox", elementByFxId(document, "jvmsAgentPresetCombo").getTagName());
+        assertEquals("Button", elementByFxId(document, "jvmsRefreshAgentButton").getTagName());
+        assertEquals("Button", elementByFxId(document, "jvmsLoadAgentPresetButton").getTagName());
+        assertEquals("Button", elementByFxId(document, "jvmsApplyAgentConfigurationButton").getTagName());
+        assertEquals("TableView", elementByFxId(document, "jvmsAgentTransformsTable").getTagName());
+        assertTrue(hasStyleClass(elementByFxId(document, "jvmsAgentTransformsTable"), "dense-table"));
+        assertEquals("VBox", elementByFxId(document, "jvmsAgentConfigurationPane").getTagName());
+        assertTrue(hasStyleClass(elementByFxId(document, "jvmsAgentConfigurationPane"), "detail-panel"));
+        assertEquals("Label", elementByFxId(document, "jvmsAgentConfigurationTitleLabel").getTagName());
+        assertTrue(hasStyleClass(elementByFxId(document, "jvmsAgentConfigurationTitleLabel"),
+                "detail-panel-title"));
+        assertEquals("TextArea", elementByFxId(document, "jvmsAgentConfigurationArea").getTagName());
+        assertEquals("true", elementByFxId(document, "jvmsAgentConfigurationArea").getAttribute("wrapText"));
+        assertTrue(hasStyleClass(elementByFxId(document, "jvmsAgentConfigurationArea"), "detail-panel-body"));
+        assertEquals("Label", elementByFxId(document, "jvmsAgentStatusLabel").getTagName());
+        assertTrue(hasStyleClass(elementByFxId(document, "jvmsAgentStatusLabel"), "unavailable-state"));
         assertEquals(0, elementCountWithFxId(document, "statusLabel"));
         assertEquals(0, elementCountWithFxId(document, "taskSummaryLabel"));
         assertEquals("tlabTimelineContainer", elementByFxId(document, "tlabTimelineContainer").getAttribute("fx:id"));
@@ -670,9 +691,12 @@ class AppShellTest {
     @Test
     void jvmsLiveTabsUseUnifiedContentSpacing() throws Exception {
         String css = appCss();
+        String sessionDetail = cssBlock(css, ".jvms-session-detail");
         String tabContent = cssBlock(css, ".jvms-live-tab-content");
         String workspace = cssBlock(css, ".jvms-live-workspace");
 
+        assertTrue(sessionDetail.contains("-fx-min-height: 220px"));
+        assertTrue(sessionDetail.contains("-fx-pref-height: 320px"));
         assertTrue(tabContent.contains("-fx-padding: 10px 10px 0 0"));
         assertTrue(workspace.contains("-fx-padding: 0 0 0 8px"));
     }
@@ -1142,6 +1166,44 @@ class AppShellTest {
                 "Application assembly should reuse the existing JMX connection service for diagnostic commands");
         assertTrue(app.contains("new JmcLiveMetricService(jmxConnectionService)"),
                 "Application assembly should reuse the existing JMX connection service for live metrics");
+    }
+
+    @Test
+    void jvmBrowserBindsJmcAgentManagerControls() throws Exception {
+        String controller = java.nio.file.Files.readString(
+                java.nio.file.Path.of("src/main/java/com/youngledo/jmcfx/ui/shell/AppShellController.java"));
+        String english = java.nio.file.Files.readString(
+                java.nio.file.Path.of("src/main/resources/com/youngledo/jmcfx/ui/i18n/messages.properties"));
+        String chinese = java.nio.file.Files.readString(
+                java.nio.file.Path.of("src/main/resources/com/youngledo/jmcfx/ui/i18n/messages_zh_CN.properties"));
+
+        assertTrue(controller.contains("@FXML private Tab jvmsAgentTab;"));
+        assertTrue(controller.contains("@FXML private ComboBox<JmcAgentPreset> jvmsAgentPresetCombo;"));
+        assertTrue(controller.contains("@FXML private TableView<JmcAgentTransform> jvmsAgentTransformsTable;"));
+        assertTrue(controller.contains("@FXML private TextArea jvmsAgentConfigurationArea;"));
+        assertTrue(controller.contains("@FXML private Label jvmsAgentStatusLabel;"));
+        assertTrue(controller.contains("configureJmcAgentManager();"));
+        assertTrue(controller.contains("bindJmcAgentManager();"));
+        assertTrue(controller.contains("jvmsAgentPresetCombo.setItems(jvmBrowserViewModel.jmcAgentPresetsProperty())"));
+        assertTrue(controller.contains("jvmsAgentTransformsTable.setItems(jvmBrowserViewModel.jmcAgentTransformsProperty())"));
+        assertTrue(controller.contains("jvmsAgentConfigurationArea.textProperty().bindBidirectional("));
+        assertTrue(controller.contains("jvmBrowserViewModel.jmcAgentConfigurationProperty()"));
+        assertTrue(controller.contains("jvmsRefreshAgentButton.setOnAction(event -> jvmBrowserViewModel.refreshJmcAgent())"));
+        assertTrue(controller.contains("jvmsLoadAgentPresetButton.setOnAction(event -> jvmBrowserViewModel.loadSelectedJmcAgentPreset())"));
+        assertTrue(controller.contains("jvmsApplyAgentConfigurationButton.setOnAction(event -> jvmBrowserViewModel.applyJmcAgentConfiguration())"));
+        assertTrue(controller.contains("jvmsAgentTab.textProperty().bind(i18n.text(\"jvms.agent.tab\"))"));
+        assertTrue(controller.contains("localizedColumn(\"jvms.agent.transform.id\")"));
+
+        assertTrue(english.contains("jvms.agent.tab=JMC Agent"));
+        assertTrue(english.contains("jvms.agent.refresh=Refresh"));
+        assertTrue(english.contains("jvms.agent.loadPreset=Load Preset"));
+        assertTrue(english.contains("jvms.agent.apply=Apply Configuration"));
+        assertTrue(english.contains("jvms.agent.configuration=Event Probe XML"));
+        assertTrue(chinese.contains("jvms.agent.tab=JMC Agent"));
+        assertTrue(chinese.contains("jvms.agent.refresh=刷新"));
+        assertTrue(chinese.contains("jvms.agent.loadPreset=加载预设"));
+        assertTrue(chinese.contains("jvms.agent.apply=应用配置"));
+        assertTrue(chinese.contains("jvms.agent.configuration=事件探针 XML"));
     }
 
     @Test

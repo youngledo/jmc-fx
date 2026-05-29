@@ -53,6 +53,8 @@ import com.youngledo.jmcfx.domain.model.HeapClassHistogram;
 import com.youngledo.jmcfx.domain.model.ProcessInfo;
 import com.youngledo.jmcfx.domain.model.HotMethod;
 import com.youngledo.jmcfx.domain.model.JvmCapabilitySnapshot;
+import com.youngledo.jmcfx.domain.model.JmcAgentPreset;
+import com.youngledo.jmcfx.domain.model.JmcAgentTransform;
 import com.youngledo.jmcfx.domain.model.JvmConnection;
 import com.youngledo.jmcfx.domain.model.JvmConnectionSource;
 import com.youngledo.jmcfx.domain.model.JvmConnectionState;
@@ -98,6 +100,7 @@ import com.youngledo.jmcfx.domain.service.FileIOService;
 import com.youngledo.jmcfx.domain.service.FlightRecordingService;
 import com.youngledo.jmcfx.domain.service.HeapDumpAnalysisService;
 import com.youngledo.jmcfx.domain.service.HeapService;
+import com.youngledo.jmcfx.domain.service.JmcAgentService;
 import com.youngledo.jmcfx.domain.service.JvmInternalsService;
 import com.youngledo.jmcfx.domain.service.JavaAppService;
 import com.youngledo.jmcfx.domain.service.JdpDiscoveryService;
@@ -246,6 +249,7 @@ public class AppShellController {
     private final MBeanBrowserService mBeanBrowserService;
     private final DiagnosticCommandService diagnosticCommandService;
     private final LiveMetricService liveMetricService;
+    private final JmcAgentService jmcAgentService;
     private final AdvancedJfrAnalysisService advancedJfrAnalysisService;
     private final SavedJvmTargetRepository savedTargetRepository;
     private final JdpDiscoveryService jdpDiscoveryService;
@@ -454,6 +458,15 @@ public class AppShellController {
     @FXML private TableView<TriggerRule> jvmsTriggerRulesTable;
     @FXML private TableView<TriggerEvent> jvmsTriggerEventsTable;
     @FXML private Label jvmsTriggerErrorLabel;
+    @FXML private Tab jvmsAgentTab;
+    @FXML private ComboBox<JmcAgentPreset> jvmsAgentPresetCombo;
+    @FXML private Button jvmsRefreshAgentButton;
+    @FXML private Button jvmsLoadAgentPresetButton;
+    @FXML private Button jvmsApplyAgentConfigurationButton;
+    @FXML private TableView<JmcAgentTransform> jvmsAgentTransformsTable;
+    @FXML private Label jvmsAgentConfigurationTitleLabel;
+    @FXML private TextArea jvmsAgentConfigurationArea;
+    @FXML private Label jvmsAgentStatusLabel;
     @FXML private Label profilingTitleLabel;
     @FXML private TableView<HotMethod> profilingTable;
     @FXML private TabPane profilingTreeTabs;
@@ -665,7 +678,7 @@ public class AppShellController {
                 fileIOService, socketIOService, lockService,
                 heapService, leakSuspectsService, tlabService,
                 jvmInternalsService, environmentService, javaAppService,
-                null, null, null, null, null, null, null, null, null, null, i18n,
+                null, null, null, null, null, null, null, null, null, null, null, i18n,
                 new VirtualThreadRecordingOpenExecutor());
     }
 
@@ -688,7 +701,7 @@ public class AppShellController {
                 fileIOService, socketIOService, lockService,
                 heapService, leakSuspectsService, tlabService,
                 jvmInternalsService, environmentService, javaAppService,
-                jvmDiscoveryService, jmxConnectionService, flightRecordingService, null, null, null, null,
+                jvmDiscoveryService, jmxConnectionService, flightRecordingService, null, null, null, null, null,
                 null, null, null, i18n, new VirtualThreadRecordingOpenExecutor());
     }
 
@@ -712,8 +725,8 @@ public class AppShellController {
                 fileIOService, socketIOService, lockService,
                 heapService, leakSuspectsService, tlabService,
                 jvmInternalsService, environmentService, javaAppService,
-                jvmDiscoveryService, jmxConnectionService, flightRecordingService, mBeanBrowserService, null, null, null,
-                null, null, null, i18n, new VirtualThreadRecordingOpenExecutor());
+                jvmDiscoveryService, jmxConnectionService, flightRecordingService, mBeanBrowserService, null, null,
+                null, null, null, null, null, i18n, new VirtualThreadRecordingOpenExecutor());
     }
 
     public AppShellController(AppShellViewModel viewModel, RecordingRepository recordingRepository,
@@ -740,7 +753,7 @@ public class AppShellController {
                 heapService, leakSuspectsService, tlabService,
                 jvmInternalsService, environmentService, javaAppService,
                 jvmDiscoveryService, jmxConnectionService, flightRecordingService, mBeanBrowserService,
-                diagnosticCommandService, liveMetricService, advancedJfrAnalysisService, null, null, null, i18n,
+                diagnosticCommandService, liveMetricService, null, advancedJfrAnalysisService, null, null, null, i18n,
                 new VirtualThreadRecordingOpenExecutor());
     }
 
@@ -760,6 +773,7 @@ public class AppShellController {
             MBeanBrowserService mBeanBrowserService,
             DiagnosticCommandService diagnosticCommandService,
             LiveMetricService liveMetricService,
+            JmcAgentService jmcAgentService,
             AdvancedJfrAnalysisService advancedJfrAnalysisService,
             SavedJvmTargetRepository savedTargetRepository,
             JdpDiscoveryService jdpDiscoveryService,
@@ -771,7 +785,7 @@ public class AppShellController {
                 heapService, leakSuspectsService, tlabService,
                 jvmInternalsService, environmentService, javaAppService,
                 jvmDiscoveryService, jmxConnectionService, flightRecordingService, mBeanBrowserService,
-                diagnosticCommandService, liveMetricService, advancedJfrAnalysisService,
+                diagnosticCommandService, liveMetricService, jmcAgentService, advancedJfrAnalysisService,
                 savedTargetRepository, jdpDiscoveryService, heapDumpAnalysisService, i18n,
                 new VirtualThreadRecordingOpenExecutor());
     }
@@ -794,7 +808,7 @@ public class AppShellController {
                 fileIOService, socketIOService, lockService,
                 heapService, leakSuspectsService, tlabService,
                 jvmInternalsService, environmentService, javaAppService,
-                jvmDiscoveryService, jmxConnectionService, null, null, null, null, null, null, null, null, i18n,
+                jvmDiscoveryService, jmxConnectionService, null, null, null, null, null, null, null, null, null, i18n,
                 new VirtualThreadRecordingOpenExecutor());
     }
 
@@ -814,7 +828,7 @@ public class AppShellController {
                 fileIOService, socketIOService, lockService,
                 heapService, leakSuspectsService, tlabService,
                 jvmInternalsService, environmentService, javaAppService,
-                null, null, null, null, null, null, null, null, null, null, i18n, recordingOpenExecutor);
+                null, null, null, null, null, null, null, null, null, null, null, i18n, recordingOpenExecutor);
     }
 
     AppShellController(AppShellViewModel viewModel, RecordingRepository recordingRepository,
@@ -836,7 +850,7 @@ public class AppShellController {
                 fileIOService, socketIOService, lockService,
                 heapService, leakSuspectsService, tlabService,
                 jvmInternalsService, environmentService, javaAppService,
-                jvmDiscoveryService, jmxConnectionService, flightRecordingService, null, null, null, null,
+                jvmDiscoveryService, jmxConnectionService, flightRecordingService, null, null, null, null, null,
                 null, null, null, i18n, recordingOpenExecutor);
     }
 
@@ -855,6 +869,7 @@ public class AppShellController {
             MBeanBrowserService mBeanBrowserService,
             DiagnosticCommandService diagnosticCommandService,
             LiveMetricService liveMetricService,
+            JmcAgentService jmcAgentService,
             AdvancedJfrAnalysisService advancedJfrAnalysisService,
             SavedJvmTargetRepository savedTargetRepository,
             JdpDiscoveryService jdpDiscoveryService,
@@ -883,6 +898,7 @@ public class AppShellController {
         this.mBeanBrowserService = mBeanBrowserService;
         this.diagnosticCommandService = diagnosticCommandService;
         this.liveMetricService = liveMetricService;
+        this.jmcAgentService = jmcAgentService;
         this.advancedJfrAnalysisService = advancedJfrAnalysisService;
         this.savedTargetRepository = savedTargetRepository;
         this.jdpDiscoveryService = jdpDiscoveryService;
@@ -926,7 +942,7 @@ public class AppShellController {
         jvmBrowserViewModel = jvmDiscoveryService != null && jmxConnectionService != null
                 ? new JvmBrowserViewModel(jvmDiscoveryService, jmxConnectionService, flightRecordingService,
                         mBeanBrowserService, diagnosticCommandService, liveMetricService,
-                        savedTargetRepository, jdpDiscoveryService,
+                        jmcAgentService, savedTargetRepository, jdpDiscoveryService,
                         new com.youngledo.jmcfx.ui.jvms.VirtualThreadJvmBrowserExecutor(), Platform::runLater,
                         this::openRecordingInBackground) : null;
         heapDumpAnalysisViewModel = heapDumpAnalysisService == null ? null
@@ -1013,6 +1029,7 @@ public class AppShellController {
         configureMBeanBrowser();
         configureDiagnosticCommands();
         configureTriggers();
+        configureJmcAgentManager();
         bindJvmBrowser();
         viewModel.selectedSectionProperty().addListener((observable, oldValue, newValue) -> {
             if ("jvms".equals(newValue)) {
@@ -1516,6 +1533,44 @@ public class AppShellController {
         jvmsTriggerEventsTable.getColumns().setAll(List.of(eventTimeCol, eventRuleCol, eventValueCol, eventMessageCol));
     }
 
+    private void configureJmcAgentManager() {
+        jvmsAgentTransformsTable.setPlaceholder(localizedTablePlaceholder("jvms.agent.transforms.empty"));
+
+        jvmsAgentPresetCombo.setCellFactory(combo -> new ListCell<>() {
+            @Override
+            protected void updateItem(JmcAgentPreset item, boolean empty) {
+                super.updateItem(item, empty);
+                setText(empty || item == null ? null : item.name());
+            }
+        });
+        jvmsAgentPresetCombo.setButtonCell(new ListCell<>() {
+            @Override
+            protected void updateItem(JmcAgentPreset item, boolean empty) {
+                super.updateItem(item, empty);
+                setText(empty || item == null ? null : item.name());
+            }
+        });
+
+        TableColumn<JmcAgentTransform, String> idCol = localizedColumn("jvms.agent.transform.id");
+        idCol.setPrefWidth(220);
+        idCol.setCellValueFactory(cell -> new ReadOnlyStringWrapper(cell.getValue().id()));
+
+        TableColumn<JmcAgentTransform, String> classCol = localizedColumn("jvms.agent.transform.class");
+        classCol.setPrefWidth(280);
+        classCol.setCellValueFactory(cell -> new ReadOnlyStringWrapper(cell.getValue().className()));
+
+        TableColumn<JmcAgentTransform, String> methodCol = localizedColumn("jvms.agent.transform.method");
+        methodCol.setPrefWidth(180);
+        methodCol.setCellValueFactory(cell -> new ReadOnlyStringWrapper(cell.getValue().methodName()));
+
+        TableColumn<JmcAgentTransform, String> descriptorCol =
+                localizedColumn("jvms.agent.transform.descriptor");
+        descriptorCol.setPrefWidth(180);
+        descriptorCol.setCellValueFactory(cell -> new ReadOnlyStringWrapper(cell.getValue().methodDescriptor()));
+
+        jvmsAgentTransformsTable.getColumns().setAll(List.of(idCol, classCol, methodCol, descriptorCol));
+    }
+
     private void bindJvmBrowser() {
         if (jvmBrowserViewModel == null) {
             jvmsTable.setItems(FXCollections.emptyObservableList());
@@ -1562,6 +1617,16 @@ public class AppShellController {
             jvmsEvaluateTriggersButton.setDisable(true);
             jvmsTriggerErrorLabel.setVisible(false);
             jvmsTriggerErrorLabel.setManaged(false);
+            jvmsAgentPresetCombo.setItems(FXCollections.emptyObservableList());
+            jvmsAgentTransformsTable.setItems(FXCollections.emptyObservableList());
+            jvmsAgentConfigurationArea.setText("");
+            jvmsAgentPresetCombo.setDisable(true);
+            jvmsRefreshAgentButton.setDisable(true);
+            jvmsLoadAgentPresetButton.setDisable(true);
+            jvmsApplyAgentConfigurationButton.setDisable(true);
+            jvmsAgentConfigurationArea.setDisable(true);
+            jvmsAgentStatusLabel.setVisible(false);
+            jvmsAgentStatusLabel.setManaged(false);
             jvmsSessionDetailPane.setVisible(false);
             jvmsSessionDetailPane.setManaged(false);
             return;
@@ -1663,6 +1728,7 @@ public class AppShellController {
         bindMBeanBrowser();
         bindDiagnosticCommands();
         bindTriggers();
+        bindJmcAgentManager();
 
         jvmsRefreshButton.setOnAction(event -> refreshJvmBrowser());
         jvmsRefreshJdpButton.setOnAction(event -> jvmBrowserViewModel.refreshJdp());
@@ -1680,6 +1746,9 @@ public class AppShellController {
         jvmsAddTriggerButton.setOnAction(event -> jvmBrowserViewModel.addTriggerRule());
         jvmsRemoveTriggerButton.setOnAction(event -> removeSelectedTriggerRule());
         jvmsEvaluateTriggersButton.setOnAction(event -> jvmBrowserViewModel.evaluateTriggersNow());
+        jvmsRefreshAgentButton.setOnAction(event -> jvmBrowserViewModel.refreshJmcAgent());
+        jvmsLoadAgentPresetButton.setOnAction(event -> jvmBrowserViewModel.loadSelectedJmcAgentPreset());
+        jvmsApplyAgentConfigurationButton.setOnAction(event -> jvmBrowserViewModel.applyJmcAgentConfiguration());
         jvmsTable.setOnMouseClicked(event -> {
             if (event.getButton() == MouseButton.PRIMARY && event.getClickCount() == 2) {
                 jvmBrowserViewModel.connectSelected();
@@ -1791,6 +1860,37 @@ public class AppShellController {
                 .or(jvmsTriggerRulesTable.getSelectionModel().selectedItemProperty().isNull()));
         jvmsEvaluateTriggersButton.disableProperty().bind(jvmBrowserViewModel.triggerLoadingProperty()
                 .or(Bindings.isEmpty(jvmBrowserViewModel.triggerRulesProperty())));
+    }
+
+    private void bindJmcAgentManager() {
+        jvmsAgentPresetCombo.setItems(jvmBrowserViewModel.jmcAgentPresetsProperty());
+        jvmsAgentTransformsTable.setItems(jvmBrowserViewModel.jmcAgentTransformsProperty());
+        jvmsAgentPresetCombo.valueProperty().bindBidirectional(
+                jvmBrowserViewModel.selectedJmcAgentPresetProperty());
+        jvmsAgentConfigurationArea.textProperty().bindBidirectional(
+                jvmBrowserViewModel.jmcAgentConfigurationProperty());
+        jvmsAgentStatusLabel.textProperty().bind(Bindings.createStringBinding(
+                () -> jvmBrowserViewModel.jmcAgentErrorProperty().get()
+                        ? jvmBrowserViewModel.jmcAgentErrorMessageProperty().get()
+                        : jvmBrowserViewModel.jmcAgentStatusMessageProperty().get(),
+                jvmBrowserViewModel.jmcAgentErrorProperty(),
+                jvmBrowserViewModel.jmcAgentErrorMessageProperty(),
+                jvmBrowserViewModel.jmcAgentStatusMessageProperty()));
+        jvmsAgentStatusLabel.visibleProperty().bind(jvmBrowserViewModel.jmcAgentStatusMessageProperty().isNotEmpty()
+                .or(jvmBrowserViewModel.jmcAgentErrorProperty()));
+        jvmsAgentStatusLabel.managedProperty().bind(jvmsAgentStatusLabel.visibleProperty());
+
+        jvmsAgentPresetCombo.disableProperty().bind(jvmBrowserViewModel.jmcAgentLoadingProperty()
+                .or(Bindings.isEmpty(jvmBrowserViewModel.jmcAgentPresetsProperty())));
+        jvmsRefreshAgentButton.disableProperty().bind(jvmBrowserViewModel.selectedSessionProperty().isNull()
+                .or(jvmBrowserViewModel.jmcAgentLoadingProperty()));
+        jvmsLoadAgentPresetButton.disableProperty().bind(jvmBrowserViewModel.jmcAgentLoadingProperty()
+                .or(jvmBrowserViewModel.selectedJmcAgentPresetProperty().isNull()));
+        jvmsApplyAgentConfigurationButton.disableProperty().bind(jvmBrowserViewModel.jmcAgentLoadingProperty()
+                .or(jvmBrowserViewModel.jmcAgentAvailableProperty().not()));
+        jvmsAgentTransformsTable.disableProperty().bind(jvmBrowserViewModel.jmcAgentAvailableProperty().not());
+        jvmsAgentConfigurationArea.disableProperty().bind(jvmBrowserViewModel.jmcAgentAvailableProperty().not()
+                .or(jvmBrowserViewModel.jmcAgentLoadingProperty()));
     }
 
     private void rebuildMBeanTree() {
@@ -3207,6 +3307,7 @@ public class AppShellController {
         jvmsMBeanTab.textProperty().bind(i18n.text("jvms.mbeans.tab"));
         jvmsDiagnosticsTab.textProperty().bind(i18n.text("jvms.diagnostics.tab"));
         jvmsTriggersTab.textProperty().bind(i18n.text("jvms.triggers.tab"));
+        jvmsAgentTab.textProperty().bind(i18n.text("jvms.agent.tab"));
         jvmsRefreshMBeanButton.textProperty().bind(i18n.text("jvms.mbeans.refresh"));
         jvmsInvokeMBeanOperationButton.textProperty().bind(i18n.text("jvms.mbeans.invoke"));
         jvmsMBeanOperationArgumentsField.promptTextProperty().bind(i18n.text("jvms.mbeans.arguments"));
@@ -3222,6 +3323,11 @@ public class AppShellController {
         jvmsAddTriggerButton.textProperty().bind(i18n.text("jvms.triggers.add"));
         jvmsRemoveTriggerButton.textProperty().bind(i18n.text("jvms.triggers.remove"));
         jvmsEvaluateTriggersButton.textProperty().bind(i18n.text("jvms.triggers.evaluate"));
+        jvmsAgentPresetCombo.promptTextProperty().bind(i18n.text("jvms.agent.preset"));
+        jvmsRefreshAgentButton.textProperty().bind(i18n.text("jvms.agent.refresh"));
+        jvmsLoadAgentPresetButton.textProperty().bind(i18n.text("jvms.agent.loadPreset"));
+        jvmsApplyAgentConfigurationButton.textProperty().bind(i18n.text("jvms.agent.apply"));
+        jvmsAgentConfigurationTitleLabel.textProperty().bind(i18n.text("jvms.agent.configuration"));
         profilingTitleLabel.textProperty().bind(i18n.text("profiling.title"));
         profilingCallGraphTab.textProperty().bind(i18n.text("profiling.tab.callGraph"));
         profilingCallGraphDirectionCombo.promptTextProperty().bind(i18n.text("profiling.callGraph.direction"));

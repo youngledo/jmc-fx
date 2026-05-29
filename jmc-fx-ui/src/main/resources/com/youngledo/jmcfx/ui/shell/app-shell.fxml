@@ -264,7 +264,11 @@
                 <SplitPane orientation="VERTICAL" VBox.vgrow="ALWAYS" DividerPositions="0.62">
                     <items>
                         <TableView fx:id="jvmsTable" styleClass="dense-table"/>
-                        <VBox fx:id="jvmsSessionDetailPane" styleClass="summary-panel" spacing="6">
+                        <VBox fx:id="jvmsSessionDetailPane" spacing="6">
+                            <styleClass>
+                                <String fx:value="summary-panel"/>
+                                <String fx:value="jvms-session-detail"/>
+                            </styleClass>
                             <TabPane fx:id="jvmsLiveTabs" VBox.vgrow="ALWAYS">
                                 <tabs>
                                     <Tab fx:id="jvmsSessionTab" closable="false">
@@ -335,6 +339,37 @@
                                                 </items>
                                             </SplitPane>
                                             <Label fx:id="jvmsTriggerErrorLabel" styleClass="unavailable-state" wrapText="true"/>
+                                        </VBox>
+                                    </Tab>
+                                    <Tab fx:id="jvmsAgentTab" closable="false">
+                                        <VBox fx:id="jvmsAgentContent" styleClass="jvms-live-tab-content" spacing="10">
+                                            <FlowPane fx:id="jvmsAgentToolbar" styleClass="page-toolbar" hgap="8" vgap="8">
+                                                <ComboBox fx:id="jvmsAgentPresetCombo" prefWidth="220"/>
+                                                <Button fx:id="jvmsRefreshAgentButton"/>
+                                                <Button fx:id="jvmsLoadAgentPresetButton"/>
+                                                <Button fx:id="jvmsApplyAgentConfigurationButton"/>
+                                            </FlowPane>
+                                            <SplitPane orientation="VERTICAL" DividerPositions="0.45" VBox.vgrow="ALWAYS">
+                                                <items>
+                                                    <TableView fx:id="jvmsAgentTransformsTable" styleClass="dense-table"/>
+                                                    <VBox fx:id="jvmsAgentConfigurationPane">
+                                                        <styleClass>
+                                                            <String fx:value="detail-panel"/>
+                                                        </styleClass>
+                                                        <Label fx:id="jvmsAgentConfigurationTitleLabel">
+                                                            <styleClass>
+                                                                <String fx:value="detail-panel-title"/>
+                                                            </styleClass>
+                                                        </Label>
+                                                        <TextArea fx:id="jvmsAgentConfigurationArea" editable="true" wrapText="true" VBox.vgrow="ALWAYS">
+                                                            <styleClass>
+                                                                <String fx:value="detail-panel-body"/>
+                                                            </styleClass>
+                                                        </TextArea>
+                                                    </VBox>
+                                                </items>
+                                            </SplitPane>
+                                            <Label fx:id="jvmsAgentStatusLabel" styleClass="unavailable-state" wrapText="true"/>
                                         </VBox>
                                     </Tab>
                                 </tabs>
