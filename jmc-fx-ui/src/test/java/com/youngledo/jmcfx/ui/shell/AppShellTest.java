@@ -183,6 +183,19 @@ class AppShellTest {
         assertEquals("TextArea", elementByFxId(document, "advancedJfrMemoryDetailArea").getTagName());
         assertEquals("false", elementByFxId(document, "advancedJfrMemoryDetailArea").getAttribute("editable"));
         assertEquals("true", elementByFxId(document, "advancedJfrMemoryDetailArea").getAttribute("wrapText"));
+        Element heapDumpPane = elementByFxId(document, "heapDumpAnalysisPane");
+        assertTrue(hasStyleClass(heapDumpPane, "page"));
+        assertTrue(hasStyleClass(heapDumpPane, "split-table-detail-page"));
+        assertTrue(hasStyleClass(heapDumpPane, "heap-dump-page"));
+        assertTrue(hasStyleClass(elementByFxId(document, "heapDumpHeader"), "page-header"));
+        assertTrue(hasStyleClass(elementByFxId(document, "heapDumpToolbar"), "page-toolbar"));
+        assertEquals(0, elementCountWithFxId(document, "heapDumpProgressBar"),
+                "HPROF long-running progress belongs in the shell status area, not the page toolbar");
+        assertTrue(hasStyleClass(elementByFxId(document, "heapDumpContent"), "page-content"));
+        assertTrue(hasStyleClass(elementByFxId(document, "heapDumpDetailsTabs"), "page-detail-tabs"));
+        assertTrue(hasStyleClass(elementByFxId(document, "heapDumpTextReportPane"), "detail-panel"));
+        assertTrue(hasStyleClass(elementByFxId(document, "heapDumpIssueDetailPane"), "detail-panel"));
+        assertTrue(hasStyleClass(elementByFxId(document, "heapDumpTextReportArea"), "detail-panel-body"));
         assertTrue(hasStyleClass(elementByFxId(document, "heapDumpIssueDetailTitleLabel"), "detail-panel-title"));
         assertEquals("homeOpenRecordingButton", elementByFxId(document, "homeOpenRecordingButton").getAttribute("fx:id"));
         assertFalse(elementByFxId(document, "homeOpenRecordingButton").hasAttribute("styleClass"),
@@ -621,6 +634,31 @@ class AppShellTest {
         assertTrue(detailPanel.contains("-fx-padding: 12px"));
         assertTrue(detailPanel.contains("-fx-spacing: 8px"));
         assertTrue(detailPanelTitle.contains("-fx-padding: 0 0 8px 0"));
+    }
+
+    @Test
+    void heapDumpPageUsesSplitTableDetailTemplateSpacing() throws Exception {
+        String css = appCss();
+        String page = cssBlock(css, ".page");
+        String header = cssBlock(css, ".page-header");
+        String toolbar = cssBlock(css, ".page-toolbar");
+        String heapDumpPage = cssBlock(css, ".heap-dump-page");
+        String content = cssBlock(css, ".heap-dump-page .page-content");
+        String table = cssBlock(css, ".heap-dump-page .dense-table");
+        String detailTabs = cssBlock(css, ".heap-dump-page .page-detail-tabs");
+        String textReport = cssBlock(css, ".heap-dump-page .dump-text-area");
+
+        assertTrue(page.contains("-fx-padding: 0 0 2px 0"));
+        assertTrue(page.contains("-fx-spacing: 12px"));
+        assertTrue(header.contains("-fx-spacing: 8px"));
+        assertTrue(toolbar.contains("-fx-padding: 2px 0 6px 0"));
+        assertTrue(toolbar.contains("-fx-alignment: center-left"));
+        assertTrue(heapDumpPage.contains("-fx-spacing: 12px"));
+        assertTrue(heapDumpPage.contains("-fx-min-width: 0"));
+        assertTrue(content.contains("-fx-padding: 6px 0 0 0"));
+        assertTrue(table.contains("-fx-min-height: 220px"));
+        assertTrue(detailTabs.contains("-fx-padding: 8px 0 0 0"));
+        assertTrue(textReport.contains("-fx-padding: 8px"));
     }
 
     @Test

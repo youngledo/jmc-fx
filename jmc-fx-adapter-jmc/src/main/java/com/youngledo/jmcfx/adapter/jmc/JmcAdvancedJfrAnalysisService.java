@@ -174,7 +174,7 @@ public class JmcAdvancedJfrAnalysisService implements AdvancedJfrAnalysisService
     private void aggregateAllocationHotspots(IItemCollection events,
             Map<MemoryIssueKey, MemoryIssueAccumulator> issues) {
         aggregateByType(events, JdkFilters.ALLOC_ALL, JdkAttributes.ALLOCATION_CLASS,
-                JdkAttributes.ALLOCATION_SIZE, MemoryIssueCategory.ALLOCATION_HOTSPOT,
+                JdkAttributes.TOTAL_ALLOCATION_SIZE, MemoryIssueCategory.ALLOCATION_HOTSPOT,
                 "High allocation volume", "Review allocation rate for this type.", issues);
     }
 

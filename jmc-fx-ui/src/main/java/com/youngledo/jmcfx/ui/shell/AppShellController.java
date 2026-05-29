@@ -387,8 +387,6 @@ public class AppShellController {
     @FXML private Label heapDumpAnalysisTitleLabel;
     @FXML private Button heapDumpOpenButton;
     @FXML private Label heapDumpNameLabel;
-    @FXML private ProgressBar heapDumpProgressBar;
-    @FXML private Label heapDumpStatusLabel;
     @FXML private Label heapDumpSummaryLabel;
     @FXML private TableView<HeapDumpIssue> heapDumpIssuesTable;
     @FXML private TabPane heapDumpDetailsTabs;
@@ -1227,7 +1225,6 @@ public class AppShellController {
         if (heapDumpAnalysisViewModel == null) {
             heapDumpOpenButton.setDisable(true);
             heapDumpNameLabel.setText("");
-            heapDumpStatusLabel.setText(i18n.get("heapDump.status.idle"));
             heapDumpSummaryLabel.setText("");
             heapDumpIssueDetailTitleLabel.setText("");
             heapDumpIssueDetailArea.setText(i18n.get("heapDump.detail.empty"));
@@ -1241,30 +1238,23 @@ public class AppShellController {
 
     private void bindHeapDumpAnalysis(HeapDumpAnalysisViewModel nextViewModel) {
         heapDumpNameLabel.textProperty().unbind();
-        heapDumpStatusLabel.textProperty().unbind();
         heapDumpSummaryLabel.textProperty().unbind();
         heapDumpIssueDetailArea.textProperty().unbind();
         heapDumpTextReportArea.textProperty().unbind();
-        heapDumpProgressBar.visibleProperty().unbind();
-        heapDumpProgressBar.managedProperty().unbind();
         heapDumpOpenButton.disableProperty().unbind();
         heapDumpIssueDetailTitleLabel.textProperty().unbind();
         if (nextViewModel == null) {
             heapDumpNameLabel.setText("");
-            heapDumpStatusLabel.setText(i18n.get("heapDump.status.idle"));
             heapDumpSummaryLabel.setText("");
             heapDumpIssueDetailArea.setText(i18n.get("heapDump.detail.empty"));
             heapDumpTextReportArea.setText("");
             heapDumpIssuesTable.setItems(FXCollections.emptyObservableList());
-            heapDumpProgressBar.setVisible(false);
-            heapDumpProgressBar.setManaged(false);
             heapDumpOpenButton.setDisable(heapDumpAnalysisService == null);
             heapDumpIssueDetailTitleLabel.setText("");
             return;
         }
         heapDumpAnalysisViewModel = nextViewModel;
         heapDumpNameLabel.textProperty().bind(heapDumpAnalysisViewModel.heapDumpNameProperty());
-        heapDumpStatusLabel.textProperty().bind(heapDumpAnalysisViewModel.statusMessageProperty());
         heapDumpSummaryLabel.textProperty().bind(heapDumpAnalysisViewModel.summaryProperty());
         heapDumpIssueDetailArea.textProperty().bind(heapDumpAnalysisViewModel.selectedIssueDetailsProperty());
         heapDumpTextReportArea.textProperty().bind(heapDumpAnalysisViewModel.textReportProperty());
@@ -1273,9 +1263,6 @@ public class AppShellController {
                 .addListener((observable, oldValue, newValue) -> heapDumpAnalysisViewModel.selectIssue(newValue));
         heapDumpAnalysisViewModel.selectedIssueProperty().addListener((observable, oldValue, newValue) ->
                 heapDumpIssuesTable.getSelectionModel().select(newValue));
-        heapDumpProgressBar.visibleProperty().bind(
-                heapDumpAnalysisViewModel.stateProperty().isEqualTo(HeapDumpAnalysisState.ANALYZING));
-        heapDumpProgressBar.managedProperty().bind(heapDumpProgressBar.visibleProperty());
         heapDumpOpenButton.disableProperty().bind(
                 heapDumpAnalysisViewModel.stateProperty().isEqualTo(HeapDumpAnalysisState.ANALYZING));
         heapDumpIssueDetailTitleLabel.textProperty().bind(Bindings.createStringBinding(

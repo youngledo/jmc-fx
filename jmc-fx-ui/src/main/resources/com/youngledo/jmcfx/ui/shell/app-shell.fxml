@@ -173,28 +173,30 @@
                     </tabs>
                 </TabPane>
             </VBox>
-            <VBox fx:id="heapDumpAnalysisPane" spacing="8" visible="false" managed="false">
-                <Label fx:id="heapDumpAnalysisTitleLabel" styleClass="view-title"/>
-                <FlowPane styleClass="page-toolbar" hgap="8" vgap="8">
+            <VBox fx:id="heapDumpAnalysisPane" styleClass="page split-table-detail-page heap-dump-page" visible="false" managed="false">
+                <VBox fx:id="heapDumpHeader" styleClass="page-header">
+                    <Label fx:id="heapDumpAnalysisTitleLabel" styleClass="view-title"/>
+                    <Label fx:id="heapDumpSummaryLabel" styleClass="event-window-status" wrapText="true"/>
+                </VBox>
+                <FlowPane fx:id="heapDumpToolbar" styleClass="page-toolbar" hgap="8" vgap="8">
                     <Button fx:id="heapDumpOpenButton"/>
                     <Label fx:id="heapDumpNameLabel" styleClass="event-window-status" wrapText="true"/>
-                    <ProgressBar fx:id="heapDumpProgressBar" prefWidth="160" visible="false" managed="false"/>
                 </FlowPane>
-                <Label fx:id="heapDumpStatusLabel" styleClass="event-window-status" wrapText="true"/>
-                <Label fx:id="heapDumpSummaryLabel" styleClass="event-window-status" wrapText="true"/>
-                <SplitPane orientation="VERTICAL" VBox.vgrow="ALWAYS" DividerPositions="0.62">
+                <SplitPane fx:id="heapDumpContent" styleClass="page-content" orientation="VERTICAL" VBox.vgrow="ALWAYS" DividerPositions="0.62">
                     <items>
                         <TableView fx:id="heapDumpIssuesTable" styleClass="dense-table"/>
-                        <TabPane fx:id="heapDumpDetailsTabs" prefHeight="260">
+                        <TabPane fx:id="heapDumpDetailsTabs" styleClass="page-detail-tabs" prefHeight="260">
                             <tabs>
                                 <Tab fx:id="heapDumpIssueDetailTab" closable="false">
-                                    <VBox styleClass="heap-dump-detail analysis-detail detail-panel" spacing="8">
+                                    <VBox fx:id="heapDumpIssueDetailPane" styleClass="heap-dump-detail analysis-detail detail-panel">
                                         <Label fx:id="heapDumpIssueDetailTitleLabel" styleClass="analysis-detail-title detail-panel-title"/>
                                         <TextArea fx:id="heapDumpIssueDetailArea" styleClass="analysis-detail-explanation detail-panel-body" wrapText="true" editable="false" VBox.vgrow="ALWAYS"/>
                                     </VBox>
                                 </Tab>
                                 <Tab fx:id="heapDumpTextReportTab" closable="false">
-                                    <TextArea fx:id="heapDumpTextReportArea" styleClass="dump-text-area" wrapText="false" editable="false"/>
+                                    <VBox fx:id="heapDumpTextReportPane" styleClass="detail-panel">
+                                        <TextArea fx:id="heapDumpTextReportArea" styleClass="dump-text-area detail-panel-body" wrapText="false" editable="false" VBox.vgrow="ALWAYS"/>
+                                    </VBox>
                                 </Tab>
                             </tabs>
                         </TabPane>

@@ -35,6 +35,45 @@
     -fx-background-color: -color-bg-default;
 }
 
+.page {
+    -fx-padding: 0 0 2px 0;
+    -fx-spacing: 12px;
+}
+
+.page-header {
+    -fx-spacing: 8px;
+}
+
+.page-toolbar {
+    -fx-padding: 2px 0 6px 0;
+    -fx-alignment: center-left;
+}
+
+.split-table-detail-page {
+    -fx-spacing: 12px;
+}
+
+.heap-dump-page {
+    -fx-spacing: 12px;
+    -fx-min-width: 0;
+}
+
+.heap-dump-page .page-content {
+    -fx-padding: 6px 0 0 0;
+}
+
+.heap-dump-page .dense-table {
+    -fx-min-height: 220px;
+}
+
+.heap-dump-page .page-detail-tabs {
+    -fx-padding: 8px 0 0 0;
+}
+
+.heap-dump-page .dump-text-area {
+    -fx-padding: 8px;
+}
+
 .sidebar-header {
     -fx-padding: 20px 10px;
     -fx-spacing: 18px;

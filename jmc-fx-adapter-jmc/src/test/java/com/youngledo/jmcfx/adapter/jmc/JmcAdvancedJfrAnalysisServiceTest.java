@@ -27,6 +27,8 @@ import com.youngledo.jmcfx.domain.service.JmcFxException;
 
 class JmcAdvancedJfrAnalysisServiceTest {
 
+    private static volatile Object allocationSink;
+
     @TempDir
     Path tempDir;
 
@@ -145,6 +147,7 @@ class JmcAdvancedJfrAnalysisServiceTest {
         for (int i = 0; i < allocations.length; i++) {
             allocations[i] = new byte[1024 + i];
         }
+        allocationSink = allocations;
     }
 
     private RecordingSummary recording(Path path) throws Exception {
