@@ -39,6 +39,13 @@ sdk env
 The installer is written to `jmc-fx-app/target/jpackage/`. On macOS, the
 default output is `JMC FX-1.0.0.dmg`.
 
+The default profile builds a trimmed runtime image with `jlink` before invoking
+`jpackage`. A full-JDK runtime fallback is available for troubleshooting:
+
+```bash
+./mvnw -pl jmc-fx-app -am -Pnative-package-full-runtime package
+```
+
 `jpackage` requires platform-specific package versions. The default package
 version is `1.0.0` because macOS rejects versions whose first number is `0`.
 Override it for releases with:

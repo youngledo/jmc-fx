@@ -55,17 +55,57 @@ class JmcFxApplicationPackagingTest {
         assertEquals("${project.build.finalName}.jar", childText(jpackagePlugin, "configuration", "mainJar"));
         assertEquals("com.youngledo.jmcfx.app.JmcFxApplication", childText(jpackagePlugin, "configuration", "mainClass"));
         assertEquals("${project.build.directory}/jpackage", childText(jpackagePlugin, "configuration", "destination"));
-        assertEquals("${java.home}", childText(jpackagePlugin, "configuration", "runtimeImage"));
+        assertEquals("${jmcfx.package.runtime.dir}", childText(jpackagePlugin, "configuration", "runtimeImage"));
         assertEquals("true", childText(jpackagePlugin, "configuration", "removeDestination"));
         assertEquals("true", childText(jpackagePlugin, "configuration", "verbose"));
         assertEquals(
                 "${project.build.directory}/jpackage-input",
                 childText(profile, "properties", "jmcfx.package.input.dir"),
                 "staged input must be outside the removable jpackage destination");
+        assertEquals("${project.build.directory}/jpackage-runtime", childText(profile, "properties", "jmcfx.package.runtime.dir"));
         assertEquals(
                 "1.0.0",
                 childText(profile, "properties", "jmcfx.package.version"),
                 "default native package version must satisfy macOS CFBundleVersion rules");
+    }
+
+    @Test
+    void nativePackageProfileCreatesJlinkRuntimeImage() throws Exception {
+        var pom = readAppPom();
+        var profile = findElementByChildText(pom.getElementsByTagNameNS(MAVEN_NAMESPACE, "profile"), "id", "native-package");
+
+        var jlinkPlugin = findPlugin(profile, "org.panteleyev", "jlink-maven-plugin");
+        assertNotNull(jlinkPlugin, "native-package should create a trimmed runtime image with jlink");
+        assertEquals("${jmcfx.package.runtime.dir}", childText(jlinkPlugin, "configuration", "output"));
+        assertEquals("${jmcfx.package.input.dir}", childText(jlinkPlugin, "configuration", "modulePaths", "modulePath"));
+        assertEquals("true", childText(jlinkPlugin, "configuration", "noHeaderFiles"));
+        assertEquals("true", childText(jlinkPlugin, "configuration", "noManPages"));
+        assertEquals("true", childText(jlinkPlugin, "configuration", "stripDebug"));
+        assertConfiguredModules(jlinkPlugin,
+                "java.desktop",
+                "java.management",
+                "java.naming",
+                "java.rmi",
+                "java.sql",
+                "jdk.attach",
+                "jdk.jfr",
+                "jdk.management.agent",
+                "jdk.unsupported",
+                "javafx.controls",
+                "javafx.fxml");
+    }
+
+    @Test
+    void fullRuntimeNativePackageProfileKeepsCompleteJdkFallback() throws Exception {
+        var pom = readAppPom();
+
+        var profile = findElementByChildText(
+                pom.getElementsByTagNameNS(MAVEN_NAMESPACE, "profile"), "id", "native-package-full-runtime");
+        assertNotNull(profile, "a full-runtime fallback profile should remain available for jlink troubleshooting");
+
+        var jpackagePlugin = findPlugin(profile, "org.panteleyev", "jpackage-maven-plugin");
+        assertNotNull(jpackagePlugin);
+        assertEquals("${java.home}", childText(jpackagePlugin, "configuration", "runtimeImage"));
     }
 
     @Test
@@ -102,6 +142,17 @@ class JmcFxApplicationPackagingTest {
             }
         }
         return null;
+    }
+
+    private static void assertConfiguredModules(Element plugin, String... expectedModules) {
+        var modules = plugin.getElementsByTagNameNS(MAVEN_NAMESPACE, "addModule");
+        var configuredModules = new java.util.HashSet<String>();
+        for (var i = 0; i < modules.getLength(); i++) {
+            configuredModules.add(modules.item(i).getTextContent().trim());
+        }
+        for (var expectedModule : expectedModules) {
+            assertTrue(configuredModules.contains(expectedModule), () -> "missing jlink module " + expectedModule);
+        }
     }
 
     private static String childText(Element element, String... path) {
