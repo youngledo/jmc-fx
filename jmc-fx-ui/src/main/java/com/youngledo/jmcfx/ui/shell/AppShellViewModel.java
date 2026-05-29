@@ -251,8 +251,8 @@ public class AppShellViewModel {
         if (workspace == null || !heapDumpWorkspaces.contains(workspace)) {
             return;
         }
-        selectedHeapDumpWorkspace.set(workspace);
         selectedWorkspace.set(null);
+        selectedHeapDumpWorkspace.set(workspace);
         selectedSection.set(HEAP_DUMP_ANALYSIS_SECTION);
     }
 
@@ -280,8 +280,8 @@ public class AppShellViewModel {
         if (workspace == null || !recordingWorkspaces.contains(workspace)) {
             return;
         }
-        selectedWorkspace.set(workspace);
         selectedHeapDumpWorkspace.set(null);
+        selectedWorkspace.set(workspace);
         recordingOpen.set(true);
         currentRecordingName.set(workspace.recording().name());
         if (HEAP_DUMP_ANALYSIS_SECTION.equals(selectedSection.get()) || isRecordingSection(selectedSection.get())) {

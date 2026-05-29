@@ -24,6 +24,7 @@
 <?import javafx.scene.layout.VBox?>
 <?import javafx.scene.control.TextArea?>
 <?import com.youngledo.jmcfx.ui.shell.AppSidebar?>
+<?import java.lang.String?>
 
 <BorderPane fx:id="root" styleClass="enterprise-shell" xmlns="http://javafx.com/javafx/25"
             xmlns:fx="http://javafx.com/fxml/1"
@@ -120,10 +121,21 @@
                 <SplitPane orientation="VERTICAL" VBox.vgrow="ALWAYS" DividerPositions="0.6">
                     <items>
                         <TableView fx:id="analysisTable" styleClass="dense-table" prefHeight="400"/>
-                        <VBox styleClass="analysis-detail detail-panel">
+                        <VBox>
+                            <styleClass>
+                                <String fx:value="detail-panel"/>
+                            </styleClass>
                             <children>
-                                <Label fx:id="analysisDetailTitle" styleClass="analysis-detail-title detail-panel-title"/>
-                                <TextArea fx:id="analysisDetailExplanation" styleClass="analysis-detail-explanation detail-panel-body" wrapText="true" editable="false" VBox.vgrow="ALWAYS"/>
+                                <Label fx:id="analysisDetailTitle">
+                                    <styleClass>
+                                        <String fx:value="detail-panel-title"/>
+                                    </styleClass>
+                                </Label>
+                                <TextArea fx:id="analysisDetailExplanation" wrapText="true" editable="false" VBox.vgrow="ALWAYS">
+                                    <styleClass>
+                                        <String fx:value="detail-panel-body"/>
+                                    </styleClass>
+                                </TextArea>
                             </children>
                         </VBox>
                     </items>
@@ -160,10 +172,21 @@
                                 <SplitPane orientation="VERTICAL" VBox.vgrow="ALWAYS" DividerPositions="0.62">
                                     <items>
                                         <TableView fx:id="advancedJfrMemoryTable" styleClass="dense-table"/>
-                                        <VBox styleClass="advanced-jfr-memory-detail analysis-detail detail-panel">
+                                        <VBox fx:id="advancedJfrMemoryDetailPane">
+                                            <styleClass>
+                                                <String fx:value="detail-panel"/>
+                                            </styleClass>
                                             <children>
-                                                <Label fx:id="advancedJfrMemoryDetailTitleLabel" styleClass="analysis-detail-title detail-panel-title"/>
-                                                <TextArea fx:id="advancedJfrMemoryDetailArea" styleClass="analysis-detail-explanation detail-panel-body" wrapText="true" editable="false" VBox.vgrow="ALWAYS"/>
+                                                <Label fx:id="advancedJfrMemoryDetailTitleLabel">
+                                                    <styleClass>
+                                                        <String fx:value="detail-panel-title"/>
+                                                    </styleClass>
+                                                </Label>
+                                                <TextArea fx:id="advancedJfrMemoryDetailArea" wrapText="true" editable="false" VBox.vgrow="ALWAYS">
+                                                    <styleClass>
+                                                        <String fx:value="detail-panel-body"/>
+                                                    </styleClass>
+                                                </TextArea>
                                             </children>
                                         </VBox>
                                     </items>
@@ -173,7 +196,12 @@
                     </tabs>
                 </TabPane>
             </VBox>
-            <VBox fx:id="heapDumpAnalysisPane" styleClass="page split-table-detail-page heap-dump-page" visible="false" managed="false">
+            <VBox fx:id="heapDumpAnalysisPane" visible="false" managed="false">
+                <styleClass>
+                    <String fx:value="page"/>
+                    <String fx:value="split-table-detail-page"/>
+                    <String fx:value="heap-dump-page"/>
+                </styleClass>
                 <VBox fx:id="heapDumpHeader" styleClass="page-header">
                     <Label fx:id="heapDumpAnalysisTitleLabel" styleClass="view-title"/>
                     <Label fx:id="heapDumpSummaryLabel" styleClass="event-window-status" wrapText="true"/>
@@ -185,17 +213,33 @@
                 <SplitPane fx:id="heapDumpContent" styleClass="page-content" orientation="VERTICAL" VBox.vgrow="ALWAYS" DividerPositions="0.62">
                     <items>
                         <TableView fx:id="heapDumpIssuesTable" styleClass="dense-table"/>
-                        <TabPane fx:id="heapDumpDetailsTabs" styleClass="page-detail-tabs" prefHeight="260">
+                        <TabPane fx:id="heapDumpDetailsTabs" styleClass="page-detail-tabs">
                             <tabs>
                                 <Tab fx:id="heapDumpIssueDetailTab" closable="false">
-                                    <VBox fx:id="heapDumpIssueDetailPane" styleClass="heap-dump-detail analysis-detail detail-panel">
-                                        <Label fx:id="heapDumpIssueDetailTitleLabel" styleClass="analysis-detail-title detail-panel-title"/>
-                                        <TextArea fx:id="heapDumpIssueDetailArea" styleClass="analysis-detail-explanation detail-panel-body" wrapText="true" editable="false" VBox.vgrow="ALWAYS"/>
+                                    <VBox fx:id="heapDumpIssueDetailPane">
+                                        <styleClass>
+                                            <String fx:value="detail-panel"/>
+                                        </styleClass>
+                                        <Label fx:id="heapDumpIssueDetailTitleLabel">
+                                            <styleClass>
+                                                <String fx:value="detail-panel-title"/>
+                                            </styleClass>
+                                        </Label>
+                                        <TextArea fx:id="heapDumpIssueDetailArea" wrapText="true" editable="false" VBox.vgrow="ALWAYS">
+                                            <styleClass>
+                                                <String fx:value="detail-panel-body"/>
+                                            </styleClass>
+                                        </TextArea>
                                     </VBox>
                                 </Tab>
                                 <Tab fx:id="heapDumpTextReportTab" closable="false">
                                     <VBox fx:id="heapDumpTextReportPane" styleClass="detail-panel">
-                                        <TextArea fx:id="heapDumpTextReportArea" styleClass="dump-text-area detail-panel-body" wrapText="false" editable="false" VBox.vgrow="ALWAYS"/>
+                                        <TextArea fx:id="heapDumpTextReportArea" wrapText="false" editable="false" VBox.vgrow="ALWAYS">
+                                            <styleClass>
+                                                <String fx:value="dump-text-area"/>
+                                                <String fx:value="detail-panel-body"/>
+                                            </styleClass>
+                                        </TextArea>
                                     </VBox>
                                 </Tab>
                             </tabs>
@@ -306,7 +350,11 @@
                         <tabs>
                             <Tab fx:id="profilingCallGraphTab" closable="false">
                                 <VBox styleClass="profiling-graph-tab-content" spacing="8">
-                                    <HBox fx:id="profilingCallGraphToolbar" styleClass="page-toolbar profiling-graph-toolbar" spacing="8" alignment="CENTER_LEFT">
+                                    <HBox fx:id="profilingCallGraphToolbar" spacing="8" alignment="CENTER_LEFT">
+                                        <styleClass>
+                                            <String fx:value="page-toolbar"/>
+                                            <String fx:value="profiling-graph-toolbar"/>
+                                        </styleClass>
                                         <ComboBox fx:id="profilingCallGraphDirectionCombo" prefWidth="150"/>
                                         <Label fx:id="profilingCallGraphDepthLabel"/>
                                         <Spinner fx:id="profilingCallGraphDepthSpinner" prefWidth="110"/>
@@ -322,7 +370,11 @@
                             </Tab>
                             <Tab fx:id="profilingCallersFlameTab" closable="false">
                                 <VBox styleClass="profiling-graph-tab-content" spacing="8">
-                                    <HBox fx:id="profilingCallersFlameToolbar" styleClass="page-toolbar profiling-graph-toolbar" spacing="8" alignment="CENTER_LEFT">
+                                    <HBox fx:id="profilingCallersFlameToolbar" spacing="8" alignment="CENTER_LEFT">
+                                        <styleClass>
+                                            <String fx:value="page-toolbar"/>
+                                            <String fx:value="profiling-graph-toolbar"/>
+                                        </styleClass>
                                         <Button fx:id="profilingCallersFlameOrientationButton" styleClass="profiling-graph-tool-button"/>
                                         <Button fx:id="profilingCallersFlameZoomOutButton" styleClass="profiling-graph-tool-button"/>
                                         <Button fx:id="profilingCallersFlameResetZoomButton" styleClass="profiling-graph-tool-button"/>
@@ -336,7 +388,11 @@
                             </Tab>
                             <Tab fx:id="profilingCalleesFlameTab" closable="false">
                                 <VBox styleClass="profiling-graph-tab-content" spacing="8">
-                                    <HBox fx:id="profilingCalleesFlameToolbar" styleClass="page-toolbar profiling-graph-toolbar" spacing="8" alignment="CENTER_LEFT">
+                                    <HBox fx:id="profilingCalleesFlameToolbar" spacing="8" alignment="CENTER_LEFT">
+                                        <styleClass>
+                                            <String fx:value="page-toolbar"/>
+                                            <String fx:value="profiling-graph-toolbar"/>
+                                        </styleClass>
                                         <Button fx:id="profilingCalleesFlameOrientationButton" styleClass="profiling-graph-tool-button"/>
                                         <Button fx:id="profilingCalleesFlameZoomOutButton" styleClass="profiling-graph-tool-button"/>
                                         <Button fx:id="profilingCalleesFlameResetZoomButton" styleClass="profiling-graph-tool-button"/>

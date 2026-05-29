@@ -15,6 +15,8 @@ import java.util.Locale;
 import java.util.Map;
 import java.util.Queue;
 import java.util.ResourceBundle;
+import java.util.concurrent.CountDownLatch;
+import java.util.concurrent.TimeUnit;
 import java.util.concurrent.atomic.AtomicInteger;
 
 import javax.xml.parsers.DocumentBuilderFactory;
@@ -46,9 +48,23 @@ import com.youngledo.jmcfx.testsupport.FakeRecordingRepository;
 import com.youngledo.jmcfx.testsupport.FakeRuleAnalysisService;
 import com.youngledo.jmcfx.testsupport.FakeSavedJvmTargetRepository;
 
+import javafx.fxml.FXMLLoader;
+import javafx.application.Platform;
+import javafx.scene.Node;
 import javafx.scene.layout.Region;
 
 class AppShellTest {
+
+    @org.junit.jupiter.api.BeforeAll
+    static void initToolkit() throws InterruptedException {
+        try {
+            CountDownLatch latch = new CountDownLatch(1);
+            Platform.startup(latch::countDown);
+            latch.await(5, TimeUnit.SECONDS);
+        } catch (IllegalStateException ignored) {
+            // Toolkit already initialized by another test class.
+        }
+    }
 
     @Test
     void closeDelegatesToCloseHandle() throws Exception {
@@ -193,6 +209,8 @@ class AppShellTest {
                 "HPROF long-running progress belongs in the shell status area, not the page toolbar");
         assertTrue(hasStyleClass(elementByFxId(document, "heapDumpContent"), "page-content"));
         assertTrue(hasStyleClass(elementByFxId(document, "heapDumpDetailsTabs"), "page-detail-tabs"));
+        assertFalse(elementByFxId(document, "heapDumpDetailsTabs").hasAttribute("prefHeight"),
+                "HPROF detail tabs must use the shared split table detail CSS sizing instead of a fixed FXML height");
         assertTrue(hasStyleClass(elementByFxId(document, "heapDumpTextReportPane"), "detail-panel"));
         assertTrue(hasStyleClass(elementByFxId(document, "heapDumpIssueDetailPane"), "detail-panel"));
         assertTrue(hasStyleClass(elementByFxId(document, "heapDumpTextReportArea"), "detail-panel-body"));
@@ -483,7 +501,7 @@ class AppShellTest {
         assertTrue(controller.contains("advancedJfrMemoryTable.getSelectionModel().clearSelection()"));
 
         assertTrue(css.contains(".advanced-jfr-memory-content"));
-        assertTrue(css.contains(".advanced-jfr-memory-detail"));
+        assertTrue(css.contains(".detail-panel"));
 
         assertTrue(english.contains("advancedJfr.heatmap.tab=Heatmap"));
         assertTrue(english.contains("advancedJfr.memory.tab=Memory Analysis"));
@@ -626,14 +644,64 @@ class AppShellTest {
     }
 
     @Test
-    void detailPanelsUseSharedSpacingContract() throws Exception {
+    void detailPanelTitlesUseSharedVerticalSpacingContract() throws Exception {
         String css = appCss();
         String detailPanel = cssBlock(css, ".detail-panel");
         String detailPanelTitle = cssBlock(css, ".detail-panel-title");
 
-        assertTrue(detailPanel.contains("-fx-padding: 12px"));
-        assertTrue(detailPanel.contains("-fx-spacing: 8px"));
-        assertTrue(detailPanelTitle.contains("-fx-padding: 0 0 8px 0"));
+        assertFalse(detailPanel.contains("-fx-padding"),
+                "Generic detail panel must not add area-level padding; callers own their page layout");
+        assertFalse(detailPanel.contains("-fx-spacing"),
+                "Generic detail panel must not add area-level spacing; only titles get shared vertical spacing");
+        assertTrue(detailPanelTitle.contains("-fx-padding: 4px 0 10px 0"));
+    }
+
+    @Test
+    void legacyDetailStyleAliasesAreNotUsed() throws Exception {
+        String css = appCss();
+        String fxml = appShellFxmlText();
+
+        for (String legacyClass : List.of("analysis-detail", "analysis-detail-title",
+                "analysis-detail-explanation", "analysis-detail-scroll", "advanced-jfr-memory-detail",
+                "heap-dump-detail")) {
+            assertFalse(css.contains("." + legacyClass),
+                    legacyClass + " must be replaced by the shared detail-panel contract in CSS");
+            assertFalse(fxml.contains(legacyClass),
+                    legacyClass + " must be replaced by the shared detail-panel contract in FXML");
+        }
+    }
+
+    @Test
+    void loadedFxmlSplitsDetailPanelStyleClassesForCssMatching() throws Exception {
+        FXMLLoader loader = loadShell();
+
+        assertLoadedStyleClass(loader, "advancedJfrMemoryDetailTitleLabel", "detail-panel-title");
+        assertLoadedStyleClass(loader, "advancedJfrMemoryDetailPane", "detail-panel");
+        assertLoadedStyleClass(loader, "heapDumpIssueDetailTitleLabel", "detail-panel-title");
+        assertLoadedStyleClass(loader, "heapDumpIssueDetailPane", "detail-panel");
+    }
+
+    @Test
+    void fxmlDoesNotPackMultipleStyleClassesIntoOneAttribute() throws Exception {
+        Document document = appShellFxml();
+
+        elements(document).values().forEach(element -> {
+            String styleClass = element.getAttribute("styleClass");
+            assertFalse(styleClass.contains(" "),
+                    () -> element.getTagName() + " packs multiple JavaFX style classes into one attribute: "
+                            + styleClass);
+        });
+    }
+
+    @Test
+    void workspaceTabsUseDistinctSelectedIndicator() throws Exception {
+        String css = appCss();
+        String selectedTab = cssBlock(css, ".recording-tabs .tab:selected");
+        String selectedTabLabel = cssBlock(css, ".recording-tabs .tab:selected .tab-label");
+
+        assertTrue(selectedTab.contains("-fx-border-width: 0 0 3px 0"));
+        assertTrue(selectedTab.contains("-fx-border-color: -color-accent-emphasis"));
+        assertTrue(selectedTabLabel.contains("-fx-text-fill: -color-fg-default"));
     }
 
     @Test
@@ -646,6 +714,7 @@ class AppShellTest {
         String content = cssBlock(css, ".heap-dump-page .page-content");
         String table = cssBlock(css, ".heap-dump-page .dense-table");
         String detailTabs = cssBlock(css, ".heap-dump-page .page-detail-tabs");
+        String detailPanelTitle = cssBlock(css, ".heap-dump-page .detail-panel-title");
         String textReport = cssBlock(css, ".heap-dump-page .dump-text-area");
 
         assertTrue(page.contains("-fx-padding: 0 0 2px 0"));
@@ -656,9 +725,45 @@ class AppShellTest {
         assertTrue(heapDumpPage.contains("-fx-spacing: 12px"));
         assertTrue(heapDumpPage.contains("-fx-min-width: 0"));
         assertTrue(content.contains("-fx-padding: 6px 0 0 0"));
-        assertTrue(table.contains("-fx-min-height: 220px"));
-        assertTrue(detailTabs.contains("-fx-padding: 8px 0 0 0"));
+        assertTrue(table.contains("-fx-min-height: 96px"));
+        assertTrue(detailTabs.contains("-fx-min-height: 120px"));
+        assertTrue(detailTabs.contains("-fx-pref-height: 220px"));
+        assertTrue(detailTabs.contains("-fx-padding: 6px 0 0 0"));
+        assertTrue(detailPanelTitle.contains("-fx-padding: 4px 0 10px 0"));
         assertTrue(textReport.contains("-fx-padding: 8px"));
+    }
+
+    @Test
+    void closingLastHeapDumpWorkspaceClearsBoundAnalysisViewModel() throws Exception {
+        String source = java.nio.file.Files.readString(
+                java.nio.file.Path.of("src/main/java/com/youngledo/jmcfx/ui/shell/AppShellController.java"));
+        String method = source.substring(source.indexOf("private void showHeapDumpWorkspace"));
+        method = method.substring(0, method.indexOf("private void bindAdvancedJfr"));
+
+        assertTrue(method.contains("bindHeapDumpAnalysis(null)"),
+                "Closing the last HPROF workspace must clear the previously bound analysis view model");
+        String bindMethod = source.substring(source.indexOf("private void bindHeapDumpAnalysis"));
+        bindMethod = bindMethod.substring(0, bindMethod.indexOf("private void showOpenHeapDumpChooser"));
+        assertTrue(bindMethod.contains("heapDumpAnalysisViewModel = null"),
+                "Clearing HPROF binding must also clear the controller-level view model reference");
+    }
+
+    @Test
+    void heapDumpRebindingRemovesOldSelectionListenersBeforeClearingViewModel() throws Exception {
+        String source = java.nio.file.Files.readString(
+                java.nio.file.Path.of("src/main/java/com/youngledo/jmcfx/ui/shell/AppShellController.java"));
+        String bindMethod = source.substring(source.indexOf("private void bindHeapDumpAnalysis"));
+        bindMethod = bindMethod.substring(0, bindMethod.indexOf("private void showOpenHeapDumpChooser"));
+
+        assertTrue(source.contains("heapDumpTableSelectionListener"));
+        assertTrue(source.contains("heapDumpSelectedIssueListener"));
+        assertTrue(bindMethod.indexOf("removeListener(heapDumpTableSelectionListener)")
+                        < bindMethod.indexOf("heapDumpAnalysisViewModel = null"),
+                "Table selection listener must be removed before the HPROF view model reference is cleared");
+        assertTrue(bindMethod.contains("removeListener(heapDumpSelectedIssueListener)"),
+                "Selected issue listener must be removed when rebinding HPROF workspaces");
+        assertFalse(bindMethod.contains("addListener((observable, oldValue, newValue) -> heapDumpAnalysisViewModel"),
+                "HPROF table selection listener must not capture the mutable controller-level view model field");
     }
 
     @Test
@@ -1503,6 +1608,35 @@ class AppShellTest {
         return fxml("app-shell.fxml");
     }
 
+    private static String appShellFxmlText() throws IOException {
+        try (InputStream stream = AppShellController.class.getResourceAsStream("app-shell.fxml")) {
+            return new String(stream.readAllBytes(), java.nio.charset.StandardCharsets.UTF_8);
+        }
+    }
+
+    private static FXMLLoader loadShell() throws IOException {
+        FXMLLoader loader = new FXMLLoader(AppShellController.class.getResource("app-shell.fxml"));
+        AppShellFactory factory = new AppShellFactory(new FakeRecordingRepository(), new FakeEventQueryService(),
+                new FakeRuleAnalysisService());
+        AppShellViewModel viewModel = new AppShellViewModel();
+        loader.setControllerFactory(type -> {
+            if (type == AppShellController.class) {
+                return factory.controllerFor(type, viewModel);
+            }
+            throw new IllegalArgumentException("Unsupported controller: " + type.getName());
+        });
+        loader.<Region>load();
+        return loader;
+    }
+
+    private static void assertLoadedStyleClass(FXMLLoader loader, String nodeId, String styleClass) {
+        Object loaded = loader.getNamespace().get(nodeId);
+        assertTrue(loaded instanceof Node, "Missing loaded node " + nodeId);
+        Node node = (Node) loaded;
+        assertTrue(node.getStyleClass().contains(styleClass),
+                () -> nodeId + " loaded style classes " + node.getStyleClass() + " must contain " + styleClass);
+    }
+
     private static RecordingSummary recording(String id, String fileName) {
         return new RecordingSummary(id, Path.of(fileName), fileName,
                 Instant.EPOCH, Instant.EPOCH.plusSeconds(1), 1000, 128);
@@ -1569,7 +1703,12 @@ class AppShellTest {
     }
 
     private static String cssBlock(String css, String selector) {
-        int start = css.indexOf(selector + " {");
+        int start = css.indexOf("\n" + selector + " {");
+        if (start >= 0) {
+            start++;
+        } else if (css.startsWith(selector + " {")) {
+            start = 0;
+        }
         assertTrue(start >= 0, selector + " rule must exist");
         int end = css.indexOf('}', start);
         assertTrue(end > start, selector + " rule must be closed");
@@ -1643,7 +1782,17 @@ class AppShellTest {
     }
 
     private static boolean hasStyleClass(Element element, String styleClass) {
-        return (" " + element.getAttribute("styleClass") + " ").contains(" " + styleClass + " ");
+        if (styleClass.equals(element.getAttribute("styleClass"))) {
+            return true;
+        }
+        for (Element child : childElements(element, "styleClass")) {
+            for (Element item : childElements(child, "String")) {
+                if (styleClass.equals(item.getAttribute("fx:value"))) {
+                    return true;
+                }
+            }
+        }
+        return false;
     }
 
     private static Map<Integer, Element> elements(Document document) {

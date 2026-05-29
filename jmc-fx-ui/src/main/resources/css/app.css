@@ -30,6 +30,16 @@
     -fx-border-color: -color-border-default;
 }
 
+.recording-tabs .tab:selected {
+    -fx-background-color: -color-bg-default;
+    -fx-border-width: 0 0 3px 0;
+    -fx-border-color: -color-accent-emphasis;
+}
+
+.recording-tabs .tab:selected .tab-label {
+    -fx-text-fill: -color-fg-default;
+}
+
 .work-area {
     -fx-padding: 18px 20px;
     -fx-background-color: -color-bg-default;
@@ -63,11 +73,17 @@
 }
 
 .heap-dump-page .dense-table {
-    -fx-min-height: 220px;
+    -fx-min-height: 96px;
 }
 
 .heap-dump-page .page-detail-tabs {
-    -fx-padding: 8px 0 0 0;
+    -fx-min-height: 120px;
+    -fx-pref-height: 220px;
+    -fx-padding: 6px 0 0 0;
+}
+
+.heap-dump-page .detail-panel-title {
+    -fx-padding: 4px 0 10px 0;
 }
 
 .heap-dump-page .dump-text-area {
@@ -617,40 +633,16 @@
 .severity-critical { -fx-fill: -color-danger-fg; }
 .severity-unknown { -fx-fill: -color-fg-muted; }
 
-/* Analysis detail */
+/* Shared detail panels */
 .detail-panel {
-    -fx-padding: 12px;
-    -fx-spacing: 8px;
 }
 .detail-panel-title {
-    -fx-padding: 0 0 8px 0;
-}
-.detail-panel-body {
-}
-.analysis-detail {
-    -fx-padding: 12px;
-    -fx-spacing: 8px;
-}
-.advanced-jfr-memory-detail {
-}
-.heap-dump-detail {
-}
-.analysis-detail-title {
+    -fx-padding: 4px 0 10px 0;
     -fx-font-weight: bold;
     -fx-font-size: 14px;
 }
-.analysis-detail-explanation {
+.detail-panel-body {
     -fx-text-fill: -color-fg-default;
-}
-.analysis-detail-scroll {
-    -fx-background-color: transparent;
-    -fx-border-color: transparent;
-}
-.analysis-detail-explanation .html-bold {
-    -fx-font-weight: bold;
-}
-.analysis-detail-explanation .html-italic {
-    -fx-font-style: italic;
 }
 
 .exception-grouping-bar {

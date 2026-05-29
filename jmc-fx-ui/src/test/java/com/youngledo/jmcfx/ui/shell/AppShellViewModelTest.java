@@ -148,6 +148,39 @@ class AppShellViewModelTest {
     }
 
     @Test
+    void switchingToHeapDumpClearsRecordingBeforeSelectingHeapDump() {
+        AppShellViewModel viewModel = new AppShellViewModel();
+        viewModel.openRecording(recording(), new OverviewViewModel(), eventBrowserViewModel(), ruleResultsViewModel());
+        HeapDumpWorkspace heapDump = new HeapDumpWorkspace(Path.of("demo.hprof"), null);
+
+        viewModel.selectedHeapDumpWorkspaceProperty().addListener((observable, oldValue, newValue) -> {
+            if (newValue != null) {
+                assertNull(viewModel.selectedWorkspaceProperty().get(),
+                        "Selecting HPROF must not expose an intermediate state with both JFR and HPROF selected");
+            }
+        });
+
+        viewModel.openHeapDump(heapDump);
+    }
+
+    @Test
+    void switchingToRecordingClearsHeapDumpBeforeSelectingRecording() {
+        AppShellViewModel viewModel = new AppShellViewModel();
+        RecordingWorkspace recording = viewModel.openRecording(
+                recording(), new OverviewViewModel(), eventBrowserViewModel(), ruleResultsViewModel());
+        viewModel.openHeapDump(new HeapDumpWorkspace(Path.of("demo.hprof"), null));
+
+        viewModel.selectedWorkspaceProperty().addListener((observable, oldValue, newValue) -> {
+            if (newValue != null) {
+                assertNull(viewModel.selectedHeapDumpWorkspaceProperty().get(),
+                        "Selecting JFR must not expose an intermediate state with both HPROF and JFR selected");
+            }
+        });
+
+        viewModel.selectWorkspace(recording);
+    }
+
+    @Test
     void tracksRecordingSectionsPerWorkspaceAndGlobalSectionsInShell() {
         AppShellViewModel viewModel = new AppShellViewModel();
         RecordingWorkspace first = viewModel.openRecording(

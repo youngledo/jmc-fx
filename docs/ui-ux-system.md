@@ -183,10 +183,15 @@ Use for tables, trees, JVM sessions, MBeans, recordings, events, and rules.
   detail area.
 - Detail panels must use the shared structure classes `detail-panel`,
   `detail-panel-title`, optional `detail-panel-meta`, and `detail-panel-body`.
-- Detail panel padding is 12 px. Title-to-body spacing is 8 px. Do not place
-  detail titles flush against the top edge of a tab, split pane, or panel.
-- New or touched detail panels must use the shared classes even when they also
-  keep older page-specific aliases for compatibility.
+- Do not keep or introduce parallel detail semantics such as
+  `analysis-detail`, `heap-dump-detail`, or feature-specific detail title/body
+  classes. Page-specific styling belongs on the page container, for example
+  `.heap-dump-page .page-detail-tabs`.
+- Split table detail areas should align with the primary table/list/tree edge.
+  Shared detail panels must not add left or right padding that shifts the detail
+  content away from the primary surface.
+- Detail title vertical spacing is controlled by `detail-panel-title`. Do not
+  place detail titles flush against the top edge of a tab, split pane, or panel.
 
 ### Long-Running Work
 

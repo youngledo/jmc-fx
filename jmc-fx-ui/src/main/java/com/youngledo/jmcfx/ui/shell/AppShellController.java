@@ -282,6 +282,10 @@ public class AppShellController {
     private EventHeatmapView advancedJfrHeatmapView;
     private final ChangeListener<EventHeatmap> advancedHeatmapListener =
             (observable, oldValue, newValue) -> advancedJfrHeatmapView.setHeatmap(newValue);
+    private final ChangeListener<HeapDumpIssue> heapDumpTableSelectionListener =
+            (observable, oldValue, newValue) -> selectHeapDumpIssue(newValue);
+    private final ChangeListener<HeapDumpIssue> heapDumpSelectedIssueListener =
+            (observable, oldValue, newValue) -> selectHeapDumpIssueInTable(newValue);
     private boolean rebindingAdvancedJfrMemory;
     private boolean eventTypesDividerInitialized;
     private boolean updatingRecordingTabs;
@@ -1237,6 +1241,11 @@ public class AppShellController {
     }
 
     private void bindHeapDumpAnalysis(HeapDumpAnalysisViewModel nextViewModel) {
+        if (heapDumpAnalysisViewModel != null) {
+            heapDumpIssuesTable.getSelectionModel().selectedItemProperty()
+                    .removeListener(heapDumpTableSelectionListener);
+            heapDumpAnalysisViewModel.selectedIssueProperty().removeListener(heapDumpSelectedIssueListener);
+        }
         heapDumpNameLabel.textProperty().unbind();
         heapDumpSummaryLabel.textProperty().unbind();
         heapDumpIssueDetailArea.textProperty().unbind();
@@ -1244,6 +1253,7 @@ public class AppShellController {
         heapDumpOpenButton.disableProperty().unbind();
         heapDumpIssueDetailTitleLabel.textProperty().unbind();
         if (nextViewModel == null) {
+            heapDumpAnalysisViewModel = null;
             heapDumpNameLabel.setText("");
             heapDumpSummaryLabel.setText("");
             heapDumpIssueDetailArea.setText(i18n.get("heapDump.detail.empty"));
@@ -1260,9 +1270,8 @@ public class AppShellController {
         heapDumpTextReportArea.textProperty().bind(heapDumpAnalysisViewModel.textReportProperty());
         heapDumpIssuesTable.setItems(heapDumpAnalysisViewModel.issues());
         heapDumpIssuesTable.getSelectionModel().selectedItemProperty()
-                .addListener((observable, oldValue, newValue) -> heapDumpAnalysisViewModel.selectIssue(newValue));
-        heapDumpAnalysisViewModel.selectedIssueProperty().addListener((observable, oldValue, newValue) ->
-                heapDumpIssuesTable.getSelectionModel().select(newValue));
+                .addListener(heapDumpTableSelectionListener);
+        heapDumpAnalysisViewModel.selectedIssueProperty().addListener(heapDumpSelectedIssueListener);
         heapDumpOpenButton.disableProperty().bind(
                 heapDumpAnalysisViewModel.stateProperty().isEqualTo(HeapDumpAnalysisState.ANALYZING));
         heapDumpIssueDetailTitleLabel.textProperty().bind(Bindings.createStringBinding(
@@ -1271,6 +1280,19 @@ public class AppShellController {
                     return issue == null ? "" : issue.subject();
                 },
                 heapDumpAnalysisViewModel.selectedIssueProperty()));
+    }
+
+    private void selectHeapDumpIssue(HeapDumpIssue issue) {
+        HeapDumpAnalysisViewModel viewModel = heapDumpAnalysisViewModel;
+        if (viewModel != null) {
+            viewModel.selectIssue(issue);
+        }
+    }
+
+    private void selectHeapDumpIssueInTable(HeapDumpIssue issue) {
+        if (heapDumpIssuesTable != null) {
+            heapDumpIssuesTable.getSelectionModel().select(issue);
+        }
     }
 
     private void showOpenHeapDumpChooser() {
@@ -3562,6 +3584,7 @@ public class AppShellController {
 
     private void showHeapDumpWorkspace(HeapDumpWorkspace workspace) {
         if (workspace == null) {
+            bindHeapDumpAnalysis(null);
             return;
         }
         selectWorkspaceTab(null, workspace);
