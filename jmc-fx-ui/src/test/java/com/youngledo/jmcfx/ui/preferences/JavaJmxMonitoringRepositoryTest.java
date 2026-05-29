@@ -72,6 +72,28 @@ class JavaJmxMonitoringRepositoryTest {
     }
 
     @Test
+    void storesLargeSampleIndexesAcrossBoundedPreferenceValues() {
+        JavaJmxMonitoringRepository repository = JavaJmxMonitoringRepository.inMemory();
+        JmxAttributeSubscription subscription = new JmxAttributeSubscription(
+                "sub-1", "42", "java.lang:type=Memory", "HeapMemoryUsage",
+                "Heap", "%", Duration.ofSeconds(1), 600, true, true);
+        repository.saveAttributeSubscription(subscription);
+
+        for (int index = 0; index < 600; index++) {
+            repository.appendSample(new JmxSubscriptionSample(
+                    "sub-1",
+                    Instant.EPOCH.plusSeconds(index),
+                    index,
+                    "sample-" + index,
+                    "%",
+                    true));
+        }
+
+        assertEquals(600, repository.findSamples("sub-1").size());
+        assertTrue(repository.rawValues().stream().allMatch(value -> value.length() <= Preferences.MAX_VALUE_LENGTH));
+    }
+
+    @Test
     void deletesSubscriptionAndItsSamples() {
         JavaJmxMonitoringRepository repository = JavaJmxMonitoringRepository.inMemory();
         JmxAttributeSubscription subscription = new JmxAttributeSubscription(
@@ -133,6 +155,28 @@ class JavaJmxMonitoringRepositoryTest {
         }
 
         assertEquals(200, repository.findNotificationEvents("notif-1").size());
+        assertTrue(repository.rawValues().stream().allMatch(value -> value.length() <= Preferences.MAX_VALUE_LENGTH));
+    }
+
+    @Test
+    void storesLargeNotificationEventIndexesAcrossBoundedPreferenceValues() {
+        JavaJmxMonitoringRepository repository = JavaJmxMonitoringRepository.inMemory();
+        JmxNotificationSubscription subscription = new JmxNotificationSubscription(
+                "notif-1", "42", "java.lang:type=Memory", "Memory", 600, true, true);
+        repository.saveNotificationSubscription(subscription);
+
+        for (int index = 0; index < 600; index++) {
+            repository.appendNotificationEvent(new JmxNotificationEvent(
+                    "notif-1",
+                    Instant.EPOCH.plusSeconds(index),
+                    "demo.type",
+                    "demo.source",
+                    index,
+                    "message-" + index,
+                    "user-data"));
+        }
+
+        assertEquals(600, repository.findNotificationEvents("notif-1").size());
         assertTrue(repository.rawValues().stream().allMatch(value -> value.length() <= Preferences.MAX_VALUE_LENGTH));
     }
 
@@ -220,6 +264,21 @@ class JavaJmxMonitoringRepositoryTest {
         repository.putRaw("samples.sub-1.row-1", sampleEntry(valid));
 
         assertEquals(List.of(valid), repository.findSamples("sub-1"));
+    }
+
+    @Test
+    void ignoresMalformedChunkedSampleIndexEntriesWithoutHidingValidRows() {
+        JavaJmxMonitoringRepository repository = JavaJmxMonitoringRepository.inMemory();
+        JmxSubscriptionSample first = new JmxSubscriptionSample("sub-1", Instant.EPOCH, 1, "1", "%", true);
+        JmxSubscriptionSample second = new JmxSubscriptionSample(
+                "sub-1", Instant.EPOCH.plusSeconds(1), 2, "2", "%", true);
+        repository.putRaw("samples.sub-1.ids.chunkCount", "2");
+        repository.putRaw("samples.sub-1.ids.chunk.0", "not-base64\n" + encoded("row-1"));
+        repository.putRaw("samples.sub-1.ids.chunk.1", encoded("missing-row") + "\n" + encoded("row-2"));
+        repository.putRaw("samples.sub-1.row-1", sampleEntry(first));
+        repository.putRaw("samples.sub-1.row-2", sampleEntry(second));
+
+        assertEquals(List.of(first, second), repository.findSamples("sub-1"));
     }
 
     @Test

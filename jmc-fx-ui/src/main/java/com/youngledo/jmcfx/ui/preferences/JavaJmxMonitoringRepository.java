@@ -1,7 +1,6 @@
 package com.youngledo.jmcfx.ui.preferences;
 
 import java.nio.charset.StandardCharsets;
-import java.util.prefs.BackingStoreException;
 import java.time.DateTimeException;
 import java.time.Duration;
 import java.time.Instant;
@@ -13,6 +12,7 @@ import java.util.Map;
 import java.util.Objects;
 import java.util.Optional;
 import java.util.UUID;
+import java.util.prefs.BackingStoreException;
 import java.util.prefs.AbstractPreferences;
 import java.util.prefs.Preferences;
 
@@ -33,6 +33,9 @@ public final class JavaJmxMonitoringRepository implements JmxMonitoringRepositor
     static final String FIELD_SEPARATOR = "\\|";
     static final String ENTRY_SEPARATOR = "\n";
 
+    private static final String ENTRY_CHUNK_COUNT_SUFFIX = ".chunkCount";
+    private static final String ENTRY_CHUNK_SUFFIX = ".chunk.";
+    private static final int MAX_INDEX_CHUNK_LENGTH = Preferences.MAX_VALUE_LENGTH - 256;
     private static final int DEFAULT_MAX_SAMPLES = 120;
     private static final int DEFAULT_MAX_NOTIFICATION_EVENTS = 200;
 
@@ -77,12 +80,12 @@ public final class JavaJmxMonitoringRepository implements JmxMonitoringRepositor
         ids.removeIf(subscriptionId::equals);
         writeIds(ATTRIBUTE_IDS, ids);
         preferences.remove(attributeKey(subscriptionId));
-        removeRows(sampleIndexKey(subscriptionId), rowId -> sampleRowKey(subscriptionId, rowId));
+        removeRows(sampleIndexPrefix(subscriptionId), rowId -> sampleRowKey(subscriptionId, rowId));
     }
 
     @Override
     public List<JmxSubscriptionSample> findSamples(String subscriptionId) {
-        return readRows(sampleIndexKey(subscriptionId), rowId -> sampleRowKey(subscriptionId, rowId),
+        return readRows(sampleIndexPrefix(subscriptionId), rowId -> sampleRowKey(subscriptionId, rowId),
                 JavaJmxMonitoringRepository::decodeSample).stream()
                 .map(StoredRow::value)
                 .toList();
@@ -91,7 +94,7 @@ public final class JavaJmxMonitoringRepository implements JmxMonitoringRepositor
     @Override
     public void appendSample(JmxSubscriptionSample sample) {
         Objects.requireNonNull(sample, "sample");
-        String indexKey = sampleIndexKey(sample.subscriptionId());
+        String indexKey = sampleIndexPrefix(sample.subscriptionId());
         RowKeyFactory rowKeyFactory = rowId -> sampleRowKey(sample.subscriptionId(), rowId);
         List<StoredRow<JmxSubscriptionSample>> samples = new ArrayList<>(
                 readRows(indexKey, rowKeyFactory, JavaJmxMonitoringRepository::decodeSample));
@@ -129,12 +132,12 @@ public final class JavaJmxMonitoringRepository implements JmxMonitoringRepositor
         ids.removeIf(subscriptionId::equals);
         writeIds(NOTIFICATION_IDS, ids);
         preferences.remove(notificationKey(subscriptionId));
-        removeRows(notificationEventIndexKey(subscriptionId), rowId -> notificationEventRowKey(subscriptionId, rowId));
+        removeRows(notificationEventIndexPrefix(subscriptionId), rowId -> notificationEventRowKey(subscriptionId, rowId));
     }
 
     @Override
     public List<JmxNotificationEvent> findNotificationEvents(String subscriptionId) {
-        return readRows(notificationEventIndexKey(subscriptionId), rowId -> notificationEventRowKey(subscriptionId, rowId),
+        return readRows(notificationEventIndexPrefix(subscriptionId), rowId -> notificationEventRowKey(subscriptionId, rowId),
                 JavaJmxMonitoringRepository::decodeNotificationEvent).stream()
                 .map(StoredRow::value)
                 .toList();
@@ -143,7 +146,7 @@ public final class JavaJmxMonitoringRepository implements JmxMonitoringRepositor
     @Override
     public void appendNotificationEvent(JmxNotificationEvent event) {
         Objects.requireNonNull(event, "event");
-        String indexKey = notificationEventIndexKey(event.subscriptionId());
+        String indexKey = notificationEventIndexPrefix(event.subscriptionId());
         RowKeyFactory rowKeyFactory = rowId -> notificationEventRowKey(event.subscriptionId(), rowId);
         List<StoredRow<JmxNotificationEvent>> events = new ArrayList<>(
                 readRows(indexKey, rowKeyFactory, JavaJmxMonitoringRepository::decodeNotificationEvent));
@@ -236,9 +239,71 @@ public final class JavaJmxMonitoringRepository implements JmxMonitoringRepositor
                 .orElse(""));
     }
 
-    private <T> List<StoredRow<T>> readRows(String indexKey, RowKeyFactory rowKeyFactory, Decoder<T> decoder) {
+    private List<String> readEntryIds(String prefixKey) {
+        List<String> ids = new ArrayList<>();
+        List<String> chunkKeys = entryChunkKeys(prefixKey);
+        if (chunkKeys.isEmpty()) {
+            return readIds(prefixKey);
+        }
+        for (String chunkKey : chunkKeys) {
+            for (String id : readIds(chunkKey)) {
+                if (!ids.contains(id)) {
+                    ids.add(id);
+                }
+            }
+        }
+        return ids;
+    }
+
+    private void writeEntryIds(String prefixKey, List<String> ids) {
+        removeEntryIds(prefixKey);
+        List<String> chunk = new ArrayList<>();
+        int chunkLength = 0;
+        int chunkIndex = 0;
+        for (String id : ids) {
+            String encodedId = encodeField(id);
+            int nextLength = chunk.isEmpty()
+                    ? encodedId.length()
+                    : chunkLength + ENTRY_SEPARATOR.length() + encodedId.length();
+            if (!chunk.isEmpty() && nextLength > MAX_INDEX_CHUNK_LENGTH) {
+                writeIds(entryChunkKey(prefixKey, chunkIndex), chunk);
+                chunkIndex++;
+                chunk = new ArrayList<>();
+                chunkLength = 0;
+            }
+            chunk.add(id);
+            chunkLength = chunk.isEmpty()
+                    ? encodedId.length()
+                    : Math.max(encodedId.length(), nextLength);
+        }
+        if (!chunk.isEmpty()) {
+            writeIds(entryChunkKey(prefixKey, chunkIndex), chunk);
+            chunkIndex++;
+        }
+        preferences.putInt(entryChunkCountKey(prefixKey), chunkIndex);
+    }
+
+    private void removeEntryIds(String prefixKey) {
+        preferences.remove(prefixKey);
+        int chunkCount = preferences.getInt(entryChunkCountKey(prefixKey), 0);
+        for (int index = 0; index < chunkCount; index++) {
+            preferences.remove(entryChunkKey(prefixKey, index));
+        }
+        preferences.remove(entryChunkCountKey(prefixKey));
+    }
+
+    private List<String> entryChunkKeys(String prefixKey) {
+        int chunkCount = preferences.getInt(entryChunkCountKey(prefixKey), 0);
+        List<String> keys = new ArrayList<>();
+        for (int index = 0; index < chunkCount; index++) {
+            keys.add(entryChunkKey(prefixKey, index));
+        }
+        return keys;
+    }
+
+    private <T> List<StoredRow<T>> readRows(String indexPrefix, RowKeyFactory rowKeyFactory, Decoder<T> decoder) {
         List<StoredRow<T>> rows = new ArrayList<>();
-        for (String rowId : readIds(indexKey)) {
+        for (String rowId : readEntryIds(indexPrefix)) {
             String persisted = preferences.get(rowKeyFactory.key(rowId), "");
             if (!persisted.isBlank()) {
                 decoder.decode(persisted).ifPresent(value -> rows.add(new StoredRow<>(rowId, value)));
@@ -248,11 +313,11 @@ public final class JavaJmxMonitoringRepository implements JmxMonitoringRepositor
     }
 
     private <T> void writeRows(
-            String indexKey,
+            String indexPrefix,
             RowKeyFactory rowKeyFactory,
             List<StoredRow<T>> rows,
             Encoder<T> encoder) {
-        List<String> oldIds = readIds(indexKey);
+        List<String> oldIds = readEntryIds(indexPrefix);
         List<String> newIds = rows.stream()
                 .map(StoredRow::id)
                 .toList();
@@ -264,14 +329,14 @@ public final class JavaJmxMonitoringRepository implements JmxMonitoringRepositor
         for (StoredRow<T> row : rows) {
             preferences.put(rowKeyFactory.key(row.id()), encoder.encode(row.value()));
         }
-        writeIds(indexKey, newIds);
+        writeEntryIds(indexPrefix, newIds);
     }
 
-    private void removeRows(String indexKey, RowKeyFactory rowKeyFactory) {
-        for (String rowId : readIds(indexKey)) {
+    private void removeRows(String indexPrefix, RowKeyFactory rowKeyFactory) {
+        for (String rowId : readEntryIds(indexPrefix)) {
             preferences.remove(rowKeyFactory.key(rowId));
         }
-        preferences.remove(indexKey);
+        removeEntryIds(indexPrefix);
     }
 
     private static Optional<JmxAttributeSubscription> decodeAttributeSubscription(String entry) {
@@ -407,7 +472,7 @@ public final class JavaJmxMonitoringRepository implements JmxMonitoringRepositor
         return ATTRIBUTE_PREFIX + id;
     }
 
-    private static String sampleIndexKey(String subscriptionId) {
+    private static String sampleIndexPrefix(String subscriptionId) {
         return SAMPLE_PREFIX + subscriptionId + ".ids";
     }
 
@@ -419,7 +484,7 @@ public final class JavaJmxMonitoringRepository implements JmxMonitoringRepositor
         return NOTIFICATION_PREFIX + id;
     }
 
-    private static String notificationEventIndexKey(String subscriptionId) {
+    private static String notificationEventIndexPrefix(String subscriptionId) {
         return NOTIFICATION_EVENT_PREFIX + subscriptionId + ".ids";
     }
 
@@ -433,6 +498,14 @@ public final class JavaJmxMonitoringRepository implements JmxMonitoringRepositor
 
     private static String decodeField(String value) {
         return new String(Base64.getUrlDecoder().decode(value), StandardCharsets.UTF_8);
+    }
+
+    private static String entryChunkCountKey(String prefixKey) {
+        return prefixKey + ENTRY_CHUNK_COUNT_SUFFIX;
+    }
+
+    private static String entryChunkKey(String prefixKey, int chunkIndex) {
+        return prefixKey + ENTRY_CHUNK_SUFFIX + chunkIndex;
     }
 
     private static boolean parseBoolean(String value) {
