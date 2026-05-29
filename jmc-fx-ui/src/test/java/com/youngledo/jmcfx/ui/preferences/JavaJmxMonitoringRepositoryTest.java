@@ -147,6 +147,33 @@ class JavaJmxMonitoringRepositoryTest {
     }
 
     @Test
+    void ignoresAttributeRowsWithMalformedBooleansWithoutHidingValidEntries() {
+        JavaJmxMonitoringRepository repository = JavaJmxMonitoringRepository.inMemory();
+        JmxAttributeSubscription valid = new JmxAttributeSubscription(
+                "sub-1", "42", "java.lang:type=Memory", "HeapMemoryUsage",
+                "Heap", "%", Duration.ofSeconds(1), 2, true, true);
+        JmxAttributeSubscription malformed = new JmxAttributeSubscription(
+                "sub-2", "42", "java.lang:type=Threading", "ThreadCount",
+                "Threads", "threads", Duration.ofSeconds(1), 2, true, true);
+        repository.putRaw("attributeSubscriptionIds", encoded("sub-2") + "\n" + encoded("sub-1"));
+        repository.putRaw("attribute.sub-2", attributeEntry(malformed, "maybe", Boolean.toString(malformed.persisted())));
+        repository.putRaw("attribute.sub-1", attributeEntry(valid));
+
+        assertEquals(List.of(valid), repository.findAttributeSubscriptions("42"));
+    }
+
+    @Test
+    void ignoresSampleRowsWithMalformedNumericBooleanWithoutHidingValidEntries() {
+        JavaJmxMonitoringRepository repository = JavaJmxMonitoringRepository.inMemory();
+        JmxSubscriptionSample valid = new JmxSubscriptionSample("sub-1", Instant.EPOCH, 1, "1", "%", true);
+        JmxSubscriptionSample malformed = new JmxSubscriptionSample(
+                "sub-1", Instant.EPOCH.plusSeconds(1), 2, "2", "%", true);
+        repository.putRaw("samples.sub-1", sampleEntry(malformed, "maybe") + "\n" + sampleEntry(valid));
+
+        assertEquals(List.of(valid), repository.findSamples("sub-1"));
+    }
+
+    @Test
     void ignoresMalformedNotificationRowsWithoutHidingValidEntries() {
         JavaJmxMonitoringRepository repository = JavaJmxMonitoringRepository.inMemory();
         JmxNotificationSubscription valid = new JmxNotificationSubscription(
@@ -161,12 +188,35 @@ class JavaJmxMonitoringRepositoryTest {
         assertEquals(List.of(validEvent), repository.findNotificationEvents("notif-1"));
     }
 
+    @Test
+    void ignoresNotificationRowsWithMalformedBooleansWithoutHidingValidEntries() {
+        JavaJmxMonitoringRepository repository = JavaJmxMonitoringRepository.inMemory();
+        JmxNotificationSubscription valid = new JmxNotificationSubscription(
+                "notif-1", "42", "java.lang:type=Memory", "Memory", 2, true, true);
+        JmxNotificationSubscription malformed = new JmxNotificationSubscription(
+                "notif-2", "42", "java.lang:type=Threading", "Threads", 2, true, true);
+        repository.putRaw("notificationSubscriptionIds", encoded("notif-2") + "\n" + encoded("notif-1"));
+        repository.putRaw("notification.notif-2",
+                notificationEntry(malformed, Boolean.toString(malformed.enabled()), "maybe"));
+        repository.putRaw("notification.notif-1", notificationEntry(valid));
+
+        assertEquals(List.of(valid), repository.findNotificationSubscriptions("42"));
+    }
+
     private static JmxNotificationEvent notificationEvent(String subscriptionId, long sequenceNumber) {
         return new JmxNotificationEvent(subscriptionId, Instant.EPOCH.plusSeconds(sequenceNumber),
                 "demo.type", "demo.source", sequenceNumber, "message " + sequenceNumber, "user data");
     }
 
     private static String attributeEntry(JmxAttributeSubscription subscription) {
+        return attributeEntry(subscription, Boolean.toString(subscription.enabled()),
+                Boolean.toString(subscription.persisted()));
+    }
+
+    private static String attributeEntry(
+            JmxAttributeSubscription subscription,
+            String enabled,
+            String persisted) {
         return String.join("|",
                 encoded(subscription.id()),
                 encoded(subscription.connectionId()),
@@ -176,29 +226,41 @@ class JavaJmxMonitoringRepositoryTest {
                 encoded(subscription.unit()),
                 encoded(Long.toString(subscription.samplingInterval().toMillis())),
                 encoded(Integer.toString(subscription.maxSamples())),
-                encoded(Boolean.toString(subscription.enabled())),
-                encoded(Boolean.toString(subscription.persisted())));
+                encoded(enabled),
+                encoded(persisted));
     }
 
     private static String sampleEntry(JmxSubscriptionSample sample) {
+        return sampleEntry(sample, Boolean.toString(sample.numeric()));
+    }
+
+    private static String sampleEntry(JmxSubscriptionSample sample, String numeric) {
         return String.join("|",
                 encoded(sample.subscriptionId()),
                 encoded(sample.observedAt().toString()),
                 encoded(Double.toString(sample.numericValue())),
                 encoded(sample.displayValue()),
                 encoded(sample.unit()),
-                encoded(Boolean.toString(sample.numeric())));
+                encoded(numeric));
     }
 
     private static String notificationEntry(JmxNotificationSubscription subscription) {
+        return notificationEntry(subscription, Boolean.toString(subscription.enabled()),
+                Boolean.toString(subscription.persisted()));
+    }
+
+    private static String notificationEntry(
+            JmxNotificationSubscription subscription,
+            String enabled,
+            String persisted) {
         return String.join("|",
                 encoded(subscription.id()),
                 encoded(subscription.connectionId()),
                 encoded(subscription.objectName()),
                 encoded(subscription.label()),
                 encoded(Integer.toString(subscription.maxEvents())),
-                encoded(Boolean.toString(subscription.enabled())),
-                encoded(Boolean.toString(subscription.persisted())));
+                encoded(enabled),
+                encoded(persisted));
     }
 
     private static String notificationEventEntry(JmxNotificationEvent event) {

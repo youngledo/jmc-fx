@@ -257,8 +257,8 @@ public final class JavaJmxMonitoringRepository implements JmxMonitoringRepositor
                     decodeField(fields[5]),
                     Duration.ofMillis(Long.parseLong(decodeField(fields[6]))),
                     Integer.parseInt(decodeField(fields[7])),
-                    Boolean.parseBoolean(decodeField(fields[8])),
-                    Boolean.parseBoolean(decodeField(fields[9]))));
+                    parseBoolean(decodeField(fields[8])),
+                    parseBoolean(decodeField(fields[9]))));
         } catch (IllegalArgumentException | DateTimeException | ArithmeticException exception) {
             return Optional.empty();
         }
@@ -290,7 +290,7 @@ public final class JavaJmxMonitoringRepository implements JmxMonitoringRepositor
                     Double.parseDouble(decodeField(fields[2])),
                     decodeField(fields[3]),
                     decodeField(fields[4]),
-                    Boolean.parseBoolean(decodeField(fields[5]))));
+                    parseBoolean(decodeField(fields[5]))));
         } catch (IllegalArgumentException | DateTimeException exception) {
             return Optional.empty();
         }
@@ -318,8 +318,8 @@ public final class JavaJmxMonitoringRepository implements JmxMonitoringRepositor
                     decodeField(fields[2]),
                     decodeField(fields[3]),
                     Integer.parseInt(decodeField(fields[4])),
-                    Boolean.parseBoolean(decodeField(fields[5])),
-                    Boolean.parseBoolean(decodeField(fields[6]))));
+                    parseBoolean(decodeField(fields[5])),
+                    parseBoolean(decodeField(fields[6]))));
         } catch (IllegalArgumentException exception) {
             return Optional.empty();
         }
@@ -393,6 +393,16 @@ public final class JavaJmxMonitoringRepository implements JmxMonitoringRepositor
 
     private static String decodeField(String value) {
         return new String(Base64.getUrlDecoder().decode(value), StandardCharsets.UTF_8);
+    }
+
+    private static boolean parseBoolean(String value) {
+        if ("true".equalsIgnoreCase(value)) {
+            return true;
+        }
+        if ("false".equalsIgnoreCase(value)) {
+            return false;
+        }
+        throw new IllegalArgumentException("Malformed boolean field: " + value);
     }
 
     @FunctionalInterface
