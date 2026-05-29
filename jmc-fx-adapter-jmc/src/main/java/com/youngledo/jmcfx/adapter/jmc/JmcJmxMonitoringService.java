@@ -10,6 +10,7 @@ import com.youngledo.jmcfx.domain.service.JmxMonitoringService;
 import java.io.IOException;
 import java.time.Clock;
 import java.time.Instant;
+import java.util.Arrays;
 import java.util.List;
 import java.util.Objects;
 import java.util.concurrent.ConcurrentHashMap;
@@ -26,6 +27,7 @@ public class JmcJmxMonitoringService implements JmxMonitoringService {
     private final JmxConnectionAccessor connectionAccessor;
     private final Clock clock;
     private final ConcurrentMap<ListenerKey, RegisteredListener> listeners = new ConcurrentHashMap<>();
+    private final Object listenerLock = new Object();
 
     public JmcJmxMonitoringService(JmxConnectionAccessor connectionAccessor) {
         this(connectionAccessor, Clock.systemUTC());
@@ -45,11 +47,11 @@ public class JmcJmxMonitoringService implements JmxMonitoringService {
                     subscription.id(),
                     clock.instant(),
                     numeric ? ((Number) value).doubleValue() : Double.NaN,
-                    String.valueOf(value),
+                    displayValue(value),
                     subscription.unit(),
                     numeric);
         } catch (IOException | JMException | RuntimeException exception) {
-            throw new JmcFxException("Unable to sample JMX attribute %s/%s: %s"
+            throw new JmcFxException("Unable to sample JMX attribute: %s/%s: %s"
                     .formatted(subscription.objectName(), subscription.attributeName(), errorMessage(exception)), exception);
         }
     }
@@ -61,34 +63,43 @@ public class JmcJmxMonitoringService implements JmxMonitoringService {
             Consumer<JmxNotificationEvent> eventSink) {
         Objects.requireNonNull(eventSink, "eventSink");
         ListenerKey key = new ListenerKey(connection.id(), subscription.id());
-        stopNotifications(connection, subscription.id());
+        synchronized (listenerLock) {
+            stopNotificationsLocked(key);
 
-        try {
-            MBeanServerConnection server = server(connection);
-            ObjectName objectName = new ObjectName(subscription.objectName());
-            NotificationListener listener = (notification, handback) -> {
-                JmxNotificationEvent event = notificationEvent(subscription, notification);
-                eventSink.accept(event);
-            };
-            server.addNotificationListener(objectName, listener, null, null);
-            listeners.put(key, new RegisteredListener(server, objectName, listener));
-            return List.of();
-        } catch (IOException | JMException | RuntimeException exception) {
-            throw new JmcFxException("Unable to start JMX notifications for %s: %s"
-                    .formatted(subscription.objectName(), errorMessage(exception)), exception);
+            try {
+                MBeanServerConnection server = server(connection);
+                ObjectName objectName = new ObjectName(subscription.objectName());
+                NotificationListener listener = (notification, handback) -> {
+                    JmxNotificationEvent event = notificationEvent(subscription, notification);
+                    eventSink.accept(event);
+                };
+                server.addNotificationListener(objectName, listener, null, null);
+                listeners.put(key, new RegisteredListener(server, objectName, listener));
+                return List.of();
+            } catch (IOException | JMException | RuntimeException exception) {
+                throw new JmcFxException("Unable to start JMX notifications for %s: %s"
+                        .formatted(subscription.objectName(), errorMessage(exception)), exception);
+            }
         }
     }
 
     @Override
     public void stopNotifications(JvmConnection connection, String subscriptionId) {
         ListenerKey key = new ListenerKey(connection.id(), subscriptionId);
-        RegisteredListener registration = listeners.remove(key);
+        synchronized (listenerLock) {
+            stopNotificationsLocked(key);
+        }
+    }
+
+    private void stopNotificationsLocked(ListenerKey key) {
+        RegisteredListener registration = listeners.get(key);
         if (registration == null) {
             return;
         }
 
         try {
             registration.server().removeNotificationListener(registration.objectName(), registration.listener());
+            listeners.remove(key);
         } catch (IOException | JMException | RuntimeException exception) {
             throw new JmcFxException("Unable to stop JMX notifications for %s: %s"
                     .formatted(registration.objectName().getCanonicalName(), errorMessage(exception)), exception);
@@ -110,6 +121,40 @@ public class JmcJmxMonitoringService implements JmxMonitoringService {
 
     private MBeanServerConnection server(JvmConnection connection) throws IOException {
         return connectionAccessor.mBeanServerConnection(connection);
+    }
+
+    private static String displayValue(Object value) {
+        if (value == null) {
+            return "";
+        }
+        if (value instanceof Object[] array) {
+            return Arrays.deepToString(array);
+        }
+        if (value instanceof boolean[] array) {
+            return Arrays.toString(array);
+        }
+        if (value instanceof byte[] array) {
+            return Arrays.toString(array);
+        }
+        if (value instanceof short[] array) {
+            return Arrays.toString(array);
+        }
+        if (value instanceof int[] array) {
+            return Arrays.toString(array);
+        }
+        if (value instanceof long[] array) {
+            return Arrays.toString(array);
+        }
+        if (value instanceof float[] array) {
+            return Arrays.toString(array);
+        }
+        if (value instanceof double[] array) {
+            return Arrays.toString(array);
+        }
+        if (value instanceof char[] array) {
+            return Arrays.toString(array);
+        }
+        return String.valueOf(value);
     }
 
     private static String errorMessage(Exception exception) {
