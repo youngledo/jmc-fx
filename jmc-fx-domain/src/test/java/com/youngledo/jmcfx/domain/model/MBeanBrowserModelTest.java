@@ -2,7 +2,11 @@ package com.youngledo.jmcfx.domain.model;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertThrows;
+import static org.junit.jupiter.api.Assertions.assertFalse;
+import static org.junit.jupiter.api.Assertions.assertTrue;
 
+import java.time.Duration;
+import java.time.Instant;
 import java.util.List;
 
 import org.junit.jupiter.api.Test;
@@ -65,5 +69,67 @@ class MBeanBrowserModelTest {
 
         assertEquals("", result.value());
         assertEquals("", result.error());
+    }
+
+    @Test
+    void jmxAttributeSubscriptionNormalizesBlankTextAndBoundsRetention() {
+        JmxAttributeSubscription subscription = new JmxAttributeSubscription(
+                "",
+                "",
+                "java.lang:type=Memory",
+                "HeapMemoryUsage",
+                "",
+                "",
+                Duration.ZERO,
+                -1,
+                true,
+                true);
+
+        assertFalse(subscription.id().isBlank());
+        assertEquals("", subscription.connectionId());
+        assertEquals("java.lang:type=Memory", subscription.objectName());
+        assertEquals("HeapMemoryUsage", subscription.attributeName());
+        assertEquals("HeapMemoryUsage", subscription.label());
+        assertEquals("", subscription.unit());
+        assertEquals(Duration.ofSeconds(1), subscription.samplingInterval());
+        assertEquals(120, subscription.maxSamples());
+    }
+
+    @Test
+    void jmxSubscriptionSampleKeepsNumericAndDisplayValues() {
+        JmxSubscriptionSample sample = new JmxSubscriptionSample(
+                "sub-1",
+                Instant.parse("2026-05-29T00:00:00Z"),
+                42.5,
+                "42.5 MB",
+                "MB",
+                true);
+
+        assertEquals("sub-1", sample.subscriptionId());
+        assertEquals(Instant.parse("2026-05-29T00:00:00Z"), sample.observedAt());
+        assertEquals(42.5, sample.numericValue());
+        assertEquals("42.5 MB", sample.displayValue());
+        assertEquals("MB", sample.unit());
+        assertTrue(sample.numeric());
+    }
+
+    @Test
+    void jmxNotificationEventNormalizesNulls() {
+        JmxNotificationEvent event = new JmxNotificationEvent(
+                null,
+                null,
+                null,
+                null,
+                7,
+                null,
+                null);
+
+        assertEquals("", event.subscriptionId());
+        assertEquals(Instant.EPOCH, event.observedAt());
+        assertEquals("", event.type());
+        assertEquals("", event.source());
+        assertEquals(7, event.sequenceNumber());
+        assertEquals("", event.message());
+        assertEquals("", event.userData());
     }
 }
