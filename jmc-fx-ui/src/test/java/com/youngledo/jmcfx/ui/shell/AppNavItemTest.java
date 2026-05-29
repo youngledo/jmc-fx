@@ -28,9 +28,11 @@ class AppNavItemTest {
         assertEquals(true, item.page());
         assertEquals("analysis", item.sectionId());
         assertEquals("analysis.title", item.titleKey());
-        assertEquals(true, item.recordingScoped());
-        assertEquals(true, item.unavailable(false));
+        assertEquals(false, item.recordingScoped());
+        assertEquals(false, item.unavailable(false));
         assertEquals(false, item.unavailable(true));
+        assertEquals(true, item.visibleIn(AppWorkspaceKind.RECORDING));
+        assertEquals(false, item.visibleIn(AppWorkspaceKind.GLOBAL));
         assertEquals(NavIconTone.RECORDING, item.iconTone());
     }
 

@@ -19,10 +19,8 @@ public class AppSidebar extends VBox {
 
     private I18n i18n;
     private AppNavTree navTree;
-    private final Label recordingNameLabel = new Label();
     private Label title;
     private Label subtitle;
-    private Label currentRecordingLabel;
     private Label version;
     private TextField searchField;
     private final ContextMenu searchResultsMenu = new ContextMenu();
@@ -38,12 +36,11 @@ public class AppSidebar extends VBox {
         setId("sidebar");
         getStyleClass().add("app-sidebar");
         VBox.setVgrow(navTree, Priority.ALWAYS);
-        getChildren().setAll(createHeader(), createRecordingCard(), navTree, createFooter());
+        getChildren().setAll(createHeader(), navTree, createFooter());
         bindLocalizedText();
     }
 
     void bind(AppShellViewModel viewModel) {
-        recordingNameLabel.textProperty().bind(viewModel.currentRecordingNameProperty());
         navTree.bind(viewModel);
     }
 
@@ -67,9 +64,6 @@ public class AppSidebar extends VBox {
         if (searchField != null) {
             searchField.promptTextProperty().bind(i18n.text("sidebar.searchWorkflows"));
             searchField.setTooltip(i18n.tooltip("sidebar.searchWorkflows"));
-        }
-        if (currentRecordingLabel != null) {
-            currentRecordingLabel.textProperty().bind(i18n.text("sidebar.currentRecording"));
         }
         if (version != null) {
             version.textProperty().bind(i18n.text("sidebar.version"));
@@ -113,16 +107,6 @@ public class AppSidebar extends VBox {
             }
         });
         return searchField;
-    }
-
-    private VBox createRecordingCard() {
-        currentRecordingLabel = new Label("Current Recording");
-        currentRecordingLabel.getStyleClass().add("recording-card-label");
-        recordingNameLabel.getStyleClass().add("recording-card-title");
-        recordingNameLabel.setWrapText(true);
-        VBox card = new VBox(currentRecordingLabel, recordingNameLabel);
-        card.getStyleClass().add("sidebar-recording-card");
-        return card;
     }
 
     private HBox createFooter() {

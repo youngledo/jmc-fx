@@ -32,6 +32,9 @@
 
 .recording-tabs .tab:selected {
     -fx-background-color: -color-bg-default;
+}
+
+.recording-tabs .tab:selected .tab-container {
     -fx-border-width: 0 0 3px 0;
     -fx-border-color: -color-accent-emphasis;
 }
@@ -157,22 +160,9 @@
     -fx-font-size: 11px;
 }
 
-.sidebar-recording-card {
-    -fx-padding: 10px 12px;
-    -fx-spacing: 3px;
-    -fx-background-color: -color-bg-subtle;
-    -fx-border-width: 0 0 1px 0;
-    -fx-border-color: -color-border-muted;
-}
-
-.recording-card-label {
+.advanced-jfr-selection-label {
     -fx-text-fill: -color-fg-muted;
     -fx-font-size: 10px;
-    -fx-font-weight: bold;
-}
-
-.recording-card-title {
-    -fx-font-size: 12px;
     -fx-font-weight: bold;
 }
 
@@ -401,6 +391,10 @@
     -fx-background-radius: 8px;
     -fx-border-radius: 8px;
     -fx-min-height: 104px;
+}
+
+.workflow-tile:hover {
+    -fx-border-color: -color-accent-emphasis;
 }
 
 .workflow-tile-title {

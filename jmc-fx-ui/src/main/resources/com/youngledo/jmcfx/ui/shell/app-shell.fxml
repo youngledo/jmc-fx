@@ -43,19 +43,20 @@
                     <Label fx:id="homeSubtitleLabel" styleClass="welcome-subtitle" wrapText="true"/>
                     <HBox styleClass="home-actions" spacing="8">
                         <Button fx:id="homeOpenRecordingButton"/>
+                        <Button fx:id="homeOpenHeapDumpButton"/>
                         <Button fx:id="homeConnectJvmButton"/>
                     </HBox>
                 </VBox>
                 <HBox styleClass="workflow-tiles" spacing="12">
-                    <VBox styleClass="workflow-tile" spacing="6" HBox.hgrow="ALWAYS">
+                    <VBox fx:id="homeJfrTile" styleClass="workflow-tile" spacing="6" HBox.hgrow="ALWAYS">
                         <Label fx:id="homeOpenWorkflowTitleLabel" styleClass="workflow-tile-title"/>
                         <Label fx:id="homeOpenWorkflowDescriptionLabel" styleClass="workflow-tile-copy" wrapText="true"/>
                     </VBox>
-                    <VBox styleClass="workflow-tile" spacing="6" HBox.hgrow="ALWAYS">
-                        <Label fx:id="homeEventsWorkflowTitleLabel" styleClass="workflow-tile-title"/>
-                        <Label fx:id="homeEventsWorkflowDescriptionLabel" styleClass="workflow-tile-copy" wrapText="true"/>
+                    <VBox fx:id="homeHeapDumpTile" styleClass="workflow-tile" spacing="6" HBox.hgrow="ALWAYS">
+                        <Label fx:id="homeHeapDumpWorkflowTitleLabel" styleClass="workflow-tile-title"/>
+                        <Label fx:id="homeHeapDumpWorkflowDescriptionLabel" styleClass="workflow-tile-copy" wrapText="true"/>
                     </VBox>
-                    <VBox styleClass="workflow-tile" spacing="6" HBox.hgrow="ALWAYS">
+                    <VBox fx:id="homeJvmTile" styleClass="workflow-tile" spacing="6" HBox.hgrow="ALWAYS">
                         <Label fx:id="homeJvmWorkflowTitleLabel" styleClass="workflow-tile-title"/>
                         <Label fx:id="homeJvmWorkflowDescriptionLabel" styleClass="workflow-tile-copy" wrapText="true"/>
                     </VBox>
@@ -155,11 +156,11 @@
                                     <Label fx:id="advancedJfrSelectionTitleLabel" styleClass="detail-title"/>
                                     <HBox fx:id="advancedJfrSelectionValues" spacing="16">
                                         <VBox spacing="2" HBox.hgrow="ALWAYS">
-                                            <Label fx:id="advancedJfrSelectedEventTypeCaptionLabel" styleClass="recording-card-label"/>
+                                            <Label fx:id="advancedJfrSelectedEventTypeCaptionLabel" styleClass="advanced-jfr-selection-label"/>
                                             <Label fx:id="advancedJfrSelectedEventTypeLabel" wrapText="true"/>
                                         </VBox>
                                         <VBox spacing="2">
-                                            <Label fx:id="advancedJfrSelectedCountCaptionLabel" styleClass="recording-card-label"/>
+                                            <Label fx:id="advancedJfrSelectedCountCaptionLabel" styleClass="advanced-jfr-selection-label"/>
                                             <Label fx:id="advancedJfrSelectedCountLabel"/>
                                         </VBox>
                                     </HBox>

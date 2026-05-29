@@ -4,6 +4,8 @@ import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 
+import java.nio.file.Path;
+import java.time.Instant;
 import java.util.List;
 import java.util.Locale;
 import java.util.concurrent.CountDownLatch;
@@ -12,6 +14,7 @@ import java.util.concurrent.TimeUnit;
 import org.junit.jupiter.api.BeforeAll;
 import org.junit.jupiter.api.Test;
 
+import com.youngledo.jmcfx.domain.model.RecordingSummary;
 import com.youngledo.jmcfx.ui.i18n.I18n;
 import com.youngledo.jmcfx.ui.i18n.LanguageMode;
 
@@ -34,6 +37,7 @@ class AppNavTreeTest {
     void searchFindsNavigationPagesByTitle() {
         AppNavTree tree = new AppNavTree(new I18n(Locale.ENGLISH));
         tree.setRecordingOpenForTesting(true);
+        tree.setActiveWorkspaceKindForTesting(AppWorkspaceKind.RECORDING);
 
         List<AppNavSearchResult> results = tree.search("socket");
 
@@ -46,6 +50,7 @@ class AppNavTreeTest {
     void searchFindsNavigationPagesBySectionId() {
         AppNavTree tree = new AppNavTree(new I18n(Locale.ENGLISH));
         tree.setRecordingOpenForTesting(true);
+        tree.setActiveWorkspaceKindForTesting(AppWorkspaceKind.RECORDING);
 
         List<AppNavSearchResult> results = tree.search("gcConfig");
 
@@ -59,6 +64,7 @@ class AppNavTreeTest {
         i18n.setLanguageMode(LanguageMode.CHINESE_SIMPLIFIED);
         AppNavTree tree = new AppNavTree(i18n);
         tree.setRecordingOpenForTesting(true);
+        tree.setActiveWorkspaceKindForTesting(AppWorkspaceKind.RECORDING);
 
         List<AppNavSearchResult> results = tree.search("套接字");
 
@@ -74,6 +80,7 @@ class AppNavTreeTest {
         i18n.setLanguageMode(LanguageMode.CHINESE_SIMPLIFIED);
         tree.setI18n(i18n);
         tree.setRecordingOpenForTesting(true);
+        tree.setActiveWorkspaceKindForTesting(AppWorkspaceKind.RECORDING);
 
         List<AppNavSearchResult> results = tree.search("文件");
 
@@ -100,6 +107,7 @@ class AppNavTreeTest {
         assertTrue(tree.search("events").isEmpty());
 
         tree.setRecordingOpenForTesting(true);
+        tree.setActiveWorkspaceKindForTesting(AppWorkspaceKind.RECORDING);
 
         assertEquals("events", tree.search("events").getFirst().sectionId());
     }
@@ -108,6 +116,7 @@ class AppNavTreeTest {
     void searchFindsAdvancedJfrRecordingPageAfterRecordingOpens() {
         AppNavTree tree = new AppNavTree(new I18n(Locale.ENGLISH));
         tree.setRecordingOpenForTesting(true);
+        tree.setActiveWorkspaceKindForTesting(AppWorkspaceKind.RECORDING);
 
         List<AppNavSearchResult> results = tree.search("advanced jfr");
 
@@ -117,12 +126,122 @@ class AppNavTreeTest {
     }
 
     @Test
-    void searchIncludesJvmBrowserWithoutRecording() {
+    void liveJvmContextDoesNotDuplicateJvmWorkspaceEntry() {
         AppNavTree tree = new AppNavTree(new I18n(Locale.ENGLISH));
+        tree.setActiveWorkspaceKindForTesting(AppWorkspaceKind.LIVE_JVM);
 
-        List<AppNavSearchResult> results = tree.search("jvms");
+        assertVisibleSections(tree, "home", "settings");
+        assertNotVisibleSections(tree, "jvms");
+        assertTrue(tree.search("jvms").isEmpty());
+    }
 
-        assertFalse(results.isEmpty());
-        assertEquals("jvms", results.getFirst().sectionId());
+    @Test
+    void boundTreeShowsOnlyGlobalMenuAfterOpeningLiveJvmWorkspace() {
+        AppShellViewModel viewModel = new AppShellViewModel();
+        AppNavTree tree = new AppNavTree(new I18n(Locale.ENGLISH));
+        tree.bind(viewModel);
+
+        viewModel.openLiveJvmWorkspace();
+
+        assertVisibleSections(tree, "home", "settings");
+        assertNotVisibleSections(tree, "jvms");
+    }
+
+    @Test
+    void globalContextSearchOnlyExposesGlobalPages() {
+        AppNavTree tree = new AppNavTree(new I18n(Locale.ENGLISH));
+        tree.setActiveWorkspaceKindForTesting(AppWorkspaceKind.GLOBAL);
+
+        assertEquals("home", tree.search("home").getFirst().sectionId());
+        assertTrue(tree.search("events").isEmpty());
+        assertTrue(tree.search("heap dump").isEmpty());
+        assertTrue(tree.search("diagnostic").isEmpty());
+    }
+
+    @Test
+    void recordingContextSearchOnlyExposesRecordingPages() {
+        AppNavTree tree = new AppNavTree(new I18n(Locale.ENGLISH));
+        tree.setActiveWorkspaceKindForTesting(AppWorkspaceKind.RECORDING);
+
+        assertEquals("events", tree.search("events").getFirst().sectionId());
+        assertEquals("home", tree.search("home").getFirst().sectionId());
+        assertEquals("settings", tree.search("settings").getFirst().sectionId());
+        assertTrue(tree.search("heap dump").isEmpty());
+    }
+
+    @Test
+    void heapDumpContextSearchOnlyExposesHeapDumpPages() {
+        AppNavTree tree = new AppNavTree(new I18n(Locale.ENGLISH));
+        tree.setActiveWorkspaceKindForTesting(AppWorkspaceKind.HEAP_DUMP);
+
+        assertEquals("heapDumpAnalysis", tree.search("heap dump").getFirst().sectionId());
+        assertEquals("home", tree.search("home").getFirst().sectionId());
+        assertEquals("settings", tree.search("settings").getFirst().sectionId());
+        assertTrue(tree.search("events").isEmpty());
+    }
+
+    @Test
+    void boundTreeShowsRecordingMenuAfterOpeningRecording() {
+        AppShellViewModel viewModel = new AppShellViewModel();
+        AppNavTree tree = new AppNavTree(new I18n(Locale.ENGLISH));
+        tree.bind(viewModel);
+
+        viewModel.openRecording(recording());
+
+        assertVisibleSections(tree, "home", "settings", "analysis", "overview", "events", "advancedJfr");
+        assertExpandedSections(tree, "analysis", "overview", "events", "advancedJfr");
+        assertTrue(tree.search("events").stream().anyMatch(result -> "events".equals(result.sectionId())));
+    }
+
+    @Test
+    void boundTreeShowsHeapDumpMenuAfterOpeningHeapDump() {
+        AppShellViewModel viewModel = new AppShellViewModel();
+        AppNavTree tree = new AppNavTree(new I18n(Locale.ENGLISH));
+        tree.bind(viewModel);
+
+        viewModel.openHeapDump(new HeapDumpWorkspace(Path.of("demo.hprof"), null));
+
+        assertVisibleSections(tree, "home", "settings", "heapDumpAnalysis");
+        assertExpandedSections(tree, "heapDumpAnalysis");
+        assertTrue(tree.search("heap dump").stream().anyMatch(result -> "heapDumpAnalysis".equals(result.sectionId())));
+    }
+
+    private static void assertVisibleSections(AppNavTree tree, String... sectionIds) {
+        List<String> visibleSectionIds = tree.getRoot().getChildren().stream()
+                .flatMap(group -> group.getChildren().stream())
+                .map(item -> item.getValue().sectionId())
+                .toList();
+        for (String sectionId : sectionIds) {
+            assertTrue(visibleSectionIds.contains(sectionId),
+                    () -> "Expected visible section " + sectionId + " in " + visibleSectionIds);
+        }
+    }
+
+    private static void assertNotVisibleSections(AppNavTree tree, String... sectionIds) {
+        List<String> visibleSectionIds = tree.getRoot().getChildren().stream()
+                .flatMap(group -> group.getChildren().stream())
+                .map(item -> item.getValue().sectionId())
+                .toList();
+        for (String sectionId : sectionIds) {
+            assertFalse(visibleSectionIds.contains(sectionId),
+                    () -> "Expected hidden section " + sectionId + " in " + visibleSectionIds);
+        }
+    }
+
+    private static void assertExpandedSections(AppNavTree tree, String... sectionIds) {
+        List<String> expandedSectionIds = java.util.stream.IntStream.range(0, tree.getExpandedItemCount())
+                .mapToObj(tree::getTreeItem)
+                .filter(item -> item != null && item.getValue() != null)
+                .map(item -> item.getValue().sectionId())
+                .toList();
+        for (String sectionId : sectionIds) {
+            assertTrue(expandedSectionIds.contains(sectionId),
+                    () -> "Expected expanded section " + sectionId + " in " + expandedSectionIds);
+        }
+    }
+
+    private static RecordingSummary recording() {
+        return new RecordingSummary("rec", Path.of("rec.jfr"), "rec.jfr",
+                Instant.EPOCH, Instant.EPOCH.plusSeconds(1), 1000, 128);
     }
 }

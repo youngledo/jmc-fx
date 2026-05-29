@@ -15,7 +15,7 @@ class I18nTest {
 
         assertEquals(LanguageMode.ENGLISH, i18n.languageModeProperty().get());
         assertEquals(Locale.ENGLISH, i18n.localeProperty().get());
-        assertEquals("Open Recording", i18n.get("home.openRecording"));
+        assertEquals("Open JFR", i18n.get("home.openRecording"));
     }
 
     @Test
@@ -38,14 +38,14 @@ class I18nTest {
         i18n.setLanguageMode(LanguageMode.SYSTEM);
 
         assertEquals(Locale.SIMPLIFIED_CHINESE, i18n.localeProperty().get());
-        assertEquals("打开记录", i18n.get("home.openRecording"));
+        assertEquals("打开JFR", i18n.get("home.openRecording"));
     }
 
     @Test
     void formatsArguments() {
         I18n i18n = new I18n(Locale.ENGLISH);
 
-        assertEquals("Current Recording: demo.jfr", i18n.format("sidebar.currentRecording.named", "demo.jfr"));
+        assertEquals("Category: demo", i18n.format("heapDump.detail.category", "demo"));
     }
 
     @Test

@@ -294,6 +294,7 @@ public class AppShellController {
 
     @FXML private BorderPane root;
     @FXML private Button homeOpenRecordingButton;
+    @FXML private Button homeOpenHeapDumpButton;
     @FXML private Button homeConnectJvmButton;
     @FXML private AppSidebar sidebar;
     @FXML private TabPane recordingTabs;
@@ -338,11 +339,14 @@ public class AppShellController {
     @FXML private Label homeSubtitleLabel;
     @FXML private Label homeOpenWorkflowTitleLabel;
     @FXML private Label homeOpenWorkflowDescriptionLabel;
-    @FXML private Label homeEventsWorkflowTitleLabel;
-    @FXML private Label homeEventsWorkflowDescriptionLabel;
+    @FXML private Label homeHeapDumpWorkflowTitleLabel;
+    @FXML private Label homeHeapDumpWorkflowDescriptionLabel;
     @FXML private Label homeJvmWorkflowTitleLabel;
     @FXML private Label homeJvmWorkflowDescriptionLabel;
     @FXML private Label homeDisclaimerLabel;
+    @FXML private VBox homeJfrTile;
+    @FXML private VBox homeHeapDumpTile;
+    @FXML private VBox homeJvmTile;
     @FXML private Label overviewTitleLabel;
     @FXML private Label overviewRecordingNameLabel;
     @FXML private Label overviewRecordingDetailsLabel;
@@ -913,7 +917,11 @@ public class AppShellController {
         configureLanguageSelector();
         configureThemeSelector();
         homeOpenRecordingButton.setOnAction(event -> openRecording());
-        homeConnectJvmButton.setOnAction(event -> viewModel.showSection("jvms"));
+        homeOpenHeapDumpButton.setOnAction(event -> showOpenHeapDumpChooser());
+        homeConnectJvmButton.setOnAction(event -> viewModel.openLiveJvmWorkspace());
+        homeJfrTile.setOnMouseClicked(event -> openRecording());
+        homeHeapDumpTile.setOnMouseClicked(event -> showOpenHeapDumpChooser());
+        homeJvmTile.setOnMouseClicked(event -> viewModel.openLiveJvmWorkspace());
         configureRecordingTabs();
         jvmBrowserViewModel = jvmDiscoveryService != null && jmxConnectionService != null
                 ? new JvmBrowserViewModel(jvmDiscoveryService, jmxConnectionService, flightRecordingService,
@@ -3153,11 +3161,12 @@ public class AppShellController {
         homeTitleLabel.textProperty().bind(i18n.text("home.title"));
         homeSubtitleLabel.textProperty().bind(i18n.text("home.subtitle"));
         homeOpenRecordingButton.textProperty().bind(i18n.text("home.openRecording"));
+        homeOpenHeapDumpButton.textProperty().bind(i18n.text("home.openHeapDump"));
         homeConnectJvmButton.textProperty().bind(i18n.text("home.connectJvm"));
         homeOpenWorkflowTitleLabel.textProperty().bind(i18n.text("home.workflow.openTitle"));
         homeOpenWorkflowDescriptionLabel.textProperty().bind(i18n.text("home.workflow.openDescription"));
-        homeEventsWorkflowTitleLabel.textProperty().bind(i18n.text("home.workflow.eventsTitle"));
-        homeEventsWorkflowDescriptionLabel.textProperty().bind(i18n.text("home.workflow.eventsDescription"));
+        homeHeapDumpWorkflowTitleLabel.textProperty().bind(i18n.text("home.workflow.heapDumpTitle"));
+        homeHeapDumpWorkflowDescriptionLabel.textProperty().bind(i18n.text("home.workflow.heapDumpDescription"));
         homeJvmWorkflowTitleLabel.textProperty().bind(i18n.text("home.workflow.jvmTitle"));
         homeJvmWorkflowDescriptionLabel.textProperty().bind(i18n.text("home.workflow.jvmDescription"));
         homeDisclaimerLabel.textProperty().bind(i18n.text("home.disclaimer"));
@@ -3372,12 +3381,21 @@ public class AppShellController {
         return workspace.name();
     }
 
+    static String tabTitleFor(LiveJvmWorkspace workspace) {
+        return workspace.name();
+    }
+
     static boolean shouldShowRecordingTabs(int workspaceCount) {
-        return shouldShowWorkspaceTabs(workspaceCount, 0);
+        return shouldShowWorkspaceTabs(workspaceCount, 0, false);
     }
 
     static boolean shouldShowWorkspaceTabs(int recordingWorkspaceCount, int heapDumpWorkspaceCount) {
-        return recordingWorkspaceCount + heapDumpWorkspaceCount > 0;
+        return shouldShowWorkspaceTabs(recordingWorkspaceCount, heapDumpWorkspaceCount, false);
+    }
+
+    static boolean shouldShowWorkspaceTabs(int recordingWorkspaceCount, int heapDumpWorkspaceCount,
+            boolean liveJvmWorkspaceOpen) {
+        return recordingWorkspaceCount + heapDumpWorkspaceCount > 0 || liveJvmWorkspaceOpen;
     }
 
     static String noTimingSelectionText(I18n i18n) {
@@ -3452,8 +3470,10 @@ public class AppShellController {
 
     private void configureActionIcons() {
         homeOpenRecordingButton.getStyleClass().add("toolbar-primary");
+        homeOpenHeapDumpButton.getStyleClass().add("toolbar-secondary");
         homeConnectJvmButton.getStyleClass().add("toolbar-secondary");
         configureActionButton(homeOpenRecordingButton, Material2AL.FOLDER_OPEN, i18n.get("home.openRecording"));
+        configureActionButton(homeOpenHeapDumpButton, Material2MZ.STORAGE, i18n.get("home.openHeapDump"));
         configureActionButton(homeConnectJvmButton, Material2MZ.MEMORY, i18n.get("home.connectJvm"));
     }
 
@@ -3473,14 +3493,13 @@ public class AppShellController {
             switch (newValue.getUserData()) {
                 case RecordingWorkspace workspace -> viewModel.selectWorkspace(workspace);
                 case HeapDumpWorkspace workspace -> viewModel.selectHeapDumpWorkspace(workspace);
+                case LiveJvmWorkspace ignored -> viewModel.selectLiveJvmWorkspace();
                 default -> {
                 }
             }
         });
-        viewModel.recordingWorkspacesProperty()
-                .addListener((ListChangeListener<RecordingWorkspace>) change -> rebuildRecordingTabs());
-        viewModel.heapDumpWorkspacesProperty()
-                .addListener((ListChangeListener<HeapDumpWorkspace>) change -> rebuildRecordingTabs());
+        viewModel.workspaceTabsProperty()
+                .addListener((ListChangeListener<Object>) change -> rebuildRecordingTabs());
         rebuildRecordingTabs();
     }
 
@@ -3489,29 +3508,29 @@ public class AppShellController {
                 .addListener((observable, oldValue, newValue) -> showWorkspace(newValue));
         viewModel.selectedHeapDumpWorkspaceProperty()
                 .addListener((observable, oldValue, newValue) -> showHeapDumpWorkspace(newValue));
+        viewModel.selectedLiveJvmWorkspaceProperty()
+                .addListener((observable, oldValue, newValue) -> showLiveJvmWorkspace(newValue));
         showWorkspace(viewModel.selectedWorkspaceProperty().get());
         showHeapDumpWorkspace(viewModel.selectedHeapDumpWorkspaceProperty().get());
+        showLiveJvmWorkspace(viewModel.selectedLiveJvmWorkspaceProperty().get());
     }
 
     private void rebuildRecordingTabs() {
         updatingRecordingTabs = true;
         try {
-            List<Tab> recordingTabsList = viewModel.recordingWorkspacesProperty().stream()
-                    .map(this::toRecordingTab)
+            List<Tab> tabs = viewModel.workspaceTabsProperty().stream()
+                    .map(this::toWorkspaceTab)
                     .toList();
-            List<Tab> heapDumpTabs = viewModel.heapDumpWorkspacesProperty().stream()
-                    .map(this::toHeapDumpTab)
-                    .toList();
-            List<Tab> tabs = new java.util.ArrayList<>(recordingTabsList);
-            tabs.addAll(heapDumpTabs);
             recordingTabs.getTabs().setAll(tabs);
             boolean showTabs = shouldShowWorkspaceTabs(
                     viewModel.recordingWorkspacesProperty().size(),
-                    viewModel.heapDumpWorkspacesProperty().size());
+                    viewModel.heapDumpWorkspacesProperty().size(),
+                    viewModel.liveJvmWorkspaceOpenProperty().get());
             recordingTabs.setVisible(showTabs);
             recordingTabs.setManaged(showTabs);
             selectWorkspaceTab(viewModel.selectedWorkspaceProperty().get(),
-                    viewModel.selectedHeapDumpWorkspaceProperty().get());
+                    viewModel.selectedHeapDumpWorkspaceProperty().get(),
+                    viewModel.selectedLiveJvmWorkspaceProperty().get());
         } finally {
             updatingRecordingTabs = false;
         }
@@ -3533,12 +3552,31 @@ public class AppShellController {
         return tab;
     }
 
-    private void selectRecordingTab(RecordingWorkspace workspace) {
-        selectWorkspaceTab(workspace, null);
+    private Tab toLiveJvmTab(LiveJvmWorkspace workspace) {
+        Tab tab = new Tab(tabTitleFor(workspace));
+        tab.setUserData(workspace);
+        tab.setClosable(true);
+        tab.setOnClosed(event -> viewModel.closeLiveJvmWorkspace());
+        return tab;
     }
 
-    private void selectWorkspaceTab(RecordingWorkspace recordingWorkspace, HeapDumpWorkspace heapDumpWorkspace) {
-        Object workspace = heapDumpWorkspace != null ? heapDumpWorkspace : recordingWorkspace;
+    private Tab toWorkspaceTab(Object workspace) {
+        return switch (workspace) {
+            case RecordingWorkspace recordingWorkspace -> toRecordingTab(recordingWorkspace);
+            case HeapDumpWorkspace heapDumpWorkspace -> toHeapDumpTab(heapDumpWorkspace);
+            case LiveJvmWorkspace liveJvmWorkspace -> toLiveJvmTab(liveJvmWorkspace);
+            default -> throw new IllegalArgumentException("Unsupported workspace tab: " + workspace);
+        };
+    }
+
+    private void selectRecordingTab(RecordingWorkspace workspace) {
+        selectWorkspaceTab(workspace, null, null);
+    }
+
+    private void selectWorkspaceTab(RecordingWorkspace recordingWorkspace, HeapDumpWorkspace heapDumpWorkspace,
+            LiveJvmWorkspace liveJvmWorkspace) {
+        Object workspace = liveJvmWorkspace != null ? liveJvmWorkspace
+                : heapDumpWorkspace != null ? heapDumpWorkspace : recordingWorkspace;
         if (workspace == null) {
             recordingTabs.getSelectionModel().clearSelection();
             return;
@@ -3587,8 +3625,15 @@ public class AppShellController {
             bindHeapDumpAnalysis(null);
             return;
         }
-        selectWorkspaceTab(null, workspace);
+        selectWorkspaceTab(null, workspace, null);
         bindHeapDumpAnalysis(workspace.viewModel());
+    }
+
+    private void showLiveJvmWorkspace(LiveJvmWorkspace workspace) {
+        if (workspace == null) {
+            return;
+        }
+        selectWorkspaceTab(null, null, workspace);
     }
 
     private void bindAdvancedJfr(AdvancedJfrViewModel nextViewModel) {
@@ -3789,6 +3834,9 @@ public class AppShellController {
     }
 
     private void openRecordingInBackground(Path path) {
+        if (selectExistingRecordingWorkspace(path)) {
+            return;
+        }
         setRecordingOpening(true);
         setBackgroundWorkVisible(true);
         viewModel.showStatus(openingRecordingStatus(i18n, path));
@@ -3862,6 +3910,9 @@ public class AppShellController {
     }
 
     private void openHeapDumpInBackground(Path path) {
+        if (selectExistingHeapDumpWorkspace(path)) {
+            return;
+        }
         setBackgroundWorkVisible(true);
         viewModel.showStatus(openingHeapDumpStatus(i18n, path));
         viewModel.showTaskSummary(i18n.get("taskSummary.openingHeapDump"));
@@ -3878,6 +3929,24 @@ public class AppShellController {
         nextViewModel.analyze(path);
     }
 
+    private boolean selectExistingRecordingWorkspace(Path path) {
+        if (viewModel.selectRecordingWorkspaceByPath(path)) {
+            viewModel.showStatus(i18n.format("status.openedRecording", path.getFileName()));
+            viewModel.showTaskSummary("");
+            return true;
+        }
+        return false;
+    }
+
+    private boolean selectExistingHeapDumpWorkspace(Path path) {
+        if (viewModel.selectHeapDumpWorkspaceByPath(path)) {
+            viewModel.showStatus(openingHeapDumpStatus(i18n, path));
+            viewModel.showTaskSummary("");
+            return true;
+        }
+        return false;
+    }
+
     private void showOpenRecordingFailure(RuntimeException exception) {
         String message = exception.getMessage() == null ? exception.getClass().getSimpleName() : exception.getMessage();
         viewModel.showStatus(i18n.format("status.openRecordingFailed", message));
@@ -3890,6 +3959,9 @@ public class AppShellController {
         recordingOpening = opening;
         if (homeOpenRecordingButton != null) {
             homeOpenRecordingButton.setDisable(shouldDisableOpenRecordingButton(opening));
+        }
+        if (homeOpenHeapDumpButton != null) {
+            homeOpenHeapDumpButton.setDisable(opening);
         }
     }
 

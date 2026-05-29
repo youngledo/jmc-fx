@@ -26,18 +26,36 @@ controls over large illustrative panels or one-off visual treatments.
 
 ## Information Architecture
 
-The shell has four stable top-level areas:
+The shell has stable global pages and typed workspaces:
 
-- Home: entry point for opening recordings and connecting JVMs.
-- JVMs: live JVM discovery, connection, session detail, and future live tools.
-- Recording workspace: offline JFR analysis pages for the selected recording.
+- Home: entry point for opening JFR recordings, opening HPROF heap dumps, and
+  connecting JVMs.
 - Settings: application preferences such as language and theme.
+- JFR recording workspace: offline JFR analysis pages for the selected
+  recording.
+- HPROF heap dump workspace: heap dump analysis pages for the selected dump.
+- Live JVM workspace: live JVM discovery, connection, session detail, and live
+  tools.
 
 Navigation rules:
 
 - Left navigation is the durable map of workflows.
-- Recording-specific pages belong to the selected recording workspace.
-- Global pages such as Home, JVMs, and Settings are not recording-specific.
+- Home owns start actions such as opening JFR, opening HPROF, and connecting
+  JVMs. These actions are not persistent left-navigation items.
+- Workspace tabs represent opened or connected targets. Home is a global page,
+  not a workspace tab.
+- Left navigation must always include a `GLOBAL` group containing Home and
+  Settings, followed by the active workspace group when a JFR, HPROF, or live
+  JVM workspace is selected.
+- Home and Settings do not close or clear active workspaces. Selecting an
+  existing workspace tab restores that workspace's typed navigation context.
+- JFR workspaces show JFR recording workflows; HPROF workspaces show heap dump
+  workflows; live JVM workspaces show live JVM workflows.
+- If a workspace tab already represents the active target, the left navigation
+  must not duplicate that target as a second entry point.
+- Recording-specific pages belong only to the selected JFR recording workspace.
+- Heap dump pages belong only to the selected HPROF heap dump workspace.
+- Global pages such as Home and Settings are not recording-specific.
 - Live JVM state and offline recording state must not be merged into one hidden
   context. If a future page can use both, the current source must be explicit.
 - Avoid creating top-level navigation items for small tools. Prefer tabs,

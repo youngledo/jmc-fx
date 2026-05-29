@@ -143,6 +143,15 @@ class AppShellTest {
     }
 
     @Test
+    void workspaceTabsIncludeSingletonLiveJvmWorkspace() {
+        assertFalse(AppShellController.shouldShowWorkspaceTabs(0, 0, false));
+        assertTrue(AppShellController.shouldShowWorkspaceTabs(0, 0, true));
+        assertTrue(AppShellController.shouldShowWorkspaceTabs(1, 0, false));
+        assertTrue(AppShellController.shouldShowWorkspaceTabs(0, 1, false));
+        assertEquals("JVM", AppShellController.tabTitleFor(new LiveJvmWorkspace("JVM")));
+    }
+
+    @Test
     void uiPomIncludesMaterialIconPack() throws Exception {
         Document document = pom("pom.xml");
 
@@ -163,6 +172,10 @@ class AppShellTest {
         assertEquals("AppSidebar", sidebar.getTagName());
         assertEquals(0, elementCountWithStyleClass(document, "left-nav"));
         assertEquals(0, elementCountWithStyleClass(document, "nav-section-label"));
+        assertEquals(0, elementCountWithStyleClass(document, "sidebar-recording-card"));
+        assertEquals(0, elementCountWithFxId(document, "workspaceTopbar"));
+        assertEquals(0, elementCountWithFxId(document, "workspaceContextLabel"));
+        assertEquals(0, elementCountWithFxId(document, "workspaceHomeButton"));
         assertEquals("TabPane", elementByFxId(document, "recordingTabs").getTagName());
         assertEquals("StackPane", elementByFxId(document, "workspaceStack").getTagName());
 
@@ -172,8 +185,13 @@ class AppShellTest {
         assertTrue(hasStyleClass(elementByFxId(document, "homeKickerLabel"), "home-kicker"));
         assertTrue(hasStyleClass(elementByFxId(document, "homeTitleLabel"), "welcome-title"));
         assertTrue(hasStyleClass(elementByFxId(document, "homeSubtitleLabel"), "welcome-subtitle"));
+        assertEquals("Button", elementByFxId(document, "homeOpenHeapDumpButton").getTagName());
+        assertTrue(hasStyleClass(elementByFxId(document, "homeJfrTile"), "workflow-tile"));
+        assertTrue(hasStyleClass(elementByFxId(document, "homeHeapDumpTile"), "workflow-tile"));
+        assertTrue(hasStyleClass(elementByFxId(document, "homeJvmTile"), "workflow-tile"));
         assertTrue(hasStyleClass(elementByFxId(document, "homeOpenWorkflowTitleLabel"), "workflow-tile-title"));
-        assertTrue(hasStyleClass(elementByFxId(document, "homeEventsWorkflowTitleLabel"), "workflow-tile-title"));
+        assertTrue(hasStyleClass(elementByFxId(document, "homeHeapDumpWorkflowTitleLabel"), "workflow-tile-title"));
+        assertTrue(hasStyleClass(elementByFxId(document, "homeHeapDumpWorkflowDescriptionLabel"), "workflow-tile-copy"));
         assertTrue(hasStyleClass(elementByFxId(document, "homeJvmWorkflowDescriptionLabel"), "workflow-tile-copy"));
         assertTrue("true".equals(elementByFxId(document, "homeJvmWorkflowDescriptionLabel").getAttribute("wrapText")));
 
@@ -454,6 +472,20 @@ class AppShellTest {
     }
 
     @Test
+    void workspaceShellKeepsGlobalLauncherInLeftNavigation() throws Exception {
+        String controller = java.nio.file.Files.readString(
+                java.nio.file.Path.of("src/main/java/com/youngledo/jmcfx/ui/shell/AppShellController.java"));
+        String css = appCss();
+
+        assertFalse(controller.contains("workspaceHomeButton"));
+        assertFalse(controller.contains("workspaceTopbar"));
+        assertFalse(controller.contains("workspaceContextLabel"));
+        assertFalse(css.contains(".workspace-topbar"));
+        assertFalse(css.contains(".workspace-context-label"));
+        assertFalse(css.contains(".workspace-home-button"));
+    }
+
+    @Test
     void advancedJfrShellUsesTabbedHeatmapAndMemoryBindings() throws Exception {
         String controller = java.nio.file.Files.readString(
                 java.nio.file.Path.of("src/main/java/com/youngledo/jmcfx/ui/shell/AppShellController.java"));
@@ -568,7 +600,9 @@ class AppShellTest {
         assertTrue(css.contains(".sidebar-header"));
         assertTrue(css.contains(".sidebar-product-mark"));
         assertTrue(css.contains(".sidebar-search"));
-        assertTrue(css.contains(".sidebar-recording-card"));
+        assertFalse(css.contains(".sidebar-recording-card"));
+        assertFalse(css.contains(".recording-card-label"));
+        assertFalse(css.contains(".recording-card-title"));
         assertTrue(css.contains(".app-nav-tree"));
         assertTrue(css.contains(".app-nav-tree-cell"));
         assertTrue(css.contains(".nav-icon-recording"));
@@ -682,10 +716,13 @@ class AppShellTest {
     void workspaceTabsUseDistinctSelectedIndicator() throws Exception {
         String css = appCss();
         String selectedTab = cssBlock(css, ".recording-tabs .tab:selected");
+        String selectedTabContainer = cssBlock(css, ".recording-tabs .tab:selected .tab-container");
         String selectedTabLabel = cssBlock(css, ".recording-tabs .tab:selected .tab-label");
 
-        assertTrue(selectedTab.contains("-fx-border-width: 0 0 3px 0"));
-        assertTrue(selectedTab.contains("-fx-border-color: -color-accent-emphasis"));
+        assertFalse(selectedTab.contains("-fx-border-width"),
+                "Selected workspace tabs must not change tab border size because it can clip adjacent labels");
+        assertTrue(selectedTabContainer.contains("-fx-border-width: 0 0 3px 0"));
+        assertTrue(selectedTabContainer.contains("-fx-border-color: -color-accent-emphasis"));
         assertTrue(selectedTabLabel.contains("-fx-text-fill: -color-fg-default"));
     }
 
@@ -731,6 +768,27 @@ class AppShellTest {
         bindMethod = bindMethod.substring(0, bindMethod.indexOf("private void showOpenHeapDumpChooser"));
         assertTrue(bindMethod.contains("heapDumpAnalysisViewModel = null"),
                 "Clearing HPROF binding must also clear the controller-level view model reference");
+    }
+
+    @Test
+    void fileBackedWorkspaceOpenShortCircuitsWhenPathIsAlreadyOpen() throws Exception {
+        String source = java.nio.file.Files.readString(
+                java.nio.file.Path.of("src/main/java/com/youngledo/jmcfx/ui/shell/AppShellController.java"));
+        String openRecording = source.substring(source.indexOf("private void openRecordingInBackground"),
+                source.indexOf("PreparedRecordingWorkspace prepareRecordingWorkspace"));
+        String openHeapDump = source.substring(source.indexOf("private void openHeapDumpInBackground"),
+                source.indexOf("private void showOpenRecordingFailure"));
+
+        assertTrue(openRecording.contains("selectExistingRecordingWorkspace(path)"),
+                "Opening an already-open JFR should select the existing workspace before parsing");
+        assertTrue(openRecording.indexOf("selectExistingRecordingWorkspace(path)")
+                        < openRecording.indexOf("setRecordingOpening(true)"),
+                "JFR duplicate detection must happen before showing parse progress");
+        assertTrue(openHeapDump.contains("selectExistingHeapDumpWorkspace(path)"),
+                "Opening an already-open HPROF should select the existing workspace before analysis");
+        assertTrue(openHeapDump.indexOf("selectExistingHeapDumpWorkspace(path)")
+                        < openHeapDump.indexOf("setBackgroundWorkVisible(true)"),
+                "HPROF duplicate detection must happen before starting analysis progress");
     }
 
     @Test

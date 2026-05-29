@@ -12,7 +12,9 @@ import org.kordamp.ikonli.material2.Material2MZ;
 import com.youngledo.jmcfx.ui.i18n.I18n;
 
 import javafx.beans.property.BooleanProperty;
+import javafx.beans.property.ObjectProperty;
 import javafx.beans.property.SimpleBooleanProperty;
+import javafx.beans.property.SimpleObjectProperty;
 import javafx.beans.value.ChangeListener;
 import javafx.scene.control.TreeItem;
 import javafx.scene.control.TreeView;
@@ -20,25 +22,31 @@ import javafx.scene.control.TreeView;
 final class AppNavTree extends TreeView<AppNavItem> {
 
     private final BooleanProperty recordingOpen = new SimpleBooleanProperty(false);
+    private final ObjectProperty<AppWorkspaceKind> activeWorkspaceKind =
+            new SimpleObjectProperty<>(AppWorkspaceKind.GLOBAL);
+    private final TreeItem<AppNavItem> rootItem;
+    private final List<TreeItem<AppNavItem>> globalGroups;
+    private final List<TreeItem<AppNavItem>> recordingGroups;
+    private final List<TreeItem<AppNavItem>> heapDumpGroups;
+    private final List<TreeItem<AppNavItem>> liveJvmGroups;
     private final Map<String, TreeItem<AppNavItem>> pageItems;
     private Consumer<String> navigationHandler = section -> { };
     private I18n i18n;
 
     AppNavTree(I18n i18n) {
         this.i18n = i18n;
-        TreeItem<AppNavItem> rootItem = new TreeItem<>(AppNavItem.group("nav.root", Material2AL.ACCOUNT_TREE));
-        TreeItem<AppNavItem> workspace = group("nav.group.workspace", Material2AL.HOME, NavIconTone.WORKSPACE);
+        rootItem = new TreeItem<>(AppNavItem.group("nav.root", Material2AL.ACCOUNT_TREE));
+        TreeItem<AppNavItem> global = group("nav.group.global", Material2AL.HOME, NavIconTone.WORKSPACE);
         TreeItem<AppNavItem> recording = group("nav.group.recording", Material2AL.ANALYTICS, NavIconTone.RECORDING);
         TreeItem<AppNavItem> javaApp = group("nav.group.javaApplication", Material2AL.INSIGHTS, NavIconTone.JAVA);
         TreeItem<AppNavItem> memoryAnalysis = group("nav.group.memoryAnalysis", Material2MZ.MEMORY, NavIconTone.MEMORY);
         TreeItem<AppNavItem> jvmInternals = group("nav.group.jvmInternals", Material2MZ.MEMORY, NavIconTone.JVM);
         TreeItem<AppNavItem> environment = group("nav.group.environment", Material2MZ.PUBLIC, NavIconTone.ENVIRONMENT);
-        TreeItem<AppNavItem> application = group("nav.group.application", Material2MZ.SETTINGS, NavIconTone.APPLICATION);
-
         TreeItem<AppNavItem> home = page("home", "nav.home", Material2AL.HOME, false, NavIconTone.WORKSPACE);
-        TreeItem<AppNavItem> jvms = page("jvms", "jvms.title", Material2MZ.MEMORY, false, NavIconTone.WORKSPACE);
+        TreeItem<AppNavItem> jvms = page("jvms", "jvms.title", Material2MZ.MEMORY, AppWorkspaceKind.LIVE_JVM,
+                NavIconTone.WORKSPACE);
         TreeItem<AppNavItem> heapDumpAnalysis = page("heapDumpAnalysis", "nav.heapDumpAnalysis",
-                Material2MZ.STORAGE, false, NavIconTone.MEMORY);
+                Material2MZ.STORAGE, AppWorkspaceKind.HEAP_DUMP, NavIconTone.MEMORY);
         TreeItem<AppNavItem> analysis = page("analysis", "analysis.title", Material2AL.INSIGHTS, true, NavIconTone.RECORDING);
         TreeItem<AppNavItem> overview = page("overview", "overview.title", Material2MZ.PAGEVIEW, true, NavIconTone.RECORDING);
         TreeItem<AppNavItem> events = page("events", "events.title", Material2AL.EVENT, true, NavIconTone.RECORDING);
@@ -72,7 +80,7 @@ final class AppNavTree extends TreeView<AppNavItem> {
         TreeItem<AppNavItem> vmOperationsPage = page("vmOperations", "nav.vmOperations", Material2MZ.SECURITY, true, NavIconTone.JVM);
         TreeItem<AppNavItem> settings = page("settings", "settings.title", Material2MZ.SETTINGS, false, NavIconTone.APPLICATION);
 
-        workspace.getChildren().setAll(List.of(home, jvms, heapDumpAnalysis));
+        global.getChildren().setAll(List.of(home, settings));
         recording.getChildren().setAll(List.of(analysis, overview, events, advancedJfr));
         javaApp.getChildren().setAll(List.of(profiling, exceptions, threads, fileio, socketio, locks,
                 threadHistogram, security, nativeLibraries, threadDumps));
@@ -81,20 +89,21 @@ final class AppNavTree extends TreeView<AppNavItem> {
                 recordingInfoPage, agentsPage, constantPoolsPage));
         jvmInternals.getChildren().setAll(List.of(jvmInfoPage, gcConfigPage, gcSummaryPage, gcDetailsPage,
                 compilationsPage, codeCachePage, classLoadingPage, vmOperationsPage));
-        application.getChildren().setAll(List.of(settings));
-        rootItem.getChildren().setAll(List.of(workspace, recording, javaApp, jvmInternals, memoryAnalysis, environment, application));
+        globalGroups = List.of(global);
+        recordingGroups = List.of(global, recording, javaApp, jvmInternals, memoryAnalysis, environment);
+        heapDumpGroups = List.of(global, groupWith(heapDumpAnalysis));
+        liveJvmGroups = List.of(global);
+        rootItem.getChildren().setAll(globalGroups);
         rootItem.setExpanded(true);
-        workspace.setExpanded(true);
+        global.setExpanded(true);
         recording.setExpanded(true);
         javaApp.setExpanded(true);
         jvmInternals.setExpanded(true);
         memoryAnalysis.setExpanded(true);
         environment.setExpanded(true);
-        application.setExpanded(true);
 
         pageItems = new HashMap<>();
         pageItems.put("home", home);
-        pageItems.put("jvms", jvms);
         pageItems.put("heapDumpAnalysis", heapDumpAnalysis);
         pageItems.put("analysis", analysis);
         pageItems.put("overview", overview);
@@ -146,11 +155,15 @@ final class AppNavTree extends TreeView<AppNavItem> {
 
     void bind(AppShellViewModel viewModel) {
         recordingOpen.bind(viewModel.recordingOpenProperty());
+        activeWorkspaceKind.bind(viewModel.activeWorkspaceKindProperty());
+        viewModel.activeWorkspaceKindProperty()
+                .addListener((observable, oldValue, newValue) -> updateNavigationContext(newValue));
         viewModel.recordingOpenProperty()
                 .addListener((observable, oldValue, newValue) -> refresh());
         viewModel.selectedSectionProperty()
                 .addListener((observable, oldValue, newValue) -> selectSection(newValue));
         selectSection(viewModel.selectedSectionProperty().get());
+        updateNavigationContext(viewModel.activeWorkspaceKindProperty().get());
     }
 
     void setNavigationHandler(Consumer<String> navigationHandler) {
@@ -164,6 +177,7 @@ final class AppNavTree extends TreeView<AppNavItem> {
         }
         return pageItems.values().stream()
                 .map(TreeItem::getValue)
+                .filter(item -> item.visibleIn(activeWorkspaceKind.get()))
                 .filter(item -> !item.unavailable(recordingOpen.get()))
                 .map(item -> new AppNavSearchResult(item.sectionId(), i18n.get(item.titleKey())))
                 .filter(result -> matches(result, normalizedQuery))
@@ -173,7 +187,8 @@ final class AppNavTree extends TreeView<AppNavItem> {
 
     void navigateToSection(String sectionId) {
         TreeItem<AppNavItem> item = pageItems.get(sectionId);
-        if (item == null || item.getValue().unavailable(recordingOpen.get())) {
+        if (item == null || !item.getValue().visibleIn(activeWorkspaceKind.get())
+                || item.getValue().unavailable(recordingOpen.get())) {
             return;
         }
         if (getSelectionModel().getSelectedItem() == item) {
@@ -187,12 +202,17 @@ final class AppNavTree extends TreeView<AppNavItem> {
         recordingOpen.set(open);
     }
 
+    void setActiveWorkspaceKindForTesting(AppWorkspaceKind workspaceKind) {
+        activeWorkspaceKind.set(workspaceKind == null ? AppWorkspaceKind.GLOBAL : workspaceKind);
+        updateNavigationContext(activeWorkspaceKind.get());
+    }
+
     private void navigate(TreeItem<AppNavItem> item) {
         if (item == null || item.getValue() == null || !item.getValue().page()) {
             return;
         }
         AppNavItem navItem = item.getValue();
-        if (navItem.unavailable(recordingOpen.get())) {
+        if (!navItem.visibleIn(activeWorkspaceKind.get()) || navItem.unavailable(recordingOpen.get())) {
             selectSection(null);
             return;
         }
@@ -205,7 +225,31 @@ final class AppNavTree extends TreeView<AppNavItem> {
             getSelectionModel().clearSelection();
             return;
         }
+        if (!item.getValue().visibleIn(activeWorkspaceKind.get())) {
+            getSelectionModel().clearSelection();
+            return;
+        }
         getSelectionModel().select(item);
+    }
+
+    private void updateNavigationContext(AppWorkspaceKind workspaceKind) {
+        AppWorkspaceKind kind = workspaceKind == null ? AppWorkspaceKind.GLOBAL : workspaceKind;
+        String selectedSectionId = getSelectionModel().getSelectedItem() == null
+                ? null : getSelectionModel().getSelectedItem().getValue().sectionId();
+        List<TreeItem<AppNavItem>> groups = switch (kind) {
+            case GLOBAL -> globalGroups;
+            case RECORDING -> recordingGroups;
+            case HEAP_DUMP -> heapDumpGroups;
+            case LIVE_JVM -> liveJvmGroups;
+        };
+        getSelectionModel().clearSelection();
+        setRoot(null);
+        rootItem.getChildren().setAll(groups);
+        rootItem.setExpanded(true);
+        groups.forEach(group -> group.setExpanded(true));
+        setRoot(rootItem);
+        selectSection(selectedSectionId);
+        refresh();
     }
 
     private static boolean matches(AppNavSearchResult result, String normalizedQuery) {
@@ -233,6 +277,18 @@ final class AppNavTree extends TreeView<AppNavItem> {
     private static TreeItem<AppNavItem> page(String sectionId, String titleKey, org.kordamp.ikonli.Ikon icon,
             boolean recordingScoped, NavIconTone iconTone) {
         return new TreeItem<>(AppNavItem.page(sectionId, titleKey, icon, recordingScoped, iconTone));
+    }
+
+    private static TreeItem<AppNavItem> page(String sectionId, String titleKey, org.kordamp.ikonli.Ikon icon,
+            AppWorkspaceKind workspaceKind, NavIconTone iconTone) {
+        return new TreeItem<>(AppNavItem.page(sectionId, titleKey, icon, workspaceKind, iconTone));
+    }
+
+    private static TreeItem<AppNavItem> groupWith(TreeItem<AppNavItem> page) {
+        TreeItem<AppNavItem> group = group(page.getValue().titleKey(), page.getValue().icon(), page.getValue().iconTone());
+        group.getChildren().setAll(List.of(page));
+        group.setExpanded(true);
+        return group;
     }
 
     private static TreeItem<AppNavItem> unavailablePage(String sectionId, String titleKey, org.kordamp.ikonli.Ikon icon) {
