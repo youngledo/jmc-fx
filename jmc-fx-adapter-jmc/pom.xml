@@ -32,6 +32,11 @@
             <version>${jmc.version}</version>
         </dependency>
         <dependency>
+            <groupId>org.openjdk.jmc</groupId>
+            <artifactId>org.openjdk.jmc.joverflow</artifactId>
+            <version>${jmc.joverflow.version}</version>
+        </dependency>
+        <dependency>
             <groupId>org.junit.jupiter</groupId>
             <artifactId>junit-jupiter</artifactId>
             <scope>test</scope>

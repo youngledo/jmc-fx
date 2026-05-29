@@ -27,6 +27,7 @@
         <javafx.version>26</javafx.version>
 
         <jmc.version>9.1.2</jmc.version>
+        <jmc.joverflow.version>10.0.0-SNAPSHOT</jmc.joverflow.version>
         <atlantafx.version>2.0.1</atlantafx.version>
         <ikonli.version>12.3.1</ikonli.version>
         <testfx.version>4.0.18</testfx.version>
