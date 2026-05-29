@@ -10,8 +10,6 @@ import com.youngledo.jmcfx.domain.service.JmxMonitoringService;
 import java.io.IOException;
 import java.time.Clock;
 import java.time.Instant;
-import java.util.ArrayList;
-import java.util.Collections;
 import java.util.List;
 import java.util.Objects;
 import java.util.concurrent.ConcurrentHashMap;
@@ -68,15 +66,13 @@ public class JmcJmxMonitoringService implements JmxMonitoringService {
         try {
             MBeanServerConnection server = server(connection);
             ObjectName objectName = new ObjectName(subscription.objectName());
-            List<JmxNotificationEvent> events = Collections.synchronizedList(new ArrayList<>());
             NotificationListener listener = (notification, handback) -> {
                 JmxNotificationEvent event = notificationEvent(subscription, notification);
-                events.add(event);
                 eventSink.accept(event);
             };
             server.addNotificationListener(objectName, listener, null, null);
             listeners.put(key, new RegisteredListener(server, objectName, listener));
-            return events;
+            return List.of();
         } catch (IOException | JMException | RuntimeException exception) {
             throw new JmcFxException("Unable to start JMX notifications for %s: %s"
                     .formatted(subscription.objectName(), errorMessage(exception)), exception);

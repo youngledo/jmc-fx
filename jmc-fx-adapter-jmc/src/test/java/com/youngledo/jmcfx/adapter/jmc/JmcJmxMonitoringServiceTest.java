@@ -59,9 +59,10 @@ class JmcJmxMonitoringServiceTest {
         JmxNotificationSubscription subscription = new JmxNotificationSubscription(
                 "notif-1", "local", name.getCanonicalName(), "Notifier", 10, true, false);
 
-        service.startNotifications(CONNECTION, subscription, events::add);
+        List<JmxNotificationEvent> returnedEvents = service.startNotifications(CONNECTION, subscription, events::add);
         notifier.fire("changed");
 
+        assertTrue(returnedEvents.isEmpty());
         assertEquals(1, events.size());
         assertEquals("notif-1", events.getFirst().subscriptionId());
         assertEquals("jmcfx.changed", events.getFirst().type());
