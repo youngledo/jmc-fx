@@ -15,6 +15,10 @@ import com.youngledo.jmcfx.domain.model.DiagnosticCommandRequest;
 import com.youngledo.jmcfx.domain.model.DiagnosticCommandResult;
 import com.youngledo.jmcfx.domain.model.EventHeatmap;
 import com.youngledo.jmcfx.domain.model.JdpJvmAdvertisement;
+import com.youngledo.jmcfx.domain.model.JmxAttributeSubscription;
+import com.youngledo.jmcfx.domain.model.JmxNotificationEvent;
+import com.youngledo.jmcfx.domain.model.JmxNotificationSubscription;
+import com.youngledo.jmcfx.domain.model.JmxSubscriptionSample;
 import com.youngledo.jmcfx.domain.model.JvmCapability;
 import com.youngledo.jmcfx.domain.model.JvmCapabilitySnapshot;
 import com.youngledo.jmcfx.domain.model.JvmCapabilityStatus;
@@ -250,6 +254,44 @@ class FakeJvmServicesTest {
                 objectName, "update", List.of("java.lang.String"), List.of("alpha"))).value());
         assertEquals("int", service.invoke(new MBeanOperationRequest(connection,
                 objectName, "update", List.of("int"), List.of("7"))).value());
+    }
+
+    @Test
+    void fakeJmxMonitoringServiceReturnsSamplesAndNotifications() {
+        FakeJmxMonitoringService service = new FakeJmxMonitoringService();
+        JvmConnection connection = local("42", "demo.Main").asConnected("service:jmx:local://42");
+        JmxAttributeSubscription subscription = new JmxAttributeSubscription(
+                "sub-1", connection.id(), "java.lang:type=Memory", "HeapMemoryUsage",
+                "Heap", "%", Duration.ofSeconds(2), 10, true, false);
+        JmxSubscriptionSample sample = new JmxSubscriptionSample(
+                "sub-1", Instant.EPOCH, 55.0, "55", "%", true);
+        JmxNotificationSubscription notificationSubscription = new JmxNotificationSubscription(
+                "notif-1", connection.id(), "demo:type=Notifier", "Notifier", 20, true, false);
+        JmxNotificationEvent event = new JmxNotificationEvent(
+                "notif-1", Instant.EPOCH, "demo.type", "demo:type=Notifier", 1, "changed", "");
+
+        service.setSample(connection.id(), subscription.id(), sample);
+        service.setNotificationEvents(connection.id(), notificationSubscription.id(), List.of(event));
+
+        assertEquals(sample, service.sampleAttribute(connection, subscription));
+        assertEquals(List.of(event), service.startNotifications(connection, notificationSubscription, ignored -> { }));
+        service.stopNotifications(connection, notificationSubscription.id());
+        assertEquals(List.of(notificationSubscription.id()), service.stoppedNotificationIds());
+    }
+
+    @Test
+    void fakeJmxMonitoringRepositoryPersistsSubscriptionsAndEvents() {
+        FakeJmxMonitoringRepository repository = new FakeJmxMonitoringRepository();
+        JmxAttributeSubscription subscription = new JmxAttributeSubscription(
+                "sub-1", "42", "java.lang:type=Memory", "HeapMemoryUsage",
+                "Heap", "%", Duration.ofSeconds(1), 3, true, true);
+        JmxSubscriptionSample sample = new JmxSubscriptionSample("sub-1", Instant.EPOCH, 1.0, "1", "%", true);
+
+        repository.saveAttributeSubscription(subscription);
+        repository.appendSample(sample);
+
+        assertEquals(List.of(subscription), repository.findAttributeSubscriptions("42"));
+        assertEquals(List.of(sample), repository.findSamples("sub-1"));
     }
 
     @Test
