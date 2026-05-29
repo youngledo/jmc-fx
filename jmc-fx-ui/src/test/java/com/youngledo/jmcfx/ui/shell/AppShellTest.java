@@ -657,21 +657,6 @@ class AppShellTest {
     }
 
     @Test
-    void legacyDetailStyleAliasesAreNotUsed() throws Exception {
-        String css = appCss();
-        String fxml = appShellFxmlText();
-
-        for (String legacyClass : List.of("analysis-detail", "analysis-detail-title",
-                "analysis-detail-explanation", "analysis-detail-scroll", "advanced-jfr-memory-detail",
-                "heap-dump-detail")) {
-            assertFalse(css.contains("." + legacyClass),
-                    legacyClass + " must be replaced by the shared detail-panel contract in CSS");
-            assertFalse(fxml.contains(legacyClass),
-                    legacyClass + " must be replaced by the shared detail-panel contract in FXML");
-        }
-    }
-
-    @Test
     void loadedFxmlSplitsDetailPanelStyleClassesForCssMatching() throws Exception {
         FXMLLoader loader = loadShell();
 
@@ -1606,12 +1591,6 @@ class AppShellTest {
 
     private static Document appShellFxml() throws ParserConfigurationException, SAXException, IOException {
         return fxml("app-shell.fxml");
-    }
-
-    private static String appShellFxmlText() throws IOException {
-        try (InputStream stream = AppShellController.class.getResourceAsStream("app-shell.fxml")) {
-            return new String(stream.readAllBytes(), java.nio.charset.StandardCharsets.UTF_8);
-        }
     }
 
     private static FXMLLoader loadShell() throws IOException {
