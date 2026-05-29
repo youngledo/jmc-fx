@@ -47,6 +47,8 @@ import com.youngledo.jmcfx.domain.model.GcEvent;
 import com.youngledo.jmcfx.domain.model.GcHeapSummary;
 import com.youngledo.jmcfx.domain.model.GcReferenceStat;
 import com.youngledo.jmcfx.domain.model.GcSummary;
+import com.youngledo.jmcfx.domain.model.HeapDumpAnalysisState;
+import com.youngledo.jmcfx.domain.model.HeapDumpIssue;
 import com.youngledo.jmcfx.domain.model.HeapClassHistogram;
 import com.youngledo.jmcfx.domain.model.ProcessInfo;
 import com.youngledo.jmcfx.domain.model.HotMethod;
@@ -94,6 +96,7 @@ import com.youngledo.jmcfx.domain.service.EventQueryService;
 import com.youngledo.jmcfx.domain.service.ExceptionService;
 import com.youngledo.jmcfx.domain.service.FileIOService;
 import com.youngledo.jmcfx.domain.service.FlightRecordingService;
+import com.youngledo.jmcfx.domain.service.HeapDumpAnalysisService;
 import com.youngledo.jmcfx.domain.service.HeapService;
 import com.youngledo.jmcfx.domain.service.JvmInternalsService;
 import com.youngledo.jmcfx.domain.service.JavaAppService;
@@ -120,6 +123,8 @@ import com.youngledo.jmcfx.ui.environment.EnvironmentViewModel;
 import com.youngledo.jmcfx.ui.exceptions.ExceptionViewModel;
 import com.youngledo.jmcfx.ui.fileio.FileIOViewModel;
 import com.youngledo.jmcfx.ui.heap.HeapViewModel;
+import com.youngledo.jmcfx.ui.heapdump.HeapDumpAnalysisViewModel;
+import com.youngledo.jmcfx.ui.heapdump.VirtualThreadHeapDumpAnalysisExecutor;
 import com.youngledo.jmcfx.ui.i18n.I18n;
 import com.youngledo.jmcfx.ui.i18n.LanguageMode;
 import com.youngledo.jmcfx.ui.javaapp.JavaAppOverviewViewModel;
@@ -244,6 +249,7 @@ public class AppShellController {
     private final AdvancedJfrAnalysisService advancedJfrAnalysisService;
     private final SavedJvmTargetRepository savedTargetRepository;
     private final JdpDiscoveryService jdpDiscoveryService;
+    private final HeapDumpAnalysisService heapDumpAnalysisService;
     private final I18n i18n;
     private final RecordingOpenExecutor recordingOpenExecutor;
     private final ListChangeListener<EventTypeNode> eventTypeTreeListener = change -> rebuildEventTypeTree();
@@ -271,6 +277,7 @@ public class AppShellController {
     private NativeLibraryViewModel nativeLibraryViewModel;
     private ThreadDumpViewModel threadDumpViewModel;
     private AdvancedJfrViewModel advancedJfrViewModel;
+    private HeapDumpAnalysisViewModel heapDumpAnalysisViewModel;
     private JvmBrowserViewModel jvmBrowserViewModel;
     private EventHeatmapView advancedJfrHeatmapView;
     private final ChangeListener<EventHeatmap> advancedHeatmapListener =
@@ -291,6 +298,7 @@ public class AppShellController {
     @FXML private VBox eventsPane;
     @FXML private VBox analysisPane;
     @FXML private VBox advancedJfrPane;
+    @FXML private VBox heapDumpAnalysisPane;
     @FXML private VBox jvmsPane;
     @FXML private VBox profilingPane;
     @FXML private VBox exceptionsPane;
@@ -376,6 +384,19 @@ public class AppShellController {
     @FXML private TableView<MemoryIssue> advancedJfrMemoryTable;
     @FXML private Label advancedJfrMemoryDetailTitleLabel;
     @FXML private TextArea advancedJfrMemoryDetailArea;
+    @FXML private Label heapDumpAnalysisTitleLabel;
+    @FXML private Button heapDumpOpenButton;
+    @FXML private Label heapDumpNameLabel;
+    @FXML private ProgressBar heapDumpProgressBar;
+    @FXML private Label heapDumpStatusLabel;
+    @FXML private Label heapDumpSummaryLabel;
+    @FXML private TableView<HeapDumpIssue> heapDumpIssuesTable;
+    @FXML private TabPane heapDumpDetailsTabs;
+    @FXML private Tab heapDumpIssueDetailTab;
+    @FXML private Tab heapDumpTextReportTab;
+    @FXML private Label heapDumpIssueDetailTitleLabel;
+    @FXML private TextArea heapDumpIssueDetailArea;
+    @FXML private TextArea heapDumpTextReportArea;
     @FXML private Label jvmsTitleLabel;
     @FXML private Button jvmsRefreshButton;
     @FXML private TextField jvmsManualUrlField;
@@ -638,7 +659,7 @@ public class AppShellController {
                 fileIOService, socketIOService, lockService,
                 heapService, leakSuspectsService, tlabService,
                 jvmInternalsService, environmentService, javaAppService,
-                null, null, null, null, null, null, null, null, null, i18n,
+                null, null, null, null, null, null, null, null, null, null, i18n,
                 new VirtualThreadRecordingOpenExecutor());
     }
 
@@ -662,7 +683,7 @@ public class AppShellController {
                 heapService, leakSuspectsService, tlabService,
                 jvmInternalsService, environmentService, javaAppService,
                 jvmDiscoveryService, jmxConnectionService, flightRecordingService, null, null, null, null,
-                null, null, i18n, new VirtualThreadRecordingOpenExecutor());
+                null, null, null, i18n, new VirtualThreadRecordingOpenExecutor());
     }
 
     public AppShellController(AppShellViewModel viewModel, RecordingRepository recordingRepository,
@@ -686,7 +707,7 @@ public class AppShellController {
                 heapService, leakSuspectsService, tlabService,
                 jvmInternalsService, environmentService, javaAppService,
                 jvmDiscoveryService, jmxConnectionService, flightRecordingService, mBeanBrowserService, null, null, null,
-                null, null, i18n, new VirtualThreadRecordingOpenExecutor());
+                null, null, null, i18n, new VirtualThreadRecordingOpenExecutor());
     }
 
     public AppShellController(AppShellViewModel viewModel, RecordingRepository recordingRepository,
@@ -713,7 +734,7 @@ public class AppShellController {
                 heapService, leakSuspectsService, tlabService,
                 jvmInternalsService, environmentService, javaAppService,
                 jvmDiscoveryService, jmxConnectionService, flightRecordingService, mBeanBrowserService,
-                diagnosticCommandService, liveMetricService, advancedJfrAnalysisService, null, null, i18n,
+                diagnosticCommandService, liveMetricService, advancedJfrAnalysisService, null, null, null, i18n,
                 new VirtualThreadRecordingOpenExecutor());
     }
 
@@ -736,6 +757,7 @@ public class AppShellController {
             AdvancedJfrAnalysisService advancedJfrAnalysisService,
             SavedJvmTargetRepository savedTargetRepository,
             JdpDiscoveryService jdpDiscoveryService,
+            HeapDumpAnalysisService heapDumpAnalysisService,
             I18n i18n) {
         this(viewModel, recordingRepository, eventQueryService, ruleAnalysisService,
                 profilingService, exceptionService, threadService,
@@ -744,7 +766,8 @@ public class AppShellController {
                 jvmInternalsService, environmentService, javaAppService,
                 jvmDiscoveryService, jmxConnectionService, flightRecordingService, mBeanBrowserService,
                 diagnosticCommandService, liveMetricService, advancedJfrAnalysisService,
-                savedTargetRepository, jdpDiscoveryService, i18n, new VirtualThreadRecordingOpenExecutor());
+                savedTargetRepository, jdpDiscoveryService, heapDumpAnalysisService, i18n,
+                new VirtualThreadRecordingOpenExecutor());
     }
 
     public AppShellController(AppShellViewModel viewModel, RecordingRepository recordingRepository,
@@ -765,7 +788,7 @@ public class AppShellController {
                 fileIOService, socketIOService, lockService,
                 heapService, leakSuspectsService, tlabService,
                 jvmInternalsService, environmentService, javaAppService,
-                jvmDiscoveryService, jmxConnectionService, null, null, null, null, null, null, null, i18n,
+                jvmDiscoveryService, jmxConnectionService, null, null, null, null, null, null, null, null, i18n,
                 new VirtualThreadRecordingOpenExecutor());
     }
 
@@ -785,7 +808,7 @@ public class AppShellController {
                 fileIOService, socketIOService, lockService,
                 heapService, leakSuspectsService, tlabService,
                 jvmInternalsService, environmentService, javaAppService,
-                null, null, null, null, null, null, null, null, null, i18n, recordingOpenExecutor);
+                null, null, null, null, null, null, null, null, null, null, i18n, recordingOpenExecutor);
     }
 
     AppShellController(AppShellViewModel viewModel, RecordingRepository recordingRepository,
@@ -808,7 +831,7 @@ public class AppShellController {
                 heapService, leakSuspectsService, tlabService,
                 jvmInternalsService, environmentService, javaAppService,
                 jvmDiscoveryService, jmxConnectionService, flightRecordingService, null, null, null, null,
-                null, null, i18n, recordingOpenExecutor);
+                null, null, null, i18n, recordingOpenExecutor);
     }
 
     AppShellController(AppShellViewModel viewModel, RecordingRepository recordingRepository,
@@ -829,6 +852,7 @@ public class AppShellController {
             AdvancedJfrAnalysisService advancedJfrAnalysisService,
             SavedJvmTargetRepository savedTargetRepository,
             JdpDiscoveryService jdpDiscoveryService,
+            HeapDumpAnalysisService heapDumpAnalysisService,
             I18n i18n,
             RecordingOpenExecutor recordingOpenExecutor) {
         this.viewModel = viewModel;
@@ -856,6 +880,7 @@ public class AppShellController {
         this.advancedJfrAnalysisService = advancedJfrAnalysisService;
         this.savedTargetRepository = savedTargetRepository;
         this.jdpDiscoveryService = jdpDiscoveryService;
+        this.heapDumpAnalysisService = heapDumpAnalysisService;
         this.i18n = i18n;
         this.recordingOpenExecutor = recordingOpenExecutor;
     }
@@ -894,6 +919,9 @@ public class AppShellController {
                         savedTargetRepository, jdpDiscoveryService,
                         new com.youngledo.jmcfx.ui.jvms.VirtualThreadJvmBrowserExecutor(), Platform::runLater,
                         this::openRecordingInBackground) : null;
+        heapDumpAnalysisViewModel = heapDumpAnalysisService == null ? null
+                : new HeapDumpAnalysisViewModel(heapDumpAnalysisService,
+                        new VirtualThreadHeapDumpAnalysisExecutor(), i18n);
         homePane.visibleProperty().bind(viewModel.selectedSectionProperty().isEqualTo("home"));
         homePane.managedProperty().bind(homePane.visibleProperty());
         overviewPane.visibleProperty().bind(viewModel.selectedSectionProperty().isEqualTo("overview"));
@@ -904,6 +932,8 @@ public class AppShellController {
         analysisPane.managedProperty().bind(analysisPane.visibleProperty());
         advancedJfrPane.visibleProperty().bind(viewModel.selectedSectionProperty().isEqualTo("advancedJfr"));
         advancedJfrPane.managedProperty().bind(advancedJfrPane.visibleProperty());
+        heapDumpAnalysisPane.visibleProperty().bind(viewModel.selectedSectionProperty().isEqualTo("heapDumpAnalysis"));
+        heapDumpAnalysisPane.managedProperty().bind(heapDumpAnalysisPane.visibleProperty());
         jvmsPane.visibleProperty().bind(viewModel.selectedSectionProperty().isEqualTo("jvms"));
         jvmsPane.managedProperty().bind(jvmsPane.visibleProperty());
         profilingPane.visibleProperty().bind(viewModel.selectedSectionProperty().isEqualTo("profiling"));
@@ -967,6 +997,7 @@ public class AppShellController {
         bindEvents();
         configureAnalysisTable();
         configureAdvancedJfrMemoryTable();
+        configureHeapDumpAnalysis();
         configureJvmBrowserTable();
         configureJvmRecordingsTable();
         configureMBeanBrowser();
@@ -1161,6 +1192,85 @@ public class AppShellController {
                         advancedJfrViewModel.selectMemoryIssue(issue);
                     }
                 });
+    }
+
+    private void configureHeapDumpAnalysis() {
+        heapDumpIssuesTable.setPlaceholder(localizedTablePlaceholder("heapDump.openPrompt"));
+
+        TableColumn<HeapDumpIssue, String> categoryCol = localizedColumn("heapDump.column.category");
+        categoryCol.setPrefWidth(190);
+        categoryCol.setCellValueFactory(cell -> new ReadOnlyStringWrapper(cell.getValue().category().name()));
+
+        TableColumn<HeapDumpIssue, String> subjectCol = localizedColumn("heapDump.column.subject");
+        subjectCol.setPrefWidth(440);
+        subjectCol.setCellValueFactory(cell -> new ReadOnlyStringWrapper(cell.getValue().subject()));
+
+        TableColumn<HeapDumpIssue, String> wastedBytesCol = localizedColumn("heapDump.column.wastedBytes");
+        wastedBytesCol.setPrefWidth(120);
+        wastedBytesCol.setCellValueFactory(cell ->
+                new ReadOnlyStringWrapper(DisplayFormats.formatFileSize(cell.getValue().wastedBytes())));
+
+        TableColumn<HeapDumpIssue, Number> objectCountCol = new TableColumn<>();
+        objectCountCol.textProperty().bind(i18n.text("heapDump.column.objectCount"));
+        objectCountCol.setPrefWidth(110);
+        objectCountCol.setCellValueFactory(cell ->
+                new javafx.beans.property.SimpleLongProperty(cell.getValue().objectCount()));
+        useFormattedIntegerCells(objectCountCol);
+
+        TableColumn<HeapDumpIssue, String> scoreCol = localizedColumn("heapDump.column.score");
+        scoreCol.setPrefWidth(90);
+        scoreCol.setCellValueFactory(cell ->
+                new ReadOnlyStringWrapper(DisplayFormats.formatPercent(cell.getValue().score() * 100.0)));
+
+        heapDumpIssuesTable.getColumns().setAll(List.of(categoryCol, subjectCol, wastedBytesCol,
+                objectCountCol, scoreCol));
+        if (heapDumpAnalysisViewModel == null) {
+            heapDumpOpenButton.setDisable(true);
+            heapDumpNameLabel.setText("");
+            heapDumpStatusLabel.setText(i18n.get("heapDump.status.idle"));
+            heapDumpSummaryLabel.setText("");
+            heapDumpIssueDetailTitleLabel.setText("");
+            heapDumpIssueDetailArea.setText(i18n.get("heapDump.detail.empty"));
+            heapDumpTextReportArea.setText("");
+            heapDumpIssuesTable.setItems(FXCollections.emptyObservableList());
+            return;
+        }
+        heapDumpOpenButton.setOnAction(event -> showOpenHeapDumpChooser());
+        heapDumpNameLabel.textProperty().bind(heapDumpAnalysisViewModel.heapDumpNameProperty());
+        heapDumpStatusLabel.textProperty().bind(heapDumpAnalysisViewModel.statusMessageProperty());
+        heapDumpSummaryLabel.textProperty().bind(heapDumpAnalysisViewModel.summaryProperty());
+        heapDumpIssueDetailArea.textProperty().bind(heapDumpAnalysisViewModel.selectedIssueDetailsProperty());
+        heapDumpTextReportArea.textProperty().bind(heapDumpAnalysisViewModel.textReportProperty());
+        heapDumpIssuesTable.setItems(heapDumpAnalysisViewModel.issues());
+        heapDumpIssuesTable.getSelectionModel().selectedItemProperty()
+                .addListener((observable, oldValue, newValue) -> heapDumpAnalysisViewModel.selectIssue(newValue));
+        heapDumpAnalysisViewModel.selectedIssueProperty().addListener((observable, oldValue, newValue) ->
+                heapDumpIssuesTable.getSelectionModel().select(newValue));
+        heapDumpProgressBar.visibleProperty().bind(
+                heapDumpAnalysisViewModel.stateProperty().isEqualTo(HeapDumpAnalysisState.ANALYZING));
+        heapDumpProgressBar.managedProperty().bind(heapDumpProgressBar.visibleProperty());
+        heapDumpOpenButton.disableProperty().bind(
+                heapDumpAnalysisViewModel.stateProperty().isEqualTo(HeapDumpAnalysisState.ANALYZING));
+        heapDumpIssueDetailTitleLabel.textProperty().bind(Bindings.createStringBinding(
+                () -> {
+                    HeapDumpIssue issue = heapDumpAnalysisViewModel.selectedIssueProperty().get();
+                    return issue == null ? "" : issue.subject();
+                },
+                heapDumpAnalysisViewModel.selectedIssueProperty()));
+    }
+
+    private void showOpenHeapDumpChooser() {
+        if (heapDumpAnalysisViewModel == null || root == null || root.getScene() == null) {
+            return;
+        }
+        FileChooser chooser = new FileChooser();
+        chooser.setTitle(i18n.get("heapDump.fileChooser.title"));
+        chooser.getExtensionFilters().add(
+                new FileChooser.ExtensionFilter(i18n.get("heapDump.fileChooser.hprof"), "*.hprof"));
+        java.io.File file = chooser.showOpenDialog(root.getScene().getWindow());
+        if (file != null) {
+            heapDumpAnalysisViewModel.analyze(file.toPath());
+        }
     }
 
     private void configureJvmBrowserTable() {
@@ -3035,6 +3145,10 @@ public class AppShellController {
         advancedJfrSelectionTitleLabel.textProperty().bind(i18n.text("advancedJfr.selection"));
         advancedJfrSelectedEventTypeCaptionLabel.textProperty().bind(i18n.text("advancedJfr.selectedEventType"));
         advancedJfrSelectedCountCaptionLabel.textProperty().bind(i18n.text("advancedJfr.selectedCount"));
+        heapDumpAnalysisTitleLabel.textProperty().bind(i18n.text("heapDump.title"));
+        heapDumpOpenButton.textProperty().bind(i18n.text("heapDump.open"));
+        heapDumpIssueDetailTab.textProperty().bind(i18n.text("heapDump.detail.tab"));
+        heapDumpTextReportTab.textProperty().bind(i18n.text("heapDump.report.tab"));
         jvmsTitleLabel.textProperty().bind(i18n.text("jvms.title"));
         jvmsRefreshButton.textProperty().bind(i18n.text("jvms.refresh"));
         jvmsManualUrlField.promptTextProperty().bind(i18n.text("jvms.manualUrlPrompt"));
@@ -3280,6 +3394,9 @@ public class AppShellController {
         List.copyOf(viewModel.recordingWorkspacesProperty()).forEach(viewModel::closeWorkspace);
         if (jvmBrowserViewModel != null) {
             jvmBrowserViewModel.close();
+        }
+        if (heapDumpAnalysisViewModel != null) {
+            heapDumpAnalysisViewModel.close();
         }
         recordingOpenExecutor.close();
     }

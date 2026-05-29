@@ -37,6 +37,8 @@ final class AppNavTree extends TreeView<AppNavItem> {
 
         TreeItem<AppNavItem> home = page("home", "nav.home", Material2AL.HOME, false, NavIconTone.WORKSPACE);
         TreeItem<AppNavItem> jvms = page("jvms", "jvms.title", Material2MZ.MEMORY, false, NavIconTone.WORKSPACE);
+        TreeItem<AppNavItem> heapDumpAnalysis = page("heapDumpAnalysis", "nav.heapDumpAnalysis",
+                Material2MZ.STORAGE, false, NavIconTone.MEMORY);
         TreeItem<AppNavItem> analysis = page("analysis", "analysis.title", Material2AL.INSIGHTS, true, NavIconTone.RECORDING);
         TreeItem<AppNavItem> overview = page("overview", "overview.title", Material2MZ.PAGEVIEW, true, NavIconTone.RECORDING);
         TreeItem<AppNavItem> events = page("events", "events.title", Material2AL.EVENT, true, NavIconTone.RECORDING);
@@ -70,7 +72,7 @@ final class AppNavTree extends TreeView<AppNavItem> {
         TreeItem<AppNavItem> vmOperationsPage = page("vmOperations", "nav.vmOperations", Material2MZ.SECURITY, true, NavIconTone.JVM);
         TreeItem<AppNavItem> settings = page("settings", "settings.title", Material2MZ.SETTINGS, false, NavIconTone.APPLICATION);
 
-        workspace.getChildren().setAll(List.of(home, jvms));
+        workspace.getChildren().setAll(List.of(home, jvms, heapDumpAnalysis));
         recording.getChildren().setAll(List.of(analysis, overview, events, advancedJfr));
         javaApp.getChildren().setAll(List.of(profiling, exceptions, threads, fileio, socketio, locks,
                 threadHistogram, security, nativeLibraries, threadDumps));
@@ -90,17 +92,18 @@ final class AppNavTree extends TreeView<AppNavItem> {
         environment.setExpanded(true);
         application.setExpanded(true);
 
-        pageItems = new HashMap<>(Map.of(
-                "home", home,
-                "jvms", jvms,
-                "analysis", analysis,
-                "overview", overview,
-                "events", events,
-                "advancedJfr", advancedJfr,
-                "profiling", profiling,
-                "exceptions", exceptions,
-                "threads", threads,
-                "settings", settings));
+        pageItems = new HashMap<>();
+        pageItems.put("home", home);
+        pageItems.put("jvms", jvms);
+        pageItems.put("heapDumpAnalysis", heapDumpAnalysis);
+        pageItems.put("analysis", analysis);
+        pageItems.put("overview", overview);
+        pageItems.put("events", events);
+        pageItems.put("advancedJfr", advancedJfr);
+        pageItems.put("profiling", profiling);
+        pageItems.put("exceptions", exceptions);
+        pageItems.put("threads", threads);
+        pageItems.put("settings", settings);
         pageItems.put("fileio", fileio);
         pageItems.put("socketio", socketio);
         pageItems.put("locks", locks);

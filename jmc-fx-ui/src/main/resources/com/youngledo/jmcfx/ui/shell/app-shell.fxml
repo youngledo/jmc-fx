@@ -177,6 +177,34 @@
                     </tabs>
                 </TabPane>
             </VBox>
+            <VBox fx:id="heapDumpAnalysisPane" spacing="8" visible="false" managed="false">
+                <Label fx:id="heapDumpAnalysisTitleLabel" styleClass="view-title"/>
+                <FlowPane styleClass="page-toolbar" hgap="8" vgap="8">
+                    <Button fx:id="heapDumpOpenButton"/>
+                    <Label fx:id="heapDumpNameLabel" styleClass="event-window-status" wrapText="true"/>
+                    <ProgressBar fx:id="heapDumpProgressBar" prefWidth="160" visible="false" managed="false"/>
+                </FlowPane>
+                <Label fx:id="heapDumpStatusLabel" styleClass="event-window-status" wrapText="true"/>
+                <Label fx:id="heapDumpSummaryLabel" styleClass="event-window-status" wrapText="true"/>
+                <SplitPane orientation="VERTICAL" VBox.vgrow="ALWAYS" DividerPositions="0.62">
+                    <items>
+                        <TableView fx:id="heapDumpIssuesTable" styleClass="dense-table"/>
+                        <TabPane fx:id="heapDumpDetailsTabs" prefHeight="260">
+                            <tabs>
+                                <Tab fx:id="heapDumpIssueDetailTab" closable="false">
+                                    <VBox styleClass="heap-dump-detail analysis-detail" spacing="8">
+                                        <Label fx:id="heapDumpIssueDetailTitleLabel" styleClass="analysis-detail-title"/>
+                                        <TextArea fx:id="heapDumpIssueDetailArea" styleClass="analysis-detail-explanation" wrapText="true" editable="false" VBox.vgrow="ALWAYS"/>
+                                    </VBox>
+                                </Tab>
+                                <Tab fx:id="heapDumpTextReportTab" closable="false">
+                                    <TextArea fx:id="heapDumpTextReportArea" styleClass="dump-text-area" wrapText="false" editable="false"/>
+                                </Tab>
+                            </tabs>
+                        </TabPane>
+                    </items>
+                </SplitPane>
+            </VBox>
             <VBox fx:id="jvmsPane" spacing="8">
                 <Label fx:id="jvmsTitleLabel" styleClass="view-title"/>
                 <FlowPane styleClass="page-toolbar" hgap="8" vgap="8">

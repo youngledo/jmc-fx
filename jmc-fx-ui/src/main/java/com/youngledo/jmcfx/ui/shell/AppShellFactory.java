@@ -7,6 +7,7 @@ import com.youngledo.jmcfx.domain.service.DiagnosticCommandService;
 import com.youngledo.jmcfx.domain.service.EnvironmentService;
 import com.youngledo.jmcfx.domain.service.EventQueryService;
 import com.youngledo.jmcfx.domain.service.FlightRecordingService;
+import com.youngledo.jmcfx.domain.service.HeapDumpAnalysisService;
 import com.youngledo.jmcfx.domain.service.JavaAppService;
 import com.youngledo.jmcfx.domain.service.JdpDiscoveryService;
 import com.youngledo.jmcfx.domain.service.ExceptionService;
@@ -68,6 +69,7 @@ public class AppShellFactory {
     private final AdvancedJfrAnalysisService advancedJfrAnalysisService;
     private final SavedJvmTargetRepository savedTargetRepository;
     private final JdpDiscoveryService jdpDiscoveryService;
+    private final HeapDumpAnalysisService heapDumpAnalysisService;
     private final I18n i18n;
     private final AppPreferences preferences;
 
@@ -261,6 +263,36 @@ public class AppShellFactory {
                 null, null, null, null, null, null, null, i18n, new JavaAppPreferences());
     }
 
+    public AppShellFactory(RecordingRepository recordingRepository, EventQueryService eventQueryService,
+            RuleAnalysisService ruleAnalysisService, ProfilingService profilingService,
+            ExceptionService exceptionService, ThreadService threadService,
+            FileIOService fileIOService, SocketIOService socketIOService,
+            LockService lockService, HeapService heapService,
+            LeakSuspectsService leakSuspectsService, TlabService tlabService,
+            JvmInternalsService jvmInternalsService,
+            EnvironmentService environmentService,
+            JavaAppService javaAppService,
+            JvmDiscoveryService jvmDiscoveryService,
+            JmxConnectionService jmxConnectionService,
+            FlightRecordingService flightRecordingService,
+            MBeanBrowserService mBeanBrowserService,
+            DiagnosticCommandService diagnosticCommandService,
+            LiveMetricService liveMetricService,
+            AdvancedJfrAnalysisService advancedJfrAnalysisService,
+            SavedJvmTargetRepository savedTargetRepository,
+            JdpDiscoveryService jdpDiscoveryService,
+            HeapDumpAnalysisService heapDumpAnalysisService,
+            I18n i18n) {
+        this(recordingRepository, eventQueryService, ruleAnalysisService,
+                profilingService, exceptionService, threadService,
+                fileIOService, socketIOService, lockService,
+                heapService, leakSuspectsService, tlabService,
+                jvmInternalsService, environmentService, javaAppService, jvmDiscoveryService, jmxConnectionService,
+                flightRecordingService, mBeanBrowserService, diagnosticCommandService, liveMetricService,
+                advancedJfrAnalysisService, savedTargetRepository, jdpDiscoveryService, i18n,
+                new JavaAppPreferences(), heapDumpAnalysisService);
+    }
+
     AppShellFactory(RecordingRepository recordingRepository, EventQueryService eventQueryService,
             RuleAnalysisService ruleAnalysisService, I18n i18n, AppPreferences preferences) {
         this(recordingRepository, eventQueryService, ruleAnalysisService,
@@ -291,6 +323,34 @@ public class AppShellFactory {
             SavedJvmTargetRepository savedTargetRepository,
             JdpDiscoveryService jdpDiscoveryService,
             I18n i18n, AppPreferences preferences) {
+        this(recordingRepository, eventQueryService, ruleAnalysisService, profilingService, exceptionService,
+                threadService, fileIOService, socketIOService, lockService, heapService, leakSuspectsService,
+                tlabService, jvmInternalsService, environmentService, javaAppService, jvmDiscoveryService,
+                jmxConnectionService, flightRecordingService, mBeanBrowserService, diagnosticCommandService,
+                liveMetricService, advancedJfrAnalysisService, savedTargetRepository, jdpDiscoveryService,
+                i18n, preferences, null);
+    }
+
+    private AppShellFactory(RecordingRepository recordingRepository, EventQueryService eventQueryService,
+            RuleAnalysisService ruleAnalysisService, ProfilingService profilingService,
+            ExceptionService exceptionService, ThreadService threadService,
+            FileIOService fileIOService, SocketIOService socketIOService,
+            LockService lockService, HeapService heapService,
+            LeakSuspectsService leakSuspectsService, TlabService tlabService,
+            JvmInternalsService jvmInternalsService,
+            EnvironmentService environmentService,
+            JavaAppService javaAppService,
+            JvmDiscoveryService jvmDiscoveryService,
+            JmxConnectionService jmxConnectionService,
+            FlightRecordingService flightRecordingService,
+            MBeanBrowserService mBeanBrowserService,
+            DiagnosticCommandService diagnosticCommandService,
+            LiveMetricService liveMetricService,
+            AdvancedJfrAnalysisService advancedJfrAnalysisService,
+            SavedJvmTargetRepository savedTargetRepository,
+            JdpDiscoveryService jdpDiscoveryService,
+            I18n i18n, AppPreferences preferences,
+            HeapDumpAnalysisService heapDumpAnalysisService) {
         this.recordingRepository = recordingRepository;
         this.eventQueryService = eventQueryService;
         this.ruleAnalysisService = ruleAnalysisService;
@@ -315,6 +375,7 @@ public class AppShellFactory {
         this.advancedJfrAnalysisService = advancedJfrAnalysisService;
         this.savedTargetRepository = savedTargetRepository;
         this.jdpDiscoveryService = jdpDiscoveryService;
+        this.heapDumpAnalysisService = heapDumpAnalysisService;
         this.i18n = i18n;
         this.preferences = preferences;
     }
@@ -354,7 +415,7 @@ public class AppShellFactory {
                     jvmInternalsService, environmentService, javaAppService,
                     jvmDiscoveryService, jmxConnectionService, flightRecordingService, mBeanBrowserService,
                     diagnosticCommandService, liveMetricService, advancedJfrAnalysisService,
-                    savedTargetRepository, jdpDiscoveryService, i18n);
+                    savedTargetRepository, jdpDiscoveryService, heapDumpAnalysisService, i18n);
         }
         throw new IllegalArgumentException("Unsupported controller: " + type.getName());
     }
