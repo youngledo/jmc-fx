@@ -9,6 +9,7 @@ import java.time.Duration;
 import java.time.Instant;
 import java.util.Base64;
 import java.util.List;
+import java.util.prefs.Preferences;
 
 import com.youngledo.jmcfx.domain.model.JmxAttributeSubscription;
 import com.youngledo.jmcfx.domain.model.JmxNotificationEvent;
@@ -46,6 +47,28 @@ class JavaJmxMonitoringRepositoryTest {
         assertEquals(List.of(2.0, 3.0), repository.findSamples("sub-1").stream()
                 .map(JmxSubscriptionSample::numericValue)
                 .toList());
+    }
+
+    @Test
+    void storesSamplesAcrossBoundedPreferenceValues() {
+        JavaJmxMonitoringRepository repository = JavaJmxMonitoringRepository.inMemory();
+        JmxAttributeSubscription subscription = new JmxAttributeSubscription(
+                "sub-1", "42", "java.lang:type=Memory", "HeapMemoryUsage",
+                "Heap", "%", Duration.ofSeconds(1), 120, true, true);
+        repository.saveAttributeSubscription(subscription);
+
+        for (int index = 0; index < 120; index++) {
+            repository.appendSample(new JmxSubscriptionSample(
+                    "sub-1",
+                    Instant.EPOCH.plusSeconds(index),
+                    index,
+                    "sample-" + index + "-" + "x".repeat(150),
+                    "%",
+                    true));
+        }
+
+        assertEquals(120, repository.findSamples("sub-1").size());
+        assertTrue(repository.rawValues().stream().allMatch(value -> value.length() <= Preferences.MAX_VALUE_LENGTH));
     }
 
     @Test
@@ -89,6 +112,28 @@ class JavaJmxMonitoringRepositoryTest {
         assertEquals(List.of(2L, 3L), repository.findNotificationEvents("notif-1").stream()
                 .map(JmxNotificationEvent::sequenceNumber)
                 .toList());
+    }
+
+    @Test
+    void storesNotificationEventsAcrossBoundedPreferenceValues() {
+        JavaJmxMonitoringRepository repository = JavaJmxMonitoringRepository.inMemory();
+        JmxNotificationSubscription subscription = new JmxNotificationSubscription(
+                "notif-1", "42", "java.lang:type=Memory", "Memory", 200, true, true);
+        repository.saveNotificationSubscription(subscription);
+
+        for (int index = 0; index < 200; index++) {
+            repository.appendNotificationEvent(new JmxNotificationEvent(
+                    "notif-1",
+                    Instant.EPOCH.plusSeconds(index),
+                    "demo.type",
+                    "demo.source",
+                    index,
+                    "message-" + index + "-" + "x".repeat(150),
+                    "user-data"));
+        }
+
+        assertEquals(200, repository.findNotificationEvents("notif-1").size());
+        assertTrue(repository.rawValues().stream().allMatch(value -> value.length() <= Preferences.MAX_VALUE_LENGTH));
     }
 
     @Test
@@ -137,7 +182,9 @@ class JavaJmxMonitoringRepositoryTest {
         repository.putRaw("attributeSubscriptionIds", encoded("bad-index") + "\nnot-base64\n" + encoded("sub-1"));
         repository.putRaw("attribute.bad-index", "not-base64|fields");
         repository.putRaw("attribute.sub-1", attributeEntry(valid));
-        repository.putRaw("samples.sub-1", "broken\n" + sampleEntry(new JmxSubscriptionSample(
+        repository.putRaw("samples.sub-1.ids", encoded("bad-row") + "\nnot-base64\n" + encoded("row-1"));
+        repository.putRaw("samples.sub-1.bad-row", "broken");
+        repository.putRaw("samples.sub-1.row-1", sampleEntry(new JmxSubscriptionSample(
                 "sub-1", Instant.EPOCH, 1, "1", "%", true)));
 
         assertEquals(List.of(valid), repository.findAttributeSubscriptions("42"));
@@ -168,7 +215,9 @@ class JavaJmxMonitoringRepositoryTest {
         JmxSubscriptionSample valid = new JmxSubscriptionSample("sub-1", Instant.EPOCH, 1, "1", "%", true);
         JmxSubscriptionSample malformed = new JmxSubscriptionSample(
                 "sub-1", Instant.EPOCH.plusSeconds(1), 2, "2", "%", true);
-        repository.putRaw("samples.sub-1", sampleEntry(malformed, "maybe") + "\n" + sampleEntry(valid));
+        repository.putRaw("samples.sub-1.ids", encoded("bad-row") + "\n" + encoded("row-1"));
+        repository.putRaw("samples.sub-1.bad-row", sampleEntry(malformed, "maybe"));
+        repository.putRaw("samples.sub-1.row-1", sampleEntry(valid));
 
         assertEquals(List.of(valid), repository.findSamples("sub-1"));
     }
@@ -182,7 +231,9 @@ class JavaJmxMonitoringRepositoryTest {
         repository.putRaw("notificationSubscriptionIds", encoded("bad-index") + "\nnot-base64\n" + encoded("notif-1"));
         repository.putRaw("notification.bad-index", "not-base64|fields");
         repository.putRaw("notification.notif-1", notificationEntry(valid));
-        repository.putRaw("notificationEvents.notif-1", "broken\n" + notificationEventEntry(validEvent));
+        repository.putRaw("notificationEvents.notif-1.ids", encoded("bad-row") + "\nnot-base64\n" + encoded("row-1"));
+        repository.putRaw("notificationEvents.notif-1.bad-row", "broken");
+        repository.putRaw("notificationEvents.notif-1.row-1", notificationEventEntry(validEvent));
 
         assertEquals(List.of(valid), repository.findNotificationSubscriptions("42"));
         assertEquals(List.of(validEvent), repository.findNotificationEvents("notif-1"));

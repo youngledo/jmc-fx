@@ -1,6 +1,7 @@
 package com.youngledo.jmcfx.ui.preferences;
 
 import java.nio.charset.StandardCharsets;
+import java.util.prefs.BackingStoreException;
 import java.time.DateTimeException;
 import java.time.Duration;
 import java.time.Instant;
@@ -11,6 +12,7 @@ import java.util.List;
 import java.util.Map;
 import java.util.Objects;
 import java.util.Optional;
+import java.util.UUID;
 import java.util.prefs.AbstractPreferences;
 import java.util.prefs.Preferences;
 
@@ -75,23 +77,29 @@ public final class JavaJmxMonitoringRepository implements JmxMonitoringRepositor
         ids.removeIf(subscriptionId::equals);
         writeIds(ATTRIBUTE_IDS, ids);
         preferences.remove(attributeKey(subscriptionId));
-        preferences.remove(samplesKey(subscriptionId));
+        removeRows(sampleIndexKey(subscriptionId), rowId -> sampleRowKey(subscriptionId, rowId));
     }
 
     @Override
     public List<JmxSubscriptionSample> findSamples(String subscriptionId) {
-        return readEntries(samplesKey(subscriptionId), JavaJmxMonitoringRepository::decodeSample);
+        return readRows(sampleIndexKey(subscriptionId), rowId -> sampleRowKey(subscriptionId, rowId),
+                JavaJmxMonitoringRepository::decodeSample).stream()
+                .map(StoredRow::value)
+                .toList();
     }
 
     @Override
     public void appendSample(JmxSubscriptionSample sample) {
         Objects.requireNonNull(sample, "sample");
-        List<JmxSubscriptionSample> samples = new ArrayList<>(findSamples(sample.subscriptionId()));
-        samples.add(sample);
+        String indexKey = sampleIndexKey(sample.subscriptionId());
+        RowKeyFactory rowKeyFactory = rowId -> sampleRowKey(sample.subscriptionId(), rowId);
+        List<StoredRow<JmxSubscriptionSample>> samples = new ArrayList<>(
+                readRows(indexKey, rowKeyFactory, JavaJmxMonitoringRepository::decodeSample));
+        samples.add(new StoredRow<>(newRowId(samples.stream().map(StoredRow::id).toList()), sample));
         int maxSamples = readAttributeSubscription(sample.subscriptionId())
                 .map(JmxAttributeSubscription::maxSamples)
                 .orElse(DEFAULT_MAX_SAMPLES);
-        writeSamples(sample.subscriptionId(), trimToNewest(samples, maxSamples));
+        writeRows(indexKey, rowKeyFactory, trimToNewest(samples, maxSamples), JavaJmxMonitoringRepository::encode);
     }
 
     @Override
@@ -121,27 +129,45 @@ public final class JavaJmxMonitoringRepository implements JmxMonitoringRepositor
         ids.removeIf(subscriptionId::equals);
         writeIds(NOTIFICATION_IDS, ids);
         preferences.remove(notificationKey(subscriptionId));
-        preferences.remove(notificationEventsKey(subscriptionId));
+        removeRows(notificationEventIndexKey(subscriptionId), rowId -> notificationEventRowKey(subscriptionId, rowId));
     }
 
     @Override
     public List<JmxNotificationEvent> findNotificationEvents(String subscriptionId) {
-        return readEntries(notificationEventsKey(subscriptionId), JavaJmxMonitoringRepository::decodeNotificationEvent);
+        return readRows(notificationEventIndexKey(subscriptionId), rowId -> notificationEventRowKey(subscriptionId, rowId),
+                JavaJmxMonitoringRepository::decodeNotificationEvent).stream()
+                .map(StoredRow::value)
+                .toList();
     }
 
     @Override
     public void appendNotificationEvent(JmxNotificationEvent event) {
         Objects.requireNonNull(event, "event");
-        List<JmxNotificationEvent> events = new ArrayList<>(findNotificationEvents(event.subscriptionId()));
-        events.add(event);
+        String indexKey = notificationEventIndexKey(event.subscriptionId());
+        RowKeyFactory rowKeyFactory = rowId -> notificationEventRowKey(event.subscriptionId(), rowId);
+        List<StoredRow<JmxNotificationEvent>> events = new ArrayList<>(
+                readRows(indexKey, rowKeyFactory, JavaJmxMonitoringRepository::decodeNotificationEvent));
+        events.add(new StoredRow<>(newRowId(events.stream().map(StoredRow::id).toList()), event));
         int maxEvents = readNotificationSubscription(event.subscriptionId())
                 .map(JmxNotificationSubscription::maxEvents)
                 .orElse(DEFAULT_MAX_NOTIFICATION_EVENTS);
-        writeNotificationEvents(event.subscriptionId(), trimToNewest(events, maxEvents));
+        writeRows(indexKey, rowKeyFactory, trimToNewest(events, maxEvents), JavaJmxMonitoringRepository::encode);
     }
 
     void putRaw(String key, String value) {
         preferences.put(key, value);
+    }
+
+    List<String> rawValues() {
+        try {
+            List<String> values = new ArrayList<>();
+            for (String key : preferences.keys()) {
+                values.add(preferences.get(key, ""));
+            }
+            return List.copyOf(values);
+        } catch (BackingStoreException exception) {
+            throw new IllegalStateException("Could not read preference values.", exception);
+        }
     }
 
     private List<JmxAttributeSubscription> readAttributeSubscriptions() {
@@ -210,36 +236,42 @@ public final class JavaJmxMonitoringRepository implements JmxMonitoringRepositor
                 .orElse(""));
     }
 
-    private void writeSamples(String subscriptionId, List<JmxSubscriptionSample> samples) {
-        writeEntries(samplesKey(subscriptionId), samples.stream()
-                .map(JavaJmxMonitoringRepository::encode)
-                .toList());
-    }
-
-    private void writeNotificationEvents(String subscriptionId, List<JmxNotificationEvent> events) {
-        writeEntries(notificationEventsKey(subscriptionId), events.stream()
-                .map(JavaJmxMonitoringRepository::encode)
-                .toList());
-    }
-
-    private void writeEntries(String key, List<String> encodedEntries) {
-        preferences.put(key, String.join(ENTRY_SEPARATOR, encodedEntries));
-    }
-
-    private static <T> List<T> readEntries(String key, Decoder<T> decoder, Preferences preferences) {
-        String persisted = preferences.get(key, "");
-        if (persisted.isBlank()) {
-            return List.of();
+    private <T> List<StoredRow<T>> readRows(String indexKey, RowKeyFactory rowKeyFactory, Decoder<T> decoder) {
+        List<StoredRow<T>> rows = new ArrayList<>();
+        for (String rowId : readIds(indexKey)) {
+            String persisted = preferences.get(rowKeyFactory.key(rowId), "");
+            if (!persisted.isBlank()) {
+                decoder.decode(persisted).ifPresent(value -> rows.add(new StoredRow<>(rowId, value)));
+            }
         }
-        List<T> entries = new ArrayList<>();
-        for (String entry : persisted.split(ENTRY_SEPARATOR)) {
-            decoder.decode(entry).ifPresent(entries::add);
-        }
-        return List.copyOf(entries);
+        return List.copyOf(rows);
     }
 
-    private <T> List<T> readEntries(String key, Decoder<T> decoder) {
-        return readEntries(key, decoder, preferences);
+    private <T> void writeRows(
+            String indexKey,
+            RowKeyFactory rowKeyFactory,
+            List<StoredRow<T>> rows,
+            Encoder<T> encoder) {
+        List<String> oldIds = readIds(indexKey);
+        List<String> newIds = rows.stream()
+                .map(StoredRow::id)
+                .toList();
+        for (String oldId : oldIds) {
+            if (!newIds.contains(oldId)) {
+                preferences.remove(rowKeyFactory.key(oldId));
+            }
+        }
+        for (StoredRow<T> row : rows) {
+            preferences.put(rowKeyFactory.key(row.id()), encoder.encode(row.value()));
+        }
+        writeIds(indexKey, newIds);
+    }
+
+    private void removeRows(String indexKey, RowKeyFactory rowKeyFactory) {
+        for (String rowId : readIds(indexKey)) {
+            preferences.remove(rowKeyFactory.key(rowId));
+        }
+        preferences.remove(indexKey);
     }
 
     private static Optional<JmxAttributeSubscription> decodeAttributeSubscription(String entry) {
@@ -375,16 +407,24 @@ public final class JavaJmxMonitoringRepository implements JmxMonitoringRepositor
         return ATTRIBUTE_PREFIX + id;
     }
 
-    private static String samplesKey(String subscriptionId) {
-        return SAMPLE_PREFIX + subscriptionId;
+    private static String sampleIndexKey(String subscriptionId) {
+        return SAMPLE_PREFIX + subscriptionId + ".ids";
+    }
+
+    private static String sampleRowKey(String subscriptionId, String rowId) {
+        return SAMPLE_PREFIX + subscriptionId + "." + rowId;
     }
 
     private static String notificationKey(String id) {
         return NOTIFICATION_PREFIX + id;
     }
 
-    private static String notificationEventsKey(String subscriptionId) {
-        return NOTIFICATION_EVENT_PREFIX + subscriptionId;
+    private static String notificationEventIndexKey(String subscriptionId) {
+        return NOTIFICATION_EVENT_PREFIX + subscriptionId + ".ids";
+    }
+
+    private static String notificationEventRowKey(String subscriptionId, String rowId) {
+        return NOTIFICATION_EVENT_PREFIX + subscriptionId + "." + rowId;
     }
 
     private static String encodeField(String value) {
@@ -405,9 +445,30 @@ public final class JavaJmxMonitoringRepository implements JmxMonitoringRepositor
         throw new IllegalArgumentException("Malformed boolean field: " + value);
     }
 
+    private static String newRowId(List<String> existingIds) {
+        String rowId;
+        do {
+            rowId = Long.toUnsignedString(UUID.randomUUID().getMostSignificantBits(), Character.MAX_RADIX);
+        } while (existingIds.contains(rowId));
+        return rowId;
+    }
+
     @FunctionalInterface
     private interface Decoder<T> {
         Optional<T> decode(String entry);
+    }
+
+    @FunctionalInterface
+    private interface Encoder<T> {
+        String encode(T value);
+    }
+
+    @FunctionalInterface
+    private interface RowKeyFactory {
+        String key(String rowId);
+    }
+
+    private record StoredRow<T>(String id, T value) {
     }
 
     private static final class InMemoryPreferences extends AbstractPreferences {
@@ -420,6 +481,10 @@ public final class JavaJmxMonitoringRepository implements JmxMonitoringRepositor
 
         @Override
         protected void putSpi(String key, String value) {
+            if (value.length() > Preferences.MAX_VALUE_LENGTH) {
+                throw new IllegalArgumentException(
+                        "Preference value length exceeds " + Preferences.MAX_VALUE_LENGTH + " characters.");
+            }
             values.put(key, value);
         }
 
