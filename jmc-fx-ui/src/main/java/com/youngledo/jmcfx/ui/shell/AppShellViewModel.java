@@ -55,6 +55,7 @@ public class AppShellViewModel {
     private static final String HOME_SECTION = "home";
     private static final String SETTINGS_SECTION = "settings";
     private static final String JVMS_SECTION = "jvms";
+    private static final String HEAP_DUMP_ANALYSIS_SECTION = "heapDumpAnalysis";
     private static final String DEFAULT_RECORDING_SECTION = "analysis";
     private static final Set<String> RECORDING_SECTIONS = Set.of("analysis", "overview", "events", "advancedJfr", "profiling",
             "exceptions", "threads", "fileio", "socketio", "locks", "threadHistogram", "security",
@@ -281,6 +282,7 @@ public class AppShellViewModel {
         return HOME_SECTION.equals(sectionId)
                 || SETTINGS_SECTION.equals(sectionId)
                 || JVMS_SECTION.equals(sectionId)
+                || HEAP_DUMP_ANALYSIS_SECTION.equals(sectionId)
                 || isRecordingSection(sectionId);
     }
 

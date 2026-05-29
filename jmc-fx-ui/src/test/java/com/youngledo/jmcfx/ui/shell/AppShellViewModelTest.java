@@ -101,6 +101,15 @@ class AppShellViewModelTest {
     }
 
     @Test
+    void switchesToHeapDumpAnalysisWithoutRecording() {
+        AppShellViewModel viewModel = new AppShellViewModel();
+
+        viewModel.showSection("heapDumpAnalysis");
+
+        assertEquals("heapDumpAnalysis", viewModel.selectedSectionProperty().get());
+    }
+
+    @Test
     void tracksRecordingSectionsPerWorkspaceAndGlobalSectionsInShell() {
         AppShellViewModel viewModel = new AppShellViewModel();
         RecordingWorkspace first = viewModel.openRecording(
