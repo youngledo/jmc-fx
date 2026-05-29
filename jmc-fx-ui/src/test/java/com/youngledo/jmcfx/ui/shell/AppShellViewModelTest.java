@@ -110,6 +110,44 @@ class AppShellViewModelTest {
     }
 
     @Test
+    void opensAndClosesHeapDumpWorkspace() {
+        AppShellViewModel viewModel = new AppShellViewModel();
+        HeapDumpWorkspace workspace = new HeapDumpWorkspace(Path.of("demo.hprof"), null);
+
+        viewModel.openHeapDump(workspace);
+
+        assertEquals(List.of(workspace), viewModel.heapDumpWorkspacesProperty());
+        assertSame(workspace, viewModel.selectedHeapDumpWorkspaceProperty().get());
+        assertEquals("heapDumpAnalysis", viewModel.selectedSectionProperty().get());
+
+        viewModel.closeHeapDumpWorkspace(workspace);
+
+        assertTrue(viewModel.heapDumpWorkspacesProperty().isEmpty());
+        assertNull(viewModel.selectedHeapDumpWorkspaceProperty().get());
+        assertEquals("home", viewModel.selectedSectionProperty().get());
+    }
+
+    @Test
+    void switchingBetweenRecordingAndHeapDumpWorkspacesUpdatesActiveWorkspaceKind() {
+        AppShellViewModel viewModel = new AppShellViewModel();
+        RecordingWorkspace recording = viewModel.openRecording(
+                recording(), new OverviewViewModel(), eventBrowserViewModel(), ruleResultsViewModel());
+        HeapDumpWorkspace heapDump = new HeapDumpWorkspace(Path.of("demo.hprof"), null);
+
+        viewModel.openHeapDump(heapDump);
+
+        assertNull(viewModel.selectedWorkspaceProperty().get());
+        assertSame(heapDump, viewModel.selectedHeapDumpWorkspaceProperty().get());
+        assertEquals("heapDumpAnalysis", viewModel.selectedSectionProperty().get());
+
+        viewModel.selectWorkspace(recording);
+
+        assertSame(recording, viewModel.selectedWorkspaceProperty().get());
+        assertNull(viewModel.selectedHeapDumpWorkspaceProperty().get());
+        assertEquals("analysis", viewModel.selectedSectionProperty().get());
+    }
+
+    @Test
     void tracksRecordingSectionsPerWorkspaceAndGlobalSectionsInShell() {
         AppShellViewModel viewModel = new AppShellViewModel();
         RecordingWorkspace first = viewModel.openRecording(

@@ -179,9 +179,11 @@ class AppShellTest {
         assertEquals("TableView", elementByFxId(document, "advancedJfrMemoryTable").getTagName());
         assertTrue(hasStyleClass(elementByFxId(document, "advancedJfrMemoryTable"), "dense-table"));
         assertEquals("Label", elementByFxId(document, "advancedJfrMemoryDetailTitleLabel").getTagName());
+        assertTrue(hasStyleClass(elementByFxId(document, "advancedJfrMemoryDetailTitleLabel"), "detail-panel-title"));
         assertEquals("TextArea", elementByFxId(document, "advancedJfrMemoryDetailArea").getTagName());
         assertEquals("false", elementByFxId(document, "advancedJfrMemoryDetailArea").getAttribute("editable"));
         assertEquals("true", elementByFxId(document, "advancedJfrMemoryDetailArea").getAttribute("wrapText"));
+        assertTrue(hasStyleClass(elementByFxId(document, "heapDumpIssueDetailTitleLabel"), "detail-panel-title"));
         assertEquals("homeOpenRecordingButton", elementByFxId(document, "homeOpenRecordingButton").getAttribute("fx:id"));
         assertFalse(elementByFxId(document, "homeOpenRecordingButton").hasAttribute("styleClass"),
                 "Home action buttons should keep JavaFX's default button style class; add local hooks in controller");
@@ -608,6 +610,17 @@ class AppShellTest {
 
         assertTrue(tabContent.contains("-fx-padding: 10px 10px 0 0"));
         assertTrue(workspace.contains("-fx-padding: 0 0 0 8px"));
+    }
+
+    @Test
+    void detailPanelsUseSharedSpacingContract() throws Exception {
+        String css = appCss();
+        String detailPanel = cssBlock(css, ".detail-panel");
+        String detailPanelTitle = cssBlock(css, ".detail-panel-title");
+
+        assertTrue(detailPanel.contains("-fx-padding: 12px"));
+        assertTrue(detailPanel.contains("-fx-spacing: 8px"));
+        assertTrue(detailPanelTitle.contains("-fx-padding: 0 0 8px 0"));
     }
 
     @Test
@@ -1145,10 +1158,24 @@ class AppShellTest {
     }
 
     @Test
+    void heapDumpTabTitleUsesHeapDumpFileName() {
+        HeapDumpWorkspace workspace = new HeapDumpWorkspace(Path.of("/tmp/demo.hprof"), null);
+
+        assertEquals("demo.hprof", AppShellController.tabTitleFor(workspace));
+    }
+
+    @Test
     void recordingTabsAreShownOnlyWhenWorkspacesExist() {
         assertFalse(AppShellController.shouldShowRecordingTabs(0));
         assertTrue(AppShellController.shouldShowRecordingTabs(1));
         assertTrue(AppShellController.shouldShowRecordingTabs(2));
+    }
+
+    @Test
+    void workspaceTabsAreShownWhenAnyWorkspaceExists() {
+        assertFalse(AppShellController.shouldShowWorkspaceTabs(0, 0));
+        assertTrue(AppShellController.shouldShowWorkspaceTabs(1, 0));
+        assertTrue(AppShellController.shouldShowWorkspaceTabs(0, 1));
     }
 
     @Test
@@ -1259,6 +1286,14 @@ class AppShellTest {
 
         assertEquals("Opening recording: sample.jfr",
                 AppShellController.openingRecordingStatus(i18n, Path.of("/tmp/sample.jfr")));
+    }
+
+    @Test
+    void openingHeapDumpStatusUsesSelectedFileName() {
+        I18n i18n = new I18n(java.util.Locale.ENGLISH);
+
+        assertEquals("Opening heap dump demo.hprof.",
+                AppShellController.openingHeapDumpStatus(i18n, Path.of("demo.hprof")));
     }
 
     @Test

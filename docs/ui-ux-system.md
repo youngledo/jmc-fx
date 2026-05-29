@@ -181,6 +181,12 @@ Use for tables, trees, JVM sessions, MBeans, recordings, events, and rules.
 - If no item is selected, show an empty state in the detail area.
 - If detail loading fails, preserve the selection and show the failure in the
   detail area.
+- Detail panels must use the shared structure classes `detail-panel`,
+  `detail-panel-title`, optional `detail-panel-meta`, and `detail-panel-body`.
+- Detail panel padding is 12 px. Title-to-body spacing is 8 px. Do not place
+  detail titles flush against the top edge of a tab, split pane, or panel.
+- New or touched detail panels must use the shared classes even when they also
+  keep older page-specific aliases for compatibility.
 
 ### Long-Running Work
 
@@ -188,6 +194,8 @@ Use for loading recordings, querying JMX, reading large event windows, exporting
 data, and diagnostic actions.
 
 - Never block the FX Application Thread.
+- File-backed workspace creation, such as opening JFR or HPROF files, must use
+  shell-level status/progress feedback.
 - Disable only controls that conflict with the active operation.
 - Keep existing data visible during refresh unless it is misleading.
 - Prefer scoped busy state over full-page blanking.

@@ -1236,6 +1236,33 @@ public class AppShellController {
             return;
         }
         heapDumpOpenButton.setOnAction(event -> showOpenHeapDumpChooser());
+        bindHeapDumpAnalysis(heapDumpAnalysisViewModel);
+    }
+
+    private void bindHeapDumpAnalysis(HeapDumpAnalysisViewModel nextViewModel) {
+        heapDumpNameLabel.textProperty().unbind();
+        heapDumpStatusLabel.textProperty().unbind();
+        heapDumpSummaryLabel.textProperty().unbind();
+        heapDumpIssueDetailArea.textProperty().unbind();
+        heapDumpTextReportArea.textProperty().unbind();
+        heapDumpProgressBar.visibleProperty().unbind();
+        heapDumpProgressBar.managedProperty().unbind();
+        heapDumpOpenButton.disableProperty().unbind();
+        heapDumpIssueDetailTitleLabel.textProperty().unbind();
+        if (nextViewModel == null) {
+            heapDumpNameLabel.setText("");
+            heapDumpStatusLabel.setText(i18n.get("heapDump.status.idle"));
+            heapDumpSummaryLabel.setText("");
+            heapDumpIssueDetailArea.setText(i18n.get("heapDump.detail.empty"));
+            heapDumpTextReportArea.setText("");
+            heapDumpIssuesTable.setItems(FXCollections.emptyObservableList());
+            heapDumpProgressBar.setVisible(false);
+            heapDumpProgressBar.setManaged(false);
+            heapDumpOpenButton.setDisable(heapDumpAnalysisService == null);
+            heapDumpIssueDetailTitleLabel.setText("");
+            return;
+        }
+        heapDumpAnalysisViewModel = nextViewModel;
         heapDumpNameLabel.textProperty().bind(heapDumpAnalysisViewModel.heapDumpNameProperty());
         heapDumpStatusLabel.textProperty().bind(heapDumpAnalysisViewModel.statusMessageProperty());
         heapDumpSummaryLabel.textProperty().bind(heapDumpAnalysisViewModel.summaryProperty());
@@ -1260,7 +1287,7 @@ public class AppShellController {
     }
 
     private void showOpenHeapDumpChooser() {
-        if (heapDumpAnalysisViewModel == null || root == null || root.getScene() == null) {
+        if (heapDumpAnalysisService == null || root == null || root.getScene() == null) {
             return;
         }
         FileChooser chooser = new FileChooser();
@@ -1269,7 +1296,7 @@ public class AppShellController {
                 new FileChooser.ExtensionFilter(i18n.get("heapDump.fileChooser.hprof"), "*.hprof"));
         java.io.File file = chooser.showOpenDialog(root.getScene().getWindow());
         if (file != null) {
-            heapDumpAnalysisViewModel.analyze(file.toPath());
+            openHeapDumpInBackground(file.toPath());
         }
     }
 
@@ -3332,8 +3359,16 @@ public class AppShellController {
         return workspace.recording().name();
     }
 
+    static String tabTitleFor(HeapDumpWorkspace workspace) {
+        return workspace.name();
+    }
+
     static boolean shouldShowRecordingTabs(int workspaceCount) {
-        return workspaceCount > 0;
+        return shouldShowWorkspaceTabs(workspaceCount, 0);
+    }
+
+    static boolean shouldShowWorkspaceTabs(int recordingWorkspaceCount, int heapDumpWorkspaceCount) {
+        return recordingWorkspaceCount + heapDumpWorkspaceCount > 0;
     }
 
     static String noTimingSelectionText(I18n i18n) {
@@ -3350,6 +3385,10 @@ public class AppShellController {
 
     static String jfrRecordingsFilterDescription(I18n i18n) {
         return i18n.get("fileChooser.jfrRecordings");
+    }
+
+    static String openingHeapDumpStatus(I18n i18n, Path path) {
+        return i18n.format("status.openingHeapDump", path.getFileName());
     }
 
     static String saveRecordingInitialFileName(String recordingName) {
@@ -3392,10 +3431,11 @@ public class AppShellController {
 
     public void close() {
         List.copyOf(viewModel.recordingWorkspacesProperty()).forEach(viewModel::closeWorkspace);
+        List.copyOf(viewModel.heapDumpWorkspacesProperty()).forEach(viewModel::closeHeapDumpWorkspace);
         if (jvmBrowserViewModel != null) {
             jvmBrowserViewModel.close();
         }
-        if (heapDumpAnalysisViewModel != null) {
+        if (viewModel.heapDumpWorkspacesProperty().isEmpty() && heapDumpAnalysisViewModel != null) {
             heapDumpAnalysisViewModel.close();
         }
         recordingOpenExecutor.close();
@@ -3418,33 +3458,51 @@ public class AppShellController {
     private void configureRecordingTabs() {
         recordingTabs.setTabClosingPolicy(TabPane.TabClosingPolicy.ALL_TABS);
         recordingTabs.getSelectionModel().selectedItemProperty().addListener((observable, oldValue, newValue) -> {
-            if (updatingRecordingTabs || newValue == null || !(newValue.getUserData() instanceof RecordingWorkspace workspace)) {
+            if (updatingRecordingTabs || newValue == null) {
                 return;
             }
-            viewModel.selectWorkspace(workspace);
+            switch (newValue.getUserData()) {
+                case RecordingWorkspace workspace -> viewModel.selectWorkspace(workspace);
+                case HeapDumpWorkspace workspace -> viewModel.selectHeapDumpWorkspace(workspace);
+                default -> {
+                }
+            }
         });
         viewModel.recordingWorkspacesProperty()
                 .addListener((ListChangeListener<RecordingWorkspace>) change -> rebuildRecordingTabs());
+        viewModel.heapDumpWorkspacesProperty()
+                .addListener((ListChangeListener<HeapDumpWorkspace>) change -> rebuildRecordingTabs());
         rebuildRecordingTabs();
     }
 
     private void bindWorkspaceSelection() {
         viewModel.selectedWorkspaceProperty()
                 .addListener((observable, oldValue, newValue) -> showWorkspace(newValue));
+        viewModel.selectedHeapDumpWorkspaceProperty()
+                .addListener((observable, oldValue, newValue) -> showHeapDumpWorkspace(newValue));
         showWorkspace(viewModel.selectedWorkspaceProperty().get());
+        showHeapDumpWorkspace(viewModel.selectedHeapDumpWorkspaceProperty().get());
     }
 
     private void rebuildRecordingTabs() {
         updatingRecordingTabs = true;
         try {
-            List<Tab> tabs = viewModel.recordingWorkspacesProperty().stream()
+            List<Tab> recordingTabsList = viewModel.recordingWorkspacesProperty().stream()
                     .map(this::toRecordingTab)
                     .toList();
+            List<Tab> heapDumpTabs = viewModel.heapDumpWorkspacesProperty().stream()
+                    .map(this::toHeapDumpTab)
+                    .toList();
+            List<Tab> tabs = new java.util.ArrayList<>(recordingTabsList);
+            tabs.addAll(heapDumpTabs);
             recordingTabs.getTabs().setAll(tabs);
-            boolean showTabs = shouldShowRecordingTabs(tabs.size());
+            boolean showTabs = shouldShowWorkspaceTabs(
+                    viewModel.recordingWorkspacesProperty().size(),
+                    viewModel.heapDumpWorkspacesProperty().size());
             recordingTabs.setVisible(showTabs);
             recordingTabs.setManaged(showTabs);
-            selectRecordingTab(viewModel.selectedWorkspaceProperty().get());
+            selectWorkspaceTab(viewModel.selectedWorkspaceProperty().get(),
+                    viewModel.selectedHeapDumpWorkspaceProperty().get());
         } finally {
             updatingRecordingTabs = false;
         }
@@ -3458,7 +3516,20 @@ public class AppShellController {
         return tab;
     }
 
+    private Tab toHeapDumpTab(HeapDumpWorkspace workspace) {
+        Tab tab = new Tab(tabTitleFor(workspace));
+        tab.setUserData(workspace);
+        tab.setClosable(true);
+        tab.setOnClosed(event -> viewModel.closeHeapDumpWorkspace(workspace));
+        return tab;
+    }
+
     private void selectRecordingTab(RecordingWorkspace workspace) {
+        selectWorkspaceTab(workspace, null);
+    }
+
+    private void selectWorkspaceTab(RecordingWorkspace recordingWorkspace, HeapDumpWorkspace heapDumpWorkspace) {
+        Object workspace = heapDumpWorkspace != null ? heapDumpWorkspace : recordingWorkspace;
         if (workspace == null) {
             recordingTabs.getSelectionModel().clearSelection();
             return;
@@ -3500,6 +3571,14 @@ public class AppShellController {
         bindAdvancedJfr(workspace == null ? null : workspace.advancedJfrViewModel());
         loadedWorkspace = workspace;
         loadSelectedWorkspaceSection();
+    }
+
+    private void showHeapDumpWorkspace(HeapDumpWorkspace workspace) {
+        if (workspace == null) {
+            return;
+        }
+        selectWorkspaceTab(null, workspace);
+        bindHeapDumpAnalysis(workspace.viewModel());
     }
 
     private void bindAdvancedJfr(AdvancedJfrViewModel nextViewModel) {
@@ -3770,6 +3849,23 @@ public class AppShellController {
                 prepared.threadDumps(), prepared.advancedJfr());
         viewModel.showStatus(i18n.format("status.openedRecording", prepared.recording().name()));
         setRecordingOpening(false);
+    }
+
+    private void openHeapDumpInBackground(Path path) {
+        setBackgroundWorkVisible(true);
+        viewModel.showStatus(openingHeapDumpStatus(i18n, path));
+        viewModel.showTaskSummary(i18n.get("taskSummary.openingHeapDump"));
+        HeapDumpAnalysisViewModel nextViewModel = new HeapDumpAnalysisViewModel(heapDumpAnalysisService,
+                new VirtualThreadHeapDumpAnalysisExecutor(), i18n);
+        HeapDumpWorkspace workspace = new HeapDumpWorkspace(path, nextViewModel);
+        viewModel.openHeapDump(workspace);
+        nextViewModel.stateProperty().addListener((observable, oldValue, newValue) -> {
+            if (newValue != HeapDumpAnalysisState.ANALYZING) {
+                setBackgroundWorkVisible(false);
+                viewModel.showTaskSummary(nextViewModel.statusMessageProperty().get());
+            }
+        });
+        nextViewModel.analyze(path);
     }
 
     private void showOpenRecordingFailure(RuntimeException exception) {

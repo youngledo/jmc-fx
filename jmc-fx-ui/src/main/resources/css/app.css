@@ -579,17 +579,22 @@
 .severity-unknown { -fx-fill: -color-fg-muted; }
 
 /* Analysis detail */
-.analysis-detail {
-    -fx-padding: 12px 0 0 0;
+.detail-panel {
+    -fx-padding: 12px;
     -fx-spacing: 8px;
 }
-.advanced-jfr-memory-detail.analysis-detail {
-    -fx-padding: 16px 0 0 0;
-    -fx-spacing: 12px;
+.detail-panel-title {
+    -fx-padding: 0 0 8px 0;
 }
-.heap-dump-detail.analysis-detail {
-    -fx-padding: 16px 0 0 0;
-    -fx-spacing: 12px;
+.detail-panel-body {
+}
+.analysis-detail {
+    -fx-padding: 12px;
+    -fx-spacing: 8px;
+}
+.advanced-jfr-memory-detail {
+}
+.heap-dump-detail {
 }
 .analysis-detail-title {
     -fx-font-weight: bold;

@@ -66,7 +66,11 @@ public class AppShellViewModel {
     private final ObservableList<RecordingWorkspace> recordingWorkspaces = FXCollections.observableArrayList();
     private final ObservableList<RecordingWorkspace> readOnlyRecordingWorkspaces =
             FXCollections.unmodifiableObservableList(recordingWorkspaces);
+    private final ObservableList<HeapDumpWorkspace> heapDumpWorkspaces = FXCollections.observableArrayList();
+    private final ObservableList<HeapDumpWorkspace> readOnlyHeapDumpWorkspaces =
+            FXCollections.unmodifiableObservableList(heapDumpWorkspaces);
     private final ObjectProperty<RecordingWorkspace> selectedWorkspace = new SimpleObjectProperty<>();
+    private final ObjectProperty<HeapDumpWorkspace> selectedHeapDumpWorkspace = new SimpleObjectProperty<>();
     private final StringProperty selectedSection = new SimpleStringProperty("home");
     private final StringProperty statusMessage = new SimpleStringProperty("");
     private final StringProperty taskSummary = new SimpleStringProperty("");
@@ -117,6 +121,14 @@ public class AppShellViewModel {
 
     public ReadOnlyObjectProperty<RecordingWorkspace> selectedWorkspaceProperty() {
         return selectedWorkspace;
+    }
+
+    public ObservableList<HeapDumpWorkspace> heapDumpWorkspacesProperty() {
+        return readOnlyHeapDumpWorkspaces;
+    }
+
+    public ReadOnlyObjectProperty<HeapDumpWorkspace> selectedHeapDumpWorkspaceProperty() {
+        return selectedHeapDumpWorkspace;
     }
 
     public void showSection(String sectionId) {
@@ -229,14 +241,50 @@ public class AppShellViewModel {
         return workspace;
     }
 
+    public void openHeapDump(HeapDumpWorkspace workspace) {
+        Objects.requireNonNull(workspace, "workspace");
+        heapDumpWorkspaces.add(workspace);
+        selectHeapDumpWorkspace(workspace);
+    }
+
+    public void selectHeapDumpWorkspace(HeapDumpWorkspace workspace) {
+        if (workspace == null || !heapDumpWorkspaces.contains(workspace)) {
+            return;
+        }
+        selectedHeapDumpWorkspace.set(workspace);
+        selectedWorkspace.set(null);
+        selectedSection.set(HEAP_DUMP_ANALYSIS_SECTION);
+    }
+
+    public void closeHeapDumpWorkspace(HeapDumpWorkspace workspace) {
+        if (workspace == null || !heapDumpWorkspaces.contains(workspace)) {
+            return;
+        }
+        boolean active = workspace == selectedHeapDumpWorkspace.get();
+        int closedIndex = heapDumpWorkspaces.indexOf(workspace);
+        heapDumpWorkspaces.remove(workspace);
+        workspace.close();
+        if (!active) {
+            return;
+        }
+        if (heapDumpWorkspaces.isEmpty()) {
+            selectedHeapDumpWorkspace.set(null);
+            selectedSection.set(HOME_SECTION);
+            return;
+        }
+        int nextIndex = Math.min(closedIndex, heapDumpWorkspaces.size() - 1);
+        selectHeapDumpWorkspace(heapDumpWorkspaces.get(nextIndex));
+    }
+
     public void selectWorkspace(RecordingWorkspace workspace) {
         if (workspace == null || !recordingWorkspaces.contains(workspace)) {
             return;
         }
         selectedWorkspace.set(workspace);
+        selectedHeapDumpWorkspace.set(null);
         recordingOpen.set(true);
         currentRecordingName.set(workspace.recording().name());
-        if (isRecordingSection(selectedSection.get())) {
+        if (HEAP_DUMP_ANALYSIS_SECTION.equals(selectedSection.get()) || isRecordingSection(selectedSection.get())) {
             selectedSection.set(workspace.selectedSectionProperty().get());
         }
     }
