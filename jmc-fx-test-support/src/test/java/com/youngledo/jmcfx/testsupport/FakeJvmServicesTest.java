@@ -14,6 +14,7 @@ import com.youngledo.jmcfx.domain.model.DiagnosticCommandInfo;
 import com.youngledo.jmcfx.domain.model.DiagnosticCommandRequest;
 import com.youngledo.jmcfx.domain.model.DiagnosticCommandResult;
 import com.youngledo.jmcfx.domain.model.EventHeatmap;
+import com.youngledo.jmcfx.domain.model.JfrMetadataReport;
 import com.youngledo.jmcfx.domain.model.JdpJvmAdvertisement;
 import com.youngledo.jmcfx.domain.model.JmxAttributeSubscription;
 import com.youngledo.jmcfx.domain.model.JmxNotificationEvent;
@@ -467,6 +468,18 @@ class FakeJvmServicesTest {
 
         assertEquals(report, service.loadMemoryAnalysis(recording(), 12));
         assertEquals(12, service.lastMaxMemoryIssues());
+    }
+
+    @Test
+    void fakeJfrMetadataServiceReturnsDeterministicReport() {
+        FakeJfrMetadataService service = new FakeJfrMetadataService();
+
+        JfrMetadataReport report = service.loadMetadata(recording());
+
+        assertEquals(2, report.eventTypeCount());
+        assertEquals(3, report.eventCount());
+        assertTrue(report.eventTypes().stream()
+                .anyMatch(type -> "jdk.CPULoad".equals(type.id()) && "Operating System".equals(type.category())));
     }
 
     private static JvmConnection local(String pid, String name) {
