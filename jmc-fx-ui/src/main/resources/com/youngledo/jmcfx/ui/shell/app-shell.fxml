@@ -287,6 +287,7 @@
                 <FlowPane styleClass="page-toolbar" hgap="8" vgap="8">
                     <Button fx:id="jvmsRefreshButton"/>
                     <TextField fx:id="jvmsManualUrlField" prefWidth="360"/>
+                    <Label fx:id="jvmsManualUrlHintLabel" styleClass="event-window-status" wrapText="true"/>
                     <TextField fx:id="jvmsManualNameField" prefWidth="160"/>
                     <Button fx:id="jvmsSaveTargetButton"/>
                     <Button fx:id="jvmsRemoveSavedTargetButton"/>

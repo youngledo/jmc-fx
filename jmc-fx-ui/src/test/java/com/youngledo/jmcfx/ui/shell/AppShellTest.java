@@ -286,6 +286,9 @@ class AppShellTest {
         assertEquals("Button", elementByFxId(document, "jvmsRefreshButton").getTagName());
         assertEquals("TextField", elementByFxId(document, "jvmsManualUrlField").getTagName());
         assertEquals("360", elementByFxId(document, "jvmsManualUrlField").getAttribute("prefWidth"));
+        assertEquals("Label", elementByFxId(document, "jvmsManualUrlHintLabel").getTagName());
+        assertEquals("true", elementByFxId(document, "jvmsManualUrlHintLabel").getAttribute("wrapText"));
+        assertTrue(hasStyleClass(elementByFxId(document, "jvmsManualUrlHintLabel"), "event-window-status"));
         assertEquals("TextField", elementByFxId(document, "jvmsManualNameField").getTagName());
         assertEquals("160", elementByFxId(document, "jvmsManualNameField").getAttribute("prefWidth"));
         assertEquals("Button", elementByFxId(document, "jvmsSaveTargetButton").getTagName());
@@ -1196,12 +1199,14 @@ class AppShellTest {
                 java.nio.file.Path.of("src/main/resources/com/youngledo/jmcfx/ui/i18n/messages_zh_CN.properties"));
 
         assertTrue(controller.contains("@FXML private TextField jvmsManualNameField;"));
+        assertTrue(controller.contains("@FXML private Label jvmsManualUrlHintLabel;"));
         assertTrue(controller.contains("@FXML private Button jvmsSaveTargetButton;"));
         assertTrue(controller.contains("@FXML private Button jvmsRemoveSavedTargetButton;"));
         assertTrue(controller.contains("@FXML private Button jvmsRefreshJdpButton;"));
         assertTrue(controller.contains("@FXML private Label jvmsSelectedConnectionStatusLabel;"));
         assertTrue(controller.contains("jvmsManualNameField.textProperty().bindBidirectional("));
         assertTrue(controller.contains("jvmBrowserViewModel.manualConnectionNameProperty()"));
+        assertTrue(controller.contains("jvmsManualUrlHintLabel.textProperty().bind(i18n.text(\"jvms.manualUrlHint\"))"));
         assertTrue(controller.contains("jvmsRefreshJdpButton.setOnAction(event -> jvmBrowserViewModel.refreshJdp())"));
         assertTrue(controller.contains("jvmsSaveTargetButton.setOnAction(event -> jvmBrowserViewModel.saveManualTarget())"));
         assertTrue(controller.contains("jvmsRemoveSavedTargetButton.setOnAction(event ->"));
@@ -1217,12 +1222,15 @@ class AppShellTest {
         assertTrue(controller.contains("selectedConnectionStatusText("));
         assertTrue(controller.contains("jvmBrowserViewModel.jdpStatusMessageProperty()"));
         assertTrue(controller.contains("jvmsManualNameField.setDisable(true);"));
+        assertTrue(controller.contains("jvmsManualUrlHintLabel.setDisable(true);"));
         assertTrue(controller.contains("jvmsSaveTargetButton.setDisable(true);"));
         assertTrue(controller.contains("jvmsRemoveSavedTargetButton.setDisable(true);"));
         assertTrue(controller.contains("jvmsRefreshJdpButton.setDisable(true);"));
         assertTrue(controller.contains("jvmsSelectedConnectionStatusLabel.textProperty().bind(i18n.text(\"jvms.jdp.status.idle\"))"));
 
-        assertJvmBrowserJdpI18n(english, "jvms.manualNamePrompt=Display name",
+        assertJvmBrowserJdpI18n(english, "jvms.manualUrlPrompt=RMI or Jolokia JMX service URL",
+                "jvms.manualUrlHint=Jolokia example: service:jmx:jolokia://localhost:8778/jolokia",
+                "jvms.manualNamePrompt=Display name",
                 "jvms.saveTarget=Save Target",
                 "jvms.removeSavedTarget=Remove Saved",
                 "jvms.refreshJdp=Refresh JDP",
@@ -1237,7 +1245,9 @@ class AppShellTest {
                 "jvms.status.saved=Saved JMX target.",
                 "jvms.status.jdp=Discovered through JDP.",
                 "jvms.status.connected=Connected.");
-        assertJvmBrowserJdpI18n(chinese, "jvms.manualNamePrompt=显示名称",
+        assertJvmBrowserJdpI18n(chinese, "jvms.manualUrlPrompt=RMI 或 Jolokia JMX service URL",
+                "jvms.manualUrlHint=Jolokia 示例：service:jmx:jolokia://localhost:8778/jolokia",
+                "jvms.manualNamePrompt=显示名称",
                 "jvms.saveTarget=保存目标",
                 "jvms.removeSavedTarget=移除保存项",
                 "jvms.refreshJdp=刷新JDP",

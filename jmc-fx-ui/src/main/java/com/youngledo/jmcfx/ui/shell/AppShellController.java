@@ -446,6 +446,7 @@ public class AppShellController {
     @FXML private Label jvmsTitleLabel;
     @FXML private Button jvmsRefreshButton;
     @FXML private TextField jvmsManualUrlField;
+    @FXML private Label jvmsManualUrlHintLabel;
     @FXML private TextField jvmsManualNameField;
     @FXML private Button jvmsSaveTargetButton;
     @FXML private Button jvmsRemoveSavedTargetButton;
@@ -1833,6 +1834,7 @@ public class AppShellController {
             jvmsTable.setItems(FXCollections.emptyObservableList());
             jvmsRefreshButton.setDisable(true);
             jvmsManualUrlField.setDisable(true);
+            jvmsManualUrlHintLabel.setDisable(true);
             jvmsManualNameField.setDisable(true);
             jvmsSaveTargetButton.setDisable(true);
             jvmsRemoveSavedTargetButton.setDisable(true);
@@ -1916,6 +1918,7 @@ public class AppShellController {
                 jvmBrowserViewModel.manualConnectionNameProperty());
         jvmsRefreshButton.disableProperty().bind(jvmBrowserViewModel.loadingProperty());
         jvmsManualUrlField.disableProperty().bind(jvmBrowserViewModel.loadingProperty());
+        jvmsManualUrlHintLabel.disableProperty().bind(jvmBrowserViewModel.loadingProperty());
         jvmsManualNameField.disableProperty().bind(jvmBrowserViewModel.loadingProperty());
         jvmsRefreshJdpButton.disableProperty().bind(
                 jvmBrowserViewModel.loadingProperty().or(jvmBrowserViewModel.jdpRefreshInProgressProperty()));
@@ -3690,6 +3693,7 @@ public class AppShellController {
         jvmsTitleLabel.textProperty().bind(i18n.text("jvms.title"));
         jvmsRefreshButton.textProperty().bind(i18n.text("jvms.refresh"));
         jvmsManualUrlField.promptTextProperty().bind(i18n.text("jvms.manualUrlPrompt"));
+        jvmsManualUrlHintLabel.textProperty().bind(i18n.text("jvms.manualUrlHint"));
         jvmsManualNameField.promptTextProperty().bind(i18n.text("jvms.manualNamePrompt"));
         jvmsSaveTargetButton.textProperty().bind(i18n.text("jvms.saveTarget"));
         jvmsRemoveSavedTargetButton.textProperty().bind(i18n.text("jvms.removeSavedTarget"));
