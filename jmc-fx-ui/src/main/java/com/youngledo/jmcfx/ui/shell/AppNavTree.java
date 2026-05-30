@@ -75,6 +75,7 @@ final class AppNavTree extends TreeView<AppNavItem> {
         TreeItem<AppNavItem> gcConfigPage = page("gcConfig", "nav.gcConfig", Material2MZ.SETTINGS, true, NavIconTone.JVM);
         TreeItem<AppNavItem> gcSummaryPage = page("gcSummary", "nav.gcSummary", Material2AL.LIST, true, NavIconTone.JVM);
         TreeItem<AppNavItem> gcDetailsPage = page("gcDetails", "nav.gcDetails", Material2AL.BUG_REPORT, true, NavIconTone.JVM);
+        TreeItem<AppNavItem> g1GcPage = page("g1Gc", "nav.g1Gc", Material2AL.GRID_ON, true, NavIconTone.JVM);
         TreeItem<AppNavItem> compilationsPage = page("compilations", "nav.compilations", Material2MZ.PUBLIC, true, NavIconTone.JVM);
         TreeItem<AppNavItem> codeCachePage = page("codeCache", "nav.codeCache", Material2MZ.STORAGE, true, NavIconTone.JVM);
         TreeItem<AppNavItem> classLoadingPage = page("classLoading", "nav.classLoading", Material2MZ.SAVE, true, NavIconTone.JVM);
@@ -88,7 +89,7 @@ final class AppNavTree extends TreeView<AppNavItem> {
         memoryAnalysis.getChildren().setAll(List.of(heap, leaks, tlab));
         environment.getChildren().setAll(List.of(processPage, envVarsPage, sysPropsPage,
                 recordingInfoPage, agentsPage, constantPoolsPage));
-        jvmInternals.getChildren().setAll(List.of(jvmInfoPage, gcConfigPage, gcSummaryPage, gcDetailsPage,
+        jvmInternals.getChildren().setAll(List.of(jvmInfoPage, gcConfigPage, gcSummaryPage, gcDetailsPage, g1GcPage,
                 compilationsPage, codeCachePage, classLoadingPage, vmOperationsPage));
         globalGroups = List.of(global);
         recordingGroups = List.of(global, recording, javaApp, jvmInternals, memoryAnalysis, environment);
@@ -135,6 +136,7 @@ final class AppNavTree extends TreeView<AppNavItem> {
         pageItems.put("gcConfig", gcConfigPage);
         pageItems.put("gcSummary", gcSummaryPage);
         pageItems.put("gcDetails", gcDetailsPage);
+        pageItems.put("g1Gc", g1GcPage);
         pageItems.put("compilations", compilationsPage);
         pageItems.put("codeCache", codeCachePage);
         pageItems.put("classLoading", classLoadingPage);

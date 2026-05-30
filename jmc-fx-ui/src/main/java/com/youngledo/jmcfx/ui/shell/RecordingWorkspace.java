@@ -11,6 +11,7 @@ import com.youngledo.jmcfx.ui.events.EventBrowserViewModel;
 import com.youngledo.jmcfx.ui.environment.EnvironmentViewModel;
 import com.youngledo.jmcfx.ui.exceptions.ExceptionViewModel;
 import com.youngledo.jmcfx.ui.fileio.FileIOViewModel;
+import com.youngledo.jmcfx.ui.gc.G1GcViewModel;
 import com.youngledo.jmcfx.ui.heap.HeapViewModel;
 import com.youngledo.jmcfx.ui.leaks.LeakSuspectsViewModel;
 import com.youngledo.jmcfx.ui.locks.LockViewModel;
@@ -72,6 +73,7 @@ public final class RecordingWorkspace {
     private final NativeLibraryViewModel nativeLibraryViewModel;
     private final ThreadDumpViewModel threadDumpViewModel;
     private final JfrMetadataViewModel jfrMetadataViewModel;
+    private final G1GcViewModel g1GcViewModel;
     private final AdvancedJfrViewModel advancedJfrViewModel;
 
     public RecordingWorkspace(RecordingSummary recording, OverviewViewModel overviewViewModel,
@@ -157,6 +159,39 @@ public final class RecordingWorkspace {
             ThreadDumpViewModel threadDumpViewModel,
             JfrMetadataViewModel jfrMetadataViewModel,
             AdvancedJfrViewModel advancedJfrViewModel) {
+        this(recording, overviewViewModel, eventBrowserViewModel, ruleResultsViewModel,
+                profilingViewModel, exceptionViewModel, threadViewModel, fileIOViewModel,
+                socketIOViewModel, lockViewModel, heapViewModel, leakSuspectsViewModel,
+                tlabViewModel, jvmInfoViewModel, gcConfigViewModel, gcSummaryViewModel,
+                gcDetailsViewModel, compilationsViewModel, codeCacheViewModel,
+                classLoadingViewModel, vmOperationsViewModel, environmentViewModel,
+                javaAppOverviewViewModel, securityViewModel, nativeLibraryViewModel,
+                threadDumpViewModel, jfrMetadataViewModel, null, advancedJfrViewModel);
+    }
+
+    public RecordingWorkspace(RecordingSummary recording, OverviewViewModel overviewViewModel,
+            EventBrowserViewModel eventBrowserViewModel, RuleResultsViewModel ruleResultsViewModel,
+            ProfilingViewModel profilingViewModel, ExceptionViewModel exceptionViewModel,
+            ThreadViewModel threadViewModel, FileIOViewModel fileIOViewModel,
+            SocketIOViewModel socketIOViewModel, LockViewModel lockViewModel,
+            HeapViewModel heapViewModel, LeakSuspectsViewModel leakSuspectsViewModel,
+            TlabViewModel tlabViewModel,
+            JvmInfoViewModel jvmInfoViewModel,
+            GcConfigViewModel gcConfigViewModel,
+            GcSummaryViewModel gcSummaryViewModel,
+            GcDetailsViewModel gcDetailsViewModel,
+            CompilationsViewModel compilationsViewModel,
+            CodeCacheViewModel codeCacheViewModel,
+            ClassLoadingViewModel classLoadingViewModel,
+            VmOperationsViewModel vmOperationsViewModel,
+            EnvironmentViewModel environmentViewModel,
+            JavaAppOverviewViewModel javaAppOverviewViewModel,
+            SecurityViewModel securityViewModel,
+            NativeLibraryViewModel nativeLibraryViewModel,
+            ThreadDumpViewModel threadDumpViewModel,
+            JfrMetadataViewModel jfrMetadataViewModel,
+            G1GcViewModel g1GcViewModel,
+            AdvancedJfrViewModel advancedJfrViewModel) {
         this.recording = Objects.requireNonNull(recording, "recording");
         this.overviewViewModel = Objects.requireNonNull(overviewViewModel, "overviewViewModel");
         this.eventBrowserViewModel = Objects.requireNonNull(eventBrowserViewModel, "eventBrowserViewModel");
@@ -184,6 +219,7 @@ public final class RecordingWorkspace {
         this.nativeLibraryViewModel = nativeLibraryViewModel;
         this.threadDumpViewModel = threadDumpViewModel;
         this.jfrMetadataViewModel = jfrMetadataViewModel;
+        this.g1GcViewModel = g1GcViewModel;
         this.advancedJfrViewModel = advancedJfrViewModel;
     }
 
@@ -354,6 +390,10 @@ public final class RecordingWorkspace {
 
     public JfrMetadataViewModel jfrMetadataViewModel() {
         return jfrMetadataViewModel;
+    }
+
+    public G1GcViewModel g1GcViewModel() {
+        return g1GcViewModel;
     }
 
     public AdvancedJfrViewModel advancedJfrViewModel() {

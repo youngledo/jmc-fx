@@ -694,6 +694,51 @@ class AppShellTest {
     }
 
     @Test
+    void g1GcShellUsesSplitTableDetailBindingsAndI18n() throws Exception {
+        Document document = appShellFxml();
+        String controller = java.nio.file.Files.readString(
+                java.nio.file.Path.of("src/main/java/com/youngledo/jmcfx/ui/shell/AppShellController.java"));
+        String english = java.nio.file.Files.readString(
+                java.nio.file.Path.of("src/main/resources/com/youngledo/jmcfx/ui/i18n/messages.properties"));
+        String chinese = java.nio.file.Files.readString(
+                java.nio.file.Path.of("src/main/resources/com/youngledo/jmcfx/ui/i18n/messages_zh_CN.properties"));
+
+        Element g1GcPane = elementByFxId(document, "g1GcPane");
+        assertEquals("VBox", g1GcPane.getTagName());
+        assertTrue(hasStyleClass(g1GcPane, "page"));
+        assertTrue(hasStyleClass(g1GcPane, "split-table-detail-page"));
+        assertEquals("TableView", elementByFxId(document, "g1GcRegionSummaryTable").getTagName());
+        assertEquals("TableView", elementByFxId(document, "g1GcRegionStatesTable").getTagName());
+        assertEquals("TableView", elementByFxId(document, "g1GcPauseTable").getTagName());
+        assertTrue(hasStyleClass(elementByFxId(document, "g1GcDetailPane"), "detail-panel"));
+        assertTrue(hasStyleClass(elementByFxId(document, "g1GcDetailTitleLabel"), "detail-panel-title"));
+        assertTrue(hasStyleClass(elementByFxId(document, "g1GcDetailArea"), "detail-panel-body"));
+
+        assertTrue(controller.contains("import com.youngledo.jmcfx.domain.model.G1GcRegionState;"));
+        assertTrue(controller.contains("import com.youngledo.jmcfx.ui.gc.G1GcViewModel;"));
+        assertTrue(controller.contains("@FXML private VBox g1GcPane;"));
+        assertTrue(controller.contains("@FXML private TableView<G1GcRegionSummary> g1GcRegionSummaryTable;"));
+        assertTrue(controller.contains("@FXML private TableView<G1GcRegionState> g1GcRegionStatesTable;"));
+        assertTrue(controller.contains("@FXML private TableView<GcEvent> g1GcPauseTable;"));
+        assertTrue(controller.contains("g1GcPane.visibleProperty().bind(viewModel.selectedSectionProperty().isEqualTo(\"g1Gc\"))"));
+        assertTrue(controller.contains("configureG1GcTables();"));
+        assertTrue(controller.contains("g1GcRegionStatesTable.setItems(nextViewModel.recentRegionStatesProperty())"));
+        assertTrue(controller.contains("g1GcDetailArea.textProperty().bind(nextViewModel.selectedDetailProperty())"));
+        assertTrue(controller.contains("case \"g1Gc\" -> loadIfPresent(workspace.g1GcViewModel(), recording);"));
+
+        assertTrue(english.contains("nav.g1Gc=G1 GC"));
+        assertTrue(english.contains("g1Gc.title=G1 GC"));
+        assertTrue(english.contains("g1Gc.detail.title=Region Details"));
+        assertTrue(english.contains("g1Gc.column.region=Region"));
+        assertTrue(english.contains("g1Gc.column.eventKind=Event"));
+        assertTrue(chinese.contains("nav.g1Gc=G1 GC"));
+        assertTrue(chinese.contains("g1Gc.title=G1 GC"));
+        assertTrue(chinese.contains("g1Gc.detail.title=Region详情"));
+        assertTrue(chinese.contains("g1Gc.column.region=Region"));
+        assertTrue(chinese.contains("g1Gc.column.eventKind=事件"));
+    }
+
+    @Test
     void appShellFxmlDoesNotHardcodeVisibleLocalizedText() throws Exception {
         Document document = appShellFxml();
 

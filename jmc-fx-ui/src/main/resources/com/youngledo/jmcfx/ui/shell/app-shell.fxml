@@ -664,6 +664,43 @@
                 <Label fx:id="gcHeapSummaryLabel"/>
                 <TableView fx:id="gcHeapSummaryTable" styleClass="dense-table" prefHeight="200" VBox.vgrow="ALWAYS"/>
             </VBox>
+            <VBox fx:id="g1GcPane" visible="false" managed="false">
+                <styleClass>
+                    <String fx:value="page"/>
+                    <String fx:value="split-table-detail-page"/>
+                </styleClass>
+                <VBox styleClass="page-header">
+                    <Label fx:id="g1GcTitleLabel" styleClass="view-title"/>
+                    <Label fx:id="g1GcSummaryLabel" styleClass="event-window-status" wrapText="true"/>
+                </VBox>
+                <SplitPane fx:id="g1GcContent" styleClass="page-content" orientation="VERTICAL" VBox.vgrow="ALWAYS" DividerPositions="0.60">
+                    <VBox spacing="8">
+                        <Label fx:id="g1GcRegionStatesLabel"/>
+                        <TableView fx:id="g1GcRegionStatesTable" styleClass="dense-table" VBox.vgrow="ALWAYS"/>
+                    </VBox>
+                    <VBox fx:id="g1GcDetailPane">
+                        <styleClass>
+                            <String fx:value="detail-panel"/>
+                        </styleClass>
+                        <Label fx:id="g1GcDetailTitleLabel">
+                            <styleClass>
+                                <String fx:value="detail-panel-title"/>
+                            </styleClass>
+                        </Label>
+                        <TextArea fx:id="g1GcDetailArea" wrapText="true" editable="false" VBox.vgrow="ALWAYS">
+                            <styleClass>
+                                <String fx:value="detail-panel-body"/>
+                            </styleClass>
+                        </TextArea>
+                    </VBox>
+                    <VBox spacing="8">
+                        <Label fx:id="g1GcRegionSummaryLabel"/>
+                        <TableView fx:id="g1GcRegionSummaryTable" styleClass="dense-table" prefHeight="150"/>
+                        <Label fx:id="g1GcPausesLabel"/>
+                        <TableView fx:id="g1GcPauseTable" styleClass="dense-table" prefHeight="180"/>
+                    </VBox>
+                </SplitPane>
+            </VBox>
             <VBox fx:id="compilationsPane" spacing="8" visible="false" managed="false">
                 <Label fx:id="compilationsTitleLabel" styleClass="view-title"/>
                 <VBox fx:id="compilationDurationChartContainer" prefHeight="180"/>

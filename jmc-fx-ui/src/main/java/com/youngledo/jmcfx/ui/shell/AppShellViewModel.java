@@ -11,6 +11,7 @@ import com.youngledo.jmcfx.ui.events.EventBrowserViewModel;
 import com.youngledo.jmcfx.ui.environment.EnvironmentViewModel;
 import com.youngledo.jmcfx.ui.exceptions.ExceptionViewModel;
 import com.youngledo.jmcfx.ui.fileio.FileIOViewModel;
+import com.youngledo.jmcfx.ui.gc.G1GcViewModel;
 import com.youngledo.jmcfx.ui.heap.HeapViewModel;
 import com.youngledo.jmcfx.ui.i18n.LanguageMode;
 import com.youngledo.jmcfx.ui.javaapp.JavaAppOverviewViewModel;
@@ -62,7 +63,7 @@ public class AppShellViewModel {
     private static final Set<String> RECORDING_SECTIONS = Set.of("analysis", "overview", "events", "metadata", "advancedJfr", "profiling",
             "exceptions", "threads", "fileio", "socketio", "locks", "threadHistogram", "security",
             "nativeLibraries", "threadDumps", "heap", "leaks", "tlab", "jvmInfo", "gcConfig", "gcSummary",
-            "gcDetails", "compilations", "codeCache", "classLoading", "vmOperations", "processes", "envVars",
+            "gcDetails", "g1Gc", "compilations", "codeCache", "classLoading", "vmOperations", "processes", "envVars",
             "sysProps", "recordingInfo", "agents", "constantPools");
 
     private final ObservableList<RecordingWorkspace> recordingWorkspaces = FXCollections.observableArrayList();
@@ -268,7 +269,7 @@ public class AppShellViewModel {
                 fileio, socketio, locks, heap, leakSuspects, tlab,
                 jvmInfo, gcConfig, gcSummary, gcDetails, compilations, codeCache, classLoading, vmOperations,
                 environment, javaAppOverviewViewModel, securityViewModel, nativeLibraryViewModel, threadDumpViewModel,
-                null, advancedJfrViewModel);
+                null, null, advancedJfrViewModel);
     }
 
     public RecordingWorkspace openRecording(RecordingSummary recording, OverviewViewModel overview,
@@ -286,6 +287,29 @@ public class AppShellViewModel {
             ThreadDumpViewModel threadDumpViewModel,
             JfrMetadataViewModel jfrMetadataViewModel,
             AdvancedJfrViewModel advancedJfrViewModel) {
+        return openRecording(recording, overview, events, ruleResults, profiling, exceptions, threads,
+                fileio, socketio, locks, heap, leakSuspects, tlab,
+                jvmInfo, gcConfig, gcSummary, gcDetails, compilations, codeCache, classLoading, vmOperations,
+                environment, javaAppOverviewViewModel, securityViewModel, nativeLibraryViewModel, threadDumpViewModel,
+                jfrMetadataViewModel, null, advancedJfrViewModel);
+    }
+
+    public RecordingWorkspace openRecording(RecordingSummary recording, OverviewViewModel overview,
+            EventBrowserViewModel events, RuleResultsViewModel ruleResults,
+            ProfilingViewModel profiling, ExceptionViewModel exceptions, ThreadViewModel threads,
+            FileIOViewModel fileio, SocketIOViewModel socketio, LockViewModel locks,
+            HeapViewModel heap, LeakSuspectsViewModel leakSuspects, TlabViewModel tlab,
+            JvmInfoViewModel jvmInfo, GcConfigViewModel gcConfig, GcSummaryViewModel gcSummary,
+            GcDetailsViewModel gcDetails, CompilationsViewModel compilations,
+            CodeCacheViewModel codeCache, ClassLoadingViewModel classLoading,
+            VmOperationsViewModel vmOperations, EnvironmentViewModel environment,
+            JavaAppOverviewViewModel javaAppOverviewViewModel,
+            SecurityViewModel securityViewModel,
+            NativeLibraryViewModel nativeLibraryViewModel,
+            ThreadDumpViewModel threadDumpViewModel,
+            JfrMetadataViewModel jfrMetadataViewModel,
+            G1GcViewModel g1GcViewModel,
+            AdvancedJfrViewModel advancedJfrViewModel) {
         Objects.requireNonNull(recording, "recording");
         Objects.requireNonNull(overview, "overview");
         Objects.requireNonNull(events, "events");
@@ -300,7 +324,7 @@ public class AppShellViewModel {
                 profiling, exceptions, threads, fileio, socketio, locks, heap, leakSuspects, tlab,
                 jvmInfo, gcConfig, gcSummary, gcDetails, compilations, codeCache, classLoading, vmOperations,
                 environment, javaAppOverviewViewModel, securityViewModel, nativeLibraryViewModel, threadDumpViewModel,
-                jfrMetadataViewModel, advancedJfrViewModel);
+                jfrMetadataViewModel, g1GcViewModel, advancedJfrViewModel);
         workspace.selectedSectionProperty().set(DEFAULT_RECORDING_SECTION);
         recordingWorkspaces.add(workspace);
         workspaceTabs.add(workspace);

@@ -43,6 +43,8 @@ import com.youngledo.jmcfx.domain.model.ExceptionSummary;
 import com.youngledo.jmcfx.domain.model.FileIOEvent;
 import com.youngledo.jmcfx.domain.model.FileIOHistogram;
 import com.youngledo.jmcfx.domain.model.FlightRecordingInfo;
+import com.youngledo.jmcfx.domain.model.G1GcRegionState;
+import com.youngledo.jmcfx.domain.model.G1GcRegionSummary;
 import com.youngledo.jmcfx.domain.model.GcEvent;
 import com.youngledo.jmcfx.domain.model.GcHeapSummary;
 import com.youngledo.jmcfx.domain.model.GcReferenceStat;
@@ -102,6 +104,7 @@ import com.youngledo.jmcfx.domain.service.EventQueryService;
 import com.youngledo.jmcfx.domain.service.ExceptionService;
 import com.youngledo.jmcfx.domain.service.FileIOService;
 import com.youngledo.jmcfx.domain.service.FlightRecordingService;
+import com.youngledo.jmcfx.domain.service.G1GcService;
 import com.youngledo.jmcfx.domain.service.HeapDumpAnalysisService;
 import com.youngledo.jmcfx.domain.service.HeapService;
 import com.youngledo.jmcfx.domain.service.JmcAgentService;
@@ -132,6 +135,7 @@ import com.youngledo.jmcfx.ui.events.VirtualThreadEventBrowserExecutor;
 import com.youngledo.jmcfx.ui.environment.EnvironmentViewModel;
 import com.youngledo.jmcfx.ui.exceptions.ExceptionViewModel;
 import com.youngledo.jmcfx.ui.fileio.FileIOViewModel;
+import com.youngledo.jmcfx.ui.gc.G1GcViewModel;
 import com.youngledo.jmcfx.ui.heap.HeapViewModel;
 import com.youngledo.jmcfx.ui.heapdump.HeapDumpAnalysisViewModel;
 import com.youngledo.jmcfx.ui.heapdump.VirtualThreadHeapDumpAnalysisExecutor;
@@ -263,6 +267,7 @@ public class AppShellController {
     private final JmxMonitoringService jmxMonitoringService;
     private final JmxMonitoringRepository jmxMonitoringRepository;
     private final JfrMetadataService jfrMetadataService;
+    private final G1GcService g1GcService;
     private final AdvancedJfrAnalysisService advancedJfrAnalysisService;
     private final SavedJvmTargetRepository savedTargetRepository;
     private final JdpDiscoveryService jdpDiscoveryService;
@@ -341,6 +346,7 @@ public class AppShellController {
     @FXML private VBox gcConfigPane;
     @FXML private VBox gcSummaryPane;
     @FXML private VBox gcDetailsPane;
+    @FXML private VBox g1GcPane;
     @FXML private VBox compilationsPane;
     @FXML private VBox codeCachePane;
     @FXML private VBox classLoadingPane;
@@ -616,6 +622,18 @@ public class AppShellController {
     @FXML private TableView<GcEvent> gcEventsTable;
     @FXML private TableView<GcReferenceStat> gcReferenceStatsTable;
     @FXML private TableView<GcHeapSummary> gcHeapSummaryTable;
+    @FXML private Label g1GcTitleLabel;
+    @FXML private Label g1GcSummaryLabel;
+    @FXML private Label g1GcRegionStatesLabel;
+    @FXML private Label g1GcRegionSummaryLabel;
+    @FXML private Label g1GcPausesLabel;
+    @FXML private TableView<G1GcRegionSummary> g1GcRegionSummaryTable;
+    @FXML private TableView<G1GcRegionState> g1GcRegionStatesTable;
+    @FXML private TableView<GcEvent> g1GcPauseTable;
+    @FXML private Label g1GcDetailTitleLabel;
+    @FXML private TextArea g1GcDetailArea;
+    private final ChangeListener<G1GcRegionState> g1GcSelectedRegionStateListener =
+            (observable, oldValue, newValue) -> g1GcRegionStatesTable.getSelectionModel().select(newValue);
     @FXML private VBox gcHeapChartContainer;
     private TimelineChart gcHeapChart;
     @FXML private VBox gcMetaspaceChartContainer;
@@ -708,7 +726,7 @@ public class AppShellController {
                 fileIOService, socketIOService, lockService,
                 heapService, leakSuspectsService, tlabService,
                 jvmInternalsService, environmentService, javaAppService,
-                null, null, null, null, null, null, null, null, null, null, null, null, null, null, i18n,
+                null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, i18n,
                 new VirtualThreadRecordingOpenExecutor());
     }
 
@@ -732,7 +750,7 @@ public class AppShellController {
                 heapService, leakSuspectsService, tlabService,
                 jvmInternalsService, environmentService, javaAppService,
                 jvmDiscoveryService, jmxConnectionService, flightRecordingService, null, null, null, null, null,
-                null, null, null, null, null, null, i18n, new VirtualThreadRecordingOpenExecutor());
+                null, null, null, null, null, null, null, i18n, new VirtualThreadRecordingOpenExecutor());
     }
 
     public AppShellController(AppShellViewModel viewModel, RecordingRepository recordingRepository,
@@ -756,7 +774,7 @@ public class AppShellController {
                 heapService, leakSuspectsService, tlabService,
                 jvmInternalsService, environmentService, javaAppService,
                 jvmDiscoveryService, jmxConnectionService, flightRecordingService, mBeanBrowserService, null, null,
-                null, null, null, null, null, null, null, null, i18n, new VirtualThreadRecordingOpenExecutor());
+                null, null, null, null, null, null, null, null, null, i18n, new VirtualThreadRecordingOpenExecutor());
     }
 
     public AppShellController(AppShellViewModel viewModel, RecordingRepository recordingRepository,
@@ -783,7 +801,7 @@ public class AppShellController {
                 heapService, leakSuspectsService, tlabService,
                 jvmInternalsService, environmentService, javaAppService,
                 jvmDiscoveryService, jmxConnectionService, flightRecordingService, mBeanBrowserService,
-                diagnosticCommandService, liveMetricService, null, null, null, null, advancedJfrAnalysisService, null, null,
+                diagnosticCommandService, liveMetricService, null, null, null, null, null, advancedJfrAnalysisService, null, null,
                 null, i18n, new VirtualThreadRecordingOpenExecutor());
     }
 
@@ -815,7 +833,7 @@ public class AppShellController {
                 heapService, leakSuspectsService, tlabService,
                 jvmInternalsService, environmentService, javaAppService,
                 jvmDiscoveryService, jmxConnectionService, flightRecordingService, mBeanBrowserService,
-                diagnosticCommandService, liveMetricService, jmcAgentService, null, null, null,
+                diagnosticCommandService, liveMetricService, jmcAgentService, null, null, null, null,
                 advancedJfrAnalysisService, savedTargetRepository, jdpDiscoveryService, heapDumpAnalysisService, i18n,
                 new VirtualThreadRecordingOpenExecutor());
     }
@@ -840,6 +858,7 @@ public class AppShellController {
             JmxMonitoringService jmxMonitoringService,
             JmxMonitoringRepository jmxMonitoringRepository,
             JfrMetadataService jfrMetadataService,
+            G1GcService g1GcService,
             AdvancedJfrAnalysisService advancedJfrAnalysisService,
             SavedJvmTargetRepository savedTargetRepository,
             JdpDiscoveryService jdpDiscoveryService,
@@ -852,7 +871,7 @@ public class AppShellController {
                 jvmInternalsService, environmentService, javaAppService,
                 jvmDiscoveryService, jmxConnectionService, flightRecordingService, mBeanBrowserService,
                 diagnosticCommandService, liveMetricService, jmcAgentService,
-                jmxMonitoringService, jmxMonitoringRepository, null, advancedJfrAnalysisService,
+                jmxMonitoringService, jmxMonitoringRepository, jfrMetadataService, g1GcService, advancedJfrAnalysisService,
                 savedTargetRepository, jdpDiscoveryService, heapDumpAnalysisService, i18n,
                 new VirtualThreadRecordingOpenExecutor());
     }
@@ -875,7 +894,7 @@ public class AppShellController {
                 fileIOService, socketIOService, lockService,
                 heapService, leakSuspectsService, tlabService,
                 jvmInternalsService, environmentService, javaAppService,
-                jvmDiscoveryService, jmxConnectionService, null, null, null, null, null, null, null, null, null, null,
+                jvmDiscoveryService, jmxConnectionService, null, null, null, null, null, null, null, null, null, null, null,
                 null, null, i18n, new VirtualThreadRecordingOpenExecutor());
     }
 
@@ -895,7 +914,7 @@ public class AppShellController {
                 fileIOService, socketIOService, lockService,
                 heapService, leakSuspectsService, tlabService,
                 jvmInternalsService, environmentService, javaAppService,
-                null, null, null, null, null, null, null, null, null, null, null, null, null, null, i18n,
+                null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, i18n,
                 recordingOpenExecutor);
     }
 
@@ -919,7 +938,7 @@ public class AppShellController {
                 heapService, leakSuspectsService, tlabService,
                 jvmInternalsService, environmentService, javaAppService,
                 jvmDiscoveryService, jmxConnectionService, flightRecordingService, null, null, null, null, null,
-                null, null, null, null, null, null, i18n, recordingOpenExecutor);
+                null, null, null, null, null, null, null, i18n, recordingOpenExecutor);
     }
 
     AppShellController(AppShellViewModel viewModel, RecordingRepository recordingRepository,
@@ -941,6 +960,7 @@ public class AppShellController {
             JmxMonitoringService jmxMonitoringService,
             JmxMonitoringRepository jmxMonitoringRepository,
             JfrMetadataService jfrMetadataService,
+            G1GcService g1GcService,
             AdvancedJfrAnalysisService advancedJfrAnalysisService,
             SavedJvmTargetRepository savedTargetRepository,
             JdpDiscoveryService jdpDiscoveryService,
@@ -973,6 +993,7 @@ public class AppShellController {
         this.jmxMonitoringService = jmxMonitoringService;
         this.jmxMonitoringRepository = jmxMonitoringRepository;
         this.jfrMetadataService = jfrMetadataService;
+        this.g1GcService = g1GcService;
         this.advancedJfrAnalysisService = advancedJfrAnalysisService;
         this.savedTargetRepository = savedTargetRepository;
         this.jdpDiscoveryService = jdpDiscoveryService;
@@ -1081,6 +1102,8 @@ public class AppShellController {
         gcSummaryPane.managedProperty().bind(gcSummaryPane.visibleProperty());
         gcDetailsPane.visibleProperty().bind(viewModel.selectedSectionProperty().isEqualTo("gcDetails"));
         gcDetailsPane.managedProperty().bind(gcDetailsPane.visibleProperty());
+        g1GcPane.visibleProperty().bind(viewModel.selectedSectionProperty().isEqualTo("g1Gc"));
+        g1GcPane.managedProperty().bind(g1GcPane.visibleProperty());
         compilationsPane.visibleProperty().bind(viewModel.selectedSectionProperty().isEqualTo("compilations"));
         compilationsPane.managedProperty().bind(compilationsPane.visibleProperty());
         codeCachePane.visibleProperty().bind(viewModel.selectedSectionProperty().isEqualTo("codeCache"));
@@ -1145,6 +1168,7 @@ public class AppShellController {
         configureGcEventsTable();
         configureGcReferenceStatsTable();
         configureGcHeapSummaryTable();
+        configureG1GcTables();
         configureCompilationsTable();
         configureCompilationFailuresTable();
         configureCodeCacheSweepsTable();
@@ -3547,6 +3571,11 @@ public class AppShellController {
         analysisTitleLabel.textProperty().bind(i18n.text("analysis.title"));
         metadataTitleLabel.textProperty().bind(i18n.text("metadata.title"));
         metadataDetailTitleLabel.textProperty().bind(i18n.text("metadata.detail.title"));
+        g1GcTitleLabel.textProperty().bind(i18n.text("g1Gc.title"));
+        g1GcRegionStatesLabel.textProperty().bind(i18n.text("g1Gc.regionStates"));
+        g1GcRegionSummaryLabel.textProperty().bind(i18n.text("g1Gc.regionSummary"));
+        g1GcPausesLabel.textProperty().bind(i18n.text("g1Gc.pauses"));
+        g1GcDetailTitleLabel.textProperty().bind(i18n.text("g1Gc.detail.title"));
         advancedJfrTitleLabel.textProperty().bind(i18n.text("advancedJfr.title"));
         advancedJfrHeatmapTab.textProperty().bind(i18n.text("advancedJfr.heatmap.tab"));
         advancedJfrMemoryTab.textProperty().bind(i18n.text("advancedJfr.memory.tab"));
@@ -3982,6 +4011,7 @@ public class AppShellController {
         bindGcConfig(workspace == null ? null : workspace.gcConfigViewModel());
         bindGcSummary(workspace == null ? null : workspace.gcSummaryViewModel());
         bindGcDetails(workspace == null ? null : workspace.gcDetailsViewModel());
+        bindG1Gc(workspace == null ? null : workspace.g1GcViewModel());
         bindCompilations(workspace == null ? null : workspace.compilationsViewModel());
         bindCodeCache(workspace == null ? null : workspace.codeCacheViewModel());
         bindClassLoading(workspace == null ? null : workspace.classLoadingViewModel());
@@ -4067,6 +4097,33 @@ public class AppShellController {
         metadataEventTypesTable.setItems(nextViewModel.eventTypesProperty());
         metadataEventTypesTable.getSelectionModel().select(nextViewModel.selectedEventTypeProperty().get());
         nextViewModel.selectedEventTypeProperty().addListener(metadataSelectedEventTypeListener);
+    }
+
+    private G1GcViewModel g1GcViewModel;
+
+    private void bindG1Gc(G1GcViewModel nextViewModel) {
+        if (g1GcViewModel != null) {
+            g1GcViewModel.selectedRegionStateProperty().removeListener(g1GcSelectedRegionStateListener);
+        }
+        g1GcSummaryLabel.textProperty().unbind();
+        g1GcDetailArea.textProperty().unbind();
+        g1GcRegionSummaryTable.setItems(FXCollections.emptyObservableList());
+        g1GcRegionStatesTable.setItems(FXCollections.emptyObservableList());
+        g1GcPauseTable.setItems(FXCollections.emptyObservableList());
+        g1GcRegionStatesTable.getSelectionModel().clearSelection();
+        g1GcSummaryLabel.setText(i18n.get("g1Gc.summary"));
+        g1GcDetailArea.setText("");
+        g1GcViewModel = nextViewModel;
+        if (nextViewModel == null) {
+            return;
+        }
+        g1GcSummaryLabel.textProperty().bind(nextViewModel.summaryProperty());
+        g1GcDetailArea.textProperty().bind(nextViewModel.selectedDetailProperty());
+        g1GcRegionSummaryTable.setItems(nextViewModel.regionSummariesProperty());
+        g1GcRegionStatesTable.setItems(nextViewModel.recentRegionStatesProperty());
+        g1GcPauseTable.setItems(nextViewModel.gcPausesProperty());
+        g1GcRegionStatesTable.getSelectionModel().select(nextViewModel.selectedRegionStateProperty().get());
+        nextViewModel.selectedRegionStateProperty().addListener(g1GcSelectedRegionStateListener);
     }
 
     private void bindAdvancedJfrMemoryText(AdvancedJfrViewModel nextViewModel) {
@@ -4267,6 +4324,7 @@ public class AppShellController {
         GcConfigViewModel gcConfig = jvmInternalsService != null ? new GcConfigViewModel(jvmInternalsService) : null;
         GcSummaryViewModel gcSummary = jvmInternalsService != null ? new GcSummaryViewModel(jvmInternalsService) : null;
         GcDetailsViewModel gcDetails = jvmInternalsService != null ? new GcDetailsViewModel(jvmInternalsService) : null;
+        G1GcViewModel g1Gc = g1GcService != null ? new G1GcViewModel(g1GcService) : null;
         CompilationsViewModel compilationsVm = jvmInternalsService != null ? new CompilationsViewModel(jvmInternalsService) : null;
         CodeCacheViewModel codeCache = jvmInternalsService != null ? new CodeCacheViewModel(jvmInternalsService) : null;
         ClassLoadingViewModel classLoading = jvmInternalsService != null ? new ClassLoadingViewModel(jvmInternalsService) : null;
@@ -4284,7 +4342,7 @@ public class AppShellController {
         return new PreparedRecordingWorkspace(recording, overview, events, analysis, profiling, exceptions, threads,
                 fileio, socketio, locks, heap, leakSuspects, tlab, jvmInfo, gcConfig, gcSummary, gcDetails,
                 compilationsVm, codeCache, classLoading, vmOperations, environment, javaAppOverview, security,
-                nativeLibraries, threadDumps, metadata, advancedJfr);
+                nativeLibraries, threadDumps, metadata, g1Gc, advancedJfr);
     }
 
     private void attachPreparedRecordingWorkspace(PreparedRecordingWorkspace prepared) {
@@ -4300,7 +4358,7 @@ public class AppShellController {
                 prepared.jvmInfo(), prepared.gcConfig(), prepared.gcSummary(), prepared.gcDetails(),
                 prepared.compilations(), prepared.codeCache(), prepared.classLoading(), prepared.vmOperations(),
                 prepared.environment(), prepared.javaAppOverview(), prepared.security(), prepared.nativeLibraries(),
-                prepared.threadDumps(), prepared.metadata(), prepared.advancedJfr());
+                prepared.threadDumps(), prepared.metadata(), prepared.g1Gc(), prepared.advancedJfr());
         viewModel.showStatus(i18n.format("status.openedRecording", prepared.recording().name()));
         setRecordingOpening(false);
     }
@@ -4475,6 +4533,7 @@ public class AppShellController {
             case "gcConfig" -> loadIfPresent(workspace.gcConfigViewModel(), recording);
             case "gcSummary" -> loadIfPresent(workspace.gcSummaryViewModel(), recording);
             case "gcDetails" -> loadIfPresent(workspace.gcDetailsViewModel(), recording);
+            case "g1Gc" -> loadIfPresent(workspace.g1GcViewModel(), recording);
             case "compilations" -> loadIfPresent(workspace.compilationsViewModel(), recording);
             case "codeCache" -> loadIfPresent(workspace.codeCacheViewModel(), recording);
             case "classLoading" -> loadIfPresent(workspace.classLoadingViewModel(), recording);
@@ -4630,6 +4689,12 @@ public class AppShellController {
         }
     }
 
+    private void loadIfPresent(G1GcViewModel viewModel, RecordingSummary recording) {
+        if (viewModel != null) {
+            viewModel.load(recording);
+        }
+    }
+
     private void loadIfPresent(AdvancedJfrViewModel viewModel, RecordingSummary recording) {
         if (viewModel != null) {
             viewModel.load(recording);
@@ -4664,6 +4729,7 @@ public class AppShellController {
             NativeLibraryViewModel nativeLibraries,
             ThreadDumpViewModel threadDumps,
             JfrMetadataViewModel metadata,
+            G1GcViewModel g1Gc,
             AdvancedJfrViewModel advancedJfr) {
     }
 
@@ -5036,6 +5102,82 @@ public class AppShellController {
         metaCommittedCol.setCellValueFactory(data -> new ReadOnlyStringWrapper(
                 DisplayFormats.formatFileSize(data.getValue().metaspaceCommitted())));
         gcHeapSummaryTable.getColumns().setAll(List.of(idCol, whenCol, usedCol, committedCol, metaUsedCol, metaCommittedCol));
+    }
+
+    private void configureG1GcTables() {
+        g1GcRegionSummaryTable.setPlaceholder(localizedTablePlaceholder("g1Gc.empty"));
+        TableColumn<G1GcRegionSummary, String> typeCol = localizedColumn("g1Gc.column.type");
+        typeCol.setPrefWidth(180);
+        typeCol.setCellValueFactory(data -> new ReadOnlyStringWrapper(data.getValue().type()));
+        TableColumn<G1GcRegionSummary, String> countCol = localizedColumn("common.column.count");
+        countCol.setPrefWidth(100);
+        countCol.setCellValueFactory(data -> new ReadOnlyStringWrapper(
+                DisplayFormats.formatInteger(data.getValue().regionCount())));
+        TableColumn<G1GcRegionSummary, String> usedCol = localizedColumn("g1Gc.column.used");
+        usedCol.setPrefWidth(140);
+        usedCol.setCellValueFactory(data -> new ReadOnlyStringWrapper(
+                DisplayFormats.formatFileSize(data.getValue().usedBytes())));
+        TableColumn<G1GcRegionSummary, String> capacityCol = localizedColumn("g1Gc.column.capacity");
+        capacityCol.setPrefWidth(140);
+        capacityCol.setCellValueFactory(data -> new ReadOnlyStringWrapper(
+                DisplayFormats.formatFileSize(data.getValue().capacityBytes())));
+        g1GcRegionSummaryTable.getColumns().setAll(List.of(typeCol, countCol, usedCol, capacityCol));
+
+        g1GcRegionStatesTable.setPlaceholder(localizedTablePlaceholder("g1Gc.empty"));
+        TableColumn<G1GcRegionState, String> regionCol = localizedColumn("g1Gc.column.region");
+        regionCol.setPrefWidth(90);
+        regionCol.setCellValueFactory(data -> new ReadOnlyStringWrapper(
+                DisplayFormats.formatInteger(data.getValue().regionIndex())));
+        TableColumn<G1GcRegionState, String> eventKindCol = localizedColumn("g1Gc.column.eventKind");
+        eventKindCol.setPrefWidth(120);
+        eventKindCol.setCellValueFactory(data -> new ReadOnlyStringWrapper(data.getValue().eventKind()));
+        TableColumn<G1GcRegionState, String> stateTypeCol = localizedColumn("g1Gc.column.type");
+        stateTypeCol.setPrefWidth(160);
+        stateTypeCol.setCellValueFactory(data -> new ReadOnlyStringWrapper(data.getValue().type()));
+        TableColumn<G1GcRegionState, String> previousTypeCol = localizedColumn("g1Gc.column.previousType");
+        previousTypeCol.setPrefWidth(160);
+        previousTypeCol.setCellValueFactory(data -> new ReadOnlyStringWrapper(data.getValue().previousType()));
+        TableColumn<G1GcRegionState, String> stateUsedCol = localizedColumn("g1Gc.column.used");
+        stateUsedCol.setPrefWidth(140);
+        stateUsedCol.setCellValueFactory(data -> new ReadOnlyStringWrapper(
+                DisplayFormats.formatFileSize(data.getValue().usedBytes())));
+        TableColumn<G1GcRegionState, String> stateCapacityCol = localizedColumn("g1Gc.column.capacity");
+        stateCapacityCol.setPrefWidth(140);
+        stateCapacityCol.setCellValueFactory(data -> new ReadOnlyStringWrapper(
+                DisplayFormats.formatFileSize(data.getValue().capacityBytes())));
+        TableColumn<G1GcRegionState, String> timeCol = localizedColumn("common.column.time");
+        timeCol.setPrefWidth(220);
+        timeCol.setCellValueFactory(data -> new ReadOnlyStringWrapper(
+                DisplayFormats.formatTimestamp(data.getValue().startTime(), ZoneId.systemDefault())));
+        g1GcRegionStatesTable.getColumns().setAll(List.of(regionCol, eventKindCol, stateTypeCol,
+                previousTypeCol, stateUsedCol, stateCapacityCol, timeCol));
+        g1GcRegionStatesTable.getSelectionModel().selectedItemProperty()
+                .addListener((observable, oldValue, newValue) -> {
+                    if (g1GcViewModel != null && newValue != g1GcViewModel.selectedRegionStateProperty().get()) {
+                        g1GcViewModel.selectedRegionStateProperty().set(newValue);
+                    }
+                });
+
+        g1GcPauseTable.setPlaceholder(localizedTablePlaceholder("g1Gc.pauses.empty"));
+        TableColumn<GcEvent, String> pauseIdCol = localizedColumn("gc.column.id");
+        pauseIdCol.setPrefWidth(80);
+        pauseIdCol.setCellValueFactory(data -> new ReadOnlyStringWrapper(
+                DisplayFormats.formatInteger(data.getValue().gcId())));
+        TableColumn<GcEvent, String> nameCol = localizedColumn("common.column.name");
+        nameCol.setPrefWidth(180);
+        nameCol.setCellValueFactory(data -> new ReadOnlyStringWrapper(data.getValue().name()));
+        TableColumn<GcEvent, String> causeCol = localizedColumn("gcDetails.column.cause");
+        causeCol.setPrefWidth(240);
+        causeCol.setCellValueFactory(data -> new ReadOnlyStringWrapper(data.getValue().cause()));
+        TableColumn<GcEvent, String> totalPauseCol = localizedColumn("gcDetails.column.totalPause");
+        totalPauseCol.setPrefWidth(120);
+        totalPauseCol.setCellValueFactory(data -> new ReadOnlyStringWrapper(
+                DisplayFormats.formatMicros(data.getValue().totalPauseMicros())));
+        TableColumn<GcEvent, String> pauseTimeCol = localizedColumn("common.column.time");
+        pauseTimeCol.setPrefWidth(220);
+        pauseTimeCol.setCellValueFactory(data -> new ReadOnlyStringWrapper(
+                DisplayFormats.formatTimestamp(data.getValue().startTime(), ZoneId.systemDefault())));
+        g1GcPauseTable.getColumns().setAll(List.of(pauseIdCol, nameCol, causeCol, totalPauseCol, pauseTimeCol));
     }
 
     private void configureCompilationsTable() {
