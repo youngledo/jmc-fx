@@ -444,13 +444,116 @@
     -fx-background-color: -color-bg-subtle;
 }
 
+.jvms-browser-sidebar {
+    -fx-min-width: 280px;
+    -fx-pref-width: 340px;
+    -fx-max-width: 430px;
+}
+
+.jvms-browser-sidebar .text-field {
+    -fx-max-width: Infinity;
+}
+
+.jvms-browser-sidebar .dense-table {
+    -fx-min-height: 180px;
+}
+
 .jvms-session-detail {
-    -fx-min-height: 220px;
-    -fx-pref-height: 320px;
+    -fx-min-width: 0;
+    -fx-min-height: 360px;
 }
 
 .jvms-live-tab-content {
     -fx-padding: 10px 10px 0 0;
+}
+
+.jvms-live-tab-content .chart {
+    -fx-min-height: 120px;
+}
+
+.jvms-overview-group {
+    -fx-padding: 4px 0 8px 0;
+    -fx-min-height: 120px;
+}
+
+.jvms-overview-group .page-detail-tabs {
+    -fx-min-height: 96px;
+}
+
+.jvms-overview-chart-panel {
+    -fx-min-height: 0;
+}
+
+.jvms-overview-chart-panel .chart {
+    -fx-min-width: 0;
+}
+
+.jvms-overview-chart-panel .scroll-pane {
+    -fx-min-width: 132px;
+    -fx-pref-width: 168px;
+    -fx-max-width: 220px;
+    -fx-min-height: 0;
+}
+
+.jvms-overview-metric-toggles {
+    -fx-padding: 2px 4px 2px 4px;
+}
+
+.jvms-overview-metric-toggles .check-box {
+    -fx-font-size: 11px;
+    -fx-max-width: Infinity;
+}
+
+.jvms-overview-metric-toggle-content {
+    -fx-alignment: CENTER_LEFT;
+    -fx-spacing: 6px;
+}
+
+.jvms-overview-metric-swatch {
+    -fx-min-width: 10px;
+    -fx-min-height: 10px;
+    -fx-pref-width: 10px;
+    -fx-pref-height: 10px;
+    -fx-background-radius: 2px;
+}
+
+.jvms-overview-metric-swatch.default-color0 {
+    -fx-background-color: #f3622d;
+}
+
+.jvms-overview-metric-swatch.default-color1 {
+    -fx-background-color: #fba71b;
+}
+
+.jvms-overview-metric-swatch.default-color2 {
+    -fx-background-color: #57b757;
+}
+
+.jvms-overview-metric-swatch.default-color3 {
+    -fx-background-color: #41a9c9;
+}
+
+.jvms-overview-metric-swatch.default-color4 {
+    -fx-background-color: #4258c9;
+}
+
+.jvms-overview-metric-swatch.default-color5 {
+    -fx-background-color: #9a42c8;
+}
+
+.jvms-overview-metric-swatch.default-color6 {
+    -fx-background-color: #c84164;
+}
+
+.jvms-overview-metric-swatch.default-color7 {
+    -fx-background-color: #888888;
+}
+
+.jvms-overview-metric-toggles .check-box > .box {
+    -fx-min-width: 10px;
+    -fx-min-height: 10px;
+    -fx-pref-width: 10px;
+    -fx-pref-height: 10px;
 }
 
 .jvms-live-workspace {

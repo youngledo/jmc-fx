@@ -1235,6 +1235,32 @@ class JvmBrowserViewModelTest {
     }
 
     @Test
+    void connectedSessionLoadsOverviewMetricsForChartAndTable() {
+        FakeJmxConnectionService jmx = new FakeJmxConnectionService();
+        FakeLiveMetricService metrics = new FakeLiveMetricService();
+        JvmBrowserViewModel viewModel = viewModel(new FakeJvmDiscoveryService(), jmx, metrics);
+        JvmConnection connected = connectedWithMBeans(viewModel, jmx);
+        metrics.setDefinitions(connected.id(), List.of(
+                new LiveMetricDefinition(LiveMetricKind.PROCESS_CPU_LOAD_PERCENT, "Process CPU", "%", 80.0),
+                new LiveMetricDefinition(LiveMetricKind.HEAP_USED_PERCENT, "Heap Used", "%", 80.0),
+                new LiveMetricDefinition(LiveMetricKind.THREAD_COUNT, "Thread Count", "threads", 250.0)));
+        metrics.setSnapshot(connected.id(), List.of(
+                new LiveMetricSnapshot(LiveMetricKind.PROCESS_CPU_LOAD_PERCENT, 52.5, "%", Instant.EPOCH),
+                new LiveMetricSnapshot(LiveMetricKind.HEAP_USED_PERCENT, 64.0, "%", Instant.EPOCH),
+                new LiveMetricSnapshot(LiveMetricKind.THREAD_COUNT, 18.0, "threads", Instant.EPOCH)));
+
+        viewModel.selectedConnectionProperty().set(connected);
+
+        assertEquals(List.of("Processor", "Memory", "Dashboard"),
+                viewModel.overviewMetricsProperty().stream().map(LiveJvmOverviewMetric::group).toList());
+        assertEquals(List.of("52.5%", "64.0%", "18"),
+                viewModel.overviewMetricsProperty().stream().map(LiveJvmOverviewMetric::displayValue).toList());
+        assertFalse(viewModel.overviewLoadingProperty().get());
+        assertFalse(viewModel.overviewErrorProperty().get());
+        assertFalse(viewModel.overviewPersistenceProperty().get().configured());
+    }
+
+    @Test
     void evaluateTriggersAppendsNotifyEventWhenThresholdMatches() {
         FakeJmxConnectionService jmx = new FakeJmxConnectionService();
         FakeLiveMetricService metrics = new FakeLiveMetricService();
@@ -1489,6 +1515,26 @@ class JvmBrowserViewModelTest {
         assertTrue(viewModel.jmxAttributeSubscriptionsProperty().isEmpty());
         assertTrue(viewModel.jmxSubscriptionSamplesProperty().isEmpty());
         assertNull(viewModel.selectedJmxAttributeSubscriptionProperty().get());
+    }
+
+    @Test
+    void clearingSelectedSessionClearsOverviewState() {
+        FakeJmxConnectionService jmx = new FakeJmxConnectionService();
+        FakeLiveMetricService metrics = new FakeLiveMetricService();
+        JvmBrowserViewModel viewModel = viewModel(new FakeJvmDiscoveryService(), jmx, metrics);
+        JvmConnection connected = connectedWithMBeans(viewModel, jmx);
+        metrics.setDefinitions(connected.id(), List.of(
+                new LiveMetricDefinition(LiveMetricKind.HEAP_USED_PERCENT, "Heap Used", "%", 80.0)));
+        metrics.setSnapshot(connected.id(), List.of(
+                new LiveMetricSnapshot(LiveMetricKind.HEAP_USED_PERCENT, 64.0, "%", Instant.EPOCH)));
+        viewModel.selectedConnectionProperty().set(connected);
+
+        viewModel.selectedConnectionProperty().set(null);
+
+        assertTrue(viewModel.overviewMetricsProperty().isEmpty());
+        assertFalse(viewModel.overviewPersistenceProperty().get().configured());
+        assertFalse(viewModel.overviewLoadingProperty().get());
+        assertFalse(viewModel.overviewErrorProperty().get());
     }
 
     private static JvmBrowserViewModel viewModel(FakeJvmDiscoveryService discovery, FakeJmxConnectionService jmx) {

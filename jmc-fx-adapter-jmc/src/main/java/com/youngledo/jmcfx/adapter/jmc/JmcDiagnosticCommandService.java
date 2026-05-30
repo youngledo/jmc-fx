@@ -7,6 +7,7 @@ import java.util.List;
 import java.util.Map;
 import java.util.Objects;
 
+import javax.management.Descriptor;
 import javax.management.JMException;
 import javax.management.MBeanInfo;
 import javax.management.MBeanOperationInfo;
@@ -70,11 +71,18 @@ public class JmcDiagnosticCommandService implements DiagnosticCommandService {
     private DiagnosticCommandInfo commandInfo(MBeanOperationInfo operation) {
         return new DiagnosticCommandInfo(
                 operation.getName(),
-                operation.getName(),
+                displayName(operation),
                 operation.getDescription(),
                 Arrays.stream(operation.getSignature())
                         .map(this::parameterInfo)
                         .toList());
+    }
+
+    private String displayName(MBeanOperationInfo operation) {
+        Descriptor descriptor = operation.getDescriptor();
+        Object dcmdName = descriptor == null ? null : descriptor.getFieldValue("dcmd.name");
+        String displayName = dcmdName == null ? "" : dcmdName.toString();
+        return displayName.isBlank() ? operation.getName() : displayName;
     }
 
     private DiagnosticCommandParameter parameterInfo(MBeanParameterInfo parameter) {

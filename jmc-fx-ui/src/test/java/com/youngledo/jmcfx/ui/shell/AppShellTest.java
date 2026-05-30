@@ -285,19 +285,19 @@ class AppShellTest {
                 "Home action buttons should keep JavaFX's default button style class; add local hooks in controller");
         assertFalse(elementByFxId(document, "homeConnectJvmButton").hasAttribute("disable"),
                 "Connect JVM should be enabled now that the JVM browser page exists");
-        Element jvmsToolbar = (Element) elementByFxId(document, "jvmsRefreshButton").getParentNode();
-        assertEquals("FlowPane", jvmsToolbar.getTagName());
-        assertTrue(hasStyleClass(jvmsToolbar, "page-toolbar"));
-        assertEquals("8", jvmsToolbar.getAttribute("hgap"));
-        assertEquals("8", jvmsToolbar.getAttribute("vgap"));
+        assertEquals("SplitPane", elementByFxId(document, "jvmsWorkspaceSplit").getTagName());
+        assertEquals("0.28", elementByFxId(document, "jvmsWorkspaceSplit").getAttribute("DividerPositions"));
+        assertEquals("VBox", elementByFxId(document, "jvmsBrowserSidebar").getTagName());
+        assertTrue(hasStyleClass(elementByFxId(document, "jvmsBrowserSidebar"), "summary-panel"));
+        assertTrue(hasStyleClass(elementByFxId(document, "jvmsBrowserSidebar"), "jvms-browser-sidebar"));
         assertEquals("Button", elementByFxId(document, "jvmsRefreshButton").getTagName());
         assertEquals("TextField", elementByFxId(document, "jvmsManualUrlField").getTagName());
-        assertEquals("360", elementByFxId(document, "jvmsManualUrlField").getAttribute("prefWidth"));
+        assertFalse(elementByFxId(document, "jvmsManualUrlField").hasAttribute("prefWidth"));
         assertEquals("Label", elementByFxId(document, "jvmsManualUrlHintLabel").getTagName());
         assertEquals("true", elementByFxId(document, "jvmsManualUrlHintLabel").getAttribute("wrapText"));
         assertTrue(hasStyleClass(elementByFxId(document, "jvmsManualUrlHintLabel"), "event-window-status"));
         assertEquals("TextField", elementByFxId(document, "jvmsManualNameField").getTagName());
-        assertEquals("160", elementByFxId(document, "jvmsManualNameField").getAttribute("prefWidth"));
+        assertFalse(elementByFxId(document, "jvmsManualNameField").hasAttribute("prefWidth"));
         assertEquals("Button", elementByFxId(document, "jvmsSaveTargetButton").getTagName());
         assertEquals("Button", elementByFxId(document, "jvmsRemoveSavedTargetButton").getTagName());
         assertEquals("Button", elementByFxId(document, "jvmsRefreshJdpButton").getTagName());
@@ -308,6 +308,7 @@ class AppShellTest {
         assertEquals("Button", elementByFxId(document, "jvmsConnectButton").getTagName());
         assertEquals("Button", elementByFxId(document, "jvmsDisconnectButton").getTagName());
         assertEquals("TableView", elementByFxId(document, "jvmsTable").getTagName());
+        assertEquals("ALWAYS", elementByFxId(document, "jvmsTable").getAttribute("VBox.vgrow"));
         assertEquals("VBox", elementByFxId(document, "jvmsSessionDetailPane").getTagName());
         assertTrue(hasStyleClass(elementByFxId(document, "jvmsSessionDetailPane"), "summary-panel"));
         assertTrue(hasStyleClass(elementByFxId(document, "jvmsSessionDetailPane"), "jvms-session-detail"));
@@ -320,6 +321,47 @@ class AppShellTest {
         assertEquals("Label", elementByFxId(document, "jvmsRecordingStatusLabel").getTagName());
         assertEquals("Label", elementByFxId(document, "jvmsSessionErrorLabel").getTagName());
         assertEquals("TabPane", elementByFxId(document, "jvmsLiveTabs").getTagName());
+        assertEquals("Tab", elementByFxId(document, "jvmsOverviewTab").getTagName());
+        assertTrue(hasStyleClass(elementByFxId(document, "jvmsOverviewContent"), "jvms-live-tab-content"));
+        assertFalse(hasFxId(document, "jvmsOverviewUpdatedLabel"));
+        assertEquals("Label", elementByFxId(document, "jvmsOverviewPersistenceTitleLabel").getTagName());
+        assertEquals("Label", elementByFxId(document, "jvmsOverviewPersistenceLabel").getTagName());
+        assertFalse(hasFxId(document, "jvmsRefreshOverviewButton"));
+        assertEquals("TableView", elementByFxId(document, "jvmsOverviewPersistenceTable").getTagName());
+        assertEquals("Label", elementByFxId(document, "jvmsOverviewDashboardTitleLabel").getTagName());
+        assertEquals("TabPane", elementByFxId(document, "jvmsOverviewDashboardTabs").getTagName());
+        assertTrue(hasStyleClass(elementByFxId(document, "jvmsOverviewDashboardTabs"), "page-detail-tabs"));
+        assertEquals("FlowPane", elementByFxId(document, "jvmsOverviewDashboardMetricToggles").getTagName());
+        assertEquals("VERTICAL", elementByFxId(document, "jvmsOverviewDashboardMetricToggles").getAttribute("orientation"));
+        assertEquals("ScrollPane", elementByFxId(document, "jvmsOverviewDashboardMetricToggles").getParentNode().getNodeName());
+        assertTrue(hasStyleClass(elementByFxId(document, "jvmsOverviewDashboardMetricToggles"),
+                "jvms-overview-metric-toggles"));
+        assertEquals("LineChart", elementByFxId(document, "jvmsOverviewDashboardChart").getTagName());
+        assertEquals("false", elementByFxId(document, "jvmsOverviewDashboardChart").getAttribute("legendVisible"));
+        assertEquals("TableView", elementByFxId(document, "jvmsOverviewDashboardTable").getTagName());
+        assertEquals("Label", elementByFxId(document, "jvmsOverviewProcessorTitleLabel").getTagName());
+        assertEquals("TabPane", elementByFxId(document, "jvmsOverviewProcessorTabs").getTagName());
+        assertTrue(hasStyleClass(elementByFxId(document, "jvmsOverviewProcessorTabs"), "page-detail-tabs"));
+        assertEquals("FlowPane", elementByFxId(document, "jvmsOverviewProcessorMetricToggles").getTagName());
+        assertEquals("VERTICAL", elementByFxId(document, "jvmsOverviewProcessorMetricToggles").getAttribute("orientation"));
+        assertEquals("ScrollPane", elementByFxId(document, "jvmsOverviewProcessorMetricToggles").getParentNode().getNodeName());
+        assertTrue(hasStyleClass(elementByFxId(document, "jvmsOverviewProcessorMetricToggles"),
+                "jvms-overview-metric-toggles"));
+        assertEquals("LineChart", elementByFxId(document, "jvmsOverviewProcessorChart").getTagName());
+        assertEquals("false", elementByFxId(document, "jvmsOverviewProcessorChart").getAttribute("legendVisible"));
+        assertEquals("TableView", elementByFxId(document, "jvmsOverviewProcessorTable").getTagName());
+        assertEquals("Label", elementByFxId(document, "jvmsOverviewMemoryTitleLabel").getTagName());
+        assertEquals("TabPane", elementByFxId(document, "jvmsOverviewMemoryTabs").getTagName());
+        assertTrue(hasStyleClass(elementByFxId(document, "jvmsOverviewMemoryTabs"), "page-detail-tabs"));
+        assertEquals("FlowPane", elementByFxId(document, "jvmsOverviewMemoryMetricToggles").getTagName());
+        assertEquals("VERTICAL", elementByFxId(document, "jvmsOverviewMemoryMetricToggles").getAttribute("orientation"));
+        assertEquals("ScrollPane", elementByFxId(document, "jvmsOverviewMemoryMetricToggles").getParentNode().getNodeName());
+        assertTrue(hasStyleClass(elementByFxId(document, "jvmsOverviewMemoryMetricToggles"),
+                "jvms-overview-metric-toggles"));
+        assertEquals("LineChart", elementByFxId(document, "jvmsOverviewMemoryChart").getTagName());
+        assertEquals("false", elementByFxId(document, "jvmsOverviewMemoryChart").getAttribute("legendVisible"));
+        assertEquals("TableView", elementByFxId(document, "jvmsOverviewMemoryTable").getTagName());
+        assertEquals("Label", elementByFxId(document, "jvmsOverviewErrorLabel").getTagName());
         assertEquals("Tab", elementByFxId(document, "jvmsSessionTab").getTagName());
         assertTrue(hasStyleClass(elementByFxId(document, "jvmsSessionContent"), "jvms-live-tab-content"));
         assertEquals("Tab", elementByFxId(document, "jvmsMBeanTab").getTagName());
@@ -600,6 +642,112 @@ class AppShellTest {
         assertFalse(css.contains(".workspace-topbar"));
         assertFalse(css.contains(".workspace-context-label"));
         assertFalse(css.contains(".workspace-home-button"));
+    }
+
+    @Test
+    void liveJvmOverviewProvidesDefaultChartAndTableViews() throws Exception {
+        String controller = java.nio.file.Files.readString(
+                java.nio.file.Path.of("src/main/java/com/youngledo/jmcfx/ui/shell/AppShellController.java"));
+        String english = java.nio.file.Files.readString(
+                java.nio.file.Path.of("src/main/resources/com/youngledo/jmcfx/ui/i18n/messages.properties"));
+        String chinese = java.nio.file.Files.readString(
+                java.nio.file.Path.of("src/main/resources/com/youngledo/jmcfx/ui/i18n/messages_zh_CN.properties"));
+        String css = appCss();
+
+        assertTrue(controller.contains("@FXML private Tab jvmsOverviewTab;"));
+        assertTrue(controller.contains("@FXML private TableView<LiveJvmOverviewMetric> jvmsOverviewPersistenceTable;"));
+        assertTrue(controller.contains("@FXML private LineChart<Number, Number> jvmsOverviewDashboardChart;"));
+        assertTrue(controller.contains("@FXML private FlowPane jvmsOverviewDashboardMetricToggles;"));
+        assertTrue(controller.contains("@FXML private TableView<LiveJvmOverviewMetric> jvmsOverviewDashboardTable;"));
+        assertTrue(controller.contains("@FXML private LineChart<Number, Number> jvmsOverviewProcessorChart;"));
+        assertTrue(controller.contains("@FXML private FlowPane jvmsOverviewProcessorMetricToggles;"));
+        assertTrue(controller.contains("@FXML private TableView<LiveJvmOverviewMetric> jvmsOverviewProcessorTable;"));
+        assertTrue(controller.contains("@FXML private LineChart<Number, Number> jvmsOverviewMemoryChart;"));
+        assertTrue(controller.contains("@FXML private FlowPane jvmsOverviewMemoryMetricToggles;"));
+        assertTrue(controller.contains("@FXML private TableView<LiveJvmOverviewMetric> jvmsOverviewMemoryTable;"));
+        assertTrue(controller.contains("DEFAULT_OVERVIEW_CHART_METRICS"));
+        assertTrue(controller.contains("overviewChartSeries"));
+        assertTrue(controller.contains("new CheckBox()"));
+        assertTrue(controller.contains("checkBox.setGraphic(overviewMetricToggleGraphic(group, metric))"));
+        assertTrue(controller.contains("selectOverviewMetricAxis(group, kind)"));
+        assertTrue(controller.contains("updatingOverviewMetricSelection"));
+        assertTrue(controller.contains("refreshOverviewMetricToggleGraphics(group)"));
+        assertTrue(controller.contains("updateOverviewMetricToggle(CheckBox checkBox, String group, LiveJvmOverviewMetric metric)"));
+        assertTrue(controller.contains("overviewMetricColorStyle(String group, LiveMetricKind kind)"));
+        assertTrue(controller.contains("graphic.setPadding(new Insets(0, 0, 0, 8))"));
+        assertFalse(controller.contains("series.getNode()"));
+        assertTrue(controller.contains("updateLiveJvmOverviewChart"));
+        assertTrue(controller.contains(".filter(metric -> group.equals(metric.group()))"));
+        assertTrue(controller.contains("List<XYChart.Series<Number, Number>> orderedSeries = new ArrayList<>()"));
+        assertTrue(controller.contains("chart.getData().setAll(orderedSeries)"));
+        assertTrue(controller.contains("updateOverviewChartAxis"));
+        assertTrue(controller.contains("updateOverviewChartAxis(LineChart<Number, Number> chart, String group, List<LiveMetricKind> kinds)"));
+        assertTrue(controller.contains("overviewChartAxis(String group, List<LiveMetricKind> kinds)"));
+        assertFalse(controller.contains("OverviewChartAxis.MIXED"));
+        assertTrue(controller.contains("overviewChartValue"));
+        assertTrue(controller.contains("DisplayFormats.formatFileSize(Math.round(numeric))"));
+        assertTrue(controller.contains("OverviewValueTickFormatter"));
+        assertTrue(controller.contains("chart.setLegendVisible(false);"));
+        assertTrue(controller.contains("configureLiveJvmOverview();"));
+        assertTrue(controller.contains("bindLiveJvmOverview();"));
+        assertTrue(controller.contains("rebuildLiveJvmOverviewGroups();"));
+        assertTrue(controller.contains(".addListener((ListChangeListener<LiveJvmOverviewMetric>) change -> updateLiveJvmOverviewCharts())"));
+        assertTrue(controller.contains("overviewMetricTogglesUninitialized()"));
+        assertTrue(controller.contains("jvmsOverviewDashboardMetricToggles.getChildren().isEmpty()"));
+        assertTrue(controller.contains("event -> refreshLiveJvmOverviewCharts()"));
+        assertFalse(controller.contains("jvmsRefreshOverviewButton"));
+        assertFalse(controller.contains("jvmsOverviewUpdatedLabel"));
+        assertTrue(controller.contains("jvmsOverviewDashboardTabs.getSelectionModel().select(jvmsOverviewDashboardChartTab)"));
+        assertTrue(controller.contains("jvmsOverviewProcessorTabs.getSelectionModel().select(jvmsOverviewProcessorChartTab)"));
+        assertTrue(controller.contains("jvmsOverviewMemoryTabs.getSelectionModel().select(jvmsOverviewMemoryChartTab)"));
+        assertTrue(controller.contains("jvmsOverviewTab.textProperty().bind(i18n.text(\"jvms.overview.tab\"))"));
+        assertTrue(controller.contains("jvmsOverviewPersistenceTitleLabel.textProperty().bind(i18n.text(\"jvms.overview.persistence.title\"))"));
+        assertTrue(controller.contains("jvmsOverviewDashboardTitleLabel.textProperty().bind(i18n.text(\"jvms.overview.dashboard.title\"))"));
+        assertTrue(controller.contains("jvmsOverviewProcessorTitleLabel.textProperty().bind(i18n.text(\"jvms.overview.processor.title\"))"));
+        assertTrue(controller.contains("jvmsOverviewMemoryTitleLabel.textProperty().bind(i18n.text(\"jvms.overview.memory.title\"))"));
+        assertTrue(controller.contains("new Timeline(new KeyFrame(Duration.seconds(2)"));
+        assertTrue(controller.contains("localizedColumn(\"jvms.overview.metric.name\")"));
+        assertTrue(controller.contains("localizedColumn(\"jvms.overview.metric.value\")"));
+        assertTrue(controller.contains("localizedColumn(\"jvms.overview.metric.observed\")"));
+
+        assertTrue(css.contains(".jvms-live-tab-content .chart"));
+        assertFalse(css.contains(".jvms-live-tab-content .chart:refreshing"));
+        assertFalse(css.contains(".jvms-live-tab-content .table-view:refreshing"));
+        assertTrue(css.contains(".jvms-overview-group"));
+        assertTrue(css.contains(".jvms-overview-chart-panel .scroll-pane"));
+        assertTrue(css.contains(".jvms-overview-metric-toggles"));
+        assertTrue(css.contains(".jvms-overview-metric-toggle-content"));
+        assertTrue(css.contains("-fx-spacing: 6px"));
+        assertTrue(css.contains(".jvms-overview-metric-swatch.default-color0"));
+        assertTrue(css.contains("-fx-background-color: #f3622d"));
+
+        assertTrue(english.contains("jvms.overview.tab=Overview"));
+        assertTrue(english.contains("jvms.overview.chart=Chart"));
+        assertTrue(english.contains("jvms.overview.table=Table"));
+        assertFalse(english.contains("jvms.overview.refresh="));
+        assertFalse(english.contains("jvms.overview.updated="));
+        assertFalse(english.contains("jvms.overview.updated.empty="));
+        assertTrue(english.contains("jvms.overview.persistence.title=JMX Data Persistence Settings"));
+        assertTrue(english.contains("jvms.overview.dashboard.title=Dashboard"));
+        assertTrue(english.contains("jvms.overview.processor.title=Processor"));
+        assertTrue(english.contains("jvms.overview.memory.title=Memory"));
+        assertTrue(english.contains("jvms.overview.persistence.summary=Persistence enabled for"));
+        assertTrue(english.contains("jvms.overview.metrics.empty=No overview metrics sampled yet."));
+        assertTrue(controller.contains("case \"bytes\" -> \"\""));
+        assertTrue(english.contains("jvms.overview.axis.memory=Memory"));
+        assertTrue(chinese.contains("jvms.overview.tab=总览"));
+        assertTrue(chinese.contains("jvms.overview.chart=图表"));
+        assertTrue(chinese.contains("jvms.overview.table=表格"));
+        assertFalse(chinese.contains("jvms.overview.refresh="));
+        assertFalse(chinese.contains("jvms.overview.updated="));
+        assertFalse(chinese.contains("jvms.overview.updated.empty="));
+        assertTrue(chinese.contains("jvms.overview.persistence.title=JMX数据持久化设置"));
+        assertTrue(chinese.contains("jvms.overview.dashboard.title=Dashboard"));
+        assertTrue(chinese.contains("jvms.overview.processor.title=Processor"));
+        assertTrue(chinese.contains("jvms.overview.memory.title=Memory"));
+        assertTrue(chinese.contains("jvms.overview.persistence.summary=已为"));
+        assertTrue(chinese.contains("jvms.overview.metrics.empty=尚未采样总览指标。"));
+        assertTrue(chinese.contains("jvms.overview.axis.memory=内存"));
     }
 
     @Test
@@ -925,11 +1073,13 @@ class AppShellTest {
     void jvmsLiveTabsUseUnifiedContentSpacing() throws Exception {
         String css = appCss();
         String sessionDetail = cssBlock(css, ".jvms-session-detail");
+        String browserSidebar = cssBlock(css, ".jvms-browser-sidebar");
         String tabContent = cssBlock(css, ".jvms-live-tab-content");
         String workspace = cssBlock(css, ".jvms-live-workspace");
 
-        assertTrue(sessionDetail.contains("-fx-min-height: 220px"));
-        assertTrue(sessionDetail.contains("-fx-pref-height: 320px"));
+        assertTrue(browserSidebar.contains("-fx-pref-width: 340px"));
+        assertTrue(sessionDetail.contains("-fx-min-height: 360px"));
+        assertFalse(sessionDetail.contains("-fx-pref-height: 320px"));
         assertTrue(tabContent.contains("-fx-padding: 10px 10px 0 0"));
         assertTrue(workspace.contains("-fx-padding: 0 0 0 8px"));
     }
@@ -2068,6 +2218,11 @@ class AppShellTest {
                 .map(Map.Entry::getValue)
                 .findFirst()
                 .orElseThrow(() -> new AssertionError("Missing fx:id " + fxId));
+    }
+
+    private static boolean hasFxId(Document document, String fxId) {
+        return elements(document).values().stream()
+                .anyMatch(element -> fxId.equals(element.getAttribute("fx:id")));
     }
 
     private static Element elementByStyleClass(Document document, String styleClass) {

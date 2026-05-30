@@ -10,6 +10,7 @@ import java.util.List;
 
 import javax.management.Attribute;
 import javax.management.AttributeList;
+import javax.management.Descriptor;
 import javax.management.DynamicMBean;
 import javax.management.MBeanException;
 import javax.management.MBeanInfo;
@@ -19,6 +20,7 @@ import javax.management.MBeanServer;
 import javax.management.MBeanServerFactory;
 import javax.management.ObjectName;
 import javax.management.ReflectionException;
+import javax.management.modelmbean.DescriptorSupport;
 
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
@@ -52,7 +54,7 @@ class JmcDiagnosticCommandServiceTest {
 
         assertEquals(List.of("threadPrint", "gcHeapInfo", "zCustom"),
                 commands.stream().map(DiagnosticCommandInfo::name).toList());
-        assertEquals(List.of("threadPrint", "gcHeapInfo", "zCustom"),
+        assertEquals(List.of("Thread.print", "GC.heap_info", "zCustom"),
                 commands.stream().map(DiagnosticCommandInfo::displayName).toList());
 
         DiagnosticCommandInfo threadPrint = commands.getFirst();
@@ -60,7 +62,7 @@ class JmcDiagnosticCommandServiceTest {
         assertEquals(1, threadPrint.parameters().size());
         assertEquals("options", threadPrint.parameters().getFirst().name());
         assertEquals("[Ljava.lang.String;", threadPrint.parameters().getFirst().type());
-        assertEquals("Thread print options", threadPrint.parameters().getFirst().description());
+        assertEquals("threadPrint options", threadPrint.parameters().getFirst().description());
         assertFalse(threadPrint.parameters().getFirst().required());
     }
 
@@ -184,24 +186,18 @@ class JmcDiagnosticCommandServiceTest {
                     null,
                     null,
                     new MBeanOperationInfo[] {
-                            operation("zCustom", "Custom command"),
-                            operation("gcHeapInfo", "Heap information"),
-                            new MBeanOperationInfo(
-                                    "threadPrint",
-                                    "Print all threads",
-                                    new MBeanParameterInfo[] {
-                                            new MBeanParameterInfo(
-                                                    "options",
-                                                    "[Ljava.lang.String;",
-                                                    "Thread print options")
-                                    },
-                                    "java.lang.String",
-                                    MBeanOperationInfo.ACTION)
+                            operation("zCustom", "Custom command", null),
+                            operation("gcHeapInfo", "Heap information", "GC.heap_info"),
+                            operation("threadPrint", "Print all threads", "Thread.print")
                     },
                     null);
         }
 
-        private MBeanOperationInfo operation(String name, String description) {
+        private MBeanOperationInfo operation(String name, String description, String dcmdName) {
+            Descriptor descriptor = new DescriptorSupport();
+            if (dcmdName != null) {
+                descriptor.setField("dcmd.name", dcmdName);
+            }
             return new MBeanOperationInfo(
                     name,
                     description,
@@ -209,7 +205,8 @@ class JmcDiagnosticCommandServiceTest {
                             new MBeanParameterInfo("options", "[Ljava.lang.String;", name + " options")
                     },
                     "java.lang.String",
-                    MBeanOperationInfo.ACTION);
+                    MBeanOperationInfo.ACTION,
+                    descriptor);
         }
     }
 }

@@ -1,10 +1,15 @@
 package com.youngledo.jmcfx.ui.shell;
 
+import java.time.Instant;
 import java.time.ZoneId;
 import java.time.format.DateTimeFormatter;
 import java.nio.charset.StandardCharsets;
 import java.nio.file.Files;
+import java.util.ArrayList;
+import java.util.HashMap;
+import java.util.Map;
 import java.util.List;
+import java.util.Set;
 import java.util.StringJoiner;
 import java.nio.file.Path;
 
@@ -74,6 +79,7 @@ import com.youngledo.jmcfx.domain.model.JvmSessionSnapshot;
 import com.youngledo.jmcfx.domain.model.LeakCandidate;
 import com.youngledo.jmcfx.domain.model.LeakReferenceNode;
 import com.youngledo.jmcfx.domain.model.LiveMetricDefinition;
+import com.youngledo.jmcfx.domain.model.LiveMetricKind;
 import com.youngledo.jmcfx.domain.model.LockGrouping;
 import com.youngledo.jmcfx.domain.model.LockHistogram;
 import com.youngledo.jmcfx.domain.model.MBeanAttributeInfo;
@@ -160,6 +166,8 @@ import com.youngledo.jmcfx.ui.jvm.GcSummaryViewModel;
 import com.youngledo.jmcfx.ui.jvm.JvmInfoViewModel;
 import com.youngledo.jmcfx.ui.jvm.VmOperationsViewModel;
 import com.youngledo.jmcfx.ui.jvms.JvmBrowserViewModel;
+import com.youngledo.jmcfx.ui.jvms.LiveJvmPersistenceOverview;
+import com.youngledo.jmcfx.ui.jvms.LiveJvmOverviewMetric;
 import com.youngledo.jmcfx.ui.leaks.LeakSuspectsViewModel;
 import com.youngledo.jmcfx.ui.locks.LockViewModel;
 import com.youngledo.jmcfx.ui.metadata.JfrMetadataViewModel;
@@ -181,6 +189,8 @@ import com.youngledo.jmcfx.ui.socketio.SocketIOViewModel;
 import com.youngledo.jmcfx.ui.threads.ThreadViewModel;
 import com.youngledo.jmcfx.ui.tlab.TlabViewModel;
 
+import javafx.animation.KeyFrame;
+import javafx.animation.Timeline;
 import javafx.application.Platform;
 import javafx.beans.binding.Bindings;
 import javafx.beans.property.ReadOnlyStringWrapper;
@@ -191,8 +201,10 @@ import javafx.collections.ListChangeListener;
 import javafx.fxml.FXML;
 import javafx.scene.Node;
 import javafx.scene.chart.LineChart;
+import javafx.scene.chart.NumberAxis;
 import javafx.scene.chart.XYChart;
 import javafx.scene.control.Button;
+import javafx.scene.control.CheckBox;
 import javafx.scene.control.ComboBox;
 import javafx.scene.control.ContentDisplay;
 import javafx.scene.control.ContextMenu;
@@ -214,6 +226,7 @@ import javafx.scene.control.TableColumn;
 import javafx.scene.control.TableView;
 import javafx.scene.control.TabPane;
 import javafx.scene.control.TextField;
+import javafx.scene.control.Tooltip;
 import javafx.scene.control.Toggle;
 import javafx.scene.control.ToggleGroup;
 import javafx.scene.control.TreeItem;
@@ -222,11 +235,15 @@ import javafx.scene.input.MouseButton;
 import javafx.scene.input.MouseEvent;
 import javafx.scene.input.ScrollEvent;
 import javafx.scene.input.ZoomEvent;
+import javafx.geometry.Insets;
 import javafx.scene.layout.BorderPane;
+import javafx.scene.layout.FlowPane;
 import javafx.scene.layout.HBox;
+import javafx.scene.layout.Priority;
 import javafx.scene.layout.Region;
 import javafx.scene.layout.VBox;
 import javafx.stage.FileChooser;
+import javafx.util.Duration;
 import javafx.util.StringConverter;
 import org.kordamp.ikonli.Ikon;
 import org.kordamp.ikonli.javafx.FontIcon;
@@ -242,6 +259,10 @@ import org.apache.logging.log4j.Logger;
 public class AppShellController {
 
     private static final Logger LOGGER = LogManager.getLogger(AppShellController.class);
+    private static final Map<String, Set<LiveMetricKind>> DEFAULT_OVERVIEW_CHART_METRICS = Map.of(
+            "Dashboard", Set.of(LiveMetricKind.THREAD_COUNT),
+            "Processor", Set.of(LiveMetricKind.PROCESS_CPU_LOAD_PERCENT, LiveMetricKind.SYSTEM_CPU_LOAD_PERCENT),
+            "Memory", Set.of(LiveMetricKind.HEAP_USED_PERCENT));
 
     static final int MIN_EVENT_TYPES_WIDTH = 180;
     static final int DEFAULT_EVENT_TYPES_WIDTH = 260;
@@ -249,6 +270,11 @@ public class AppShellController {
     static final double DEFAULT_EVENT_TYPES_DIVIDER_POSITION = 0.25;
     private final AppShellViewModel viewModel;
     private final RecordingRepository recordingRepository;
+    private final Map<String, Map<LiveMetricKind, CheckBox>> overviewMetricToggles = new HashMap<>();
+    private final Map<String, Map<LiveMetricKind, XYChart.Series<Number, Number>>> overviewChartSeries =
+            new HashMap<>();
+    private boolean updatingOverviewMetricSelection;
+    private boolean overviewFullRefreshPending = true;
     private final EventQueryService eventQueryService;
     private final RuleAnalysisService ruleAnalysisService;
     private final ProfilingService profilingService;
@@ -454,11 +480,37 @@ public class AppShellController {
     @FXML private TableView<JvmConnection> jvmsTable;
     @FXML private VBox jvmsSessionDetailPane;
     @FXML private TabPane jvmsLiveTabs;
+    @FXML private Tab jvmsOverviewTab;
     @FXML private Tab jvmsSessionTab;
     @FXML private Tab jvmsMBeanTab;
     @FXML private Tab jvmsDiagnosticsTab;
     @FXML private Tab jvmsTriggersTab;
     @FXML private Label jvmsSessionTitleLabel;
+    @FXML private Label jvmsOverviewPersistenceTitleLabel;
+    @FXML private Label jvmsOverviewPersistenceLabel;
+    @FXML private TableView<LiveJvmOverviewMetric> jvmsOverviewPersistenceTable;
+    @FXML private Label jvmsOverviewDashboardTitleLabel;
+    @FXML private TabPane jvmsOverviewDashboardTabs;
+    @FXML private Tab jvmsOverviewDashboardChartTab;
+    @FXML private Tab jvmsOverviewDashboardTableTab;
+    @FXML private FlowPane jvmsOverviewDashboardMetricToggles;
+    @FXML private LineChart<Number, Number> jvmsOverviewDashboardChart;
+    @FXML private TableView<LiveJvmOverviewMetric> jvmsOverviewDashboardTable;
+    @FXML private Label jvmsOverviewProcessorTitleLabel;
+    @FXML private TabPane jvmsOverviewProcessorTabs;
+    @FXML private Tab jvmsOverviewProcessorChartTab;
+    @FXML private Tab jvmsOverviewProcessorTableTab;
+    @FXML private FlowPane jvmsOverviewProcessorMetricToggles;
+    @FXML private LineChart<Number, Number> jvmsOverviewProcessorChart;
+    @FXML private TableView<LiveJvmOverviewMetric> jvmsOverviewProcessorTable;
+    @FXML private Label jvmsOverviewMemoryTitleLabel;
+    @FXML private TabPane jvmsOverviewMemoryTabs;
+    @FXML private Tab jvmsOverviewMemoryChartTab;
+    @FXML private Tab jvmsOverviewMemoryTableTab;
+    @FXML private FlowPane jvmsOverviewMemoryMetricToggles;
+    @FXML private LineChart<Number, Number> jvmsOverviewMemoryChart;
+    @FXML private TableView<LiveJvmOverviewMetric> jvmsOverviewMemoryTable;
+    @FXML private Label jvmsOverviewErrorLabel;
     @FXML private Label jvmsRuntimeSummaryLabel;
     @FXML private ListView<JvmCapabilitySnapshot> jvmsCapabilitiesList;
     @FXML private Button jvmsStartRecordingButton;
@@ -689,6 +741,7 @@ public class AppShellController {
     @FXML private TableView<ClassloaderStatistics> classLoadingStatsTable;
     @FXML private TableView<VmOperationSummary> vmOperationSummaryTable;
     @FXML private TableView<VmOperationEvent> vmOperationEventsTable;
+    private Timeline liveJvmOverviewRefreshTimeline;
     @FXML private TableView<ProcessInfo> processesTable;
     @FXML private TableView<EnvironmentVariable> envVarsTable;
     @FXML private TextField envVarsSearchField;
@@ -1174,6 +1227,7 @@ public class AppShellController {
         configureJvmBrowserTable();
         configureJvmRecordingsTable();
         configureMBeanBrowser();
+        configureLiveJvmOverview();
         configureDiagnosticCommands();
         configureTriggers();
         configureJmxMonitoring();
@@ -1613,6 +1667,54 @@ public class AppShellController {
         jvmsDiagnosticCommandsTable.getColumns().setAll(List.of(nameCol, descriptionCol, parametersCol));
     }
 
+    private void configureLiveJvmOverview() {
+        configureOverviewChart(jvmsOverviewDashboardChart);
+        configureOverviewChart(jvmsOverviewProcessorChart);
+        configureOverviewChart(jvmsOverviewMemoryChart);
+        jvmsOverviewDashboardTabs.getSelectionModel().select(jvmsOverviewDashboardChartTab);
+        jvmsOverviewProcessorTabs.getSelectionModel().select(jvmsOverviewProcessorChartTab);
+        jvmsOverviewMemoryTabs.getSelectionModel().select(jvmsOverviewMemoryChartTab);
+        configureOverviewTable(jvmsOverviewPersistenceTable, false);
+        configureOverviewTable(jvmsOverviewDashboardTable, true);
+        configureOverviewTable(jvmsOverviewProcessorTable, true);
+        configureOverviewTable(jvmsOverviewMemoryTable, true);
+    }
+
+    private void configureOverviewChart(LineChart<Number, Number> chart) {
+        chart.setCreateSymbols(false);
+        chart.setLegendVisible(false);
+        NumberAxis xAxis = (NumberAxis) chart.getXAxis();
+        NumberAxis yAxis = (NumberAxis) chart.getYAxis();
+        xAxis.setTickLabelFormatter(new OverviewSequenceTickFormatter());
+    }
+
+    private void configureOverviewTable(TableView<LiveJvmOverviewMetric> table, boolean includeObservedColumn) {
+        table.setPlaceholder(localizedTablePlaceholder("jvms.overview.metrics.empty"));
+
+        TableColumn<LiveJvmOverviewMetric, String> metricCol =
+                localizedColumn("jvms.overview.metric.name");
+        metricCol.setPrefWidth(220);
+        metricCol.setCellValueFactory(cell -> new ReadOnlyStringWrapper(cell.getValue().label()));
+
+        TableColumn<LiveJvmOverviewMetric, String> valueCol =
+                localizedColumn("jvms.overview.metric.value");
+        valueCol.setPrefWidth(160);
+        valueCol.setCellValueFactory(cell -> new ReadOnlyStringWrapper(cell.getValue().displayValue()));
+
+        if (!includeObservedColumn) {
+            table.getColumns().setAll(List.of(metricCol, valueCol));
+            return;
+        }
+
+        TableColumn<LiveJvmOverviewMetric, String> observedCol =
+                localizedColumn("jvms.overview.metric.observed");
+        observedCol.setPrefWidth(180);
+        observedCol.setCellValueFactory(cell -> new ReadOnlyStringWrapper(
+                formatEventTimeForDisplay(cell.getValue().observedAt(), ZoneId.systemDefault())));
+
+        table.getColumns().setAll(List.of(metricCol, valueCol, observedCol));
+    }
+
     private void configureTriggers() {
         jvmsTriggerRulesTable.setPlaceholder(localizedTablePlaceholder("jvms.triggers.rules.empty"));
         jvmsTriggerEventsTable.setPlaceholder(localizedTablePlaceholder("jvms.triggers.events.empty"));
@@ -1827,6 +1929,15 @@ public class AppShellController {
             jvmsSelectedConnectionStatusLabel.textProperty().bind(i18n.text("jvms.jdp.status.idle"));
             jvmsStartRecordingButton.setDisable(true);
             jvmsStopRecordingButton.setDisable(true);
+            jvmsOverviewPersistenceTable.setItems(FXCollections.emptyObservableList());
+            jvmsOverviewDashboardTable.setItems(FXCollections.emptyObservableList());
+            jvmsOverviewProcessorTable.setItems(FXCollections.emptyObservableList());
+            jvmsOverviewMemoryTable.setItems(FXCollections.emptyObservableList());
+            jvmsOverviewDashboardChart.getData().clear();
+            jvmsOverviewProcessorChart.getData().clear();
+            jvmsOverviewMemoryChart.getData().clear();
+            jvmsOverviewErrorLabel.setVisible(false);
+            jvmsOverviewErrorLabel.setManaged(false);
             jvmsRecordingsTable.setItems(FXCollections.emptyObservableList());
             jvmsMBeanAttributesTable.setItems(FXCollections.emptyObservableList());
             jvmsMBeanOperationsTable.setItems(FXCollections.emptyObservableList());
@@ -1957,6 +2068,7 @@ public class AppShellController {
         jvmsSessionErrorLabel.visibleProperty().bind(jvmBrowserViewModel.sessionErrorProperty());
         jvmsSessionErrorLabel.managedProperty().bind(jvmsSessionErrorLabel.visibleProperty());
         jvmsSessionErrorLabel.textProperty().bind(jvmBrowserViewModel.sessionErrorMessageProperty());
+        bindLiveJvmOverview();
         jvmsRecordingsTable.setItems(jvmBrowserViewModel.flightRecordingsProperty());
         jvmsRecordingsTable.getSelectionModel().selectedItemProperty().addListener((observable, oldValue, newValue) ->
                 jvmBrowserViewModel.selectedFlightRecordingProperty().set(newValue));
@@ -2044,6 +2156,103 @@ public class AppShellController {
         jvmsInvokeMBeanOperationButton.disableProperty().bind(jvmBrowserViewModel.mbeanBrowserAvailableProperty().not()
                 .or(jvmBrowserViewModel.selectedMBeanOperationProperty().isNull())
                 .or(jvmBrowserViewModel.mbeanLoadingProperty()));
+    }
+
+    private void bindLiveJvmOverview() {
+        jvmsOverviewPersistenceTable.setItems(FXCollections.observableArrayList());
+        bindOverviewGroupTable(jvmsOverviewDashboardTable, "Dashboard");
+        bindOverviewGroupTable(jvmsOverviewProcessorTable, "Processor");
+        bindOverviewGroupTable(jvmsOverviewMemoryTable, "Memory");
+        jvmBrowserViewModel.overviewMetricsProperty()
+                .addListener((ListChangeListener<LiveJvmOverviewMetric>) change -> updateLiveJvmOverviewCharts());
+        jvmBrowserViewModel.overviewPersistenceProperty()
+                .addListener((observable, oldValue, newValue) -> {
+                    if (overviewFullRefreshPending) {
+                        rebuildLiveJvmOverviewGroups();
+                        overviewFullRefreshPending = false;
+                    }
+                });
+        i18n.localeProperty().addListener((observable, oldValue, newValue) -> {
+            overviewFullRefreshPending = true;
+            rebuildLiveJvmOverviewGroups();
+            overviewFullRefreshPending = false;
+        });
+        rebuildLiveJvmOverviewGroups();
+        jvmsOverviewPersistenceLabel.textProperty().bind(Bindings.createStringBinding(
+                () -> formatOverviewPersistence(jvmBrowserViewModel.overviewPersistenceProperty().get()),
+                jvmBrowserViewModel.overviewPersistenceProperty(),
+                i18n.localeProperty()));
+        jvmsOverviewErrorLabel.textProperty().bind(jvmBrowserViewModel.overviewErrorMessageProperty());
+        jvmsOverviewErrorLabel.visibleProperty().bind(jvmBrowserViewModel.overviewErrorProperty());
+        jvmsOverviewErrorLabel.managedProperty().bind(jvmsOverviewErrorLabel.visibleProperty());
+        jvmsOverviewPersistenceTable.disableProperty().bind(jvmBrowserViewModel.selectedSessionProperty().isNull());
+        jvmsOverviewDashboardTable.disableProperty().bind(jvmBrowserViewModel.selectedSessionProperty().isNull());
+        jvmsOverviewProcessorTable.disableProperty().bind(jvmBrowserViewModel.selectedSessionProperty().isNull());
+        jvmsOverviewMemoryTable.disableProperty().bind(jvmBrowserViewModel.selectedSessionProperty().isNull());
+        jvmBrowserViewModel.selectedSessionProperty().addListener((observable, oldValue, newValue) -> {
+            overviewFullRefreshPending = true;
+            updateLiveJvmOverviewRefreshTimer();
+        });
+        updateLiveJvmOverviewRefreshTimer();
+    }
+
+    private void bindOverviewGroupTable(TableView<LiveJvmOverviewMetric> table, String group) {
+        table.setItems(FXCollections.observableArrayList(latestOverviewRows(group)));
+    }
+
+    private String formatOverviewPersistence(LiveJvmPersistenceOverview persistence) {
+        if (persistence == null) {
+            return i18n.get("jvms.overview.persistence.empty");
+        }
+        if (!persistence.configured()) {
+            return i18n.get("jvms.overview.persistence.unconfigured");
+        }
+        if (persistence.empty()) {
+            return i18n.get("jvms.overview.persistence.none");
+        }
+        String samples = persistence.maxSamples() > 0
+                ? i18n.format("jvms.overview.persistence.samples", persistence.maxSamples())
+                : i18n.get("jvms.overview.persistence.samples.default");
+        String notifications = persistence.maxEvents() > 0
+                ? i18n.format("jvms.overview.persistence.notifications", persistence.maxEvents())
+                : i18n.get("jvms.overview.persistence.notifications.default");
+        return i18n.format("jvms.overview.persistence.summary",
+                persistence.persistedAttributeSubscriptions(),
+                persistence.attributeSubscriptions(),
+                persistence.persistedNotificationSubscriptions(),
+                persistence.notificationSubscriptions(),
+                samples,
+                notifications);
+    }
+
+    private Instant lastOverviewObservation() {
+        return jvmBrowserViewModel.overviewMetricsProperty().stream()
+                .map(LiveJvmOverviewMetric::observedAt)
+                .max(Instant::compareTo)
+                .orElse(Instant.EPOCH);
+    }
+
+    private void updateLiveJvmOverviewRefreshTimer() {
+        if (jvmBrowserViewModel == null) {
+            stopLiveJvmOverviewRefreshTimer();
+            return;
+        }
+        if (jvmBrowserViewModel.selectedSessionProperty().get() == null) {
+            stopLiveJvmOverviewRefreshTimer();
+            return;
+        }
+        if (liveJvmOverviewRefreshTimeline == null) {
+            liveJvmOverviewRefreshTimeline = new Timeline(new KeyFrame(Duration.seconds(2),
+                    event -> refreshLiveJvmOverviewCharts()));
+            liveJvmOverviewRefreshTimeline.setCycleCount(Timeline.INDEFINITE);
+        }
+        liveJvmOverviewRefreshTimeline.play();
+    }
+
+    private void stopLiveJvmOverviewRefreshTimer() {
+        if (liveJvmOverviewRefreshTimeline != null) {
+            liveJvmOverviewRefreshTimeline.stop();
+        }
     }
 
     private void bindDiagnosticCommands() {
@@ -2314,6 +2523,369 @@ public class AppShellController {
                 java.time.Duration.ofSeconds(1),
                 120,
                 true);
+    }
+
+    private void rebuildLiveJvmOverviewGroups() {
+        if (jvmBrowserViewModel == null) {
+            return;
+        }
+        replaceOverviewTableRows(jvmsOverviewPersistenceTable, overviewPersistenceRows());
+        replaceOverviewTableRows(jvmsOverviewDashboardTable, latestOverviewRows("Dashboard"));
+        replaceOverviewTableRows(jvmsOverviewProcessorTable, latestOverviewRows("Processor"));
+        replaceOverviewTableRows(jvmsOverviewMemoryTable, latestOverviewRows("Memory"));
+        rebuildOverviewMetricToggles("Dashboard", jvmsOverviewDashboardMetricToggles);
+        rebuildOverviewMetricToggles("Processor", jvmsOverviewProcessorMetricToggles);
+        rebuildOverviewMetricToggles("Memory", jvmsOverviewMemoryMetricToggles);
+        updateLiveJvmOverviewChart(jvmsOverviewDashboardChart, "Dashboard");
+        updateLiveJvmOverviewChart(jvmsOverviewProcessorChart, "Processor");
+        updateLiveJvmOverviewChart(jvmsOverviewMemoryChart, "Memory");
+    }
+
+    private void updateLiveJvmOverviewCharts() {
+        if (jvmBrowserViewModel == null) {
+            return;
+        }
+        if (overviewMetricTogglesUninitialized()) {
+            rebuildLiveJvmOverviewGroups();
+            overviewFullRefreshPending = false;
+            return;
+        }
+        updateLiveJvmOverviewChart(jvmsOverviewDashboardChart, "Dashboard");
+        updateLiveJvmOverviewChart(jvmsOverviewProcessorChart, "Processor");
+        updateLiveJvmOverviewChart(jvmsOverviewMemoryChart, "Memory");
+    }
+
+    private boolean overviewMetricTogglesUninitialized() {
+        return !latestOverviewRows("Dashboard").isEmpty() && jvmsOverviewDashboardMetricToggles.getChildren().isEmpty()
+                || !latestOverviewRows("Processor").isEmpty()
+                        && jvmsOverviewProcessorMetricToggles.getChildren().isEmpty()
+                || !latestOverviewRows("Memory").isEmpty() && jvmsOverviewMemoryMetricToggles.getChildren().isEmpty();
+    }
+
+    private void refreshLiveJvmOverviewCharts() {
+        if (jvmBrowserViewModel == null || jvmBrowserViewModel.overviewLoadingProperty().get()) {
+            return;
+        }
+        jvmBrowserViewModel.refreshOverview();
+    }
+
+    private void replaceOverviewTableRows(TableView<LiveJvmOverviewMetric> table, List<LiveJvmOverviewMetric> rows) {
+        if (table.getItems() == null) {
+            table.setItems(FXCollections.observableArrayList(rows));
+        } else {
+            table.getItems().setAll(rows);
+        }
+    }
+
+    private void rebuildOverviewMetricToggles(String group, FlowPane container) {
+        Map<LiveMetricKind, CheckBox> toggles = overviewMetricToggles.computeIfAbsent(group, key -> new HashMap<>());
+        List<LiveJvmOverviewMetric> rows = latestOverviewRows(group);
+        for (LiveJvmOverviewMetric metric : rows) {
+            toggles.computeIfAbsent(metric.kind(), kind -> {
+                CheckBox checkBox = new CheckBox();
+                checkBox.setSelected(defaultOverviewMetricVisible(group, kind));
+                checkBox.selectedProperty().addListener((observable, oldValue, newValue) -> {
+                    if (updatingOverviewMetricSelection) {
+                        return;
+                    }
+                    if (newValue) {
+                        selectOverviewMetricAxis(group, kind);
+                    }
+                    updateLiveJvmOverviewChart(chartForOverviewGroup(group), group);
+                    refreshOverviewMetricToggleGraphics(group);
+                });
+                return checkBox;
+            });
+            CheckBox checkBox = toggles.get(metric.kind());
+            updateOverviewMetricToggle(checkBox, group, metric);
+        }
+        List<CheckBox> visibleToggles = rows.stream()
+                .map(LiveJvmOverviewMetric::kind)
+                .distinct()
+                .map(toggles::get)
+                .toList();
+        if (!container.getChildren().equals(visibleToggles)) {
+            container.getChildren().setAll(visibleToggles);
+        }
+    }
+
+    private void refreshOverviewMetricToggleGraphics(String group) {
+        Map<LiveMetricKind, CheckBox> toggles = overviewMetricToggles.getOrDefault(group, Map.of());
+        latestOverviewRows(group).forEach(metric -> {
+            CheckBox checkBox = toggles.get(metric.kind());
+            if (checkBox != null) {
+                updateOverviewMetricToggle(checkBox, group, metric);
+            }
+        });
+    }
+
+    private void updateOverviewMetricToggle(CheckBox checkBox, String group, LiveJvmOverviewMetric metric) {
+        checkBox.setText(null);
+        checkBox.setGraphic(overviewMetricToggleGraphic(group, metric));
+        String tooltip = i18n.format("jvms.overview.metric.toggleTooltip",
+                metric.label(), metric.displayValue(), metric.unit());
+        if (checkBox.getTooltip() == null) {
+            checkBox.setTooltip(new Tooltip(tooltip));
+        } else {
+            checkBox.getTooltip().setText(tooltip);
+        }
+    }
+
+    private void selectOverviewMetricAxis(String group, LiveMetricKind selectedKind) {
+        OverviewChartAxis selectedAxis = latestOverviewMetric(group, selectedKind)
+                .map(metric -> overviewMetricAxis(metric.unit()))
+                .orElse(OverviewChartAxis.COUNT);
+        Map<LiveMetricKind, CheckBox> toggles = overviewMetricToggles.getOrDefault(group, Map.of());
+        updatingOverviewMetricSelection = true;
+        try {
+            toggles.forEach((kind, checkBox) -> {
+                if (kind == selectedKind || !checkBox.isSelected()) {
+                    return;
+                }
+                OverviewChartAxis axis = latestOverviewMetric(group, kind)
+                        .map(metric -> overviewMetricAxis(metric.unit()))
+                        .orElse(OverviewChartAxis.COUNT);
+                if (axis != selectedAxis) {
+                    checkBox.setSelected(false);
+                }
+            });
+        } finally {
+            updatingOverviewMetricSelection = false;
+        }
+    }
+
+    private Node overviewMetricToggleGraphic(String group, LiveJvmOverviewMetric metric) {
+        Region swatch = new Region();
+        swatch.getStyleClass().setAll("jvms-overview-metric-swatch",
+                overviewMetricColorStyle(group, metric.kind()));
+        Label label = new Label(overviewMetricDisplayName(metric));
+        label.setMaxWidth(Double.MAX_VALUE);
+        HBox.setHgrow(label, Priority.ALWAYS);
+        HBox graphic = new HBox(6, swatch, label);
+        graphic.getStyleClass().add("jvms-overview-metric-toggle-content");
+        graphic.setPadding(new Insets(0, 0, 0, 8));
+        graphic.setMaxWidth(Double.MAX_VALUE);
+        return graphic;
+    }
+
+    private boolean overviewMetricVisible(String group, LiveMetricKind kind) {
+        CheckBox checkBox = overviewMetricToggles.getOrDefault(group, Map.of()).get(kind);
+        return checkBox == null ? defaultOverviewMetricVisible(group, kind) : checkBox.isSelected();
+    }
+
+    private boolean defaultOverviewMetricVisible(String group, LiveMetricKind kind) {
+        return DEFAULT_OVERVIEW_CHART_METRICS.getOrDefault(group, Set.of()).contains(kind);
+    }
+
+    private LineChart<Number, Number> chartForOverviewGroup(String group) {
+        return switch (group) {
+            case "Dashboard" -> jvmsOverviewDashboardChart;
+            case "Processor" -> jvmsOverviewProcessorChart;
+            case "Memory" -> jvmsOverviewMemoryChart;
+            default -> throw new IllegalArgumentException(group);
+        };
+    }
+
+    private void updateLiveJvmOverviewChart(LineChart<Number, Number> chart, String group) {
+        if (jvmBrowserViewModel == null) {
+            chart.getData().clear();
+            return;
+        }
+        List<LiveMetricKind> kinds = jvmBrowserViewModel.overviewMetricsProperty().stream()
+                .filter(metric -> group.equals(metric.group()))
+                .map(LiveJvmOverviewMetric::kind)
+                .distinct()
+                .filter(kind -> overviewMetricVisible(group, kind))
+                .toList();
+        updateOverviewChartAxis(chart, group, kinds);
+        Map<LiveMetricKind, XYChart.Series<Number, Number>> seriesByKind =
+                overviewChartSeries.computeIfAbsent(group, key -> new HashMap<>());
+        seriesByKind.entrySet().removeIf(entry -> {
+            if (kinds.contains(entry.getKey())) {
+                return false;
+            }
+            chart.getData().remove(entry.getValue());
+            return true;
+        });
+        for (LiveMetricKind kind : kinds) {
+            XYChart.Series<Number, Number> series = seriesByKind.computeIfAbsent(kind, key -> new XYChart.Series<>());
+            latestOverviewMetric(group, kind).ifPresent(metric -> series.setName(overviewMetricDisplayName(metric)));
+            series.getData().setAll(jvmBrowserViewModel.overviewMetricsProperty().stream()
+                    .filter(metric -> group.equals(metric.group()))
+                    .filter(metric -> metric.kind() == kind)
+                    .map(metric -> new XYChart.Data<Number, Number>(
+                            metric.sequence(), overviewChartValue(metric)))
+                    .toList());
+        }
+        List<XYChart.Series<Number, Number>> orderedSeries = new ArrayList<>();
+        for (LiveMetricKind kind : kinds) {
+            XYChart.Series<Number, Number> series = seriesByKind.get(kind);
+            if (series != null && !series.getData().isEmpty()) {
+                orderedSeries.add(series);
+            }
+        }
+        chart.getData().setAll(orderedSeries);
+    }
+
+    private void updateOverviewChartAxis(LineChart<Number, Number> chart, String group, List<LiveMetricKind> kinds) {
+        NumberAxis xAxis = (NumberAxis) chart.getXAxis();
+        NumberAxis yAxis = (NumberAxis) chart.getYAxis();
+        xAxis.setLabel(i18n.get("jvms.overview.axis.sample"));
+        OverviewChartAxis axis = overviewChartAxis(group, kinds);
+        yAxis.setLabel(switch (axis) {
+            case PERCENT -> i18n.get("jvms.overview.axis.percent");
+            case MEMORY -> i18n.get("jvms.overview.axis.memory");
+            case COUNT -> i18n.get("jvms.overview.axis.count");
+            case LOAD -> i18n.get("jvms.overview.axis.load");
+        });
+        yAxis.setTickLabelFormatter(new OverviewValueTickFormatter(axis));
+        if (axis == OverviewChartAxis.PERCENT) {
+            yAxis.setAutoRanging(false);
+            yAxis.setLowerBound(0.0);
+            yAxis.setUpperBound(100.0);
+            yAxis.setTickUnit(20.0);
+        } else {
+            yAxis.setAutoRanging(true);
+        }
+    }
+
+    private OverviewChartAxis overviewChartAxis(String group, List<LiveMetricKind> kinds) {
+        return kinds.stream()
+                .map(kind -> latestOverviewMetric(group, kind))
+                .flatMap(java.util.Optional::stream)
+                .map(metric -> overviewMetricAxis(metric.unit()))
+                .findFirst()
+                .orElse(OverviewChartAxis.COUNT);
+    }
+
+    private OverviewChartAxis overviewMetricAxis(String unit) {
+        return switch (unit) {
+            case "%" -> OverviewChartAxis.PERCENT;
+            case "bytes" -> OverviewChartAxis.MEMORY;
+            case "load" -> OverviewChartAxis.LOAD;
+            default -> OverviewChartAxis.COUNT;
+        };
+    }
+
+    private double overviewChartValue(LiveJvmOverviewMetric metric) {
+        return metric.value();
+    }
+
+    private String overviewMetricDisplayName(LiveJvmOverviewMetric metric) {
+        String unit = overviewMetricDisplayUnit(metric.unit());
+        return unit.isBlank() ? metric.label() : metric.label() + " (" + unit + ")";
+    }
+
+    private String overviewMetricDisplayUnit(String unit) {
+        return switch (unit) {
+            case "%" -> "%";
+            case "bytes" -> "";
+            default -> unit;
+        };
+    }
+
+    private String overviewMetricColorStyle(String group, LiveMetricKind kind) {
+        List<LiveMetricKind> visibleKinds = latestOverviewRows(group).stream()
+                .map(LiveJvmOverviewMetric::kind)
+                .distinct()
+                .filter(candidate -> overviewMetricVisible(group, candidate))
+                .toList();
+        int visibleIndex = visibleKinds.indexOf(kind);
+        if (visibleIndex >= 0) {
+            return "default-color" + Math.floorMod(visibleIndex, 8);
+        }
+        List<LiveMetricKind> allKinds = latestOverviewRows(group).stream()
+                .map(LiveJvmOverviewMetric::kind)
+                .distinct()
+                .toList();
+        int allIndex = allKinds.indexOf(kind);
+        return "default-color" + Math.floorMod(Math.max(allIndex, 0), 8);
+    }
+
+    private List<LiveJvmOverviewMetric> latestOverviewRows(String group) {
+        if (jvmBrowserViewModel == null) {
+            return List.of();
+        }
+        return jvmBrowserViewModel.overviewMetricsProperty().stream()
+                .filter(metric -> group.equals(metric.group()))
+                .collect(java.util.stream.Collectors.groupingBy(
+                        LiveJvmOverviewMetric::kind,
+                        java.util.stream.Collectors.maxBy(
+                                java.util.Comparator.comparingLong(LiveJvmOverviewMetric::sequence))))
+                .values()
+                .stream()
+                .flatMap(java.util.Optional::stream)
+                .sorted(java.util.Comparator.comparing(metric -> overviewMetricOrder(metric.kind())))
+                .toList();
+    }
+
+    private java.util.Optional<LiveJvmOverviewMetric> latestOverviewMetric(String group, LiveMetricKind kind) {
+        return jvmBrowserViewModel.overviewMetricsProperty().stream()
+                .filter(metric -> group.equals(metric.group()))
+                .filter(metric -> metric.kind() == kind)
+                .max(java.util.Comparator.comparingLong(LiveJvmOverviewMetric::sequence));
+    }
+
+    private List<LiveJvmOverviewMetric> overviewPersistenceRows() {
+        LiveJvmPersistenceOverview persistence = jvmBrowserViewModel.overviewPersistenceProperty().get();
+        if (persistence == null) {
+            persistence = LiveJvmPersistenceOverview.notConfigured();
+        }
+        Instant observedAt = lastOverviewObservation();
+        return List.of(
+                overviewPersistenceRow("jvms.overview.persistence.metric.configured",
+                        persistence.configured()
+                                ? i18n.get("jvms.overview.persistence.metric.yes")
+                                : i18n.get("jvms.overview.persistence.metric.no"),
+                        observedAt),
+                overviewPersistenceRow("jvms.overview.persistence.metric.attributeSubscriptions",
+                        DisplayFormats.formatInteger(persistence.attributeSubscriptions()),
+                        observedAt),
+                overviewPersistenceRow("jvms.overview.persistence.metric.persistedAttributes",
+                        DisplayFormats.formatInteger(persistence.persistedAttributeSubscriptions()),
+                        observedAt),
+                overviewPersistenceRow("jvms.overview.persistence.metric.notificationSubscriptions",
+                        DisplayFormats.formatInteger(persistence.notificationSubscriptions()),
+                        observedAt),
+                overviewPersistenceRow("jvms.overview.persistence.metric.persistedNotifications",
+                        DisplayFormats.formatInteger(persistence.persistedNotificationSubscriptions()),
+                        observedAt),
+                overviewPersistenceRow("jvms.overview.persistence.metric.retainedSamples",
+                        persistence.maxSamples() > 0
+                                ? DisplayFormats.formatInteger(persistence.maxSamples())
+                                : i18n.get("jvms.overview.persistence.samples.default"),
+                        observedAt),
+                overviewPersistenceRow("jvms.overview.persistence.metric.retainedNotifications",
+                persistence.maxEvents() > 0
+                        ? DisplayFormats.formatInteger(persistence.maxEvents())
+                        : i18n.get("jvms.overview.persistence.notifications.default"),
+                        observedAt));
+    }
+
+    private LiveJvmOverviewMetric overviewPersistenceRow(String labelKey, String value, Instant observedAt) {
+        return new LiveJvmOverviewMetric("JMX Data Persistence Settings", LiveMetricKind.THREAD_COUNT,
+                i18n.get(labelKey), 0.0, value, "", observedAt, 0);
+    }
+
+    private int overviewMetricOrder(LiveMetricKind kind) {
+        return switch (kind) {
+            case THREAD_COUNT -> 10;
+            case PEAK_THREAD_COUNT -> 20;
+            case DAEMON_THREAD_COUNT -> 30;
+            case LOADED_CLASS_COUNT -> 40;
+            case TOTAL_LOADED_CLASS_COUNT -> 50;
+            case UNLOADED_CLASS_COUNT -> 60;
+            case PROCESS_CPU_LOAD_PERCENT -> 110;
+            case SYSTEM_CPU_LOAD_PERCENT -> 120;
+            case AVAILABLE_PROCESSORS -> 130;
+            case SYSTEM_LOAD_AVERAGE -> 140;
+            case HEAP_USED_PERCENT -> 210;
+            case HEAP_USED_BYTES -> 220;
+            case HEAP_COMMITTED_BYTES -> 230;
+            case HEAP_MAX_BYTES -> 240;
+            case NON_HEAP_USED_BYTES -> 250;
+            case NON_HEAP_COMMITTED_BYTES -> 260;
+        };
     }
 
     private void rebuildJmxMonitoringChart() {
@@ -3682,6 +4254,17 @@ public class AppShellController {
         jvmsRefreshJdpButton.textProperty().bind(i18n.text("jvms.refreshJdp"));
         jvmsConnectButton.textProperty().bind(i18n.text("jvms.connect"));
         jvmsDisconnectButton.textProperty().bind(i18n.text("jvms.disconnect"));
+        jvmsOverviewTab.textProperty().bind(i18n.text("jvms.overview.tab"));
+        jvmsOverviewPersistenceTitleLabel.textProperty().bind(i18n.text("jvms.overview.persistence.title"));
+        jvmsOverviewDashboardTitleLabel.textProperty().bind(i18n.text("jvms.overview.dashboard.title"));
+        jvmsOverviewProcessorTitleLabel.textProperty().bind(i18n.text("jvms.overview.processor.title"));
+        jvmsOverviewMemoryTitleLabel.textProperty().bind(i18n.text("jvms.overview.memory.title"));
+        jvmsOverviewDashboardChartTab.textProperty().bind(i18n.text("jvms.overview.chart"));
+        jvmsOverviewDashboardTableTab.textProperty().bind(i18n.text("jvms.overview.table"));
+        jvmsOverviewProcessorChartTab.textProperty().bind(i18n.text("jvms.overview.chart"));
+        jvmsOverviewProcessorTableTab.textProperty().bind(i18n.text("jvms.overview.table"));
+        jvmsOverviewMemoryChartTab.textProperty().bind(i18n.text("jvms.overview.chart"));
+        jvmsOverviewMemoryTableTab.textProperty().bind(i18n.text("jvms.overview.table"));
         jvmsSessionTab.textProperty().bind(i18n.text("jvms.session.tab"));
         jvmsMBeanTab.textProperty().bind(i18n.text("jvms.mbeans.tab"));
         jvmsDiagnosticsTab.textProperty().bind(i18n.text("jvms.diagnostics.tab"));
@@ -3947,6 +4530,7 @@ public class AppShellController {
     }
 
     public void close() {
+        stopLiveJvmOverviewRefreshTimer();
         List.copyOf(viewModel.recordingWorkspacesProperty()).forEach(viewModel::closeWorkspace);
         List.copyOf(viewModel.heapDumpWorkspacesProperty()).forEach(viewModel::closeHeapDumpWorkspace);
         if (jvmBrowserViewModel != null) {
@@ -5936,5 +6520,76 @@ public class AppShellController {
         });
         ContextMenu menu = new ContextMenu(exportItem);
         table.setContextMenu(menu);
+    }
+
+    private static final class OverviewSequenceTickFormatter extends StringConverter<Number> {
+        @Override
+        public String toString(Number value) {
+            if (value == null) {
+                return "";
+            }
+            return DisplayFormats.formatInteger(Math.round(value.doubleValue()));
+        }
+
+        @Override
+        public Number fromString(String string) {
+            return 0;
+        }
+    }
+
+    private enum OverviewChartAxis {
+        PERCENT,
+        MEMORY,
+        COUNT,
+        LOAD
+    }
+
+    private static final class OverviewValueTickFormatter extends StringConverter<Number> {
+
+        private final OverviewChartAxis axis;
+
+        private OverviewValueTickFormatter(OverviewChartAxis axis) {
+            this.axis = axis == null ? OverviewChartAxis.COUNT : axis;
+        }
+
+        @Override
+        public String toString(Number value) {
+            if (value == null) {
+                return "";
+            }
+            double numeric = value.doubleValue();
+            if (axis == OverviewChartAxis.PERCENT) {
+                return DisplayFormats.formatInteger(Math.round(numeric)) + "%";
+            }
+            if (axis == OverviewChartAxis.MEMORY) {
+                return DisplayFormats.formatFileSize(Math.round(numeric));
+            }
+            if (axis == OverviewChartAxis.LOAD && Math.abs(numeric) < 100) {
+                return String.format(java.util.Locale.US, "%.2f", numeric);
+            }
+            return compactNumber(numeric);
+        }
+
+        private static String compactNumber(double numeric) {
+            double absolute = Math.abs(numeric);
+            if (absolute >= 1_000_000_000) {
+                return String.format(java.util.Locale.US, "%.1fB", numeric / 1_000_000_000.0);
+            }
+            if (absolute >= 1_000_000) {
+                return String.format(java.util.Locale.US, "%.1fM", numeric / 1_000_000.0);
+            }
+            if (absolute >= 1_000) {
+                return String.format(java.util.Locale.US, "%.1fK", numeric / 1_000.0);
+            }
+            if (absolute >= 100) {
+                return DisplayFormats.formatInteger(Math.round(numeric));
+            }
+            return String.format(java.util.Locale.US, "%.1f", numeric);
+        }
+
+        @Override
+        public Number fromString(String string) {
+            return 0;
+        }
     }
 }

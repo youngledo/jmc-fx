@@ -79,6 +79,7 @@ public class JvmBrowserViewModel implements AutoCloseable {
 
     private static final Logger LOGGER = LogManager.getLogger(JvmBrowserViewModel.class);
     private static final Duration JDP_DISCOVERY_TIMEOUT = Duration.ofMillis(750);
+    private static final int OVERVIEW_HISTORY_LIMIT = 120;
     private static final DateTimeFormatter RECORDING_NAME_TIMESTAMP =
             DateTimeFormatter.ofPattern("yyyyMMddHHmmss");
 
@@ -113,6 +114,7 @@ public class JvmBrowserViewModel implements AutoCloseable {
     private final ObservableList<JmxNotificationSubscription> jmxNotificationSubscriptions =
             FXCollections.observableArrayList();
     private final ObservableList<JmxNotificationEvent> jmxNotificationEvents = FXCollections.observableArrayList();
+    private final ObservableList<LiveJvmOverviewMetric> overviewMetrics = FXCollections.observableArrayList();
     private final ObjectProperty<JvmConnection> selectedConnection = new SimpleObjectProperty<>();
     private final ObjectProperty<FlightRecordingInfo> selectedFlightRecording = new SimpleObjectProperty<>();
     private final ObjectProperty<MBeanNode> selectedMBean = new SimpleObjectProperty<>();
@@ -172,8 +174,13 @@ public class JvmBrowserViewModel implements AutoCloseable {
     private final BooleanProperty jmxMonitoringLoading = new SimpleBooleanProperty(false);
     private final BooleanProperty jmxMonitoringError = new SimpleBooleanProperty(false);
     private final StringProperty jmxMonitoringErrorMessage = new SimpleStringProperty("");
+    private final ObjectProperty<LiveJvmPersistenceOverview> overviewPersistence =
+            new SimpleObjectProperty<>(LiveJvmPersistenceOverview.notConfigured());
     private final BooleanProperty triggerLoading = new SimpleBooleanProperty(false);
     private final BooleanProperty triggerError = new SimpleBooleanProperty(false);
+    private final BooleanProperty overviewLoading = new SimpleBooleanProperty(false);
+    private final BooleanProperty overviewError = new SimpleBooleanProperty(false);
+    private final StringProperty overviewErrorMessage = new SimpleStringProperty("");
     private final Map<Long, JvmConnection> sessionStartedRecordings = new HashMap<>();
     private final Map<String, JvmConnection> liveConnectionsByStableKey = new HashMap<>();
     private int pendingWorkCount;
@@ -182,6 +189,8 @@ public class JvmBrowserViewModel implements AutoCloseable {
     private long diagnosticCommandRequestGeneration;
     private long jmcAgentRequestGeneration;
     private long jmxMonitoringGeneration;
+    private long overviewRequestGeneration;
+    private long overviewSampleSequence;
     private long triggerRuleSequence;
     private long triggerEvaluationGeneration;
 
@@ -524,6 +533,26 @@ public class JvmBrowserViewModel implements AutoCloseable {
 
     public StringProperty jmxMonitoringErrorMessageProperty() {
         return jmxMonitoringErrorMessage;
+    }
+
+    public ObservableList<LiveJvmOverviewMetric> overviewMetricsProperty() {
+        return overviewMetrics;
+    }
+
+    public ObjectProperty<LiveJvmPersistenceOverview> overviewPersistenceProperty() {
+        return overviewPersistence;
+    }
+
+    public BooleanProperty overviewLoadingProperty() {
+        return overviewLoading;
+    }
+
+    public BooleanProperty overviewErrorProperty() {
+        return overviewError;
+    }
+
+    public StringProperty overviewErrorMessageProperty() {
+        return overviewErrorMessage;
     }
 
     public ObservableList<LiveMetricDefinition> liveMetricDefinitionsProperty() {
@@ -1325,6 +1354,7 @@ public class JvmBrowserViewModel implements AutoCloseable {
         clearDiagnosticCommands();
         clearJmcAgent();
         clearJmxMonitoring();
+        clearOverview();
         clearTriggerSessionState();
         clearSessionError();
         if (connection == null || !connection.connected()) {
@@ -1346,6 +1376,7 @@ public class JvmBrowserViewModel implements AutoCloseable {
                     loadDiagnosticCommands(snapshot);
                     loadJmcAgent(snapshot);
                     loadJmxMonitoring(snapshot);
+                    loadOverview(snapshot);
                     loadTriggerMetrics(snapshot);
                     sessionLoading.set(false);
                 });
@@ -1361,6 +1392,7 @@ public class JvmBrowserViewModel implements AutoCloseable {
                     clearDiagnosticCommands();
                     clearJmcAgent();
                     clearJmxMonitoring();
+                    clearOverview();
                     clearTriggerSessionState();
                     sessionError.set(true);
                     sessionErrorMessage.set(exception.getMessage() == null
@@ -1580,6 +1612,7 @@ public class JvmBrowserViewModel implements AutoCloseable {
         jmxNotificationSubscriptions.setAll(notificationSubscriptions);
         selectedJmxNotificationSubscription.set(notificationSubscriptions.isEmpty()
                 ? null : notificationSubscriptions.getFirst());
+        updateOverviewPersistenceSummary();
     }
 
     private boolean canUseJmxMonitoring(JvmSessionSnapshot snapshot) {
@@ -1629,6 +1662,94 @@ public class JvmBrowserViewModel implements AutoCloseable {
                 failTrigger(generation, snapshot, exception);
             }
         });
+    }
+
+    public void refreshOverview() {
+        loadOverview(selectedSession.get());
+    }
+
+    private void loadOverview(JvmSessionSnapshot snapshot) {
+        if (liveMetricService == null || snapshot == null || !snapshot.connection().connected()) {
+            clearOverview();
+            return;
+        }
+        long generation = nextOverviewRequestGeneration();
+        overviewLoading.set(true);
+        clearOverviewError();
+        executor.execute(() -> {
+            try {
+                List<LiveMetricDefinition> definitions = liveMetricService.definitions(snapshot.connection());
+                List<LiveMetricSnapshot> samples = liveMetricService.snapshot(snapshot.connection());
+                List<LiveJvmOverviewMetric> rows = overviewRows(definitions, samples);
+                runOnFx(() -> {
+                    if (!isCurrentOverviewRequest(generation, snapshot)) {
+                        return;
+                    }
+                    appendOverviewRows(rows);
+                    updateOverviewPersistenceSummary();
+                    overviewLoading.set(false);
+                    clearOverviewError();
+                });
+            } catch (RuntimeException exception) {
+                failOverview(generation, snapshot, exception);
+            }
+        });
+    }
+
+    private List<LiveJvmOverviewMetric> overviewRows(
+            List<LiveMetricDefinition> definitions, List<LiveMetricSnapshot> samples) {
+        Map<LiveMetricKind, LiveMetricDefinition> byKind = definitions.stream()
+                .collect(Collectors.toMap(LiveMetricDefinition::kind, definition -> definition,
+                        (first, second) -> first));
+        return samples.stream()
+                .filter(sample -> byKind.containsKey(sample.kind()))
+                .map(sample -> {
+                    LiveMetricDefinition definition = byKind.get(sample.kind());
+                    return new LiveJvmOverviewMetric(overviewGroup(sample.kind()), sample.kind(), definition.label(),
+                            sample.value(), overviewDisplayValue(sample), sample.unit(), sample.observedAt(),
+                            overviewSampleSequence + 1);
+                })
+                .toList();
+    }
+
+    private static String overviewGroup(LiveMetricKind kind) {
+        return switch (kind) {
+            case PROCESS_CPU_LOAD_PERCENT, SYSTEM_CPU_LOAD_PERCENT, AVAILABLE_PROCESSORS, SYSTEM_LOAD_AVERAGE ->
+                    "Processor";
+            case HEAP_USED_PERCENT, HEAP_USED_BYTES, HEAP_COMMITTED_BYTES, HEAP_MAX_BYTES,
+                    NON_HEAP_USED_BYTES, NON_HEAP_COMMITTED_BYTES -> "Memory";
+            case THREAD_COUNT, PEAK_THREAD_COUNT, DAEMON_THREAD_COUNT, LOADED_CLASS_COUNT,
+                    TOTAL_LOADED_CLASS_COUNT, UNLOADED_CLASS_COUNT -> "Dashboard";
+        };
+    }
+
+    private static String overviewDisplayValue(LiveMetricSnapshot sample) {
+        if ("%".equals(sample.unit())) {
+            return String.format(java.util.Locale.US, "%.1f%%", sample.value());
+        }
+        if ("bytes".equals(sample.unit())) {
+            return com.youngledo.jmcfx.ui.util.DisplayFormats.formatFileSize(Math.round(sample.value()));
+        }
+        if (Double.isFinite(sample.value())) {
+            return java.text.NumberFormat.getIntegerInstance(java.util.Locale.US).format(Math.round(sample.value()));
+        }
+        return "";
+    }
+
+    private void appendOverviewRows(List<LiveJvmOverviewMetric> rows) {
+        if (rows.isEmpty()) {
+            return;
+        }
+        overviewSampleSequence++;
+        overviewMetrics.addAll(rows.stream()
+                .map(row -> new LiveJvmOverviewMetric(row.group(), row.kind(), row.label(), row.value(),
+                        row.displayValue(), row.unit(), row.observedAt(), overviewSampleSequence))
+                .toList());
+        Map<LiveMetricKind, Long> counts = overviewMetrics.stream()
+                .collect(Collectors.groupingBy(LiveJvmOverviewMetric::kind, Collectors.counting()));
+        overviewMetrics.removeIf(metric ->
+                counts.getOrDefault(metric.kind(), 0L) > OVERVIEW_HISTORY_LIMIT
+                        && metric.sequence() <= overviewSampleSequence - OVERVIEW_HISTORY_LIMIT);
     }
 
     private TriggerAction selectedTriggerAction() {
@@ -1815,6 +1936,16 @@ public class JvmBrowserViewModel implements AutoCloseable {
         jmxMonitoringAvailable.set(false);
         jmxMonitoringLoading.set(false);
         clearJmxMonitoringError();
+        updateOverviewPersistenceSummary();
+    }
+
+    private void clearOverview() {
+        nextOverviewRequestGeneration();
+        overviewMetrics.clear();
+        overviewSampleSequence = 0;
+        overviewPersistence.set(LiveJvmPersistenceOverview.notConfigured());
+        overviewLoading.set(false);
+        clearOverviewError();
     }
 
     private void appendBoundedSample(JmxAttributeSubscription subscription, JmxSubscriptionSample sample) {
@@ -1855,6 +1986,24 @@ public class JvmBrowserViewModel implements AutoCloseable {
         jmxMonitoringError.set(true);
         jmxMonitoringErrorMessage.set(message);
         jmxMonitoringLoading.set(false);
+    }
+
+    private void clearOverviewError() {
+        overviewError.set(false);
+        overviewErrorMessage.set("");
+    }
+
+    private void failOverview(long generation, JvmSessionSnapshot snapshot, RuntimeException exception) {
+        logActionFailure("Unable to load JVM overview for " + snapshot.connection().displayName(), exception);
+        runOnFx(() -> {
+            if (!isCurrentOverviewRequest(generation, snapshot)) {
+                return;
+            }
+            overviewError.set(true);
+            overviewErrorMessage.set(exception.getMessage() == null ? exception.getClass().getSimpleName()
+                    : exception.getMessage());
+            overviewLoading.set(false);
+        });
     }
 
     private void clearTriggerSessionState() {
@@ -2051,9 +2200,42 @@ public class JvmBrowserViewModel implements AutoCloseable {
         return ++jmxMonitoringGeneration;
     }
 
+    private long nextOverviewRequestGeneration() {
+        return ++overviewRequestGeneration;
+    }
+
     private boolean isCurrentJmxMonitoringGeneration(long generation, JvmSessionSnapshot snapshot) {
         return jmxMonitoringGeneration == generation && selectedSession.get() == snapshot
                 && jmxMonitoringAvailable.get();
+    }
+
+    private boolean isCurrentOverviewRequest(long generation, JvmSessionSnapshot snapshot) {
+        return overviewRequestGeneration == generation && selectedSession.get() == snapshot;
+    }
+
+    private void updateOverviewPersistenceSummary() {
+        if (jmxMonitoringRepository == null) {
+            overviewPersistence.set(LiveJvmPersistenceOverview.notConfigured());
+            return;
+        }
+        int attributeCount = jmxAttributeSubscriptions.size();
+        int persistedAttributes = (int) jmxAttributeSubscriptions.stream()
+                .filter(JmxAttributeSubscription::persisted)
+                .count();
+        int notificationCount = jmxNotificationSubscriptions.size();
+        int persistedNotifications = (int) jmxNotificationSubscriptions.stream()
+                .filter(JmxNotificationSubscription::persisted)
+                .count();
+        int maxSamples = jmxAttributeSubscriptions.stream()
+                .mapToInt(JmxAttributeSubscription::maxSamples)
+                .max()
+                .orElse(0);
+        int maxEvents = jmxNotificationSubscriptions.stream()
+                .mapToInt(JmxNotificationSubscription::maxEvents)
+                .max()
+                .orElse(0);
+        overviewPersistence.set(new LiveJvmPersistenceOverview(true, attributeCount, persistedAttributes,
+                notificationCount, persistedNotifications, maxSamples, maxEvents));
     }
 
     private long nextTriggerEvaluationGeneration() {

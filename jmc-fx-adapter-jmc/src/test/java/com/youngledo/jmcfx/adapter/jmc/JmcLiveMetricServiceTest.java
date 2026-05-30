@@ -51,9 +51,21 @@ class JmcLiveMetricServiceTest {
 
         assertEquals(List.of(
                 new LiveMetricDefinition(LiveMetricKind.HEAP_USED_PERCENT, "Heap Used", "%", 80.0),
+                new LiveMetricDefinition(LiveMetricKind.HEAP_USED_BYTES, "Heap Used", "bytes", 0.0),
+                new LiveMetricDefinition(LiveMetricKind.HEAP_COMMITTED_BYTES, "Heap Committed", "bytes", 0.0),
+                new LiveMetricDefinition(LiveMetricKind.HEAP_MAX_BYTES, "Heap Max", "bytes", 0.0),
+                new LiveMetricDefinition(LiveMetricKind.NON_HEAP_USED_BYTES, "Non-Heap Used", "bytes", 0.0),
+                new LiveMetricDefinition(LiveMetricKind.NON_HEAP_COMMITTED_BYTES, "Non-Heap Committed", "bytes", 0.0),
                 new LiveMetricDefinition(LiveMetricKind.THREAD_COUNT, "Thread Count", "threads", 200.0),
+                new LiveMetricDefinition(LiveMetricKind.PEAK_THREAD_COUNT, "Peak Thread Count", "threads", 200.0),
+                new LiveMetricDefinition(LiveMetricKind.DAEMON_THREAD_COUNT, "Daemon Thread Count", "threads", 200.0),
                 new LiveMetricDefinition(LiveMetricKind.LOADED_CLASS_COUNT, "Loaded Classes", "classes", 20000.0),
-                new LiveMetricDefinition(LiveMetricKind.PROCESS_CPU_LOAD_PERCENT, "Process CPU", "%", 80.0)),
+                new LiveMetricDefinition(LiveMetricKind.TOTAL_LOADED_CLASS_COUNT, "Total Loaded Classes", "classes", 20000.0),
+                new LiveMetricDefinition(LiveMetricKind.UNLOADED_CLASS_COUNT, "Unloaded Classes", "classes", 20000.0),
+                new LiveMetricDefinition(LiveMetricKind.PROCESS_CPU_LOAD_PERCENT, "Process CPU", "%", 80.0),
+                new LiveMetricDefinition(LiveMetricKind.SYSTEM_CPU_LOAD_PERCENT, "System CPU", "%", 80.0),
+                new LiveMetricDefinition(LiveMetricKind.AVAILABLE_PROCESSORS, "Available Processors", "processors", 0.0),
+                new LiveMetricDefinition(LiveMetricKind.SYSTEM_LOAD_AVERAGE, "System Load Average", "load", 0.0)),
                 definitions);
     }
 
@@ -61,16 +73,28 @@ class JmcLiveMetricServiceTest {
     void snapshotConvertsMBeanAttributesToNumericMetrics() throws Exception {
         MBeanServer controlledServer = MBeanServerFactory.newMBeanServer();
         controlledServer.registerMBean(
-                new AttributesMBean(Map.of("HeapMemoryUsage", heapMemoryUsage(25L, 100L))),
+                new AttributesMBean(Map.of(
+                        "HeapMemoryUsage", memoryUsage(0L, 25L, 75L, 100L),
+                        "NonHeapMemoryUsage", memoryUsage(0L, 12L, 24L, -1L))),
                 objectName("java.lang:type=Memory"));
         controlledServer.registerMBean(
-                new AttributesMBean(Map.of("ThreadCount", 7)),
+                new AttributesMBean(Map.of(
+                        "ThreadCount", 7,
+                        "PeakThreadCount", 11,
+                        "DaemonThreadCount", 3)),
                 objectName("java.lang:type=Threading"));
         controlledServer.registerMBean(
-                new AttributesMBean(Map.of("LoadedClassCount", 42)),
+                new AttributesMBean(Map.of(
+                        "LoadedClassCount", 42,
+                        "TotalLoadedClassCount", 50L,
+                        "UnloadedClassCount", 8L)),
                 objectName("java.lang:type=ClassLoading"));
         controlledServer.registerMBean(
-                new AttributesMBean(Map.of("ProcessCpuLoad", 0.5)),
+                new AttributesMBean(Map.of(
+                        "ProcessCpuLoad", 0.5,
+                        "SystemCpuLoad", 0.75,
+                        "AvailableProcessors", 8,
+                        "SystemLoadAverage", 2.25)),
                 objectName("java.lang:type=OperatingSystem"));
 
         JmcLiveMetricService controlledService = new JmcLiveMetricService(
@@ -81,15 +105,31 @@ class JmcLiveMetricServiceTest {
 
         assertEquals(List.of(
                 LiveMetricKind.HEAP_USED_PERCENT,
+                LiveMetricKind.HEAP_USED_BYTES,
+                LiveMetricKind.HEAP_COMMITTED_BYTES,
+                LiveMetricKind.HEAP_MAX_BYTES,
+                LiveMetricKind.NON_HEAP_USED_BYTES,
+                LiveMetricKind.NON_HEAP_COMMITTED_BYTES,
                 LiveMetricKind.THREAD_COUNT,
+                LiveMetricKind.PEAK_THREAD_COUNT,
+                LiveMetricKind.DAEMON_THREAD_COUNT,
                 LiveMetricKind.LOADED_CLASS_COUNT,
-                LiveMetricKind.PROCESS_CPU_LOAD_PERCENT),
+                LiveMetricKind.TOTAL_LOADED_CLASS_COUNT,
+                LiveMetricKind.UNLOADED_CLASS_COUNT,
+                LiveMetricKind.PROCESS_CPU_LOAD_PERCENT,
+                LiveMetricKind.SYSTEM_CPU_LOAD_PERCENT,
+                LiveMetricKind.AVAILABLE_PROCESSORS,
+                LiveMetricKind.SYSTEM_LOAD_AVERAGE),
                 snapshots.stream().map(LiveMetricSnapshot::kind).toList());
-        assertEquals(List.of("%", "threads", "classes", "%"),
+        assertEquals(List.of("%", "bytes", "bytes", "bytes", "bytes", "bytes",
+                        "threads", "threads", "threads", "classes", "classes", "classes",
+                        "%", "%", "processors", "load"),
                 snapshots.stream().map(LiveMetricSnapshot::unit).toList());
-        assertEquals(List.of(OBSERVED_AT, OBSERVED_AT, OBSERVED_AT, OBSERVED_AT),
-                snapshots.stream().map(LiveMetricSnapshot::observedAt).toList());
-        assertEquals(List.of(25.0, 7.0, 42.0, 50.0),
+        assertEquals(16, snapshots.stream()
+                .filter(snapshot -> OBSERVED_AT.equals(snapshot.observedAt()))
+                .count());
+        assertEquals(List.of(25.0, 25.0, 75.0, 100.0, 12.0, 24.0,
+                        7.0, 11.0, 3.0, 42.0, 50.0, 8.0, 50.0, 75.0, 8.0, 2.25),
                 snapshots.stream().map(LiveMetricSnapshot::value).toList());
     }
 
@@ -101,14 +141,18 @@ class JmcLiveMetricServiceTest {
         assertFalse(snapshots.stream().mapToDouble(LiveMetricSnapshot::value).anyMatch(Double::isInfinite));
     }
 
-    private static CompositeData heapMemoryUsage(long used, long max) throws OpenDataException {
+    private static CompositeData memoryUsage(long init, long used, long committed, long max) throws OpenDataException {
         CompositeType type = new CompositeType(
-                "HeapMemoryUsage",
-                "Heap memory usage",
-                new String[] { "used", "max" },
-                new String[] { "used", "max" },
-                new SimpleType<?>[] { SimpleType.LONG, SimpleType.LONG });
-        return new CompositeDataSupport(type, Map.of("used", used, "max", max));
+                "MemoryUsage",
+                "Memory usage",
+                new String[] { "init", "used", "committed", "max" },
+                new String[] { "init", "used", "committed", "max" },
+                new SimpleType<?>[] { SimpleType.LONG, SimpleType.LONG, SimpleType.LONG, SimpleType.LONG });
+        return new CompositeDataSupport(type, Map.of(
+                "init", init,
+                "used", used,
+                "committed", committed,
+                "max", max));
     }
 
     private static ObjectName objectName(String name) throws Exception {
