@@ -18,6 +18,7 @@ import org.openjdk.jmc.flightrecorder.stacktrace.StacktraceModel.Fork;
 import org.openjdk.jmc.flightrecorder.stacktrace.StacktraceFrame;
 
 import com.youngledo.jmcfx.domain.model.HotMethod;
+import com.youngledo.jmcfx.domain.model.DependencyGraphReport;
 import com.youngledo.jmcfx.domain.model.RecordingSummary;
 import com.youngledo.jmcfx.domain.model.StackTreeNode;
 import com.youngledo.jmcfx.domain.service.JmcFxException;
@@ -82,6 +83,11 @@ public class JmcProfilingService implements ProfilingService {
 		}
 
 		return buildTree(targetFork, targetFork.getItemsInFork());
+	}
+
+	@Override
+	public DependencyGraphReport loadPackageDependencies(RecordingSummary recording, int packageDepth) {
+		return DependencyGraphReport.EMPTY;
 	}
 
 	private Fork findFork(Fork fork, String method) {

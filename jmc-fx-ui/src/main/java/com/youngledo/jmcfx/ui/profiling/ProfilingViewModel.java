@@ -1,7 +1,11 @@
 package com.youngledo.jmcfx.ui.profiling;
 
 import java.util.List;
+import java.util.LinkedHashMap;
+import java.util.Map;
 
+import com.youngledo.jmcfx.domain.model.DependencyGraphEdge;
+import com.youngledo.jmcfx.domain.model.DependencyGraphReport;
 import com.youngledo.jmcfx.domain.model.HotMethod;
 import com.youngledo.jmcfx.domain.model.RecordingSummary;
 import com.youngledo.jmcfx.domain.model.StackTreeNode;
@@ -20,7 +24,9 @@ public class ProfilingViewModel {
 
     private final ProfilingService profilingService;
     private final ObservableList<HotMethod> hotMethods = FXCollections.observableArrayList();
+    private final ObservableList<DependencyGraphEdge> dependencyEdges = FXCollections.observableArrayList();
     private final ObjectProperty<HotMethod> selectedMethod = new SimpleObjectProperty<>();
+    private final ObjectProperty<DependencyGraphEdge> selectedDependencyEdge = new SimpleObjectProperty<>();
     private final ObjectProperty<StackTreeNode> callersTree = new SimpleObjectProperty<>(StackTreeNode.EMPTY);
     private final ObjectProperty<StackTreeNode> calleesTree = new SimpleObjectProperty<>(StackTreeNode.EMPTY);
     private final ObjectProperty<FlameGraphLayout> callersFlameGraph =
@@ -31,8 +37,12 @@ public class ProfilingViewModel {
             new SimpleObjectProperty<>(CallGraphDirection.CALLEES);
     private final ObjectProperty<CallGraphLayout> callGraph =
             new SimpleObjectProperty<>(CallGraphLayout.EMPTY);
+    private final ObjectProperty<CallGraphLayout> dependencyGraph =
+            new SimpleObjectProperty<>(CallGraphLayout.EMPTY);
     private final ObjectProperty<Integer> callGraphMaxDepth =
             new SimpleObjectProperty<>(CallGraphLayoutBuilder.DEFAULT_MAX_DEPTH);
+    private final ObjectProperty<Integer> dependencyPackageDepth =
+            new SimpleObjectProperty<>(2);
     private RecordingSummary currentRecording;
     private String selectedMethodName;
 
@@ -46,6 +56,14 @@ public class ProfilingViewModel {
 
     public ObjectProperty<HotMethod> selectedMethodProperty() {
         return selectedMethod;
+    }
+
+    public ObservableList<DependencyGraphEdge> dependencyEdgesProperty() {
+        return dependencyEdges;
+    }
+
+    public ObjectProperty<DependencyGraphEdge> selectedDependencyEdgeProperty() {
+        return selectedDependencyEdge;
     }
 
     public ObjectProperty<StackTreeNode> callersTreeProperty() {
@@ -72,18 +90,48 @@ public class ProfilingViewModel {
         return callGraph;
     }
 
+    public ObjectProperty<CallGraphLayout> dependencyGraphProperty() {
+        return dependencyGraph;
+    }
+
     public ObjectProperty<Integer> callGraphMaxDepthProperty() {
         return callGraphMaxDepth;
+    }
+
+    public ObjectProperty<Integer> dependencyPackageDepthProperty() {
+        return dependencyPackageDepth;
     }
 
     public void load(RecordingSummary recording) {
         currentRecording = recording;
         List<HotMethod> methods = profilingService.loadHotMethods(recording);
+        DependencyGraphReport dependencyReport =
+                profilingService.loadPackageDependencies(recording, resolvedPackageDepth());
+        CallGraphLayout dependencyGraphLayout = buildDependencyGraph(dependencyReport);
         FxDispatch.run(() -> {
             hotMethods.setAll(methods);
+            dependencyEdges.setAll(dependencyReport.edges());
+            selectedDependencyEdge.set(null);
             selectedMethod.set(null);
             selectedMethodName = null;
             clearStackDetails();
+            dependencyGraph.set(dependencyGraphLayout);
+        });
+    }
+
+    public void setDependencyPackageDepth(int packageDepth) {
+        int resolvedDepth = Math.max(1, packageDepth);
+        dependencyPackageDepth.set(resolvedDepth);
+        if (currentRecording == null) {
+            return;
+        }
+        DependencyGraphReport dependencyReport =
+                profilingService.loadPackageDependencies(currentRecording, resolvedDepth);
+        CallGraphLayout dependencyGraphLayout = buildDependencyGraph(dependencyReport);
+        FxDispatch.run(() -> {
+            dependencyEdges.setAll(dependencyReport.edges());
+            selectedDependencyEdge.set(null);
+            dependencyGraph.set(dependencyGraphLayout);
         });
     }
 
@@ -159,7 +207,37 @@ public class ProfilingViewModel {
         return Math.max(1, maxDepth);
     }
 
+    private int resolvedPackageDepth() {
+        Integer packageDepth = dependencyPackageDepth.get();
+        if (packageDepth == null) {
+            return 1;
+        }
+        return Math.max(1, packageDepth);
+    }
+
     private StackTreeNode stackTreeOrEmpty(StackTreeNode stackTree) {
         return stackTree == null ? StackTreeNode.EMPTY : stackTree;
+    }
+
+    private CallGraphLayout buildDependencyGraph(DependencyGraphReport report) {
+        if (report == null || report.edges().isEmpty()) {
+            return CallGraphLayout.EMPTY;
+        }
+        Map<String, CallGraphNode> nodes = new LinkedHashMap<>();
+        List<CallGraphEdge> edges = new java.util.ArrayList<>();
+        int maxSourceDepth = 0;
+        for (DependencyGraphEdge edge : report.edges()) {
+            CallGraphNode source = nodes.computeIfAbsent(edge.source(), label -> dependencyNode(nodes.size(), label));
+            CallGraphNode target = nodes.computeIfAbsent(edge.target(), label -> dependencyNode(nodes.size(), label));
+            edges.add(new CallGraphEdge(source.id(), target.id(), edge.count(), edge.percentage()));
+            maxSourceDepth = Math.max(maxSourceDepth, Math.max(source.depth(), target.depth()));
+        }
+        return new CallGraphLayout(List.copyOf(nodes.values()), edges, maxSourceDepth);
+    }
+
+    private static CallGraphNode dependencyNode(int index, String label) {
+        double y = (index % 2 == 0) ? 0.25 : 0.75;
+        double x = 0.1 + Math.min(0.8, index * 0.12);
+        return new CallGraphNode("node-" + (index + 1), label, 0, 0, index, x, y, index == 0);
     }
 }

@@ -1949,6 +1949,12 @@ class AppShellTest {
             public StackTreeNode loadStackTraceTree(RecordingSummary recording, String method, boolean callers) {
                 return StackTreeNode.EMPTY;
             }
+
+            @Override
+            public com.youngledo.jmcfx.domain.model.DependencyGraphReport loadPackageDependencies(
+                    RecordingSummary recording, int packageDepth) {
+                return com.youngledo.jmcfx.domain.model.DependencyGraphReport.EMPTY;
+            }
         };
     }
 

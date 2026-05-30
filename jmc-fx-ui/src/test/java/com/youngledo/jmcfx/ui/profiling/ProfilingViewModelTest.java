@@ -9,6 +9,8 @@ import java.util.concurrent.atomic.AtomicInteger;
 import java.util.concurrent.atomic.AtomicReference;
 
 import com.youngledo.jmcfx.domain.model.HotMethod;
+import com.youngledo.jmcfx.domain.model.DependencyGraphEdge;
+import com.youngledo.jmcfx.domain.model.DependencyGraphReport;
 import com.youngledo.jmcfx.domain.model.RecordingSummary;
 import com.youngledo.jmcfx.domain.model.StackTreeNode;
 import com.youngledo.jmcfx.domain.service.ProfilingService;
@@ -27,12 +29,69 @@ class ProfilingViewModelTest {
         FakeProfilingService service = new FakeProfilingService();
         service.addHotMethod(new HotMethod("com.Foo.bar()", "JIT_COMPILED", 50, 50.0));
         service.addHotMethod(new HotMethod("com.Foo.baz()", "INTERPRETED", 30, 30.0));
+        service.setDependencyReport(new DependencyGraphReport(
+                List.of(new DependencyGraphEdge("com.foo", "com.bar", 7, 70.0)), 10, 2));
 
         ProfilingViewModel vm = new ProfilingViewModel(service);
         vm.load(testRecording());
 
         assertEquals(2, vm.hotMethodsProperty().size());
         assertEquals("com.Foo.bar()", vm.hotMethodsProperty().getFirst().method());
+        assertEquals(1, vm.dependencyEdgesProperty().size());
+        assertEquals("com.foo", vm.dependencyEdgesProperty().getFirst().source());
+        assertEquals(2, vm.dependencyPackageDepthProperty().get());
+    }
+
+    @Test
+    void loadBuildsDependencyGraphFromReportEdges() {
+        FakeProfilingService service = new FakeProfilingService();
+        service.setDependencyReport(new DependencyGraphReport(List.of(
+                new DependencyGraphEdge("com.ui", "com.service", 8, 80.0),
+                new DependencyGraphEdge("com.service", "com.repo", 2, 20.0)), 10, 2));
+
+        ProfilingViewModel vm = new ProfilingViewModel(service);
+        vm.load(testRecording());
+
+        assertEquals(List.of("com.ui", "com.service", "com.repo"), labels(vm.dependencyGraphProperty().get()));
+        assertEquals(2, vm.dependencyGraphProperty().get().edges().size());
+        assertEquals("node-1", vm.dependencyGraphProperty().get().edges().getFirst().sourceId());
+        assertEquals("node-2", vm.dependencyGraphProperty().get().edges().getFirst().targetId());
+    }
+
+    @Test
+    void changingDependencyPackageDepthReloadsCurrentRecording() {
+        FakeProfilingService service = new FakeProfilingService();
+        service.setDependencyReport(new DependencyGraphReport(
+                List.of(new DependencyGraphEdge("com.example", "org.example", 4, 100.0)), 4, 2));
+
+        ProfilingViewModel vm = new ProfilingViewModel(service);
+        vm.load(testRecording());
+
+        service.setDependencyReport(new DependencyGraphReport(
+                List.of(new DependencyGraphEdge("com", "org", 4, 100.0)), 4, 1));
+        vm.setDependencyPackageDepth(1);
+
+        assertEquals(1, vm.dependencyPackageDepthProperty().get());
+        assertEquals("com", vm.dependencyEdgesProperty().getFirst().source());
+        assertEquals(List.of("com", "org"), labels(vm.dependencyGraphProperty().get()));
+    }
+
+    @Test
+    void loadClearsDependencyGraphAndSelection() {
+        FakeProfilingService service = new FakeProfilingService();
+        service.setDependencyReport(new DependencyGraphReport(
+                List.of(new DependencyGraphEdge("a", "b", 1, 100.0)), 1, 1));
+
+        ProfilingViewModel vm = new ProfilingViewModel(service);
+        vm.load(testRecording());
+        vm.selectedDependencyEdgeProperty().set(vm.dependencyEdgesProperty().getFirst());
+
+        service.setDependencyReport(DependencyGraphReport.EMPTY);
+        vm.load(testRecording());
+
+        assertTrue(vm.dependencyEdgesProperty().isEmpty());
+        assertNull(vm.selectedDependencyEdgeProperty().get());
+        assertSame(CallGraphLayout.EMPTY, vm.dependencyGraphProperty().get());
     }
 
     @Test
@@ -206,6 +265,11 @@ class ProfilingViewModelTest {
                 }
                 return tree;
             }
+
+            @Override
+            public DependencyGraphReport loadPackageDependencies(RecordingSummary recording, int packageDepth) {
+                return DependencyGraphReport.EMPTY;
+            }
         };
         ProfilingViewModel vm = new ProfilingViewModel(service);
         vmReference.set(vm);
@@ -288,6 +352,11 @@ class ProfilingViewModelTest {
             @Override
             public StackTreeNode loadStackTraceTree(RecordingSummary recording, String method, boolean callers) {
                 return null;
+            }
+
+            @Override
+            public DependencyGraphReport loadPackageDependencies(RecordingSummary recording, int packageDepth) {
+                return DependencyGraphReport.EMPTY;
             }
         };
         ProfilingViewModel vm = new ProfilingViewModel(service);
