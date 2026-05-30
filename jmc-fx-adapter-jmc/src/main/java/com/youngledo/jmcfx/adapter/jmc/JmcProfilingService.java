@@ -2,8 +2,11 @@ package com.youngledo.jmcfx.adapter.jmc;
 
 import java.io.IOException;
 import java.util.ArrayList;
+import java.util.Arrays;
 import java.util.Comparator;
+import java.util.HashMap;
 import java.util.List;
+import java.util.Map;
 
 import org.openjdk.jmc.common.item.IItemCollection;
 import org.openjdk.jmc.flightrecorder.CouldNotLoadRecordingException;
@@ -17,8 +20,9 @@ import org.openjdk.jmc.flightrecorder.stacktrace.StacktraceModel.Branch;
 import org.openjdk.jmc.flightrecorder.stacktrace.StacktraceModel.Fork;
 import org.openjdk.jmc.flightrecorder.stacktrace.StacktraceFrame;
 
-import com.youngledo.jmcfx.domain.model.HotMethod;
+import com.youngledo.jmcfx.domain.model.DependencyGraphEdge;
 import com.youngledo.jmcfx.domain.model.DependencyGraphReport;
+import com.youngledo.jmcfx.domain.model.HotMethod;
 import com.youngledo.jmcfx.domain.model.RecordingSummary;
 import com.youngledo.jmcfx.domain.model.StackTreeNode;
 import com.youngledo.jmcfx.domain.service.JmcFxException;
@@ -87,7 +91,45 @@ public class JmcProfilingService implements ProfilingService {
 
 	@Override
 	public DependencyGraphReport loadPackageDependencies(RecordingSummary recording, int packageDepth) {
-		return DependencyGraphReport.EMPTY;
+		int resolvedDepth = Math.max(1, packageDepth);
+		IItemCollection events = loadEvents(recording);
+		IItemCollection samples = events.apply(JdkFilters.EXECUTION_SAMPLE);
+		if (!samples.hasItems()) {
+			return new DependencyGraphReport(List.of(), 0, resolvedDepth);
+		}
+
+		StacktraceModel model = new StacktraceModel(false, FRAME_SEPARATOR, samples);
+		Map<EdgeKey, Integer> counts = new HashMap<>();
+		for (Branch branch : model.getRootFork().getBranches()) {
+			collectDependencyEdges(branch, null, resolvedDepth, counts);
+		}
+		int totalTransitions = counts.values().stream().mapToInt(Integer::intValue).sum();
+		if (totalTransitions == 0) {
+			return new DependencyGraphReport(List.of(), 0, resolvedDepth);
+		}
+		List<DependencyGraphEdge> edges = counts.entrySet().stream()
+				.map(entry -> new DependencyGraphEdge(entry.getKey().source(), entry.getKey().target(),
+						entry.getValue(), (entry.getValue() * 100.0) / totalTransitions))
+				.sorted(Comparator.comparingInt(DependencyGraphEdge::count).reversed()
+						.thenComparing(DependencyGraphEdge::source)
+						.thenComparing(DependencyGraphEdge::target))
+				.toList();
+		return new DependencyGraphReport(JmcResultLimiter.limitRows(edges), totalTransitions, resolvedDepth);
+	}
+
+	private void collectDependencyEdges(
+			Branch branch,
+			String parentPackage,
+			int packageDepth,
+			Map<EdgeKey, Integer> counts) {
+		String currentPackage = packageLabel(formatFrame(branch.getFirstFrame()), packageDepth);
+		int count = branch.getFirstFrame().getItemCount();
+		if (parentPackage != null && !parentPackage.equals(currentPackage) && count > 0) {
+			counts.merge(new EdgeKey(parentPackage, currentPackage), count, Integer::sum);
+		}
+		for (Branch child : branch.getEndFork().getBranches()) {
+			collectDependencyEdges(child, currentPackage, packageDepth, counts);
+		}
 	}
 
 	private Fork findFork(Fork fork, String method) {
@@ -127,7 +169,34 @@ public class JmcProfilingService implements ProfilingService {
 				false, false, true, true, true, false);
 	}
 
+	static String packageLabel(String formattedFrame, int packageDepth) {
+		if (formattedFrame == null || formattedFrame.isBlank()) {
+			return "<unknown>";
+		}
+		String methodQualifiedName = formattedFrame;
+		int parenIndex = methodQualifiedName.indexOf('(');
+		if (parenIndex >= 0) {
+			methodQualifiedName = methodQualifiedName.substring(0, parenIndex);
+		}
+		int methodSeparator = methodQualifiedName.lastIndexOf('.');
+		if (methodSeparator <= 0) {
+			return "<default>";
+		}
+		String classQualifiedName = methodQualifiedName.substring(0, methodSeparator);
+		int classSeparator = classQualifiedName.lastIndexOf('.');
+		if (classSeparator <= 0) {
+			return "<default>";
+		}
+		String packageName = classQualifiedName.substring(0, classSeparator);
+		String[] parts = packageName.split("\\.");
+		int depth = Math.min(Math.max(1, packageDepth), parts.length);
+		return String.join(".", Arrays.copyOf(parts, depth));
+	}
+
 	private IItemCollection loadEvents(RecordingSummary recording) {
 		return JmcRecordingDataCache.SHARED.events(recording);
+	}
+
+	private record EdgeKey(String source, String target) {
 	}
 }

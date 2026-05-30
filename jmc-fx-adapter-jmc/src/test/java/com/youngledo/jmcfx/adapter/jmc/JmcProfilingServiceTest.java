@@ -4,6 +4,7 @@ import java.nio.file.Path;
 import java.time.Instant;
 import java.util.List;
 
+import com.youngledo.jmcfx.domain.model.DependencyGraphReport;
 import com.youngledo.jmcfx.domain.model.HotMethod;
 import com.youngledo.jmcfx.domain.model.RecordingSummary;
 import com.youngledo.jmcfx.domain.model.StackTreeNode;
@@ -34,6 +35,39 @@ class JmcProfilingServiceTest {
 				Instant.now(), Instant.now(), 1000, 1024);
 		StackTreeNode tree = service.loadStackTraceTree(recording, "java.lang.Thread.run", true);
 		assertNotNull(tree);
+	}
+
+	@Test
+	void loadPackageDependenciesReturnsReport(@TempDir Path tempDir) throws Exception {
+		Path jfrFile = createMinimalRecording(tempDir);
+		RecordingSummary recording = new RecordingSummary("test", jfrFile, "test",
+				Instant.now(), Instant.now(), 1000, 1024);
+
+		DependencyGraphReport report = service.loadPackageDependencies(recording, 2);
+
+		assertNotNull(report);
+		assertEquals(2, report.packageDepth());
+		assertTrue(report.totalTransitions() >= 0);
+	}
+
+	@Test
+	void loadPackageDependenciesClampsPackageDepth(@TempDir Path tempDir) throws Exception {
+		Path jfrFile = createMinimalRecording(tempDir);
+		RecordingSummary recording = new RecordingSummary("test", jfrFile, "test",
+				Instant.now(), Instant.now(), 1000, 1024);
+
+		DependencyGraphReport report = service.loadPackageDependencies(recording, 0);
+
+		assertEquals(1, report.packageDepth());
+	}
+
+	@Test
+	void packageLabelUsesRequestedPackageDepth() {
+		assertEquals("java", JmcProfilingService.packageLabel("java.lang.Thread.run()", 1));
+		assertEquals("java.lang", JmcProfilingService.packageLabel("java.lang.Thread.run()", 2));
+		assertEquals("java.lang", JmcProfilingService.packageLabel("java.lang.Thread.run()", 8));
+		assertEquals("<default>", JmcProfilingService.packageLabel("Thread.run()", 2));
+		assertEquals("<unknown>", JmcProfilingService.packageLabel("", 2));
 	}
 
 	private Path createMinimalRecording(Path tempDir) throws Exception {
