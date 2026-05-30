@@ -132,4 +132,47 @@ class MBeanBrowserModelTest {
         assertEquals("", event.message());
         assertEquals("", event.userData());
     }
+
+    @Test
+    void jfrMetadataFieldNormalizesNullText() {
+        JfrMetadataField field = new JfrMetadataField(null, null, null, EventValueType.NUMBER, null);
+
+        assertEquals("", field.id());
+        assertEquals("", field.label());
+        assertEquals("", field.description());
+        assertEquals(EventValueType.NUMBER, field.valueType());
+        assertEquals("", field.unit());
+    }
+
+    @Test
+    void jfrMetadataEventTypeNormalizesSummaryAndFields() {
+        JfrMetadataEventType eventType = new JfrMetadataEventType(
+                "jdk.CPULoad",
+                "CPU Load",
+                List.of("Operating System"),
+                7,
+                null,
+                List.of(new JfrMetadataField("jvmUser", "JVM User", "", EventValueType.NUMBER, "%")));
+
+        assertEquals("jdk.CPULoad", eventType.id());
+        assertEquals("CPU Load", eventType.name());
+        assertEquals(List.of("Operating System"), eventType.categoryPath());
+        assertEquals("Operating System", eventType.category());
+        assertEquals(7, eventType.eventCount());
+        assertEquals(1, eventType.fieldCount());
+        assertEquals("", eventType.description());
+    }
+
+    @Test
+    void jfrMetadataReportComputesTotals() {
+        JfrMetadataReport report = new JfrMetadataReport(List.of(
+                new JfrMetadataEventType("jdk.CPULoad", "CPU Load", List.of("Operating System"),
+                        2, "", List.of(new JfrMetadataField("jvmUser", "JVM User", "", EventValueType.NUMBER, "%"))),
+                new JfrMetadataEventType("jdk.ThreadStart", "Thread Start", List.of("Java Application"),
+                        3, "", List.of(new JfrMetadataField("eventThread", "Thread", "", EventValueType.TEXT, "")))));
+
+        assertEquals(2, report.eventTypeCount());
+        assertEquals(5, report.eventCount());
+        assertEquals(2, report.fieldCount());
+    }
 }
