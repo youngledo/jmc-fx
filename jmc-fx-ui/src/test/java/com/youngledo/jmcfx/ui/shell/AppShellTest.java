@@ -739,6 +739,51 @@ class AppShellTest {
     }
 
     @Test
+    void javaFxEventsShellUsesSplitTableDetailBindingsAndI18n() throws Exception {
+        Document document = appShellFxml();
+        String controller = java.nio.file.Files.readString(
+                java.nio.file.Path.of("src/main/java/com/youngledo/jmcfx/ui/shell/AppShellController.java"));
+        String english = java.nio.file.Files.readString(
+                java.nio.file.Path.of("src/main/resources/com/youngledo/jmcfx/ui/i18n/messages.properties"));
+        String chinese = java.nio.file.Files.readString(
+                java.nio.file.Path.of("src/main/resources/com/youngledo/jmcfx/ui/i18n/messages_zh_CN.properties"));
+
+        Element javaFxEventsPane = elementByFxId(document, "javaFxEventsPane");
+        assertEquals("VBox", javaFxEventsPane.getTagName());
+        assertTrue(hasStyleClass(javaFxEventsPane, "page"));
+        assertTrue(hasStyleClass(javaFxEventsPane, "split-table-detail-page"));
+        assertEquals("TableView", elementByFxId(document, "javaFxEventsPhaseTable").getTagName());
+        assertEquals("TableView", elementByFxId(document, "javaFxEventsPulseTable").getTagName());
+        assertEquals("TableView", elementByFxId(document, "javaFxEventsInputTable").getTagName());
+        assertTrue(hasStyleClass(elementByFxId(document, "javaFxEventsDetailPane"), "detail-panel"));
+        assertTrue(hasStyleClass(elementByFxId(document, "javaFxEventsDetailTitleLabel"), "detail-panel-title"));
+        assertTrue(hasStyleClass(elementByFxId(document, "javaFxEventsDetailArea"), "detail-panel-body"));
+
+        assertTrue(controller.contains("import com.youngledo.jmcfx.domain.model.JavaFxPulsePhase;"));
+        assertTrue(controller.contains("import com.youngledo.jmcfx.ui.jfx.JavaFxEventsViewModel;"));
+        assertTrue(controller.contains("@FXML private VBox javaFxEventsPane;"));
+        assertTrue(controller.contains("@FXML private TableView<JavaFxPulsePhase> javaFxEventsPhaseTable;"));
+        assertTrue(controller.contains("@FXML private TableView<JavaFxPulseSummary> javaFxEventsPulseTable;"));
+        assertTrue(controller.contains("@FXML private TableView<JavaFxInputEvent> javaFxEventsInputTable;"));
+        assertTrue(controller.contains("javaFxEventsPane.visibleProperty().bind(viewModel.selectedSectionProperty().isEqualTo(\"javaFxEvents\"))"));
+        assertTrue(controller.contains("configureJavaFxEventsTables();"));
+        assertTrue(controller.contains("javaFxEventsPhaseTable.setItems(nextViewModel.pulsePhasesProperty())"));
+        assertTrue(controller.contains("javaFxEventsDetailArea.textProperty().bind(nextViewModel.selectedDetailProperty())"));
+        assertTrue(controller.contains("case \"javaFxEvents\" -> loadIfPresent(workspace.javaFxEventsViewModel(), recording);"));
+
+        assertTrue(english.contains("nav.javaFxEvents=JavaFX Events"));
+        assertTrue(english.contains("javaFxEvents.title=JavaFX Events"));
+        assertTrue(english.contains("javaFxEvents.detail.title=Pulse Phase Details"));
+        assertTrue(english.contains("javaFxEvents.column.pulse=Pulse"));
+        assertTrue(english.contains("javaFxEvents.column.input=Input"));
+        assertTrue(chinese.contains("nav.javaFxEvents=JavaFX事件"));
+        assertTrue(chinese.contains("javaFxEvents.title=JavaFX事件"));
+        assertTrue(chinese.contains("javaFxEvents.detail.title=脉冲阶段详情"));
+        assertTrue(chinese.contains("javaFxEvents.column.pulse=脉冲"));
+        assertTrue(chinese.contains("javaFxEvents.column.input=输入"));
+    }
+
+    @Test
     void appShellFxmlDoesNotHardcodeVisibleLocalizedText() throws Exception {
         Document document = appShellFxml();
 

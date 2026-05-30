@@ -7,6 +7,7 @@ import com.youngledo.jmcfx.adapter.jmc.JmcDiagnosticCommandService;
 import com.youngledo.jmcfx.adapter.jmc.JmcEnvironmentService;
 import com.youngledo.jmcfx.adapter.jmc.JmcEventQueryService;
 import com.youngledo.jmcfx.adapter.jmc.JmcJavaAppService;
+import com.youngledo.jmcfx.adapter.jmc.JmcJavaFxEventService;
 import com.youngledo.jmcfx.adapter.jmc.JmcExceptionService;
 import com.youngledo.jmcfx.adapter.jmc.JmcFileIOService;
 import com.youngledo.jmcfx.adapter.jmc.JmcFlightRecordingService;
@@ -82,6 +83,7 @@ public class JmcFxApplication extends Application {
                 new JavaJmxMonitoringRepository(),
                 new JmcJfrMetadataService(),
                 new JmcG1GcService(),
+                new JmcJavaFxEventService(),
                 new JmcAdvancedJfrAnalysisService(),
                 new JavaSavedJvmTargetRepository(),
                 new JmcJdpDiscoveryService(),

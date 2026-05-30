@@ -18,9 +18,11 @@ import com.youngledo.jmcfx.domain.model.RecordingSummary;
 import com.youngledo.jmcfx.domain.service.EventQueryService;
 import com.youngledo.jmcfx.domain.service.EventQuerySession;
 import com.youngledo.jmcfx.testsupport.FakeG1GcService;
+import com.youngledo.jmcfx.testsupport.FakeJavaFxEventService;
 import com.youngledo.jmcfx.ui.events.EventBrowserBackgroundExecutor;
 import com.youngledo.jmcfx.ui.events.EventBrowserViewModel;
 import com.youngledo.jmcfx.ui.gc.G1GcViewModel;
+import com.youngledo.jmcfx.ui.jfx.JavaFxEventsViewModel;
 import com.youngledo.jmcfx.ui.overview.OverviewViewModel;
 import com.youngledo.jmcfx.ui.preferences.AppTheme;
 import com.youngledo.jmcfx.ui.rules.RuleResultsViewModel;
@@ -525,13 +527,33 @@ class AppShellViewModelTest {
                 null, null, null,
                 null, null, null,
                 null, null, null, null, null, null, null, null,
-                null, null, null, null, null, null, g1Gc, null);
+                null, null, null, null, null, null, g1Gc, null, null);
 
         viewModel.showSection("g1Gc");
 
         assertSame(g1Gc, workspace.g1GcViewModel());
         assertEquals("g1Gc", viewModel.selectedSectionProperty().get());
         assertEquals("g1Gc", workspace.selectedSectionProperty().get());
+    }
+
+    @Test
+    void recordingWorkspaceCarriesJavaFxEventsViewModelAndSection() {
+        AppShellViewModel viewModel = new AppShellViewModel();
+        JavaFxEventsViewModel javaFxEvents = new JavaFxEventsViewModel(new FakeJavaFxEventService());
+
+        RecordingWorkspace workspace = viewModel.openRecording(recording(), new OverviewViewModel(),
+                eventBrowserViewModel(), ruleResultsViewModel(),
+                null, null, null,
+                null, null, null,
+                null, null, null,
+                null, null, null, null, null, null, null, null,
+                null, null, null, null, null, null, null, javaFxEvents, null);
+
+        viewModel.showSection("javaFxEvents");
+
+        assertSame(javaFxEvents, workspace.javaFxEventsViewModel());
+        assertEquals("javaFxEvents", viewModel.selectedSectionProperty().get());
+        assertEquals("javaFxEvents", workspace.selectedSectionProperty().get());
     }
 
     @Test

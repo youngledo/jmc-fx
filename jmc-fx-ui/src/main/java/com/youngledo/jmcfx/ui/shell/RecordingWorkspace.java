@@ -30,6 +30,7 @@ import com.youngledo.jmcfx.ui.javaapp.JavaAppOverviewViewModel;
 import com.youngledo.jmcfx.ui.javaapp.NativeLibraryViewModel;
 import com.youngledo.jmcfx.ui.javaapp.SecurityViewModel;
 import com.youngledo.jmcfx.ui.javaapp.ThreadDumpViewModel;
+import com.youngledo.jmcfx.ui.jfx.JavaFxEventsViewModel;
 import com.youngledo.jmcfx.ui.jvm.VmOperationsViewModel;
 import com.youngledo.jmcfx.ui.metadata.JfrMetadataViewModel;
 import com.youngledo.jmcfx.ui.tlab.TlabViewModel;
@@ -74,6 +75,7 @@ public final class RecordingWorkspace {
     private final ThreadDumpViewModel threadDumpViewModel;
     private final JfrMetadataViewModel jfrMetadataViewModel;
     private final G1GcViewModel g1GcViewModel;
+    private final JavaFxEventsViewModel javaFxEventsViewModel;
     private final AdvancedJfrViewModel advancedJfrViewModel;
 
     public RecordingWorkspace(RecordingSummary recording, OverviewViewModel overviewViewModel,
@@ -166,7 +168,7 @@ public final class RecordingWorkspace {
                 gcDetailsViewModel, compilationsViewModel, codeCacheViewModel,
                 classLoadingViewModel, vmOperationsViewModel, environmentViewModel,
                 javaAppOverviewViewModel, securityViewModel, nativeLibraryViewModel,
-                threadDumpViewModel, jfrMetadataViewModel, null, advancedJfrViewModel);
+                threadDumpViewModel, jfrMetadataViewModel, null, null, advancedJfrViewModel);
     }
 
     public RecordingWorkspace(RecordingSummary recording, OverviewViewModel overviewViewModel,
@@ -191,6 +193,7 @@ public final class RecordingWorkspace {
             ThreadDumpViewModel threadDumpViewModel,
             JfrMetadataViewModel jfrMetadataViewModel,
             G1GcViewModel g1GcViewModel,
+            JavaFxEventsViewModel javaFxEventsViewModel,
             AdvancedJfrViewModel advancedJfrViewModel) {
         this.recording = Objects.requireNonNull(recording, "recording");
         this.overviewViewModel = Objects.requireNonNull(overviewViewModel, "overviewViewModel");
@@ -220,6 +223,7 @@ public final class RecordingWorkspace {
         this.threadDumpViewModel = threadDumpViewModel;
         this.jfrMetadataViewModel = jfrMetadataViewModel;
         this.g1GcViewModel = g1GcViewModel;
+        this.javaFxEventsViewModel = javaFxEventsViewModel;
         this.advancedJfrViewModel = advancedJfrViewModel;
     }
 
@@ -394,6 +398,10 @@ public final class RecordingWorkspace {
 
     public G1GcViewModel g1GcViewModel() {
         return g1GcViewModel;
+    }
+
+    public JavaFxEventsViewModel javaFxEventsViewModel() {
+        return javaFxEventsViewModel;
     }
 
     public AdvancedJfrViewModel advancedJfrViewModel() {

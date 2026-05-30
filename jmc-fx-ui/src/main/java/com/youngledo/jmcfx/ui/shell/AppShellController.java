@@ -52,6 +52,9 @@ import com.youngledo.jmcfx.domain.model.GcSummary;
 import com.youngledo.jmcfx.domain.model.HeapDumpAnalysisState;
 import com.youngledo.jmcfx.domain.model.HeapDumpIssue;
 import com.youngledo.jmcfx.domain.model.HeapClassHistogram;
+import com.youngledo.jmcfx.domain.model.JavaFxInputEvent;
+import com.youngledo.jmcfx.domain.model.JavaFxPulsePhase;
+import com.youngledo.jmcfx.domain.model.JavaFxPulseSummary;
 import com.youngledo.jmcfx.domain.model.ProcessInfo;
 import com.youngledo.jmcfx.domain.model.HotMethod;
 import com.youngledo.jmcfx.domain.model.JvmCapabilitySnapshot;
@@ -109,6 +112,7 @@ import com.youngledo.jmcfx.domain.service.HeapDumpAnalysisService;
 import com.youngledo.jmcfx.domain.service.HeapService;
 import com.youngledo.jmcfx.domain.service.JmcAgentService;
 import com.youngledo.jmcfx.domain.service.JfrMetadataService;
+import com.youngledo.jmcfx.domain.service.JavaFxEventService;
 import com.youngledo.jmcfx.domain.service.JvmInternalsService;
 import com.youngledo.jmcfx.domain.service.JavaAppService;
 import com.youngledo.jmcfx.domain.service.JdpDiscoveryService;
@@ -145,6 +149,7 @@ import com.youngledo.jmcfx.ui.javaapp.JavaAppOverviewViewModel;
 import com.youngledo.jmcfx.ui.javaapp.NativeLibraryViewModel;
 import com.youngledo.jmcfx.ui.javaapp.SecurityViewModel;
 import com.youngledo.jmcfx.ui.javaapp.ThreadDumpViewModel;
+import com.youngledo.jmcfx.ui.jfx.JavaFxEventsViewModel;
 import com.youngledo.jmcfx.ui.jvm.ClassLoadingViewModel;
 import com.youngledo.jmcfx.ui.jvm.CodeCacheViewModel;
 import com.youngledo.jmcfx.ui.jvm.CompilationsViewModel;
@@ -268,6 +273,7 @@ public class AppShellController {
     private final JmxMonitoringRepository jmxMonitoringRepository;
     private final JfrMetadataService jfrMetadataService;
     private final G1GcService g1GcService;
+    private final JavaFxEventService javaFxEventService;
     private final AdvancedJfrAnalysisService advancedJfrAnalysisService;
     private final SavedJvmTargetRepository savedTargetRepository;
     private final JdpDiscoveryService jdpDiscoveryService;
@@ -347,6 +353,7 @@ public class AppShellController {
     @FXML private VBox gcSummaryPane;
     @FXML private VBox gcDetailsPane;
     @FXML private VBox g1GcPane;
+    @FXML private VBox javaFxEventsPane;
     @FXML private VBox compilationsPane;
     @FXML private VBox codeCachePane;
     @FXML private VBox classLoadingPane;
@@ -634,6 +641,18 @@ public class AppShellController {
     @FXML private TextArea g1GcDetailArea;
     private final ChangeListener<G1GcRegionState> g1GcSelectedRegionStateListener =
             (observable, oldValue, newValue) -> g1GcRegionStatesTable.getSelectionModel().select(newValue);
+    @FXML private Label javaFxEventsTitleLabel;
+    @FXML private Label javaFxEventsSummaryLabel;
+    @FXML private Label javaFxEventsPhaseLabel;
+    @FXML private Label javaFxEventsPulseLabel;
+    @FXML private Label javaFxEventsInputLabel;
+    @FXML private TableView<JavaFxPulsePhase> javaFxEventsPhaseTable;
+    @FXML private TableView<JavaFxPulseSummary> javaFxEventsPulseTable;
+    @FXML private TableView<JavaFxInputEvent> javaFxEventsInputTable;
+    @FXML private Label javaFxEventsDetailTitleLabel;
+    @FXML private TextArea javaFxEventsDetailArea;
+    private final ChangeListener<JavaFxPulsePhase> javaFxSelectedPulsePhaseListener =
+            (observable, oldValue, newValue) -> javaFxEventsPhaseTable.getSelectionModel().select(newValue);
     @FXML private VBox gcHeapChartContainer;
     private TimelineChart gcHeapChart;
     @FXML private VBox gcMetaspaceChartContainer;
@@ -726,7 +745,7 @@ public class AppShellController {
                 fileIOService, socketIOService, lockService,
                 heapService, leakSuspectsService, tlabService,
                 jvmInternalsService, environmentService, javaAppService,
-                null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, i18n,
+                null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, i18n,
                 new VirtualThreadRecordingOpenExecutor());
     }
 
@@ -750,7 +769,7 @@ public class AppShellController {
                 heapService, leakSuspectsService, tlabService,
                 jvmInternalsService, environmentService, javaAppService,
                 jvmDiscoveryService, jmxConnectionService, flightRecordingService, null, null, null, null, null,
-                null, null, null, null, null, null, null, i18n, new VirtualThreadRecordingOpenExecutor());
+                null, null, null, null, null, null, null, null, i18n, new VirtualThreadRecordingOpenExecutor());
     }
 
     public AppShellController(AppShellViewModel viewModel, RecordingRepository recordingRepository,
@@ -774,7 +793,7 @@ public class AppShellController {
                 heapService, leakSuspectsService, tlabService,
                 jvmInternalsService, environmentService, javaAppService,
                 jvmDiscoveryService, jmxConnectionService, flightRecordingService, mBeanBrowserService, null, null,
-                null, null, null, null, null, null, null, null, null, i18n, new VirtualThreadRecordingOpenExecutor());
+                null, null, null, null, null, null, null, null, null, null, i18n, new VirtualThreadRecordingOpenExecutor());
     }
 
     public AppShellController(AppShellViewModel viewModel, RecordingRepository recordingRepository,
@@ -801,7 +820,7 @@ public class AppShellController {
                 heapService, leakSuspectsService, tlabService,
                 jvmInternalsService, environmentService, javaAppService,
                 jvmDiscoveryService, jmxConnectionService, flightRecordingService, mBeanBrowserService,
-                diagnosticCommandService, liveMetricService, null, null, null, null, null, advancedJfrAnalysisService, null, null,
+                diagnosticCommandService, liveMetricService, null, null, null, null, null, null, advancedJfrAnalysisService, null, null,
                 null, i18n, new VirtualThreadRecordingOpenExecutor());
     }
 
@@ -833,7 +852,7 @@ public class AppShellController {
                 heapService, leakSuspectsService, tlabService,
                 jvmInternalsService, environmentService, javaAppService,
                 jvmDiscoveryService, jmxConnectionService, flightRecordingService, mBeanBrowserService,
-                diagnosticCommandService, liveMetricService, jmcAgentService, null, null, null, null,
+                diagnosticCommandService, liveMetricService, jmcAgentService, null, null, null, null, null,
                 advancedJfrAnalysisService, savedTargetRepository, jdpDiscoveryService, heapDumpAnalysisService, i18n,
                 new VirtualThreadRecordingOpenExecutor());
     }
@@ -859,6 +878,7 @@ public class AppShellController {
             JmxMonitoringRepository jmxMonitoringRepository,
             JfrMetadataService jfrMetadataService,
             G1GcService g1GcService,
+            JavaFxEventService javaFxEventService,
             AdvancedJfrAnalysisService advancedJfrAnalysisService,
             SavedJvmTargetRepository savedTargetRepository,
             JdpDiscoveryService jdpDiscoveryService,
@@ -871,7 +891,8 @@ public class AppShellController {
                 jvmInternalsService, environmentService, javaAppService,
                 jvmDiscoveryService, jmxConnectionService, flightRecordingService, mBeanBrowserService,
                 diagnosticCommandService, liveMetricService, jmcAgentService,
-                jmxMonitoringService, jmxMonitoringRepository, jfrMetadataService, g1GcService, advancedJfrAnalysisService,
+                jmxMonitoringService, jmxMonitoringRepository, jfrMetadataService, g1GcService,
+                javaFxEventService, advancedJfrAnalysisService,
                 savedTargetRepository, jdpDiscoveryService, heapDumpAnalysisService, i18n,
                 new VirtualThreadRecordingOpenExecutor());
     }
@@ -895,7 +916,7 @@ public class AppShellController {
                 heapService, leakSuspectsService, tlabService,
                 jvmInternalsService, environmentService, javaAppService,
                 jvmDiscoveryService, jmxConnectionService, null, null, null, null, null, null, null, null, null, null, null,
-                null, null, i18n, new VirtualThreadRecordingOpenExecutor());
+                null, null, null, i18n, new VirtualThreadRecordingOpenExecutor());
     }
 
     AppShellController(AppShellViewModel viewModel, RecordingRepository recordingRepository,
@@ -914,7 +935,7 @@ public class AppShellController {
                 fileIOService, socketIOService, lockService,
                 heapService, leakSuspectsService, tlabService,
                 jvmInternalsService, environmentService, javaAppService,
-                null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, i18n,
+                null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, i18n,
                 recordingOpenExecutor);
     }
 
@@ -938,7 +959,7 @@ public class AppShellController {
                 heapService, leakSuspectsService, tlabService,
                 jvmInternalsService, environmentService, javaAppService,
                 jvmDiscoveryService, jmxConnectionService, flightRecordingService, null, null, null, null, null,
-                null, null, null, null, null, null, null, i18n, recordingOpenExecutor);
+                null, null, null, null, null, null, null, null, i18n, recordingOpenExecutor);
     }
 
     AppShellController(AppShellViewModel viewModel, RecordingRepository recordingRepository,
@@ -961,6 +982,7 @@ public class AppShellController {
             JmxMonitoringRepository jmxMonitoringRepository,
             JfrMetadataService jfrMetadataService,
             G1GcService g1GcService,
+            JavaFxEventService javaFxEventService,
             AdvancedJfrAnalysisService advancedJfrAnalysisService,
             SavedJvmTargetRepository savedTargetRepository,
             JdpDiscoveryService jdpDiscoveryService,
@@ -994,6 +1016,7 @@ public class AppShellController {
         this.jmxMonitoringRepository = jmxMonitoringRepository;
         this.jfrMetadataService = jfrMetadataService;
         this.g1GcService = g1GcService;
+        this.javaFxEventService = javaFxEventService;
         this.advancedJfrAnalysisService = advancedJfrAnalysisService;
         this.savedTargetRepository = savedTargetRepository;
         this.jdpDiscoveryService = jdpDiscoveryService;
@@ -1104,6 +1127,8 @@ public class AppShellController {
         gcDetailsPane.managedProperty().bind(gcDetailsPane.visibleProperty());
         g1GcPane.visibleProperty().bind(viewModel.selectedSectionProperty().isEqualTo("g1Gc"));
         g1GcPane.managedProperty().bind(g1GcPane.visibleProperty());
+        javaFxEventsPane.visibleProperty().bind(viewModel.selectedSectionProperty().isEqualTo("javaFxEvents"));
+        javaFxEventsPane.managedProperty().bind(javaFxEventsPane.visibleProperty());
         compilationsPane.visibleProperty().bind(viewModel.selectedSectionProperty().isEqualTo("compilations"));
         compilationsPane.managedProperty().bind(compilationsPane.visibleProperty());
         codeCachePane.visibleProperty().bind(viewModel.selectedSectionProperty().isEqualTo("codeCache"));
@@ -1169,6 +1194,7 @@ public class AppShellController {
         configureGcReferenceStatsTable();
         configureGcHeapSummaryTable();
         configureG1GcTables();
+        configureJavaFxEventsTables();
         configureCompilationsTable();
         configureCompilationFailuresTable();
         configureCodeCacheSweepsTable();
@@ -3576,6 +3602,11 @@ public class AppShellController {
         g1GcRegionSummaryLabel.textProperty().bind(i18n.text("g1Gc.regionSummary"));
         g1GcPausesLabel.textProperty().bind(i18n.text("g1Gc.pauses"));
         g1GcDetailTitleLabel.textProperty().bind(i18n.text("g1Gc.detail.title"));
+        javaFxEventsTitleLabel.textProperty().bind(i18n.text("javaFxEvents.title"));
+        javaFxEventsPhaseLabel.textProperty().bind(i18n.text("javaFxEvents.phases"));
+        javaFxEventsPulseLabel.textProperty().bind(i18n.text("javaFxEvents.pulses"));
+        javaFxEventsInputLabel.textProperty().bind(i18n.text("javaFxEvents.inputs"));
+        javaFxEventsDetailTitleLabel.textProperty().bind(i18n.text("javaFxEvents.detail.title"));
         advancedJfrTitleLabel.textProperty().bind(i18n.text("advancedJfr.title"));
         advancedJfrHeatmapTab.textProperty().bind(i18n.text("advancedJfr.heatmap.tab"));
         advancedJfrMemoryTab.textProperty().bind(i18n.text("advancedJfr.memory.tab"));
@@ -4012,6 +4043,7 @@ public class AppShellController {
         bindGcSummary(workspace == null ? null : workspace.gcSummaryViewModel());
         bindGcDetails(workspace == null ? null : workspace.gcDetailsViewModel());
         bindG1Gc(workspace == null ? null : workspace.g1GcViewModel());
+        bindJavaFxEvents(workspace == null ? null : workspace.javaFxEventsViewModel());
         bindCompilations(workspace == null ? null : workspace.compilationsViewModel());
         bindCodeCache(workspace == null ? null : workspace.codeCacheViewModel());
         bindClassLoading(workspace == null ? null : workspace.classLoadingViewModel());
@@ -4124,6 +4156,33 @@ public class AppShellController {
         g1GcPauseTable.setItems(nextViewModel.gcPausesProperty());
         g1GcRegionStatesTable.getSelectionModel().select(nextViewModel.selectedRegionStateProperty().get());
         nextViewModel.selectedRegionStateProperty().addListener(g1GcSelectedRegionStateListener);
+    }
+
+    private JavaFxEventsViewModel javaFxEventsViewModel;
+
+    private void bindJavaFxEvents(JavaFxEventsViewModel nextViewModel) {
+        if (javaFxEventsViewModel != null) {
+            javaFxEventsViewModel.selectedPulsePhaseProperty().removeListener(javaFxSelectedPulsePhaseListener);
+        }
+        javaFxEventsSummaryLabel.textProperty().unbind();
+        javaFxEventsDetailArea.textProperty().unbind();
+        javaFxEventsPulseTable.setItems(FXCollections.emptyObservableList());
+        javaFxEventsPhaseTable.setItems(FXCollections.emptyObservableList());
+        javaFxEventsInputTable.setItems(FXCollections.emptyObservableList());
+        javaFxEventsPhaseTable.getSelectionModel().clearSelection();
+        javaFxEventsSummaryLabel.setText(i18n.get("javaFxEvents.summary"));
+        javaFxEventsDetailArea.setText("");
+        javaFxEventsViewModel = nextViewModel;
+        if (nextViewModel == null) {
+            return;
+        }
+        javaFxEventsSummaryLabel.textProperty().bind(nextViewModel.summaryProperty());
+        javaFxEventsDetailArea.textProperty().bind(nextViewModel.selectedDetailProperty());
+        javaFxEventsPulseTable.setItems(nextViewModel.pulseSummariesProperty());
+        javaFxEventsPhaseTable.setItems(nextViewModel.pulsePhasesProperty());
+        javaFxEventsInputTable.setItems(nextViewModel.inputEventsProperty());
+        javaFxEventsPhaseTable.getSelectionModel().select(nextViewModel.selectedPulsePhaseProperty().get());
+        nextViewModel.selectedPulsePhaseProperty().addListener(javaFxSelectedPulsePhaseListener);
     }
 
     private void bindAdvancedJfrMemoryText(AdvancedJfrViewModel nextViewModel) {
@@ -4325,6 +4384,7 @@ public class AppShellController {
         GcSummaryViewModel gcSummary = jvmInternalsService != null ? new GcSummaryViewModel(jvmInternalsService) : null;
         GcDetailsViewModel gcDetails = jvmInternalsService != null ? new GcDetailsViewModel(jvmInternalsService) : null;
         G1GcViewModel g1Gc = g1GcService != null ? new G1GcViewModel(g1GcService) : null;
+        JavaFxEventsViewModel javaFxEvents = javaFxEventService != null ? new JavaFxEventsViewModel(javaFxEventService) : null;
         CompilationsViewModel compilationsVm = jvmInternalsService != null ? new CompilationsViewModel(jvmInternalsService) : null;
         CodeCacheViewModel codeCache = jvmInternalsService != null ? new CodeCacheViewModel(jvmInternalsService) : null;
         ClassLoadingViewModel classLoading = jvmInternalsService != null ? new ClassLoadingViewModel(jvmInternalsService) : null;
@@ -4342,7 +4402,7 @@ public class AppShellController {
         return new PreparedRecordingWorkspace(recording, overview, events, analysis, profiling, exceptions, threads,
                 fileio, socketio, locks, heap, leakSuspects, tlab, jvmInfo, gcConfig, gcSummary, gcDetails,
                 compilationsVm, codeCache, classLoading, vmOperations, environment, javaAppOverview, security,
-                nativeLibraries, threadDumps, metadata, g1Gc, advancedJfr);
+                nativeLibraries, threadDumps, metadata, g1Gc, javaFxEvents, advancedJfr);
     }
 
     private void attachPreparedRecordingWorkspace(PreparedRecordingWorkspace prepared) {
@@ -4358,7 +4418,8 @@ public class AppShellController {
                 prepared.jvmInfo(), prepared.gcConfig(), prepared.gcSummary(), prepared.gcDetails(),
                 prepared.compilations(), prepared.codeCache(), prepared.classLoading(), prepared.vmOperations(),
                 prepared.environment(), prepared.javaAppOverview(), prepared.security(), prepared.nativeLibraries(),
-                prepared.threadDumps(), prepared.metadata(), prepared.g1Gc(), prepared.advancedJfr());
+                prepared.threadDumps(), prepared.metadata(), prepared.g1Gc(), prepared.javaFxEvents(),
+                prepared.advancedJfr());
         viewModel.showStatus(i18n.format("status.openedRecording", prepared.recording().name()));
         setRecordingOpening(false);
     }
@@ -4534,6 +4595,7 @@ public class AppShellController {
             case "gcSummary" -> loadIfPresent(workspace.gcSummaryViewModel(), recording);
             case "gcDetails" -> loadIfPresent(workspace.gcDetailsViewModel(), recording);
             case "g1Gc" -> loadIfPresent(workspace.g1GcViewModel(), recording);
+            case "javaFxEvents" -> loadIfPresent(workspace.javaFxEventsViewModel(), recording);
             case "compilations" -> loadIfPresent(workspace.compilationsViewModel(), recording);
             case "codeCache" -> loadIfPresent(workspace.codeCacheViewModel(), recording);
             case "classLoading" -> loadIfPresent(workspace.classLoadingViewModel(), recording);
@@ -4695,6 +4757,12 @@ public class AppShellController {
         }
     }
 
+    private void loadIfPresent(JavaFxEventsViewModel viewModel, RecordingSummary recording) {
+        if (viewModel != null) {
+            viewModel.load(recording);
+        }
+    }
+
     private void loadIfPresent(AdvancedJfrViewModel viewModel, RecordingSummary recording) {
         if (viewModel != null) {
             viewModel.load(recording);
@@ -4730,6 +4798,7 @@ public class AppShellController {
             ThreadDumpViewModel threadDumps,
             JfrMetadataViewModel metadata,
             G1GcViewModel g1Gc,
+            JavaFxEventsViewModel javaFxEvents,
             AdvancedJfrViewModel advancedJfr) {
     }
 
@@ -5178,6 +5247,79 @@ public class AppShellController {
         pauseTimeCol.setCellValueFactory(data -> new ReadOnlyStringWrapper(
                 DisplayFormats.formatTimestamp(data.getValue().startTime(), ZoneId.systemDefault())));
         g1GcPauseTable.getColumns().setAll(List.of(pauseIdCol, nameCol, causeCol, totalPauseCol, pauseTimeCol));
+    }
+
+    private void configureJavaFxEventsTables() {
+        javaFxEventsPhaseTable.setPlaceholder(localizedTablePlaceholder("javaFxEvents.empty"));
+        TableColumn<JavaFxPulsePhase, String> pulseIdCol = localizedColumn("javaFxEvents.column.pulse");
+        pulseIdCol.setPrefWidth(90);
+        pulseIdCol.setCellValueFactory(data -> new ReadOnlyStringWrapper(
+                DisplayFormats.formatInteger(data.getValue().pulseId())));
+        TableColumn<JavaFxPulsePhase, String> phaseNameCol = localizedColumn("javaFxEvents.column.phase");
+        phaseNameCol.setPrefWidth(200);
+        phaseNameCol.setCellValueFactory(data -> new ReadOnlyStringWrapper(data.getValue().phaseName()));
+        TableColumn<JavaFxPulsePhase, String> phaseDurationCol = localizedColumn("common.column.duration");
+        phaseDurationCol.setPrefWidth(130);
+        phaseDurationCol.setCellValueFactory(data -> new ReadOnlyStringWrapper(
+                DisplayFormats.formatMicros(data.getValue().durationMicros())));
+        TableColumn<JavaFxPulsePhase, String> phaseThreadCol = localizedColumn("common.column.thread");
+        phaseThreadCol.setPrefWidth(220);
+        phaseThreadCol.setCellValueFactory(data -> new ReadOnlyStringWrapper(data.getValue().threadName()));
+        TableColumn<JavaFxPulsePhase, String> phaseTimeCol = localizedColumn("common.column.time");
+        phaseTimeCol.setPrefWidth(220);
+        phaseTimeCol.setCellValueFactory(data -> new ReadOnlyStringWrapper(
+                DisplayFormats.formatTimestamp(data.getValue().startTime(), ZoneId.systemDefault())));
+        javaFxEventsPhaseTable.getColumns().setAll(List.of(pulseIdCol, phaseNameCol, phaseDurationCol,
+                phaseThreadCol, phaseTimeCol));
+        javaFxEventsPhaseTable.getSelectionModel().selectedItemProperty()
+                .addListener((observable, oldValue, newValue) -> {
+                    if (javaFxEventsViewModel != null
+                            && newValue != javaFxEventsViewModel.selectedPulsePhaseProperty().get()) {
+                        javaFxEventsViewModel.selectedPulsePhaseProperty().set(newValue);
+                    }
+                });
+
+        javaFxEventsPulseTable.setPlaceholder(localizedTablePlaceholder("javaFxEvents.empty"));
+        TableColumn<JavaFxPulseSummary, String> summaryPulseIdCol = localizedColumn("javaFxEvents.column.pulse");
+        summaryPulseIdCol.setPrefWidth(90);
+        summaryPulseIdCol.setCellValueFactory(data -> new ReadOnlyStringWrapper(
+                DisplayFormats.formatInteger(data.getValue().pulseId())));
+        TableColumn<JavaFxPulseSummary, String> phaseCountCol = localizedColumn("javaFxEvents.column.phases");
+        phaseCountCol.setPrefWidth(110);
+        phaseCountCol.setCellValueFactory(data -> new ReadOnlyStringWrapper(
+                DisplayFormats.formatInteger(data.getValue().phaseCount())));
+        TableColumn<JavaFxPulseSummary, String> totalDurationCol = localizedColumn("javaFxEvents.column.totalDuration");
+        totalDurationCol.setPrefWidth(140);
+        totalDurationCol.setCellValueFactory(data -> new ReadOnlyStringWrapper(
+                DisplayFormats.formatMicros(data.getValue().totalDurationMicros())));
+        TableColumn<JavaFxPulseSummary, String> maxDurationCol = localizedColumn("javaFxEvents.column.maxDuration");
+        maxDurationCol.setPrefWidth(140);
+        maxDurationCol.setCellValueFactory(data -> new ReadOnlyStringWrapper(
+                DisplayFormats.formatMicros(data.getValue().maxPhaseDurationMicros())));
+        TableColumn<JavaFxPulseSummary, String> pulseTimeCol = localizedColumn("common.column.time");
+        pulseTimeCol.setPrefWidth(220);
+        pulseTimeCol.setCellValueFactory(data -> new ReadOnlyStringWrapper(
+                DisplayFormats.formatTimestamp(data.getValue().startTime(), ZoneId.systemDefault())));
+        javaFxEventsPulseTable.getColumns().setAll(List.of(summaryPulseIdCol, phaseCountCol,
+                totalDurationCol, maxDurationCol, pulseTimeCol));
+
+        javaFxEventsInputTable.setPlaceholder(localizedTablePlaceholder("javaFxEvents.inputs.empty"));
+        TableColumn<JavaFxInputEvent, String> inputTypeCol = localizedColumn("javaFxEvents.column.input");
+        inputTypeCol.setPrefWidth(180);
+        inputTypeCol.setCellValueFactory(data -> new ReadOnlyStringWrapper(data.getValue().inputType()));
+        TableColumn<JavaFxInputEvent, String> inputDurationCol = localizedColumn("common.column.duration");
+        inputDurationCol.setPrefWidth(130);
+        inputDurationCol.setCellValueFactory(data -> new ReadOnlyStringWrapper(
+                DisplayFormats.formatMicros(data.getValue().durationMicros())));
+        TableColumn<JavaFxInputEvent, String> inputThreadCol = localizedColumn("common.column.thread");
+        inputThreadCol.setPrefWidth(220);
+        inputThreadCol.setCellValueFactory(data -> new ReadOnlyStringWrapper(data.getValue().threadName()));
+        TableColumn<JavaFxInputEvent, String> inputTimeCol = localizedColumn("common.column.time");
+        inputTimeCol.setPrefWidth(220);
+        inputTimeCol.setCellValueFactory(data -> new ReadOnlyStringWrapper(
+                DisplayFormats.formatTimestamp(data.getValue().startTime(), ZoneId.systemDefault())));
+        javaFxEventsInputTable.getColumns().setAll(List.of(inputTypeCol, inputDurationCol, inputThreadCol,
+                inputTimeCol));
     }
 
     private void configureCompilationsTable() {
