@@ -39,6 +39,10 @@ import com.youngledo.jmcfx.domain.model.JdpJvmAdvertisement;
 import com.youngledo.jmcfx.domain.model.JmcAgentPreset;
 import com.youngledo.jmcfx.domain.model.JmcAgentStatus;
 import com.youngledo.jmcfx.domain.model.JmcAgentTransform;
+import com.youngledo.jmcfx.domain.model.JmxAttributeSubscription;
+import com.youngledo.jmcfx.domain.model.JmxNotificationEvent;
+import com.youngledo.jmcfx.domain.model.JmxNotificationSubscription;
+import com.youngledo.jmcfx.domain.model.JmxSubscriptionSample;
 import com.youngledo.jmcfx.domain.model.LiveMetricDefinition;
 import com.youngledo.jmcfx.domain.model.LiveMetricKind;
 import com.youngledo.jmcfx.domain.model.LiveMetricSnapshot;
@@ -58,6 +62,8 @@ import com.youngledo.jmcfx.testsupport.FakeFlightRecordingService;
 import com.youngledo.jmcfx.testsupport.FakeJdpDiscoveryService;
 import com.youngledo.jmcfx.testsupport.FakeJmcAgentService;
 import com.youngledo.jmcfx.testsupport.FakeJmxConnectionService;
+import com.youngledo.jmcfx.testsupport.FakeJmxMonitoringRepository;
+import com.youngledo.jmcfx.testsupport.FakeJmxMonitoringService;
 import com.youngledo.jmcfx.testsupport.FakeJvmDiscoveryService;
 import com.youngledo.jmcfx.testsupport.FakeLiveMetricService;
 import com.youngledo.jmcfx.testsupport.FakeMBeanBrowserService;
@@ -1358,6 +1364,133 @@ class JvmBrowserViewModelTest {
         assertEquals(TriggerActionType.NOTIFY, viewModel.selectedTriggerActionTypeProperty().get());
     }
 
+    @Test
+    void connectedSessionLoadsPersistedMonitoringState() {
+        FakeJmxConnectionService jmx = new FakeJmxConnectionService();
+        FakeJmxMonitoringService monitoring = new FakeJmxMonitoringService();
+        FakeJmxMonitoringRepository repository = new FakeJmxMonitoringRepository();
+        JvmBrowserViewModel viewModel = viewModel(new FakeJvmDiscoveryService(), jmx, null, monitoring, repository);
+        JvmConnection connected = connectedWithMBeans(viewModel, jmx);
+        JmxAttributeSubscription subscription = new JmxAttributeSubscription(
+                "sub-1", connected.id(), "java.lang:type=Memory", "HeapMemoryUsage",
+                "Heap", "%", Duration.ofSeconds(1), 3, true, true);
+        JmxSubscriptionSample sample = new JmxSubscriptionSample(
+                "sub-1", Instant.EPOCH, 50, "50", "%", true);
+        JmxNotificationSubscription notificationSubscription = new JmxNotificationSubscription(
+                "notif-1", connected.id(), "demo:type=Notifier", "Notifier", 2, true, true);
+        JmxNotificationEvent event = new JmxNotificationEvent(
+                "notif-1", Instant.EPOCH, "demo", "source", 1, "message", "");
+        repository.saveAttributeSubscription(subscription);
+        repository.appendSample(sample);
+        repository.saveNotificationSubscription(notificationSubscription);
+        repository.appendNotificationEvent(event);
+
+        viewModel.selectedConnectionProperty().set(connected);
+
+        assertTrue(viewModel.jmxMonitoringAvailableProperty().get());
+        assertEquals(List.of(subscription), viewModel.jmxAttributeSubscriptionsProperty());
+        assertEquals(subscription, viewModel.selectedJmxAttributeSubscriptionProperty().get());
+        assertEquals(List.of(sample), viewModel.jmxSubscriptionSamplesProperty());
+        assertEquals(List.of(notificationSubscription), viewModel.jmxNotificationSubscriptionsProperty());
+        assertEquals(notificationSubscription, viewModel.selectedJmxNotificationSubscriptionProperty().get());
+        assertEquals(List.of(event), viewModel.jmxNotificationEventsProperty());
+    }
+
+    @Test
+    void addSelectedMBeanAttributeSubscriptionCreatesBoundedSubscription() {
+        FakeJmxConnectionService jmx = new FakeJmxConnectionService();
+        FakeMBeanBrowserService mbeans = new FakeMBeanBrowserService();
+        FakeJmxMonitoringService monitoring = new FakeJmxMonitoringService();
+        FakeJmxMonitoringRepository repository = new FakeJmxMonitoringRepository();
+        JvmBrowserViewModel viewModel = viewModel(new FakeJvmDiscoveryService(), jmx, mbeans, monitoring, repository);
+        JvmConnection connected = connectedWithMBeans(viewModel, jmx);
+        MBeanNode runtime = MBeanNode.objectName("java.lang:type=Runtime", "Runtime");
+        MBeanAttributeInfo uptime = new MBeanAttributeInfo("Uptime", "long", true, false, "1000", "");
+        mbeans.setTree(connected.id(), List.of(MBeanNode.domain("java.lang", List.of(runtime))));
+        mbeans.setAttributes(connected.id(), runtime.objectName(), List.of(uptime));
+        mbeans.setOperations(connected.id(), runtime.objectName(), List.of());
+        viewModel.selectedConnectionProperty().set(connected);
+        viewModel.selectedMBeanProperty().set(runtime);
+
+        viewModel.addMBeanAttributeSubscription(uptime, Duration.ofSeconds(2), 3, true);
+
+        assertEquals(1, viewModel.jmxAttributeSubscriptionsProperty().size());
+        JmxAttributeSubscription subscription = viewModel.jmxAttributeSubscriptionsProperty().getFirst();
+        assertEquals(connected.id(), subscription.connectionId());
+        assertEquals(runtime.objectName(), subscription.objectName());
+        assertEquals("Uptime", subscription.attributeName());
+        assertEquals(Duration.ofSeconds(2), subscription.samplingInterval());
+        assertEquals(3, subscription.maxSamples());
+        assertEquals(List.of(subscription), repository.findAttributeSubscriptions(connected.id()));
+    }
+
+    @Test
+    void sampleSelectedSubscriptionAppendsSampleAndPersistsIt() {
+        FakeJmxConnectionService jmx = new FakeJmxConnectionService();
+        FakeJmxMonitoringService monitoring = new FakeJmxMonitoringService();
+        FakeJmxMonitoringRepository repository = new FakeJmxMonitoringRepository();
+        JvmBrowserViewModel viewModel = viewModel(new FakeJvmDiscoveryService(), jmx, null, monitoring, repository);
+        JvmConnection connected = connectedWithMBeans(viewModel, jmx);
+        JmxAttributeSubscription subscription = new JmxAttributeSubscription(
+                "sub-1", connected.id(), "java.lang:type=Threading", "ThreadCount",
+                "Thread Count", "threads", Duration.ofSeconds(1), 3, true, true);
+        JmxSubscriptionSample sample = new JmxSubscriptionSample(
+                "sub-1", Instant.EPOCH, 301, "301", "threads", true);
+        monitoring.setSample(connected.id(), "sub-1", sample);
+        viewModel.selectedConnectionProperty().set(connected);
+        viewModel.jmxAttributeSubscriptionsProperty().add(subscription);
+        viewModel.selectedJmxAttributeSubscriptionProperty().set(subscription);
+
+        viewModel.sampleSelectedJmxSubscriptionNow();
+
+        assertEquals(List.of(sample), viewModel.jmxSubscriptionSamplesProperty());
+        assertEquals(List.of(sample), repository.findSamples("sub-1"));
+    }
+
+    @Test
+    void notificationEventsAreBoundedAndPersisted() {
+        FakeJmxConnectionService jmx = new FakeJmxConnectionService();
+        FakeJmxMonitoringService monitoring = new FakeJmxMonitoringService();
+        FakeJmxMonitoringRepository repository = new FakeJmxMonitoringRepository();
+        JvmBrowserViewModel viewModel = viewModel(new FakeJvmDiscoveryService(), jmx, null, monitoring, repository);
+        JvmConnection connected = connectedWithMBeans(viewModel, jmx);
+        JmxNotificationSubscription subscription = new JmxNotificationSubscription(
+                "notif-1", connected.id(), "demo:type=Notifier", "Notifier", 1, true, true);
+        JmxNotificationEvent first = new JmxNotificationEvent(
+                "notif-1", Instant.EPOCH, "one", "demo", 1, "one", "");
+        JmxNotificationEvent second = new JmxNotificationEvent(
+                "notif-1", Instant.EPOCH.plusSeconds(1), "two", "demo", 2, "two", "");
+        monitoring.setNotificationEvents(connected.id(), "notif-1", List.of(first, second));
+        viewModel.selectedConnectionProperty().set(connected);
+
+        viewModel.startJmxNotifications(subscription);
+
+        assertEquals(List.of(second), viewModel.jmxNotificationEventsProperty());
+        assertEquals(List.of(second), repository.findNotificationEvents("notif-1"));
+    }
+
+    @Test
+    void clearingSelectedSessionClearsMonitoringState() {
+        FakeJmxConnectionService jmx = new FakeJmxConnectionService();
+        FakeJmxMonitoringService monitoring = new FakeJmxMonitoringService();
+        FakeJmxMonitoringRepository repository = new FakeJmxMonitoringRepository();
+        JvmBrowserViewModel viewModel = viewModel(new FakeJvmDiscoveryService(), jmx, null, monitoring, repository);
+        JvmConnection connected = connectedWithMBeans(viewModel, jmx);
+        JmxAttributeSubscription subscription = new JmxAttributeSubscription(
+                "sub-1", connected.id(), "java.lang:type=Memory", "HeapMemoryUsage",
+                "Heap", "%", Duration.ofSeconds(1), 3, true, true);
+        viewModel.selectedConnectionProperty().set(connected);
+        viewModel.jmxAttributeSubscriptionsProperty().add(subscription);
+        viewModel.selectedJmxAttributeSubscriptionProperty().set(subscription);
+
+        viewModel.selectedConnectionProperty().set(null);
+
+        assertFalse(viewModel.jmxMonitoringAvailableProperty().get());
+        assertTrue(viewModel.jmxAttributeSubscriptionsProperty().isEmpty());
+        assertTrue(viewModel.jmxSubscriptionSamplesProperty().isEmpty());
+        assertNull(viewModel.selectedJmxAttributeSubscriptionProperty().get());
+    }
+
     private static JvmBrowserViewModel viewModel(FakeJvmDiscoveryService discovery, FakeJmxConnectionService jmx) {
         return new JvmBrowserViewModel(discovery, jmx, new DirectJvmBrowserExecutor(), Runnable::run);
     }
@@ -1371,6 +1504,13 @@ class JvmBrowserViewModelTest {
     private static JvmBrowserViewModel viewModel(FakeJvmDiscoveryService discovery, FakeJmxConnectionService jmx,
             FakeMBeanBrowserService mbeans) {
         return new JvmBrowserViewModel(discovery, jmx, mbeans, new DirectJvmBrowserExecutor(), Runnable::run);
+    }
+
+    private static JvmBrowserViewModel viewModel(FakeJvmDiscoveryService discovery, FakeJmxConnectionService jmx,
+            FakeMBeanBrowserService mbeans, FakeJmxMonitoringService monitoring,
+            FakeJmxMonitoringRepository repository) {
+        return new JvmBrowserViewModel(discovery, jmx, null, mbeans, null, null, null,
+                monitoring, repository, null, null, new DirectJvmBrowserExecutor(), Runnable::run, path -> { });
     }
 
     private static JvmBrowserViewModel viewModel(FakeJvmDiscoveryService discovery, FakeJmxConnectionService jmx,

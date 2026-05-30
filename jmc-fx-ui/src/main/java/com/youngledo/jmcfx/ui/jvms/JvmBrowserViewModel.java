@@ -29,6 +29,10 @@ import com.youngledo.jmcfx.domain.model.FlightRecordingTemplate;
 import com.youngledo.jmcfx.domain.model.JmcAgentPreset;
 import com.youngledo.jmcfx.domain.model.JmcAgentStatus;
 import com.youngledo.jmcfx.domain.model.JmcAgentTransform;
+import com.youngledo.jmcfx.domain.model.JmxAttributeSubscription;
+import com.youngledo.jmcfx.domain.model.JmxNotificationEvent;
+import com.youngledo.jmcfx.domain.model.JmxNotificationSubscription;
+import com.youngledo.jmcfx.domain.model.JmxSubscriptionSample;
 import com.youngledo.jmcfx.domain.model.JvmCapability;
 import com.youngledo.jmcfx.domain.model.JvmCapabilityStatus;
 import com.youngledo.jmcfx.domain.model.JvmConnection;
@@ -54,6 +58,8 @@ import com.youngledo.jmcfx.domain.service.FlightRecordingService;
 import com.youngledo.jmcfx.domain.service.JmcAgentService;
 import com.youngledo.jmcfx.domain.service.JmcFxException;
 import com.youngledo.jmcfx.domain.service.JmxConnectionService;
+import com.youngledo.jmcfx.domain.service.JmxMonitoringRepository;
+import com.youngledo.jmcfx.domain.service.JmxMonitoringService;
 import com.youngledo.jmcfx.domain.service.JdpDiscoveryService;
 import com.youngledo.jmcfx.domain.service.JvmDiscoveryService;
 import com.youngledo.jmcfx.domain.service.LiveMetricService;
@@ -83,6 +89,8 @@ public class JvmBrowserViewModel implements AutoCloseable {
     private final DiagnosticCommandService diagnosticCommandService;
     private final LiveMetricService liveMetricService;
     private final JmcAgentService jmcAgentService;
+    private final JmxMonitoringService jmxMonitoringService;
+    private final JmxMonitoringRepository jmxMonitoringRepository;
     private final SavedJvmTargetRepository savedTargetRepository;
     private final JdpDiscoveryService jdpDiscoveryService;
     private final JvmBrowserExecutor executor;
@@ -99,6 +107,12 @@ public class JvmBrowserViewModel implements AutoCloseable {
     private final ObservableList<JmcAgentTransform> jmcAgentTransforms = FXCollections.observableArrayList();
     private final ObservableList<TriggerRule> triggerRules = FXCollections.observableArrayList();
     private final ObservableList<TriggerEvent> triggerEvents = FXCollections.observableArrayList();
+    private final ObservableList<JmxAttributeSubscription> jmxAttributeSubscriptions =
+            FXCollections.observableArrayList();
+    private final ObservableList<JmxSubscriptionSample> jmxSubscriptionSamples = FXCollections.observableArrayList();
+    private final ObservableList<JmxNotificationSubscription> jmxNotificationSubscriptions =
+            FXCollections.observableArrayList();
+    private final ObservableList<JmxNotificationEvent> jmxNotificationEvents = FXCollections.observableArrayList();
     private final ObjectProperty<JvmConnection> selectedConnection = new SimpleObjectProperty<>();
     private final ObjectProperty<FlightRecordingInfo> selectedFlightRecording = new SimpleObjectProperty<>();
     private final ObjectProperty<MBeanNode> selectedMBean = new SimpleObjectProperty<>();
@@ -106,6 +120,10 @@ public class JvmBrowserViewModel implements AutoCloseable {
     private final ObjectProperty<DiagnosticCommandInfo> selectedDiagnosticCommand = new SimpleObjectProperty<>();
     private final ObjectProperty<LiveMetricDefinition> selectedTriggerMetric = new SimpleObjectProperty<>();
     private final ObjectProperty<JmcAgentPreset> selectedJmcAgentPreset = new SimpleObjectProperty<>();
+    private final ObjectProperty<JmxAttributeSubscription> selectedJmxAttributeSubscription =
+            new SimpleObjectProperty<>();
+    private final ObjectProperty<JmxNotificationSubscription> selectedJmxNotificationSubscription =
+            new SimpleObjectProperty<>();
     private final ObjectProperty<TriggerOperator> selectedTriggerOperator =
             new SimpleObjectProperty<>(TriggerOperator.GREATER_THAN_OR_EQUAL);
     private final ObjectProperty<TriggerActionType> selectedTriggerActionType =
@@ -150,6 +168,10 @@ public class JvmBrowserViewModel implements AutoCloseable {
     private final BooleanProperty jmcAgentAvailable = new SimpleBooleanProperty(false);
     private final BooleanProperty jmcAgentLoading = new SimpleBooleanProperty(false);
     private final BooleanProperty jmcAgentError = new SimpleBooleanProperty(false);
+    private final BooleanProperty jmxMonitoringAvailable = new SimpleBooleanProperty(false);
+    private final BooleanProperty jmxMonitoringLoading = new SimpleBooleanProperty(false);
+    private final BooleanProperty jmxMonitoringError = new SimpleBooleanProperty(false);
+    private final StringProperty jmxMonitoringErrorMessage = new SimpleStringProperty("");
     private final BooleanProperty triggerLoading = new SimpleBooleanProperty(false);
     private final BooleanProperty triggerError = new SimpleBooleanProperty(false);
     private final Map<Long, JvmConnection> sessionStartedRecordings = new HashMap<>();
@@ -159,6 +181,7 @@ public class JvmBrowserViewModel implements AutoCloseable {
     private long mbeanRequestGeneration;
     private long diagnosticCommandRequestGeneration;
     private long jmcAgentRequestGeneration;
+    private long jmxMonitoringGeneration;
     private long triggerRuleSequence;
     private long triggerEvaluationGeneration;
 
@@ -197,7 +220,7 @@ public class JvmBrowserViewModel implements AutoCloseable {
             DiagnosticCommandService diagnosticCommandService, LiveMetricService liveMetricService,
             JvmBrowserExecutor executor, Consumer<Runnable> fxRunner, Consumer<Path> savedRecordingHandler) {
         this(discoveryService, connectionService, flightRecordingService, mBeanBrowserService,
-                diagnosticCommandService, liveMetricService, null, null, null, executor, fxRunner,
+                diagnosticCommandService, liveMetricService, null, null, null, null, null, executor, fxRunner,
                 savedRecordingHandler);
     }
 
@@ -207,7 +230,7 @@ public class JvmBrowserViewModel implements AutoCloseable {
             JmcAgentService jmcAgentService, JvmBrowserExecutor executor, Consumer<Runnable> fxRunner,
             Consumer<Path> savedRecordingHandler) {
         this(discoveryService, connectionService, flightRecordingService, mBeanBrowserService,
-                diagnosticCommandService, liveMetricService, jmcAgentService, null, null, executor, fxRunner,
+                diagnosticCommandService, liveMetricService, jmcAgentService, null, null, null, null, executor, fxRunner,
                 savedRecordingHandler);
     }
 
@@ -217,14 +240,26 @@ public class JvmBrowserViewModel implements AutoCloseable {
             SavedJvmTargetRepository savedTargetRepository, JdpDiscoveryService jdpDiscoveryService,
             JvmBrowserExecutor executor, Consumer<Runnable> fxRunner, Consumer<Path> savedRecordingHandler) {
         this(discoveryService, connectionService, flightRecordingService, mBeanBrowserService,
-                diagnosticCommandService, liveMetricService, null, savedTargetRepository, jdpDiscoveryService,
-                executor, fxRunner, savedRecordingHandler);
+                diagnosticCommandService, liveMetricService, null, null, null, savedTargetRepository,
+                jdpDiscoveryService, executor, fxRunner, savedRecordingHandler);
     }
 
     public JvmBrowserViewModel(JvmDiscoveryService discoveryService, JmxConnectionService connectionService,
             FlightRecordingService flightRecordingService, MBeanBrowserService mBeanBrowserService,
             DiagnosticCommandService diagnosticCommandService, LiveMetricService liveMetricService,
             JmcAgentService jmcAgentService, SavedJvmTargetRepository savedTargetRepository,
+            JdpDiscoveryService jdpDiscoveryService, JvmBrowserExecutor executor, Consumer<Runnable> fxRunner,
+            Consumer<Path> savedRecordingHandler) {
+        this(discoveryService, connectionService, flightRecordingService, mBeanBrowserService,
+                diagnosticCommandService, liveMetricService, jmcAgentService, null, null, savedTargetRepository,
+                jdpDiscoveryService, executor, fxRunner, savedRecordingHandler);
+    }
+
+    public JvmBrowserViewModel(JvmDiscoveryService discoveryService, JmxConnectionService connectionService,
+            FlightRecordingService flightRecordingService, MBeanBrowserService mBeanBrowserService,
+            DiagnosticCommandService diagnosticCommandService, LiveMetricService liveMetricService,
+            JmcAgentService jmcAgentService, JmxMonitoringService jmxMonitoringService,
+            JmxMonitoringRepository jmxMonitoringRepository, SavedJvmTargetRepository savedTargetRepository,
             JdpDiscoveryService jdpDiscoveryService, JvmBrowserExecutor executor, Consumer<Runnable> fxRunner,
             Consumer<Path> savedRecordingHandler) {
         this.discoveryService = Objects.requireNonNull(discoveryService, "discoveryService");
@@ -234,6 +269,8 @@ public class JvmBrowserViewModel implements AutoCloseable {
         this.diagnosticCommandService = diagnosticCommandService;
         this.liveMetricService = liveMetricService;
         this.jmcAgentService = jmcAgentService;
+        this.jmxMonitoringService = jmxMonitoringService;
+        this.jmxMonitoringRepository = jmxMonitoringRepository;
         this.savedTargetRepository = savedTargetRepository;
         this.jdpDiscoveryService = jdpDiscoveryService;
         this.executor = Objects.requireNonNull(executor, "executor");
@@ -243,6 +280,10 @@ public class JvmBrowserViewModel implements AutoCloseable {
         this.selectedMBean.addListener((observable, oldValue, newValue) -> loadSelectedMBeanDetails(newValue));
         this.selectedMBeanOperation.addListener((observable, oldValue, newValue) -> clearMBeanOperationResult());
         this.selectedDiagnosticCommand.addListener((observable, oldValue, newValue) -> clearDiagnosticCommandResult());
+        this.selectedJmxAttributeSubscription.addListener((observable, oldValue, newValue) ->
+                loadSamplesForSelection(newValue));
+        this.selectedJmxNotificationSubscription.addListener((observable, oldValue, newValue) ->
+                loadNotificationEventsForSelection(newValue));
     }
 
     public ObservableList<JvmConnection> connectionsProperty() {
@@ -443,6 +484,46 @@ public class JvmBrowserViewModel implements AutoCloseable {
 
     public BooleanProperty jmcAgentErrorProperty() {
         return jmcAgentError;
+    }
+
+    public ObservableList<JmxAttributeSubscription> jmxAttributeSubscriptionsProperty() {
+        return jmxAttributeSubscriptions;
+    }
+
+    public ObservableList<JmxSubscriptionSample> jmxSubscriptionSamplesProperty() {
+        return jmxSubscriptionSamples;
+    }
+
+    public ObservableList<JmxNotificationSubscription> jmxNotificationSubscriptionsProperty() {
+        return jmxNotificationSubscriptions;
+    }
+
+    public ObservableList<JmxNotificationEvent> jmxNotificationEventsProperty() {
+        return jmxNotificationEvents;
+    }
+
+    public ObjectProperty<JmxAttributeSubscription> selectedJmxAttributeSubscriptionProperty() {
+        return selectedJmxAttributeSubscription;
+    }
+
+    public ObjectProperty<JmxNotificationSubscription> selectedJmxNotificationSubscriptionProperty() {
+        return selectedJmxNotificationSubscription;
+    }
+
+    public BooleanProperty jmxMonitoringAvailableProperty() {
+        return jmxMonitoringAvailable;
+    }
+
+    public BooleanProperty jmxMonitoringLoadingProperty() {
+        return jmxMonitoringLoading;
+    }
+
+    public BooleanProperty jmxMonitoringErrorProperty() {
+        return jmxMonitoringError;
+    }
+
+    public StringProperty jmxMonitoringErrorMessageProperty() {
+        return jmxMonitoringErrorMessage;
     }
 
     public ObservableList<LiveMetricDefinition> liveMetricDefinitionsProperty() {
@@ -848,6 +929,101 @@ public class JvmBrowserViewModel implements AutoCloseable {
         });
     }
 
+    public void addMBeanAttributeSubscription(
+            MBeanAttributeInfo attribute,
+            Duration samplingInterval,
+            int maxSamples,
+            boolean persisted) {
+        JvmSessionSnapshot snapshot = selectedSession.get();
+        MBeanNode node = selectedMBean.get();
+        if (snapshot == null || node == null || attribute == null || node.domain() || !attribute.readable()) {
+            failJmxMonitoring("Select a readable MBean attribute to subscribe.");
+            return;
+        }
+        JmxAttributeSubscription subscription = new JmxAttributeSubscription(
+                "",
+                snapshot.connection().id(),
+                node.objectName(),
+                attribute.name(),
+                attribute.name(),
+                "",
+                samplingInterval,
+                maxSamples,
+                true,
+                persisted);
+        jmxAttributeSubscriptions.add(subscription);
+        selectedJmxAttributeSubscription.set(subscription);
+        if (persisted && jmxMonitoringRepository != null) {
+            jmxMonitoringRepository.saveAttributeSubscription(subscription);
+        }
+        clearJmxMonitoringError();
+    }
+
+    public void sampleSelectedJmxSubscriptionNow() {
+        JvmSessionSnapshot snapshot = selectedSession.get();
+        JmxAttributeSubscription subscription = selectedJmxAttributeSubscription.get();
+        if (snapshot == null || subscription == null || jmxMonitoringService == null) {
+            failJmxMonitoring("Select a JMX attribute subscription to sample.");
+            return;
+        }
+        long generation = nextJmxMonitoringGeneration();
+        jmxMonitoringLoading.set(true);
+        clearJmxMonitoringError();
+        executor.execute(() -> {
+            try {
+                JmxSubscriptionSample sample = jmxMonitoringService.sampleAttribute(snapshot.connection(), subscription);
+                runOnFx(() -> {
+                    if (!isCurrentJmxMonitoringGeneration(generation, snapshot)) {
+                        return;
+                    }
+                    appendBoundedSample(subscription, sample);
+                    if (subscription.persisted() && jmxMonitoringRepository != null) {
+                        jmxMonitoringRepository.appendSample(sample);
+                    }
+                    jmxMonitoringLoading.set(false);
+                    clearJmxMonitoringError();
+                });
+            } catch (RuntimeException exception) {
+                failJmxMonitoring(generation, snapshot, exception);
+            }
+        });
+    }
+
+    public void startJmxNotifications(JmxNotificationSubscription subscription) {
+        JvmSessionSnapshot snapshot = selectedSession.get();
+        if (snapshot == null || subscription == null || jmxMonitoringService == null) {
+            failJmxMonitoring("Select a JMX notification subscription to start.");
+            return;
+        }
+        if (!jmxNotificationSubscriptions.contains(subscription)) {
+            jmxNotificationSubscriptions.add(subscription);
+        }
+        selectedJmxNotificationSubscription.set(subscription);
+        if (subscription.persisted() && jmxMonitoringRepository != null) {
+            jmxMonitoringRepository.saveNotificationSubscription(subscription);
+        }
+        long generation = nextJmxMonitoringGeneration();
+        jmxMonitoringLoading.set(true);
+        clearJmxMonitoringError();
+        executor.execute(() -> {
+            try {
+                List<JmxNotificationEvent> initialEvents = jmxMonitoringService.startNotifications(
+                        snapshot.connection(), subscription,
+                        event -> runOnFx(() -> appendNotificationEvent(subscription, event)));
+                runOnFx(() -> {
+                    if (!isCurrentJmxMonitoringGeneration(generation, snapshot)) {
+                        return;
+                    }
+                    initialEvents.forEach(event -> appendNotificationEvent(subscription, event));
+                    jmxMonitoringLoading.set(false);
+                    clearJmxMonitoringError();
+                });
+            } catch (RuntimeException exception) {
+                failJmxMonitoring(generation, snapshot, exception);
+            }
+        });
+    }
+
     public void addTriggerRule() {
         LiveMetricDefinition metric = selectedTriggerMetric.get();
         if (metric == null) {
@@ -1148,6 +1324,7 @@ public class JvmBrowserViewModel implements AutoCloseable {
         clearMBeanBrowser();
         clearDiagnosticCommands();
         clearJmcAgent();
+        clearJmxMonitoring();
         clearTriggerSessionState();
         clearSessionError();
         if (connection == null || !connection.connected()) {
@@ -1168,6 +1345,7 @@ public class JvmBrowserViewModel implements AutoCloseable {
                     loadMBeanBrowser(snapshot);
                     loadDiagnosticCommands(snapshot);
                     loadJmcAgent(snapshot);
+                    loadJmxMonitoring(snapshot);
                     loadTriggerMetrics(snapshot);
                     sessionLoading.set(false);
                 });
@@ -1182,6 +1360,7 @@ public class JvmBrowserViewModel implements AutoCloseable {
                     clearMBeanBrowser();
                     clearDiagnosticCommands();
                     clearJmcAgent();
+                    clearJmxMonitoring();
                     clearTriggerSessionState();
                     sessionError.set(true);
                     sessionErrorMessage.set(exception.getMessage() == null
@@ -1380,6 +1559,48 @@ public class JvmBrowserViewModel implements AutoCloseable {
         jmcAgentStatusMessage.set(status.message());
         jmcAgentConfiguration.set(status.available() ? status.eventProbeXml() : "");
         jmcAgentTransforms.setAll(status.transforms());
+    }
+
+    private void loadJmxMonitoring(JvmSessionSnapshot snapshot) {
+        if (!canUseJmxMonitoring(snapshot)) {
+            clearJmxMonitoring();
+            return;
+        }
+        jmxMonitoringAvailable.set(true);
+        clearJmxMonitoringError();
+        if (jmxMonitoringRepository == null) {
+            return;
+        }
+        List<JmxAttributeSubscription> attributeSubscriptions =
+                jmxMonitoringRepository.findAttributeSubscriptions(snapshot.connection().id());
+        jmxAttributeSubscriptions.setAll(attributeSubscriptions);
+        selectedJmxAttributeSubscription.set(attributeSubscriptions.isEmpty() ? null : attributeSubscriptions.getFirst());
+        List<JmxNotificationSubscription> notificationSubscriptions =
+                jmxMonitoringRepository.findNotificationSubscriptions(snapshot.connection().id());
+        jmxNotificationSubscriptions.setAll(notificationSubscriptions);
+        selectedJmxNotificationSubscription.set(notificationSubscriptions.isEmpty()
+                ? null : notificationSubscriptions.getFirst());
+    }
+
+    private boolean canUseJmxMonitoring(JvmSessionSnapshot snapshot) {
+        return jmxMonitoringService != null && snapshot != null
+                && snapshot.statusOf(JvmCapability.MBEAN_SERVER) == JvmCapabilityStatus.AVAILABLE;
+    }
+
+    private void loadSamplesForSelection(JmxAttributeSubscription subscription) {
+        if (jmxMonitoringRepository == null || subscription == null) {
+            jmxSubscriptionSamples.clear();
+            return;
+        }
+        jmxSubscriptionSamples.setAll(jmxMonitoringRepository.findSamples(subscription.id()));
+    }
+
+    private void loadNotificationEventsForSelection(JmxNotificationSubscription subscription) {
+        if (jmxMonitoringRepository == null || subscription == null) {
+            jmxNotificationEvents.clear();
+            return;
+        }
+        jmxNotificationEvents.setAll(jmxMonitoringRepository.findNotificationEvents(subscription.id()));
     }
 
     private void loadTriggerMetrics(JvmSessionSnapshot snapshot) {
@@ -1583,6 +1804,59 @@ public class JvmBrowserViewModel implements AutoCloseable {
         jmcAgentErrorMessage.set("");
     }
 
+    private void clearJmxMonitoring() {
+        nextJmxMonitoringGeneration();
+        jmxAttributeSubscriptions.clear();
+        jmxSubscriptionSamples.clear();
+        jmxNotificationSubscriptions.clear();
+        jmxNotificationEvents.clear();
+        selectedJmxAttributeSubscription.set(null);
+        selectedJmxNotificationSubscription.set(null);
+        jmxMonitoringAvailable.set(false);
+        jmxMonitoringLoading.set(false);
+        clearJmxMonitoringError();
+    }
+
+    private void appendBoundedSample(JmxAttributeSubscription subscription, JmxSubscriptionSample sample) {
+        if (!Objects.equals(subscription.id(), sample.subscriptionId())) {
+            return;
+        }
+        if (selectedJmxAttributeSubscription.get() == subscription) {
+            jmxSubscriptionSamples.add(sample);
+            trimObservableToNewest(jmxSubscriptionSamples, subscription.maxSamples());
+        }
+    }
+
+    private void appendNotificationEvent(JmxNotificationSubscription subscription, JmxNotificationEvent event) {
+        if (!Objects.equals(subscription.id(), event.subscriptionId())) {
+            return;
+        }
+        if (subscription.persisted() && jmxMonitoringRepository != null) {
+            jmxMonitoringRepository.appendNotificationEvent(event);
+        }
+        if (selectedJmxNotificationSubscription.get() == subscription) {
+            jmxNotificationEvents.add(event);
+            trimObservableToNewest(jmxNotificationEvents, subscription.maxEvents());
+        }
+    }
+
+    private static <T> void trimObservableToNewest(ObservableList<T> rows, int maxSize) {
+        while (rows.size() > maxSize) {
+            rows.removeFirst();
+        }
+    }
+
+    private void clearJmxMonitoringError() {
+        jmxMonitoringError.set(false);
+        jmxMonitoringErrorMessage.set("");
+    }
+
+    private void failJmxMonitoring(String message) {
+        jmxMonitoringError.set(true);
+        jmxMonitoringErrorMessage.set(message);
+        jmxMonitoringLoading.set(false);
+    }
+
     private void clearTriggerSessionState() {
         nextTriggerEvaluationGeneration();
         liveMetricDefinitions.clear();
@@ -1668,6 +1942,19 @@ public class JvmBrowserViewModel implements AutoCloseable {
             jmcAgentErrorMessage.set(exception.getMessage() == null ? exception.getClass().getSimpleName()
                     : exception.getMessage());
             jmcAgentLoading.set(false);
+        });
+    }
+
+    private void failJmxMonitoring(long generation, JvmSessionSnapshot snapshot, RuntimeException exception) {
+        logActionFailure("JMX monitoring action failed", exception);
+        runOnFx(() -> {
+            if (!isCurrentJmxMonitoringGeneration(generation, snapshot)) {
+                return;
+            }
+            jmxMonitoringError.set(true);
+            jmxMonitoringErrorMessage.set(exception.getMessage() == null ? exception.getClass().getSimpleName()
+                    : exception.getMessage());
+            jmxMonitoringLoading.set(false);
         });
     }
 
@@ -1758,6 +2045,15 @@ public class JvmBrowserViewModel implements AutoCloseable {
 
     private boolean isCurrentJmcAgentRequest(long generation, JvmSessionSnapshot snapshot) {
         return jmcAgentRequestGeneration == generation && selectedSession.get() == snapshot;
+    }
+
+    private long nextJmxMonitoringGeneration() {
+        return ++jmxMonitoringGeneration;
+    }
+
+    private boolean isCurrentJmxMonitoringGeneration(long generation, JvmSessionSnapshot snapshot) {
+        return jmxMonitoringGeneration == generation && selectedSession.get() == snapshot
+                && jmxMonitoringAvailable.get();
     }
 
     private long nextTriggerEvaluationGeneration() {

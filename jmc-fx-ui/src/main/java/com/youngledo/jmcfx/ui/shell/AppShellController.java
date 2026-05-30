@@ -55,6 +55,9 @@ import com.youngledo.jmcfx.domain.model.HotMethod;
 import com.youngledo.jmcfx.domain.model.JvmCapabilitySnapshot;
 import com.youngledo.jmcfx.domain.model.JmcAgentPreset;
 import com.youngledo.jmcfx.domain.model.JmcAgentTransform;
+import com.youngledo.jmcfx.domain.model.JmxAttributeSubscription;
+import com.youngledo.jmcfx.domain.model.JmxNotificationEvent;
+import com.youngledo.jmcfx.domain.model.JmxSubscriptionSample;
 import com.youngledo.jmcfx.domain.model.JvmConnection;
 import com.youngledo.jmcfx.domain.model.JvmConnectionSource;
 import com.youngledo.jmcfx.domain.model.JvmConnectionState;
@@ -105,6 +108,8 @@ import com.youngledo.jmcfx.domain.service.JvmInternalsService;
 import com.youngledo.jmcfx.domain.service.JavaAppService;
 import com.youngledo.jmcfx.domain.service.JdpDiscoveryService;
 import com.youngledo.jmcfx.domain.service.JmxConnectionService;
+import com.youngledo.jmcfx.domain.service.JmxMonitoringRepository;
+import com.youngledo.jmcfx.domain.service.JmxMonitoringService;
 import com.youngledo.jmcfx.domain.service.JvmDiscoveryService;
 import com.youngledo.jmcfx.domain.service.LeakSuspectsService;
 import com.youngledo.jmcfx.domain.service.LiveMetricService;
@@ -172,6 +177,8 @@ import javafx.collections.FXCollections;
 import javafx.collections.ListChangeListener;
 import javafx.fxml.FXML;
 import javafx.scene.Node;
+import javafx.scene.chart.LineChart;
+import javafx.scene.chart.XYChart;
 import javafx.scene.control.Button;
 import javafx.scene.control.ComboBox;
 import javafx.scene.control.ContentDisplay;
@@ -250,6 +257,8 @@ public class AppShellController {
     private final DiagnosticCommandService diagnosticCommandService;
     private final LiveMetricService liveMetricService;
     private final JmcAgentService jmcAgentService;
+    private final JmxMonitoringService jmxMonitoringService;
+    private final JmxMonitoringRepository jmxMonitoringRepository;
     private final AdvancedJfrAnalysisService advancedJfrAnalysisService;
     private final SavedJvmTargetRepository savedTargetRepository;
     private final JdpDiscoveryService jdpDiscoveryService;
@@ -458,6 +467,14 @@ public class AppShellController {
     @FXML private TableView<TriggerRule> jvmsTriggerRulesTable;
     @FXML private TableView<TriggerEvent> jvmsTriggerEventsTable;
     @FXML private Label jvmsTriggerErrorLabel;
+    @FXML private Tab jvmsMonitoringTab;
+    @FXML private Button jvmsAddMonitoringSubscriptionButton;
+    @FXML private Button jvmsSampleSubscriptionButton;
+    @FXML private TableView<JmxAttributeSubscription> jvmsMonitoringSubscriptionsTable;
+    @FXML private LineChart<Number, Number> jvmsMonitoringChart;
+    @FXML private TableView<JmxSubscriptionSample> jvmsMonitoringSamplesTable;
+    @FXML private TableView<JmxNotificationEvent> jvmsMonitoringNotificationsTable;
+    @FXML private Label jvmsMonitoringErrorLabel;
     @FXML private Tab jvmsAgentTab;
     @FXML private ComboBox<JmcAgentPreset> jvmsAgentPresetCombo;
     @FXML private Button jvmsRefreshAgentButton;
@@ -678,7 +695,7 @@ public class AppShellController {
                 fileIOService, socketIOService, lockService,
                 heapService, leakSuspectsService, tlabService,
                 jvmInternalsService, environmentService, javaAppService,
-                null, null, null, null, null, null, null, null, null, null, null, i18n,
+                null, null, null, null, null, null, null, null, null, null, null, null, null, i18n,
                 new VirtualThreadRecordingOpenExecutor());
     }
 
@@ -702,7 +719,7 @@ public class AppShellController {
                 heapService, leakSuspectsService, tlabService,
                 jvmInternalsService, environmentService, javaAppService,
                 jvmDiscoveryService, jmxConnectionService, flightRecordingService, null, null, null, null, null,
-                null, null, null, i18n, new VirtualThreadRecordingOpenExecutor());
+                null, null, null, null, null, i18n, new VirtualThreadRecordingOpenExecutor());
     }
 
     public AppShellController(AppShellViewModel viewModel, RecordingRepository recordingRepository,
@@ -726,7 +743,7 @@ public class AppShellController {
                 heapService, leakSuspectsService, tlabService,
                 jvmInternalsService, environmentService, javaAppService,
                 jvmDiscoveryService, jmxConnectionService, flightRecordingService, mBeanBrowserService, null, null,
-                null, null, null, null, null, i18n, new VirtualThreadRecordingOpenExecutor());
+                null, null, null, null, null, null, null, i18n, new VirtualThreadRecordingOpenExecutor());
     }
 
     public AppShellController(AppShellViewModel viewModel, RecordingRepository recordingRepository,
@@ -753,8 +770,8 @@ public class AppShellController {
                 heapService, leakSuspectsService, tlabService,
                 jvmInternalsService, environmentService, javaAppService,
                 jvmDiscoveryService, jmxConnectionService, flightRecordingService, mBeanBrowserService,
-                diagnosticCommandService, liveMetricService, null, advancedJfrAnalysisService, null, null, null, i18n,
-                new VirtualThreadRecordingOpenExecutor());
+                diagnosticCommandService, liveMetricService, null, null, null, advancedJfrAnalysisService, null, null,
+                null, i18n, new VirtualThreadRecordingOpenExecutor());
     }
 
     public AppShellController(AppShellViewModel viewModel, RecordingRepository recordingRepository,
@@ -785,7 +802,43 @@ public class AppShellController {
                 heapService, leakSuspectsService, tlabService,
                 jvmInternalsService, environmentService, javaAppService,
                 jvmDiscoveryService, jmxConnectionService, flightRecordingService, mBeanBrowserService,
-                diagnosticCommandService, liveMetricService, jmcAgentService, advancedJfrAnalysisService,
+                diagnosticCommandService, liveMetricService, jmcAgentService, null, null,
+                advancedJfrAnalysisService, savedTargetRepository, jdpDiscoveryService, heapDumpAnalysisService, i18n,
+                new VirtualThreadRecordingOpenExecutor());
+    }
+
+    public AppShellController(AppShellViewModel viewModel, RecordingRepository recordingRepository,
+            EventQueryService eventQueryService, RuleAnalysisService ruleAnalysisService,
+            ProfilingService profilingService, ExceptionService exceptionService,
+            ThreadService threadService, FileIOService fileIOService,
+            SocketIOService socketIOService, LockService lockService,
+            HeapService heapService, LeakSuspectsService leakSuspectsService,
+            TlabService tlabService,
+            JvmInternalsService jvmInternalsService,
+            EnvironmentService environmentService,
+            JavaAppService javaAppService,
+            JvmDiscoveryService jvmDiscoveryService,
+            JmxConnectionService jmxConnectionService,
+            FlightRecordingService flightRecordingService,
+            MBeanBrowserService mBeanBrowserService,
+            DiagnosticCommandService diagnosticCommandService,
+            LiveMetricService liveMetricService,
+            JmcAgentService jmcAgentService,
+            JmxMonitoringService jmxMonitoringService,
+            JmxMonitoringRepository jmxMonitoringRepository,
+            AdvancedJfrAnalysisService advancedJfrAnalysisService,
+            SavedJvmTargetRepository savedTargetRepository,
+            JdpDiscoveryService jdpDiscoveryService,
+            HeapDumpAnalysisService heapDumpAnalysisService,
+            I18n i18n) {
+        this(viewModel, recordingRepository, eventQueryService, ruleAnalysisService,
+                profilingService, exceptionService, threadService,
+                fileIOService, socketIOService, lockService,
+                heapService, leakSuspectsService, tlabService,
+                jvmInternalsService, environmentService, javaAppService,
+                jvmDiscoveryService, jmxConnectionService, flightRecordingService, mBeanBrowserService,
+                diagnosticCommandService, liveMetricService, jmcAgentService,
+                jmxMonitoringService, jmxMonitoringRepository, advancedJfrAnalysisService,
                 savedTargetRepository, jdpDiscoveryService, heapDumpAnalysisService, i18n,
                 new VirtualThreadRecordingOpenExecutor());
     }
@@ -808,8 +861,8 @@ public class AppShellController {
                 fileIOService, socketIOService, lockService,
                 heapService, leakSuspectsService, tlabService,
                 jvmInternalsService, environmentService, javaAppService,
-                jvmDiscoveryService, jmxConnectionService, null, null, null, null, null, null, null, null, null, i18n,
-                new VirtualThreadRecordingOpenExecutor());
+                jvmDiscoveryService, jmxConnectionService, null, null, null, null, null, null, null, null, null, null,
+                null, i18n, new VirtualThreadRecordingOpenExecutor());
     }
 
     AppShellController(AppShellViewModel viewModel, RecordingRepository recordingRepository,
@@ -828,7 +881,8 @@ public class AppShellController {
                 fileIOService, socketIOService, lockService,
                 heapService, leakSuspectsService, tlabService,
                 jvmInternalsService, environmentService, javaAppService,
-                null, null, null, null, null, null, null, null, null, null, null, i18n, recordingOpenExecutor);
+                null, null, null, null, null, null, null, null, null, null, null, null, null, i18n,
+                recordingOpenExecutor);
     }
 
     AppShellController(AppShellViewModel viewModel, RecordingRepository recordingRepository,
@@ -851,7 +905,7 @@ public class AppShellController {
                 heapService, leakSuspectsService, tlabService,
                 jvmInternalsService, environmentService, javaAppService,
                 jvmDiscoveryService, jmxConnectionService, flightRecordingService, null, null, null, null, null,
-                null, null, null, i18n, recordingOpenExecutor);
+                null, null, null, null, null, i18n, recordingOpenExecutor);
     }
 
     AppShellController(AppShellViewModel viewModel, RecordingRepository recordingRepository,
@@ -870,6 +924,8 @@ public class AppShellController {
             DiagnosticCommandService diagnosticCommandService,
             LiveMetricService liveMetricService,
             JmcAgentService jmcAgentService,
+            JmxMonitoringService jmxMonitoringService,
+            JmxMonitoringRepository jmxMonitoringRepository,
             AdvancedJfrAnalysisService advancedJfrAnalysisService,
             SavedJvmTargetRepository savedTargetRepository,
             JdpDiscoveryService jdpDiscoveryService,
@@ -899,6 +955,8 @@ public class AppShellController {
         this.diagnosticCommandService = diagnosticCommandService;
         this.liveMetricService = liveMetricService;
         this.jmcAgentService = jmcAgentService;
+        this.jmxMonitoringService = jmxMonitoringService;
+        this.jmxMonitoringRepository = jmxMonitoringRepository;
         this.advancedJfrAnalysisService = advancedJfrAnalysisService;
         this.savedTargetRepository = savedTargetRepository;
         this.jdpDiscoveryService = jdpDiscoveryService;
@@ -917,6 +975,14 @@ public class AppShellController {
 
     JdpDiscoveryService jdpDiscoveryService() {
         return jdpDiscoveryService;
+    }
+
+    JmxMonitoringService jmxMonitoringService() {
+        return jmxMonitoringService;
+    }
+
+    JmxMonitoringRepository jmxMonitoringRepository() {
+        return jmxMonitoringRepository;
     }
 
     @FXML
@@ -942,7 +1008,8 @@ public class AppShellController {
         jvmBrowserViewModel = jvmDiscoveryService != null && jmxConnectionService != null
                 ? new JvmBrowserViewModel(jvmDiscoveryService, jmxConnectionService, flightRecordingService,
                         mBeanBrowserService, diagnosticCommandService, liveMetricService,
-                        jmcAgentService, savedTargetRepository, jdpDiscoveryService,
+                        jmcAgentService, jmxMonitoringService, jmxMonitoringRepository, savedTargetRepository,
+                        jdpDiscoveryService,
                         new com.youngledo.jmcfx.ui.jvms.VirtualThreadJvmBrowserExecutor(), Platform::runLater,
                         this::openRecordingInBackground) : null;
         heapDumpAnalysisViewModel = heapDumpAnalysisService == null ? null
@@ -1029,6 +1096,7 @@ public class AppShellController {
         configureMBeanBrowser();
         configureDiagnosticCommands();
         configureTriggers();
+        configureJmxMonitoring();
         configureJmcAgentManager();
         bindJvmBrowser();
         viewModel.selectedSectionProperty().addListener((observable, oldValue, newValue) -> {
@@ -1533,6 +1601,68 @@ public class AppShellController {
         jvmsTriggerEventsTable.getColumns().setAll(List.of(eventTimeCol, eventRuleCol, eventValueCol, eventMessageCol));
     }
 
+    private void configureJmxMonitoring() {
+        jvmsMonitoringSubscriptionsTable.setPlaceholder(localizedTablePlaceholder("jvms.monitoring.subscriptions.empty"));
+        jvmsMonitoringSamplesTable.setPlaceholder(localizedTablePlaceholder("jvms.monitoring.samples.empty"));
+        jvmsMonitoringNotificationsTable.setPlaceholder(localizedTablePlaceholder("jvms.monitoring.notifications.empty"));
+        jvmsMonitoringChart.setCreateSymbols(false);
+
+        TableColumn<JmxAttributeSubscription, String> labelCol =
+                localizedColumn("jvms.monitoring.subscription.label");
+        labelCol.setPrefWidth(180);
+        labelCol.setCellValueFactory(cell -> new ReadOnlyStringWrapper(cell.getValue().label()));
+
+        TableColumn<JmxAttributeSubscription, String> attributeCol =
+                localizedColumn("jvms.monitoring.subscription.attribute");
+        attributeCol.setPrefWidth(340);
+        attributeCol.setCellValueFactory(cell -> new ReadOnlyStringWrapper(
+                cell.getValue().objectName() + " / " + cell.getValue().attributeName()));
+
+        TableColumn<JmxAttributeSubscription, String> intervalCol =
+                localizedColumn("jvms.monitoring.subscription.interval");
+        intervalCol.setPrefWidth(120);
+        intervalCol.setCellValueFactory(cell -> new ReadOnlyStringWrapper(
+                cell.getValue().samplingInterval().toSeconds() + "s"));
+
+        jvmsMonitoringSubscriptionsTable.getColumns().setAll(List.of(labelCol, attributeCol, intervalCol));
+
+        TableColumn<JmxSubscriptionSample, String> sampleTimeCol =
+                localizedColumn("jvms.monitoring.sample.time");
+        sampleTimeCol.setPrefWidth(180);
+        sampleTimeCol.setCellValueFactory(cell -> new ReadOnlyStringWrapper(
+                formatEventTimeForDisplay(cell.getValue().observedAt(), ZoneId.systemDefault())));
+
+        TableColumn<JmxSubscriptionSample, String> sampleValueCol =
+                localizedColumn("jvms.monitoring.sample.value");
+        sampleValueCol.setPrefWidth(220);
+        sampleValueCol.setCellValueFactory(cell -> new ReadOnlyStringWrapper(cell.getValue().displayValue()));
+
+        TableColumn<JmxSubscriptionSample, String> sampleUnitCol =
+                localizedColumn("jvms.monitoring.sample.unit");
+        sampleUnitCol.setPrefWidth(120);
+        sampleUnitCol.setCellValueFactory(cell -> new ReadOnlyStringWrapper(cell.getValue().unit()));
+
+        jvmsMonitoringSamplesTable.getColumns().setAll(List.of(sampleTimeCol, sampleValueCol, sampleUnitCol));
+
+        TableColumn<JmxNotificationEvent, String> eventTimeCol =
+                localizedColumn("jvms.monitoring.notification.time");
+        eventTimeCol.setPrefWidth(180);
+        eventTimeCol.setCellValueFactory(cell -> new ReadOnlyStringWrapper(
+                formatEventTimeForDisplay(cell.getValue().observedAt(), ZoneId.systemDefault())));
+
+        TableColumn<JmxNotificationEvent, String> eventTypeCol =
+                localizedColumn("jvms.monitoring.notification.type");
+        eventTypeCol.setPrefWidth(220);
+        eventTypeCol.setCellValueFactory(cell -> new ReadOnlyStringWrapper(cell.getValue().type()));
+
+        TableColumn<JmxNotificationEvent, String> eventMessageCol =
+                localizedColumn("jvms.monitoring.notification.message");
+        eventMessageCol.setPrefWidth(420);
+        eventMessageCol.setCellValueFactory(cell -> new ReadOnlyStringWrapper(cell.getValue().message()));
+
+        jvmsMonitoringNotificationsTable.getColumns().setAll(List.of(eventTimeCol, eventTypeCol, eventMessageCol));
+    }
+
     private void configureJmcAgentManager() {
         jvmsAgentTransformsTable.setPlaceholder(localizedTablePlaceholder("jvms.agent.transforms.empty"));
 
@@ -1617,6 +1747,14 @@ public class AppShellController {
             jvmsEvaluateTriggersButton.setDisable(true);
             jvmsTriggerErrorLabel.setVisible(false);
             jvmsTriggerErrorLabel.setManaged(false);
+            jvmsMonitoringSubscriptionsTable.setItems(FXCollections.emptyObservableList());
+            jvmsMonitoringSamplesTable.setItems(FXCollections.emptyObservableList());
+            jvmsMonitoringNotificationsTable.setItems(FXCollections.emptyObservableList());
+            jvmsMonitoringChart.getData().clear();
+            jvmsAddMonitoringSubscriptionButton.setDisable(true);
+            jvmsSampleSubscriptionButton.setDisable(true);
+            jvmsMonitoringErrorLabel.setVisible(false);
+            jvmsMonitoringErrorLabel.setManaged(false);
             jvmsAgentPresetCombo.setItems(FXCollections.emptyObservableList());
             jvmsAgentTransformsTable.setItems(FXCollections.emptyObservableList());
             jvmsAgentConfigurationArea.setText("");
@@ -1728,6 +1866,7 @@ public class AppShellController {
         bindMBeanBrowser();
         bindDiagnosticCommands();
         bindTriggers();
+        bindJmxMonitoring();
         bindJmcAgentManager();
 
         jvmsRefreshButton.setOnAction(event -> refreshJvmBrowser());
@@ -1746,6 +1885,8 @@ public class AppShellController {
         jvmsAddTriggerButton.setOnAction(event -> jvmBrowserViewModel.addTriggerRule());
         jvmsRemoveTriggerButton.setOnAction(event -> removeSelectedTriggerRule());
         jvmsEvaluateTriggersButton.setOnAction(event -> jvmBrowserViewModel.evaluateTriggersNow());
+        jvmsAddMonitoringSubscriptionButton.setOnAction(event -> addSelectedMonitoringSubscription());
+        jvmsSampleSubscriptionButton.setOnAction(event -> jvmBrowserViewModel.sampleSelectedJmxSubscriptionNow());
         jvmsRefreshAgentButton.setOnAction(event -> jvmBrowserViewModel.refreshJmcAgent());
         jvmsLoadAgentPresetButton.setOnAction(event -> jvmBrowserViewModel.loadSelectedJmcAgentPreset());
         jvmsApplyAgentConfigurationButton.setOnAction(event -> jvmBrowserViewModel.applyJmcAgentConfiguration());
@@ -1860,6 +2001,34 @@ public class AppShellController {
                 .or(jvmsTriggerRulesTable.getSelectionModel().selectedItemProperty().isNull()));
         jvmsEvaluateTriggersButton.disableProperty().bind(jvmBrowserViewModel.triggerLoadingProperty()
                 .or(Bindings.isEmpty(jvmBrowserViewModel.triggerRulesProperty())));
+    }
+
+    private void bindJmxMonitoring() {
+        jvmsMonitoringSubscriptionsTable.setItems(jvmBrowserViewModel.jmxAttributeSubscriptionsProperty());
+        jvmsMonitoringSamplesTable.setItems(jvmBrowserViewModel.jmxSubscriptionSamplesProperty());
+        jvmsMonitoringNotificationsTable.setItems(jvmBrowserViewModel.jmxNotificationEventsProperty());
+        jvmsMonitoringSubscriptionsTable.getSelectionModel().selectedItemProperty()
+                .addListener((observable, oldValue, newValue) ->
+                        jvmBrowserViewModel.selectedJmxAttributeSubscriptionProperty().set(newValue));
+        jvmBrowserViewModel.selectedJmxAttributeSubscriptionProperty().addListener((observable, oldValue, newValue) ->
+                jvmsMonitoringSubscriptionsTable.getSelectionModel().select(newValue));
+        jvmBrowserViewModel.jmxSubscriptionSamplesProperty()
+                .addListener((ListChangeListener<JmxSubscriptionSample>) change -> rebuildJmxMonitoringChart());
+        jvmBrowserViewModel.selectedJmxAttributeSubscriptionProperty()
+                .addListener((observable, oldValue, newValue) -> rebuildJmxMonitoringChart());
+        rebuildJmxMonitoringChart();
+
+        jvmsMonitoringErrorLabel.textProperty().bind(jvmBrowserViewModel.jmxMonitoringErrorMessageProperty());
+        jvmsMonitoringErrorLabel.visibleProperty().bind(jvmBrowserViewModel.jmxMonitoringErrorProperty());
+        jvmsMonitoringErrorLabel.managedProperty().bind(jvmsMonitoringErrorLabel.visibleProperty());
+
+        jvmsMonitoringSubscriptionsTable.disableProperty().bind(jvmBrowserViewModel.jmxMonitoringAvailableProperty().not());
+        jvmsMonitoringSamplesTable.disableProperty().bind(jvmBrowserViewModel.jmxMonitoringAvailableProperty().not());
+        jvmsMonitoringNotificationsTable.disableProperty().bind(jvmBrowserViewModel.jmxMonitoringAvailableProperty().not());
+        jvmsAddMonitoringSubscriptionButton.disableProperty().bind(jvmBrowserViewModel.jmxMonitoringAvailableProperty().not()
+                .or(jvmBrowserViewModel.selectedMBeanProperty().isNull()));
+        jvmsSampleSubscriptionButton.disableProperty().bind(jvmBrowserViewModel.jmxMonitoringLoadingProperty()
+                .or(jvmBrowserViewModel.selectedJmxAttributeSubscriptionProperty().isNull()));
     }
 
     private void bindJmcAgentManager() {
@@ -2021,6 +2190,36 @@ public class AppShellController {
         }
         jvmBrowserViewModel.removeSelectedTriggerRule(
                 jvmsTriggerRulesTable.getSelectionModel().getSelectedItem());
+    }
+
+    private void addSelectedMonitoringSubscription() {
+        if (jvmBrowserViewModel == null) {
+            return;
+        }
+        jvmBrowserViewModel.addMBeanAttributeSubscription(
+                jvmsMBeanAttributesTable.getSelectionModel().getSelectedItem(),
+                java.time.Duration.ofSeconds(1),
+                120,
+                true);
+    }
+
+    private void rebuildJmxMonitoringChart() {
+        jvmsMonitoringChart.getData().clear();
+        JmxAttributeSubscription subscription = jvmBrowserViewModel == null
+                ? null : jvmBrowserViewModel.selectedJmxAttributeSubscriptionProperty().get();
+        if (subscription == null) {
+            return;
+        }
+        XYChart.Series<Number, Number> series = new XYChart.Series<>();
+        series.setName(subscription.label());
+        int index = 0;
+        for (JmxSubscriptionSample sample : jvmBrowserViewModel.jmxSubscriptionSamplesProperty()) {
+            if (sample.numeric()) {
+                series.getData().add(new XYChart.Data<>(index, sample.numericValue()));
+            }
+            index++;
+        }
+        jvmsMonitoringChart.getData().add(series);
     }
 
     private void refreshJvmBrowser() {
@@ -3307,6 +3506,7 @@ public class AppShellController {
         jvmsMBeanTab.textProperty().bind(i18n.text("jvms.mbeans.tab"));
         jvmsDiagnosticsTab.textProperty().bind(i18n.text("jvms.diagnostics.tab"));
         jvmsTriggersTab.textProperty().bind(i18n.text("jvms.triggers.tab"));
+        jvmsMonitoringTab.textProperty().bind(i18n.text("jvms.monitoring.tab"));
         jvmsAgentTab.textProperty().bind(i18n.text("jvms.agent.tab"));
         jvmsRefreshMBeanButton.textProperty().bind(i18n.text("jvms.mbeans.refresh"));
         jvmsInvokeMBeanOperationButton.textProperty().bind(i18n.text("jvms.mbeans.invoke"));
@@ -3323,6 +3523,8 @@ public class AppShellController {
         jvmsAddTriggerButton.textProperty().bind(i18n.text("jvms.triggers.add"));
         jvmsRemoveTriggerButton.textProperty().bind(i18n.text("jvms.triggers.remove"));
         jvmsEvaluateTriggersButton.textProperty().bind(i18n.text("jvms.triggers.evaluate"));
+        jvmsAddMonitoringSubscriptionButton.textProperty().bind(i18n.text("jvms.monitoring.addSubscription"));
+        jvmsSampleSubscriptionButton.textProperty().bind(i18n.text("jvms.monitoring.sampleNow"));
         jvmsAgentPresetCombo.promptTextProperty().bind(i18n.text("jvms.agent.preset"));
         jvmsRefreshAgentButton.textProperty().bind(i18n.text("jvms.agent.refresh"));
         jvmsLoadAgentPresetButton.textProperty().bind(i18n.text("jvms.agent.loadPreset"));

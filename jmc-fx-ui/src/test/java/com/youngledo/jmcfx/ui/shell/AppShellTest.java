@@ -44,6 +44,10 @@ import com.youngledo.jmcfx.ui.overview.OverviewViewModel;
 import com.youngledo.jmcfx.ui.rules.RuleResultsViewModel;
 import com.youngledo.jmcfx.testsupport.FakeEventQueryService;
 import com.youngledo.jmcfx.testsupport.FakeJdpDiscoveryService;
+import com.youngledo.jmcfx.testsupport.FakeJmxConnectionService;
+import com.youngledo.jmcfx.testsupport.FakeJmxMonitoringRepository;
+import com.youngledo.jmcfx.testsupport.FakeJmxMonitoringService;
+import com.youngledo.jmcfx.testsupport.FakeJvmDiscoveryService;
 import com.youngledo.jmcfx.testsupport.FakeRecordingRepository;
 import com.youngledo.jmcfx.testsupport.FakeRuleAnalysisService;
 import com.youngledo.jmcfx.testsupport.FakeSavedJvmTargetRepository;
@@ -99,6 +103,23 @@ class AppShellTest {
 
         assertEquals(savedTargets, controller.savedTargetRepository());
         assertEquals(jdpDiscovery, controller.jdpDiscoveryService());
+    }
+
+    @Test
+    void factoryPassesJmxMonitoringDependenciesToShellController() {
+        FakeJmxMonitoringService monitoringService = new FakeJmxMonitoringService();
+        FakeJmxMonitoringRepository monitoringRepository = new FakeJmxMonitoringRepository();
+        AppShellFactory factory = new AppShellFactory(new FakeRecordingRepository(), new FakeEventQueryService(),
+                new FakeRuleAnalysisService(), null, null, null, null, null, null, null, null, null, null,
+                null, null, new FakeJvmDiscoveryService(), new FakeJmxConnectionService(), null, null,
+                null, null, null, monitoringService, monitoringRepository, null, null, null, null,
+                new I18n(Locale.ENGLISH));
+
+        AppShellController controller = (AppShellController) factory.controllerFor(AppShellController.class,
+                new AppShellViewModel());
+
+        assertEquals(monitoringService, controller.jmxMonitoringService());
+        assertEquals(monitoringRepository, controller.jmxMonitoringRepository());
     }
 
     @Test
@@ -309,6 +330,19 @@ class AppShellTest {
         assertEquals("Button", elementByFxId(document, "jvmsEvaluateTriggersButton").getTagName());
         assertEquals("TableView", elementByFxId(document, "jvmsTriggerEventsTable").getTagName());
         assertEquals("Label", elementByFxId(document, "jvmsTriggerErrorLabel").getTagName());
+        assertEquals("Tab", elementByFxId(document, "jvmsMonitoringTab").getTagName());
+        assertTrue(hasStyleClass(elementByFxId(document, "jvmsMonitoringContent"), "jvms-live-tab-content"));
+        assertTrue(hasStyleClass(elementByFxId(document, "jvmsMonitoringToolbar"), "page-toolbar"));
+        assertEquals("Button", elementByFxId(document, "jvmsAddMonitoringSubscriptionButton").getTagName());
+        assertEquals("Button", elementByFxId(document, "jvmsSampleSubscriptionButton").getTagName());
+        assertEquals("TableView", elementByFxId(document, "jvmsMonitoringSubscriptionsTable").getTagName());
+        assertTrue(hasStyleClass(elementByFxId(document, "jvmsMonitoringSubscriptionsTable"), "dense-table"));
+        assertEquals("LineChart", elementByFxId(document, "jvmsMonitoringChart").getTagName());
+        assertEquals("TableView", elementByFxId(document, "jvmsMonitoringSamplesTable").getTagName());
+        assertTrue(hasStyleClass(elementByFxId(document, "jvmsMonitoringSamplesTable"), "dense-table"));
+        assertEquals("TableView", elementByFxId(document, "jvmsMonitoringNotificationsTable").getTagName());
+        assertTrue(hasStyleClass(elementByFxId(document, "jvmsMonitoringNotificationsTable"), "dense-table"));
+        assertEquals("Label", elementByFxId(document, "jvmsMonitoringErrorLabel").getTagName());
         assertEquals("Tab", elementByFxId(document, "jvmsAgentTab").getTagName());
         assertTrue(hasStyleClass(elementByFxId(document, "jvmsAgentContent"), "jvms-live-tab-content"));
         assertTrue(hasStyleClass(elementByFxId(document, "jvmsAgentToolbar"), "page-toolbar"));

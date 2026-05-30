@@ -16,6 +16,8 @@
 <?import javafx.scene.control.TextField?>
 <?import javafx.scene.control.ToggleGroup?>
 <?import javafx.scene.control.TreeView?>
+<?import javafx.scene.chart.LineChart?>
+<?import javafx.scene.chart.NumberAxis?>
 <?import javafx.geometry.Insets?>
 <?import javafx.scene.layout.BorderPane?>
 <?import javafx.scene.layout.FlowPane?>
@@ -339,6 +341,36 @@
                                                 </items>
                                             </SplitPane>
                                             <Label fx:id="jvmsTriggerErrorLabel" styleClass="unavailable-state" wrapText="true"/>
+                                        </VBox>
+                                    </Tab>
+                                    <Tab fx:id="jvmsMonitoringTab" closable="false">
+                                        <VBox fx:id="jvmsMonitoringContent" styleClass="jvms-live-tab-content" spacing="10">
+                                            <FlowPane fx:id="jvmsMonitoringToolbar" styleClass="page-toolbar" hgap="8" vgap="8">
+                                                <Button fx:id="jvmsAddMonitoringSubscriptionButton"/>
+                                                <Button fx:id="jvmsSampleSubscriptionButton"/>
+                                            </FlowPane>
+                                            <SplitPane orientation="VERTICAL" DividerPositions="0.42" VBox.vgrow="ALWAYS">
+                                                <items>
+                                                    <TableView fx:id="jvmsMonitoringSubscriptionsTable" styleClass="dense-table"/>
+                                                    <VBox styleClass="jvms-monitoring-detail" spacing="8">
+                                                        <LineChart fx:id="jvmsMonitoringChart" animated="false" legendVisible="true">
+                                                            <xAxis>
+                                                                <NumberAxis autoRanging="true"/>
+                                                            </xAxis>
+                                                            <yAxis>
+                                                                <NumberAxis autoRanging="true"/>
+                                                            </yAxis>
+                                                        </LineChart>
+                                                        <SplitPane orientation="VERTICAL" DividerPositions="0.5" VBox.vgrow="ALWAYS">
+                                                            <items>
+                                                                <TableView fx:id="jvmsMonitoringSamplesTable" styleClass="dense-table"/>
+                                                                <TableView fx:id="jvmsMonitoringNotificationsTable" styleClass="dense-table"/>
+                                                            </items>
+                                                        </SplitPane>
+                                                    </VBox>
+                                                </items>
+                                            </SplitPane>
+                                            <Label fx:id="jvmsMonitoringErrorLabel" styleClass="unavailable-state" wrapText="true"/>
                                         </VBox>
                                     </Tab>
                                     <Tab fx:id="jvmsAgentTab" closable="false">

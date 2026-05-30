@@ -457,6 +457,15 @@
     -fx-padding: 0 0 0 8px;
 }
 
+.jvms-monitoring-detail {
+    -fx-min-height: 0;
+}
+
+.jvms-monitoring-detail .chart {
+    -fx-min-height: 120px;
+    -fx-pref-height: 180px;
+}
+
 .unavailable-state {
     -fx-text-fill: -color-fg-muted;
 }
