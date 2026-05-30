@@ -16,6 +16,8 @@ import javax.management.remote.JMXConnector;
 import javax.management.remote.JMXConnectorFactory;
 import javax.management.remote.JMXServiceURL;
 
+import org.jolokia.client.jmxadapter.JolokiaJmxConnector;
+
 import com.sun.tools.attach.AttachNotSupportedException;
 import com.sun.tools.attach.VirtualMachine;
 import com.youngledo.jmcfx.domain.model.JvmCapability;
@@ -39,23 +41,31 @@ public class JmcJmxConnectionService implements JmxConnectionService, JmxConnect
     private final Map<String, JMXConnector> connectors = new ConcurrentHashMap<>();
     private final LocalConnectorAddressResolver localConnectorAddressResolver;
     private final JmxConnectorFactory connectorFactory;
+    private final JmxConnectorFactory jolokiaConnectorFactory;
 
     public JmcJmxConnectionService() {
-        this(new AttachLocalConnectorAddressResolver(), JMXConnectorFactory::connect);
+        this(new AttachLocalConnectorAddressResolver(), JMXConnectorFactory::connect,
+                serviceUrl -> new JolokiaJmxConnector(serviceUrl, Map.of()));
     }
 
     JmcJmxConnectionService(LocalConnectorAddressResolver localConnectorAddressResolver,
             JmxConnectorFactory connectorFactory) {
+        this(localConnectorAddressResolver, connectorFactory, connectorFactory);
+    }
+
+    JmcJmxConnectionService(LocalConnectorAddressResolver localConnectorAddressResolver,
+            JmxConnectorFactory connectorFactory, JmxConnectorFactory jolokiaConnectorFactory) {
         this.localConnectorAddressResolver = Objects.requireNonNull(localConnectorAddressResolver,
                 "localConnectorAddressResolver");
         this.connectorFactory = Objects.requireNonNull(connectorFactory, "connectorFactory");
+        this.jolokiaConnectorFactory = Objects.requireNonNull(jolokiaConnectorFactory, "jolokiaConnectorFactory");
     }
 
     @Override
     public JvmConnection connect(String connectionUrl) {
         try {
             JMXServiceURL serviceUrl = new JMXServiceURL(connectionUrl);
-            JMXConnector connector = connectorFactory.connect(serviceUrl);
+            JMXConnector connector = connectorFactory(serviceUrl).connect(serviceUrl);
             try {
                 String id = UUID.randomUUID().toString();
                 JvmConnection connected = new JvmConnection(id, connectionUrl, connectionUrl, true,
@@ -69,6 +79,10 @@ public class JmcJmxConnectionService implements JmxConnectionService, JmxConnect
         } catch (IOException | RuntimeException exception) {
             throw new JmcFxException("Unable to connect to JVM: " + exception.getMessage(), exception);
         }
+    }
+
+    private JmxConnectorFactory connectorFactory(JMXServiceURL serviceUrl) {
+        return "jolokia".equals(serviceUrl.getProtocol()) ? jolokiaConnectorFactory : connectorFactory;
     }
 
     @Override

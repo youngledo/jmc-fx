@@ -86,6 +86,66 @@ class JmcJmxConnectionServiceTest {
     }
 
     @Test
+    void remoteRmiConnectionUsesDefaultConnectorFactory() {
+        RecordingLocalConnectorResolver resolver = new RecordingLocalConnectorResolver("service:jmx:local://42");
+        RecordingJmxConnectorFactory defaultConnectorFactory = new RecordingJmxConnectorFactory();
+        RecordingJmxConnectorFactory jolokiaConnectorFactory = new RecordingJmxConnectorFactory();
+        JmcJmxConnectionService service = new JmcJmxConnectionService(resolver, defaultConnectorFactory,
+                jolokiaConnectorFactory);
+
+        JvmConnection connected = service.connect("service:jmx:rmi:///jndi/rmi://127.0.0.1:7091/jmxrmi");
+
+        assertEquals("service:jmx:rmi:///jndi/rmi://127.0.0.1:7091/jmxrmi",
+                defaultConnectorFactory.connectedUrl);
+        assertEquals("", jolokiaConnectorFactory.connectedUrl);
+        assertEquals("service:jmx:rmi:///jndi/rmi://127.0.0.1:7091/jmxrmi", connected.connectionUrl());
+    }
+
+    @Test
+    void remoteJolokiaConnectionUsesJolokiaConnectorFactory() {
+        RecordingLocalConnectorResolver resolver = new RecordingLocalConnectorResolver("service:jmx:local://42");
+        RecordingJmxConnectorFactory defaultConnectorFactory = new RecordingJmxConnectorFactory();
+        RecordingJmxConnectorFactory jolokiaConnectorFactory = new RecordingJmxConnectorFactory();
+        JmcJmxConnectionService service = new JmcJmxConnectionService(resolver, defaultConnectorFactory,
+                jolokiaConnectorFactory);
+
+        JvmConnection connected = service.connect("service:jmx:jolokia://localhost:8778/jolokia");
+
+        assertEquals("", defaultConnectorFactory.connectedUrl);
+        assertEquals("service:jmx:jolokia://localhost:8778/jolokia", jolokiaConnectorFactory.connectedUrl);
+        assertEquals("service:jmx:jolokia://localhost:8778/jolokia", connected.connectionUrl());
+    }
+
+    @Test
+    void disconnectClosesRemoteJolokiaConnector() {
+        RecordingLocalConnectorResolver resolver = new RecordingLocalConnectorResolver("service:jmx:local://42");
+        RecordingJmxConnectorFactory defaultConnectorFactory = new RecordingJmxConnectorFactory();
+        RecordingJmxConnectorFactory jolokiaConnectorFactory = new RecordingJmxConnectorFactory();
+        JmcJmxConnectionService service = new JmcJmxConnectionService(resolver, defaultConnectorFactory,
+                jolokiaConnectorFactory);
+
+        JvmConnection connected = service.connect("service:jmx:jolokia://localhost:8778/jolokia");
+        service.disconnect(connected);
+
+        assertEquals(1, jolokiaConnectorFactory.createdConnectors.size());
+        assertEquals(1, jolokiaConnectorFactory.createdConnectors.getFirst().closeCount);
+    }
+
+    @Test
+    void localConnectionDoesNotUseJolokiaConnectorFactory() {
+        RecordingLocalConnectorResolver resolver = new RecordingLocalConnectorResolver("service:jmx:local://42");
+        RecordingJmxConnectorFactory defaultConnectorFactory = new RecordingJmxConnectorFactory();
+        RecordingJmxConnectorFactory jolokiaConnectorFactory = new RecordingJmxConnectorFactory();
+        JmcJmxConnectionService service = new JmcJmxConnectionService(resolver, defaultConnectorFactory,
+                jolokiaConnectorFactory);
+
+        service.connectLocal(JvmConnection.local("42", "demo.Main", "26.0.1", true));
+
+        assertEquals("service:jmx:local://42", defaultConnectorFactory.connectedUrl);
+        assertEquals("", jolokiaConnectorFactory.connectedUrl);
+    }
+
+    @Test
     void repeatedLocalConnectClosesPreviousConnectorForSamePid() {
         RecordingLocalConnectorResolver resolver = new RecordingLocalConnectorResolver("service:jmx:local://42");
         RecordingJmxConnectorFactory connectorFactory = new RecordingJmxConnectorFactory();

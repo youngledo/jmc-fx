@@ -37,6 +37,11 @@
             <version>${jmc.joverflow.version}</version>
         </dependency>
         <dependency>
+            <groupId>org.jolokia</groupId>
+            <artifactId>jolokia-client-jmx-adapter</artifactId>
+            <version>${jolokia.version}</version>
+        </dependency>
+        <dependency>
             <groupId>org.junit.jupiter</groupId>
             <artifactId>junit-jupiter</artifactId>
             <scope>test</scope>
