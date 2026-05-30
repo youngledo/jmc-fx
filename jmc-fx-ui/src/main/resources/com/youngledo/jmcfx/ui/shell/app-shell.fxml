@@ -239,12 +239,7 @@
                 </styleClass>
                 <VBox fx:id="heapDumpHeader" styleClass="page-header">
                     <Label fx:id="heapDumpAnalysisTitleLabel" styleClass="view-title"/>
-                    <Label fx:id="heapDumpSummaryLabel" styleClass="event-window-status" wrapText="true"/>
                 </VBox>
-                <FlowPane fx:id="heapDumpToolbar" styleClass="page-toolbar" hgap="8" vgap="8">
-                    <Button fx:id="heapDumpOpenButton"/>
-                    <Label fx:id="heapDumpNameLabel" styleClass="event-window-status" wrapText="true"/>
-                </FlowPane>
                 <SplitPane fx:id="heapDumpContent" styleClass="page-content" orientation="VERTICAL" VBox.vgrow="ALWAYS" DividerPositions="0.62">
                     <items>
                         <TableView fx:id="heapDumpIssuesTable" styleClass="dense-table"/>

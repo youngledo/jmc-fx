@@ -260,7 +260,14 @@ class AppShellTest {
         assertTrue(hasStyleClass(heapDumpPane, "split-table-detail-page"));
         assertTrue(hasStyleClass(heapDumpPane, "heap-dump-page"));
         assertTrue(hasStyleClass(elementByFxId(document, "heapDumpHeader"), "page-header"));
-        assertTrue(hasStyleClass(elementByFxId(document, "heapDumpToolbar"), "page-toolbar"));
+        assertEquals(0, elementCountWithFxId(document, "heapDumpToolbar"),
+                "HPROF files are opened from Home; opened heap dump workspaces should not repeat the open action");
+        assertEquals(0, elementCountWithFxId(document, "heapDumpOpenButton"),
+                "HPROF open action belongs on Home, not inside an opened heap dump workspace");
+        assertEquals(0, elementCountWithFxId(document, "heapDumpNameLabel"),
+                "The opened HPROF file name is already represented by the workspace tab");
+        assertEquals(0, elementCountWithFxId(document, "heapDumpSummaryLabel"),
+                "The HPROF page should focus on analysis results instead of repeating file summary chrome");
         assertEquals(0, elementCountWithFxId(document, "heapDumpProgressBar"),
                 "HPROF long-running progress belongs in the shell status area, not the page toolbar");
         assertTrue(hasStyleClass(elementByFxId(document, "heapDumpContent"), "page-content"));

@@ -433,9 +433,6 @@ public class AppShellController {
     @FXML private Label advancedJfrMemoryDetailTitleLabel;
     @FXML private TextArea advancedJfrMemoryDetailArea;
     @FXML private Label heapDumpAnalysisTitleLabel;
-    @FXML private Button heapDumpOpenButton;
-    @FXML private Label heapDumpNameLabel;
-    @FXML private Label heapDumpSummaryLabel;
     @FXML private TableView<HeapDumpIssue> heapDumpIssuesTable;
     @FXML private TabPane heapDumpDetailsTabs;
     @FXML private Tab heapDumpIssueDetailTab;
@@ -1448,16 +1445,12 @@ public class AppShellController {
         heapDumpIssuesTable.getColumns().setAll(List.of(categoryCol, subjectCol, wastedBytesCol,
                 objectCountCol, scoreCol));
         if (heapDumpAnalysisViewModel == null) {
-            heapDumpOpenButton.setDisable(true);
-            heapDumpNameLabel.setText("");
-            heapDumpSummaryLabel.setText("");
             heapDumpIssueDetailTitleLabel.setText("");
             heapDumpIssueDetailArea.setText(i18n.get("heapDump.detail.empty"));
             heapDumpTextReportArea.setText("");
             heapDumpIssuesTable.setItems(FXCollections.emptyObservableList());
             return;
         }
-        heapDumpOpenButton.setOnAction(event -> showOpenHeapDumpChooser());
         bindHeapDumpAnalysis(heapDumpAnalysisViewModel);
     }
 
@@ -1467,34 +1460,24 @@ public class AppShellController {
                     .removeListener(heapDumpTableSelectionListener);
             heapDumpAnalysisViewModel.selectedIssueProperty().removeListener(heapDumpSelectedIssueListener);
         }
-        heapDumpNameLabel.textProperty().unbind();
-        heapDumpSummaryLabel.textProperty().unbind();
         heapDumpIssueDetailArea.textProperty().unbind();
         heapDumpTextReportArea.textProperty().unbind();
-        heapDumpOpenButton.disableProperty().unbind();
         heapDumpIssueDetailTitleLabel.textProperty().unbind();
         if (nextViewModel == null) {
             heapDumpAnalysisViewModel = null;
-            heapDumpNameLabel.setText("");
-            heapDumpSummaryLabel.setText("");
             heapDumpIssueDetailArea.setText(i18n.get("heapDump.detail.empty"));
             heapDumpTextReportArea.setText("");
             heapDumpIssuesTable.setItems(FXCollections.emptyObservableList());
-            heapDumpOpenButton.setDisable(heapDumpAnalysisService == null);
             heapDumpIssueDetailTitleLabel.setText("");
             return;
         }
         heapDumpAnalysisViewModel = nextViewModel;
-        heapDumpNameLabel.textProperty().bind(heapDumpAnalysisViewModel.heapDumpNameProperty());
-        heapDumpSummaryLabel.textProperty().bind(heapDumpAnalysisViewModel.summaryProperty());
         heapDumpIssueDetailArea.textProperty().bind(heapDumpAnalysisViewModel.selectedIssueDetailsProperty());
         heapDumpTextReportArea.textProperty().bind(heapDumpAnalysisViewModel.textReportProperty());
         heapDumpIssuesTable.setItems(heapDumpAnalysisViewModel.issues());
         heapDumpIssuesTable.getSelectionModel().selectedItemProperty()
                 .addListener(heapDumpTableSelectionListener);
         heapDumpAnalysisViewModel.selectedIssueProperty().addListener(heapDumpSelectedIssueListener);
-        heapDumpOpenButton.disableProperty().bind(
-                heapDumpAnalysisViewModel.stateProperty().isEqualTo(HeapDumpAnalysisState.ANALYZING));
         heapDumpIssueDetailTitleLabel.textProperty().bind(Bindings.createStringBinding(
                 () -> {
                     HeapDumpIssue issue = heapDumpAnalysisViewModel.selectedIssueProperty().get();
@@ -3687,7 +3670,6 @@ public class AppShellController {
         advancedJfrSelectedEventTypeCaptionLabel.textProperty().bind(i18n.text("advancedJfr.selectedEventType"));
         advancedJfrSelectedCountCaptionLabel.textProperty().bind(i18n.text("advancedJfr.selectedCount"));
         heapDumpAnalysisTitleLabel.textProperty().bind(i18n.text("heapDump.title"));
-        heapDumpOpenButton.textProperty().bind(i18n.text("heapDump.open"));
         heapDumpIssueDetailTab.textProperty().bind(i18n.text("heapDump.detail.tab"));
         heapDumpTextReportTab.textProperty().bind(i18n.text("heapDump.report.tab"));
         jvmsTitleLabel.textProperty().bind(i18n.text("jvms.title"));
