@@ -217,6 +217,23 @@ class AppShellTest {
         assertTrue("true".equals(elementByFxId(document, "homeJvmWorkflowDescriptionLabel").getAttribute("wrapText")));
 
         assertEquals("analysisPane", elementByFxId(document, "analysisPane").getAttribute("fx:id"));
+        Element metadataPane = elementByFxId(document, "metadataPane");
+        assertEquals("VBox", metadataPane.getTagName());
+        assertTrue(hasStyleClass(metadataPane, "page"));
+        assertTrue(hasStyleClass(metadataPane, "split-table-detail-page"));
+        assertEquals("Label", elementByFxId(document, "metadataTitleLabel").getTagName());
+        assertEquals("Label", elementByFxId(document, "metadataSummaryLabel").getTagName());
+        assertEquals("SplitPane", elementByFxId(document, "metadataContent").getTagName());
+        assertEquals("TableView", elementByFxId(document, "metadataEventTypesTable").getTagName());
+        assertTrue(hasStyleClass(elementByFxId(document, "metadataEventTypesTable"), "dense-table"));
+        assertEquals("VBox", elementByFxId(document, "metadataDetailPane").getTagName());
+        assertTrue(hasStyleClass(elementByFxId(document, "metadataDetailPane"), "detail-panel"));
+        assertEquals("Label", elementByFxId(document, "metadataDetailTitleLabel").getTagName());
+        assertTrue(hasStyleClass(elementByFxId(document, "metadataDetailTitleLabel"), "detail-panel-title"));
+        assertEquals("TextArea", elementByFxId(document, "metadataDetailArea").getTagName());
+        assertEquals("false", elementByFxId(document, "metadataDetailArea").getAttribute("editable"));
+        assertEquals("true", elementByFxId(document, "metadataDetailArea").getAttribute("wrapText"));
+        assertTrue(hasStyleClass(elementByFxId(document, "metadataDetailArea"), "detail-panel-body"));
         assertEquals("VBox", elementByFxId(document, "advancedJfrPane").getTagName());
         assertEquals("Label", elementByFxId(document, "advancedJfrTitleLabel").getTagName());
         assertEquals("Label", elementByFxId(document, "advancedJfrSummaryLabel").getTagName());
@@ -630,6 +647,53 @@ class AppShellTest {
     }
 
     @Test
+    void metadataShellUsesSplitTableDetailBindingsAndI18n() throws Exception {
+        String controller = java.nio.file.Files.readString(
+                java.nio.file.Path.of("src/main/java/com/youngledo/jmcfx/ui/shell/AppShellController.java"));
+        String english = java.nio.file.Files.readString(
+                java.nio.file.Path.of("src/main/resources/com/youngledo/jmcfx/ui/i18n/messages.properties"));
+        String chinese = java.nio.file.Files.readString(
+                java.nio.file.Path.of("src/main/resources/com/youngledo/jmcfx/ui/i18n/messages_zh_CN.properties"));
+
+        assertTrue(controller.contains("import com.youngledo.jmcfx.domain.model.JfrMetadataEventType;"));
+        assertTrue(controller.contains("import com.youngledo.jmcfx.ui.metadata.JfrMetadataViewModel;"));
+        assertTrue(controller.contains("@FXML private VBox metadataPane;"));
+        assertTrue(controller.contains("@FXML private Label metadataTitleLabel;"));
+        assertTrue(controller.contains("@FXML private Label metadataSummaryLabel;"));
+        assertTrue(controller.contains("@FXML private TableView<JfrMetadataEventType> metadataEventTypesTable;"));
+        assertTrue(controller.contains("@FXML private Label metadataDetailTitleLabel;"));
+        assertTrue(controller.contains("@FXML private TextArea metadataDetailArea;"));
+        assertTrue(controller.contains("metadataPane.visibleProperty().bind(viewModel.selectedSectionProperty().isEqualTo(\"metadata\"))"));
+        assertTrue(controller.contains("configureMetadataTable();"));
+        assertTrue(controller.contains("metadataTitleLabel.textProperty().bind(i18n.text(\"metadata.title\"))"));
+        assertTrue(controller.contains("metadataEventTypesTable.setPlaceholder(localizedTablePlaceholder(\"metadata.empty\"))"));
+        assertTrue(controller.contains("localizedColumn(\"metadata.column.category\")"));
+        assertTrue(controller.contains("localizedColumn(\"metadata.column.name\")"));
+        assertTrue(controller.contains("localizedColumn(\"metadata.column.eventCount\")"));
+        assertTrue(controller.contains("localizedColumn(\"metadata.column.fieldCount\")"));
+        assertTrue(controller.contains("metadataEventTypesTable.setItems(nextViewModel.eventTypesProperty())"));
+        assertTrue(controller.contains("metadataDetailArea.textProperty().bind(nextViewModel.selectedDetailProperty())"));
+        assertTrue(controller.contains("case \"metadata\" -> loadIfPresent(workspace.jfrMetadataViewModel(), recording);"));
+
+        assertTrue(english.contains("metadata.title=JFR Metadata"));
+        assertTrue(english.contains("metadata.empty=No event metadata for this recording."));
+        assertTrue(english.contains("metadata.detail.title=Event Type Details"));
+        assertTrue(english.contains("metadata.column.category=Category"));
+        assertTrue(english.contains("metadata.column.name=Name"));
+        assertTrue(english.contains("metadata.column.id=Event Type"));
+        assertTrue(english.contains("metadata.column.eventCount=Events"));
+        assertTrue(english.contains("metadata.column.fieldCount=Fields"));
+        assertTrue(chinese.contains("metadata.title=JFR元数据"));
+        assertTrue(chinese.contains("metadata.empty=此记录没有事件元数据。"));
+        assertTrue(chinese.contains("metadata.detail.title=事件类型详情"));
+        assertTrue(chinese.contains("metadata.column.category=类别"));
+        assertTrue(chinese.contains("metadata.column.name=名称"));
+        assertTrue(chinese.contains("metadata.column.id=事件类型"));
+        assertTrue(chinese.contains("metadata.column.eventCount=事件数"));
+        assertTrue(chinese.contains("metadata.column.fieldCount=字段数"));
+    }
+
+    @Test
     void appShellFxmlDoesNotHardcodeVisibleLocalizedText() throws Exception {
         Document document = appShellFxml();
 
@@ -754,6 +818,8 @@ class AppShellTest {
 
         assertLoadedStyleClass(loader, "advancedJfrMemoryDetailTitleLabel", "detail-panel-title");
         assertLoadedStyleClass(loader, "advancedJfrMemoryDetailPane", "detail-panel");
+        assertLoadedStyleClass(loader, "metadataDetailTitleLabel", "detail-panel-title");
+        assertLoadedStyleClass(loader, "metadataDetailPane", "detail-panel");
         assertLoadedStyleClass(loader, "heapDumpIssueDetailTitleLabel", "detail-panel-title");
         assertLoadedStyleClass(loader, "heapDumpIssueDetailPane", "detail-panel");
     }

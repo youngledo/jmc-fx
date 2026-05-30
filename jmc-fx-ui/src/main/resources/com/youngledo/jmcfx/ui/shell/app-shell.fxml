@@ -144,6 +144,38 @@
                     </items>
                 </SplitPane>
             </VBox>
+            <VBox fx:id="metadataPane" visible="false" managed="false">
+                <styleClass>
+                    <String fx:value="page"/>
+                    <String fx:value="split-table-detail-page"/>
+                </styleClass>
+                <VBox styleClass="page-header">
+                    <Label fx:id="metadataTitleLabel" styleClass="view-title"/>
+                    <Label fx:id="metadataSummaryLabel" styleClass="event-window-status" wrapText="true"/>
+                </VBox>
+                <SplitPane fx:id="metadataContent" styleClass="page-content" orientation="VERTICAL" VBox.vgrow="ALWAYS" DividerPositions="0.62">
+                    <items>
+                        <TableView fx:id="metadataEventTypesTable" styleClass="dense-table"/>
+                        <VBox fx:id="metadataDetailPane">
+                            <styleClass>
+                                <String fx:value="detail-panel"/>
+                            </styleClass>
+                            <children>
+                                <Label fx:id="metadataDetailTitleLabel">
+                                    <styleClass>
+                                        <String fx:value="detail-panel-title"/>
+                                    </styleClass>
+                                </Label>
+                                <TextArea fx:id="metadataDetailArea" wrapText="true" editable="false" VBox.vgrow="ALWAYS">
+                                    <styleClass>
+                                        <String fx:value="detail-panel-body"/>
+                                    </styleClass>
+                                </TextArea>
+                            </children>
+                        </VBox>
+                    </items>
+                </SplitPane>
+            </VBox>
             <VBox fx:id="advancedJfrPane" spacing="8" visible="false" managed="false">
                 <Label fx:id="advancedJfrTitleLabel" styleClass="view-title"/>
                 <Label fx:id="advancedJfrSummaryLabel" styleClass="event-window-status" wrapText="true"/>

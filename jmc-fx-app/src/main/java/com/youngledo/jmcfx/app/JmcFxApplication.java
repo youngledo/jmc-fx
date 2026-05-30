@@ -14,6 +14,7 @@ import com.youngledo.jmcfx.adapter.jmc.JmcHeapDumpAnalysisService;
 import com.youngledo.jmcfx.adapter.jmc.JmcHeapService;
 import com.youngledo.jmcfx.adapter.jmc.JmcAgentManagerService;
 import com.youngledo.jmcfx.adapter.jmc.JmcJvmInternalsService;
+import com.youngledo.jmcfx.adapter.jmc.JmcJfrMetadataService;
 import com.youngledo.jmcfx.adapter.jmc.JmcJmxMonitoringService;
 import com.youngledo.jmcfx.adapter.jmc.JmcJmxConnectionService;
 import com.youngledo.jmcfx.adapter.jmc.JmcJvmDiscoveryService;
@@ -78,6 +79,7 @@ public class JmcFxApplication extends Application {
                 new JmcAgentManagerService(jmxConnectionService),
                 new JmcJmxMonitoringService(jmxConnectionService),
                 new JavaJmxMonitoringRepository(),
+                new JmcJfrMetadataService(),
                 new JmcAdvancedJfrAnalysisService(),
                 new JavaSavedJvmTargetRepository(),
                 new JmcJdpDiscoveryService(),

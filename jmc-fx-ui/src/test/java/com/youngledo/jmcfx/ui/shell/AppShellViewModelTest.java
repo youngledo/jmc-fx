@@ -108,6 +108,19 @@ class AppShellViewModelTest {
     }
 
     @Test
+    void metadataIsARecordingSection() {
+        AppShellViewModel viewModel = new AppShellViewModel();
+        RecordingWorkspace workspace = viewModel.openRecording(
+                recording(), new OverviewViewModel(), eventBrowserViewModel(), ruleResultsViewModel());
+
+        viewModel.showSection("metadata");
+
+        assertEquals("metadata", viewModel.selectedSectionProperty().get());
+        assertEquals("metadata", workspace.selectedSectionProperty().get());
+        assertEquals(AppWorkspaceKind.RECORDING, viewModel.activeWorkspaceKindProperty().get());
+    }
+
+    @Test
     void jvmLauncherSwitchesFromExistingWorkspaceContext() {
         AppShellViewModel viewModel = new AppShellViewModel();
         viewModel.openRecording(recording(), new OverviewViewModel(), eventBrowserViewModel(), ruleResultsViewModel());

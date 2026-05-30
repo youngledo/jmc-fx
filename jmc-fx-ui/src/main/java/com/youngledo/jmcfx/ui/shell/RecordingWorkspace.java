@@ -30,6 +30,7 @@ import com.youngledo.jmcfx.ui.javaapp.NativeLibraryViewModel;
 import com.youngledo.jmcfx.ui.javaapp.SecurityViewModel;
 import com.youngledo.jmcfx.ui.javaapp.ThreadDumpViewModel;
 import com.youngledo.jmcfx.ui.jvm.VmOperationsViewModel;
+import com.youngledo.jmcfx.ui.metadata.JfrMetadataViewModel;
 import com.youngledo.jmcfx.ui.tlab.TlabViewModel;
 import com.youngledo.jmcfx.ui.threads.ThreadViewModel;
 
@@ -70,6 +71,7 @@ public final class RecordingWorkspace {
     private final SecurityViewModel securityViewModel;
     private final NativeLibraryViewModel nativeLibraryViewModel;
     private final ThreadDumpViewModel threadDumpViewModel;
+    private final JfrMetadataViewModel jfrMetadataViewModel;
     private final AdvancedJfrViewModel advancedJfrViewModel;
 
     public RecordingWorkspace(RecordingSummary recording, OverviewViewModel overviewViewModel,
@@ -123,6 +125,38 @@ public final class RecordingWorkspace {
             NativeLibraryViewModel nativeLibraryViewModel,
             ThreadDumpViewModel threadDumpViewModel,
             AdvancedJfrViewModel advancedJfrViewModel) {
+        this(recording, overviewViewModel, eventBrowserViewModel, ruleResultsViewModel,
+                profilingViewModel, exceptionViewModel, threadViewModel, fileIOViewModel,
+                socketIOViewModel, lockViewModel, heapViewModel, leakSuspectsViewModel,
+                tlabViewModel, jvmInfoViewModel, gcConfigViewModel, gcSummaryViewModel,
+                gcDetailsViewModel, compilationsViewModel, codeCacheViewModel,
+                classLoadingViewModel, vmOperationsViewModel, environmentViewModel,
+                javaAppOverviewViewModel, securityViewModel, nativeLibraryViewModel,
+                threadDumpViewModel, null, advancedJfrViewModel);
+    }
+
+    public RecordingWorkspace(RecordingSummary recording, OverviewViewModel overviewViewModel,
+            EventBrowserViewModel eventBrowserViewModel, RuleResultsViewModel ruleResultsViewModel,
+            ProfilingViewModel profilingViewModel, ExceptionViewModel exceptionViewModel,
+            ThreadViewModel threadViewModel, FileIOViewModel fileIOViewModel,
+            SocketIOViewModel socketIOViewModel, LockViewModel lockViewModel,
+            HeapViewModel heapViewModel, LeakSuspectsViewModel leakSuspectsViewModel,
+            TlabViewModel tlabViewModel,
+            JvmInfoViewModel jvmInfoViewModel,
+            GcConfigViewModel gcConfigViewModel,
+            GcSummaryViewModel gcSummaryViewModel,
+            GcDetailsViewModel gcDetailsViewModel,
+            CompilationsViewModel compilationsViewModel,
+            CodeCacheViewModel codeCacheViewModel,
+            ClassLoadingViewModel classLoadingViewModel,
+            VmOperationsViewModel vmOperationsViewModel,
+            EnvironmentViewModel environmentViewModel,
+            JavaAppOverviewViewModel javaAppOverviewViewModel,
+            SecurityViewModel securityViewModel,
+            NativeLibraryViewModel nativeLibraryViewModel,
+            ThreadDumpViewModel threadDumpViewModel,
+            JfrMetadataViewModel jfrMetadataViewModel,
+            AdvancedJfrViewModel advancedJfrViewModel) {
         this.recording = Objects.requireNonNull(recording, "recording");
         this.overviewViewModel = Objects.requireNonNull(overviewViewModel, "overviewViewModel");
         this.eventBrowserViewModel = Objects.requireNonNull(eventBrowserViewModel, "eventBrowserViewModel");
@@ -149,6 +183,7 @@ public final class RecordingWorkspace {
         this.securityViewModel = securityViewModel;
         this.nativeLibraryViewModel = nativeLibraryViewModel;
         this.threadDumpViewModel = threadDumpViewModel;
+        this.jfrMetadataViewModel = jfrMetadataViewModel;
         this.advancedJfrViewModel = advancedJfrViewModel;
     }
 
@@ -315,6 +350,10 @@ public final class RecordingWorkspace {
 
     public ThreadDumpViewModel threadDumpViewModel() {
         return threadDumpViewModel;
+    }
+
+    public JfrMetadataViewModel jfrMetadataViewModel() {
+        return jfrMetadataViewModel;
     }
 
     public AdvancedJfrViewModel advancedJfrViewModel() {

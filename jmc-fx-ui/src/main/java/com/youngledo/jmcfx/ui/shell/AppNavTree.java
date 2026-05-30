@@ -50,6 +50,7 @@ final class AppNavTree extends TreeView<AppNavItem> {
         TreeItem<AppNavItem> analysis = page("analysis", "analysis.title", Material2AL.INSIGHTS, true, NavIconTone.RECORDING);
         TreeItem<AppNavItem> overview = page("overview", "overview.title", Material2MZ.PAGEVIEW, true, NavIconTone.RECORDING);
         TreeItem<AppNavItem> events = page("events", "events.title", Material2AL.EVENT, true, NavIconTone.RECORDING);
+        TreeItem<AppNavItem> metadata = page("metadata", "nav.metadata", Material2MZ.VIEW_LIST, true, NavIconTone.RECORDING);
         TreeItem<AppNavItem> advancedJfr = page("advancedJfr", "nav.advancedJfr", Material2AL.GRID_ON, true, NavIconTone.RECORDING);
         TreeItem<AppNavItem> profiling = page("profiling", "nav.profiling", Material2AL.ASSIGNMENT, true, NavIconTone.JAVA);
         TreeItem<AppNavItem> exceptions = page("exceptions", "nav.exceptions", Material2MZ.REPORT, true, NavIconTone.JAVA);
@@ -81,7 +82,7 @@ final class AppNavTree extends TreeView<AppNavItem> {
         TreeItem<AppNavItem> settings = page("settings", "settings.title", Material2MZ.SETTINGS, false, NavIconTone.APPLICATION);
 
         global.getChildren().setAll(List.of(home, settings));
-        recording.getChildren().setAll(List.of(analysis, overview, events, advancedJfr));
+        recording.getChildren().setAll(List.of(analysis, overview, events, metadata, advancedJfr));
         javaApp.getChildren().setAll(List.of(profiling, exceptions, threads, fileio, socketio, locks,
                 threadHistogram, security, nativeLibraries, threadDumps));
         memoryAnalysis.getChildren().setAll(List.of(heap, leaks, tlab));
@@ -108,6 +109,7 @@ final class AppNavTree extends TreeView<AppNavItem> {
         pageItems.put("analysis", analysis);
         pageItems.put("overview", overview);
         pageItems.put("events", events);
+        pageItems.put("metadata", metadata);
         pageItems.put("advancedJfr", advancedJfr);
         pageItems.put("profiling", profiling);
         pageItems.put("exceptions", exceptions);

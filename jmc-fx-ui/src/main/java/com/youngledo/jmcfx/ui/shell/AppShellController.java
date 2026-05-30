@@ -55,6 +55,7 @@ import com.youngledo.jmcfx.domain.model.HotMethod;
 import com.youngledo.jmcfx.domain.model.JvmCapabilitySnapshot;
 import com.youngledo.jmcfx.domain.model.JmcAgentPreset;
 import com.youngledo.jmcfx.domain.model.JmcAgentTransform;
+import com.youngledo.jmcfx.domain.model.JfrMetadataEventType;
 import com.youngledo.jmcfx.domain.model.JmxAttributeSubscription;
 import com.youngledo.jmcfx.domain.model.JmxNotificationEvent;
 import com.youngledo.jmcfx.domain.model.JmxSubscriptionSample;
@@ -104,6 +105,7 @@ import com.youngledo.jmcfx.domain.service.FlightRecordingService;
 import com.youngledo.jmcfx.domain.service.HeapDumpAnalysisService;
 import com.youngledo.jmcfx.domain.service.HeapService;
 import com.youngledo.jmcfx.domain.service.JmcAgentService;
+import com.youngledo.jmcfx.domain.service.JfrMetadataService;
 import com.youngledo.jmcfx.domain.service.JvmInternalsService;
 import com.youngledo.jmcfx.domain.service.JavaAppService;
 import com.youngledo.jmcfx.domain.service.JdpDiscoveryService;
@@ -150,6 +152,7 @@ import com.youngledo.jmcfx.ui.jvm.VmOperationsViewModel;
 import com.youngledo.jmcfx.ui.jvms.JvmBrowserViewModel;
 import com.youngledo.jmcfx.ui.leaks.LeakSuspectsViewModel;
 import com.youngledo.jmcfx.ui.locks.LockViewModel;
+import com.youngledo.jmcfx.ui.metadata.JfrMetadataViewModel;
 import com.youngledo.jmcfx.ui.chart.TimelineChart;
 import com.youngledo.jmcfx.ui.util.CsvExport;
 import com.youngledo.jmcfx.ui.util.DisplayFormats;
@@ -259,6 +262,7 @@ public class AppShellController {
     private final JmcAgentService jmcAgentService;
     private final JmxMonitoringService jmxMonitoringService;
     private final JmxMonitoringRepository jmxMonitoringRepository;
+    private final JfrMetadataService jfrMetadataService;
     private final AdvancedJfrAnalysisService advancedJfrAnalysisService;
     private final SavedJvmTargetRepository savedTargetRepository;
     private final JdpDiscoveryService jdpDiscoveryService;
@@ -289,6 +293,7 @@ public class AppShellController {
     private SecurityViewModel securityViewModel;
     private NativeLibraryViewModel nativeLibraryViewModel;
     private ThreadDumpViewModel threadDumpViewModel;
+    private JfrMetadataViewModel jfrMetadataViewModel;
     private AdvancedJfrViewModel advancedJfrViewModel;
     private HeapDumpAnalysisViewModel heapDumpAnalysisViewModel;
     private JvmBrowserViewModel jvmBrowserViewModel;
@@ -315,6 +320,7 @@ public class AppShellController {
     @FXML private VBox overviewPane;
     @FXML private VBox eventsPane;
     @FXML private VBox analysisPane;
+    @FXML private VBox metadataPane;
     @FXML private VBox advancedJfrPane;
     @FXML private VBox heapDumpAnalysisPane;
     @FXML private VBox jvmsPane;
@@ -390,6 +396,13 @@ public class AppShellController {
     @FXML private TableView<RuleResult> analysisTable;
     @FXML private Label analysisDetailTitle;
     @FXML private TextArea analysisDetailExplanation;
+    @FXML private Label metadataTitleLabel;
+    @FXML private Label metadataSummaryLabel;
+    @FXML private TableView<JfrMetadataEventType> metadataEventTypesTable;
+    @FXML private Label metadataDetailTitleLabel;
+    @FXML private TextArea metadataDetailArea;
+    private final ChangeListener<JfrMetadataEventType> metadataSelectedEventTypeListener =
+            (observable, oldValue, newValue) -> metadataEventTypesTable.getSelectionModel().select(newValue);
     @FXML private Label advancedJfrTitleLabel;
     @FXML private Label advancedJfrSummaryLabel;
     @FXML private TabPane advancedJfrTabs;
@@ -695,7 +708,7 @@ public class AppShellController {
                 fileIOService, socketIOService, lockService,
                 heapService, leakSuspectsService, tlabService,
                 jvmInternalsService, environmentService, javaAppService,
-                null, null, null, null, null, null, null, null, null, null, null, null, null, i18n,
+                null, null, null, null, null, null, null, null, null, null, null, null, null, null, i18n,
                 new VirtualThreadRecordingOpenExecutor());
     }
 
@@ -719,7 +732,7 @@ public class AppShellController {
                 heapService, leakSuspectsService, tlabService,
                 jvmInternalsService, environmentService, javaAppService,
                 jvmDiscoveryService, jmxConnectionService, flightRecordingService, null, null, null, null, null,
-                null, null, null, null, null, i18n, new VirtualThreadRecordingOpenExecutor());
+                null, null, null, null, null, null, i18n, new VirtualThreadRecordingOpenExecutor());
     }
 
     public AppShellController(AppShellViewModel viewModel, RecordingRepository recordingRepository,
@@ -743,7 +756,7 @@ public class AppShellController {
                 heapService, leakSuspectsService, tlabService,
                 jvmInternalsService, environmentService, javaAppService,
                 jvmDiscoveryService, jmxConnectionService, flightRecordingService, mBeanBrowserService, null, null,
-                null, null, null, null, null, null, null, i18n, new VirtualThreadRecordingOpenExecutor());
+                null, null, null, null, null, null, null, null, i18n, new VirtualThreadRecordingOpenExecutor());
     }
 
     public AppShellController(AppShellViewModel viewModel, RecordingRepository recordingRepository,
@@ -770,7 +783,7 @@ public class AppShellController {
                 heapService, leakSuspectsService, tlabService,
                 jvmInternalsService, environmentService, javaAppService,
                 jvmDiscoveryService, jmxConnectionService, flightRecordingService, mBeanBrowserService,
-                diagnosticCommandService, liveMetricService, null, null, null, advancedJfrAnalysisService, null, null,
+                diagnosticCommandService, liveMetricService, null, null, null, null, advancedJfrAnalysisService, null, null,
                 null, i18n, new VirtualThreadRecordingOpenExecutor());
     }
 
@@ -802,7 +815,7 @@ public class AppShellController {
                 heapService, leakSuspectsService, tlabService,
                 jvmInternalsService, environmentService, javaAppService,
                 jvmDiscoveryService, jmxConnectionService, flightRecordingService, mBeanBrowserService,
-                diagnosticCommandService, liveMetricService, jmcAgentService, null, null,
+                diagnosticCommandService, liveMetricService, jmcAgentService, null, null, null,
                 advancedJfrAnalysisService, savedTargetRepository, jdpDiscoveryService, heapDumpAnalysisService, i18n,
                 new VirtualThreadRecordingOpenExecutor());
     }
@@ -826,6 +839,7 @@ public class AppShellController {
             JmcAgentService jmcAgentService,
             JmxMonitoringService jmxMonitoringService,
             JmxMonitoringRepository jmxMonitoringRepository,
+            JfrMetadataService jfrMetadataService,
             AdvancedJfrAnalysisService advancedJfrAnalysisService,
             SavedJvmTargetRepository savedTargetRepository,
             JdpDiscoveryService jdpDiscoveryService,
@@ -838,7 +852,7 @@ public class AppShellController {
                 jvmInternalsService, environmentService, javaAppService,
                 jvmDiscoveryService, jmxConnectionService, flightRecordingService, mBeanBrowserService,
                 diagnosticCommandService, liveMetricService, jmcAgentService,
-                jmxMonitoringService, jmxMonitoringRepository, advancedJfrAnalysisService,
+                jmxMonitoringService, jmxMonitoringRepository, null, advancedJfrAnalysisService,
                 savedTargetRepository, jdpDiscoveryService, heapDumpAnalysisService, i18n,
                 new VirtualThreadRecordingOpenExecutor());
     }
@@ -862,7 +876,7 @@ public class AppShellController {
                 heapService, leakSuspectsService, tlabService,
                 jvmInternalsService, environmentService, javaAppService,
                 jvmDiscoveryService, jmxConnectionService, null, null, null, null, null, null, null, null, null, null,
-                null, i18n, new VirtualThreadRecordingOpenExecutor());
+                null, null, i18n, new VirtualThreadRecordingOpenExecutor());
     }
 
     AppShellController(AppShellViewModel viewModel, RecordingRepository recordingRepository,
@@ -881,7 +895,7 @@ public class AppShellController {
                 fileIOService, socketIOService, lockService,
                 heapService, leakSuspectsService, tlabService,
                 jvmInternalsService, environmentService, javaAppService,
-                null, null, null, null, null, null, null, null, null, null, null, null, null, i18n,
+                null, null, null, null, null, null, null, null, null, null, null, null, null, null, i18n,
                 recordingOpenExecutor);
     }
 
@@ -905,7 +919,7 @@ public class AppShellController {
                 heapService, leakSuspectsService, tlabService,
                 jvmInternalsService, environmentService, javaAppService,
                 jvmDiscoveryService, jmxConnectionService, flightRecordingService, null, null, null, null, null,
-                null, null, null, null, null, i18n, recordingOpenExecutor);
+                null, null, null, null, null, null, i18n, recordingOpenExecutor);
     }
 
     AppShellController(AppShellViewModel viewModel, RecordingRepository recordingRepository,
@@ -926,6 +940,7 @@ public class AppShellController {
             JmcAgentService jmcAgentService,
             JmxMonitoringService jmxMonitoringService,
             JmxMonitoringRepository jmxMonitoringRepository,
+            JfrMetadataService jfrMetadataService,
             AdvancedJfrAnalysisService advancedJfrAnalysisService,
             SavedJvmTargetRepository savedTargetRepository,
             JdpDiscoveryService jdpDiscoveryService,
@@ -957,6 +972,7 @@ public class AppShellController {
         this.jmcAgentService = jmcAgentService;
         this.jmxMonitoringService = jmxMonitoringService;
         this.jmxMonitoringRepository = jmxMonitoringRepository;
+        this.jfrMetadataService = jfrMetadataService;
         this.advancedJfrAnalysisService = advancedJfrAnalysisService;
         this.savedTargetRepository = savedTargetRepository;
         this.jdpDiscoveryService = jdpDiscoveryService;
@@ -1023,6 +1039,8 @@ public class AppShellController {
         eventsPane.managedProperty().bind(eventsPane.visibleProperty());
         analysisPane.visibleProperty().bind(viewModel.selectedSectionProperty().isEqualTo("analysis"));
         analysisPane.managedProperty().bind(analysisPane.visibleProperty());
+        metadataPane.visibleProperty().bind(viewModel.selectedSectionProperty().isEqualTo("metadata"));
+        metadataPane.managedProperty().bind(metadataPane.visibleProperty());
         advancedJfrPane.visibleProperty().bind(viewModel.selectedSectionProperty().isEqualTo("advancedJfr"));
         advancedJfrPane.managedProperty().bind(advancedJfrPane.visibleProperty());
         heapDumpAnalysisPane.visibleProperty().bind(viewModel.selectedSectionProperty().isEqualTo("heapDumpAnalysis"));
@@ -1089,6 +1107,7 @@ public class AppShellController {
         bindOverview(null);
         bindEvents();
         configureAnalysisTable();
+        configureMetadataTable();
         configureAdvancedJfrMemoryTable();
         configureHeapDumpAnalysis();
         configureJvmBrowserTable();
@@ -1285,6 +1304,49 @@ public class AppShellController {
                 .addListener((observable, oldIssue, issue) -> {
                     if (!rebindingAdvancedJfrMemory && advancedJfrViewModel != null) {
                         advancedJfrViewModel.selectMemoryIssue(issue);
+                    }
+                });
+    }
+
+    private void configureMetadataTable() {
+        metadataEventTypesTable.setPlaceholder(localizedTablePlaceholder("metadata.empty"));
+
+        TableColumn<JfrMetadataEventType, String> categoryCol = localizedColumn("metadata.column.category");
+        categoryCol.setPrefWidth(220);
+        categoryCol.setCellValueFactory(cell -> new ReadOnlyStringWrapper(cell.getValue().category()));
+
+        TableColumn<JfrMetadataEventType, String> nameCol = localizedColumn("metadata.column.name");
+        nameCol.setPrefWidth(240);
+        nameCol.setCellValueFactory(cell -> new ReadOnlyStringWrapper(cell.getValue().name()));
+
+        TableColumn<JfrMetadataEventType, String> idCol = localizedColumn("metadata.column.id");
+        idCol.setPrefWidth(280);
+        idCol.setCellValueFactory(cell -> new ReadOnlyStringWrapper(cell.getValue().id()));
+
+        TableColumn<JfrMetadataEventType, String> eventCountLabelCol =
+                localizedColumn("metadata.column.eventCount");
+        TableColumn<JfrMetadataEventType, Number> eventCountCol = new TableColumn<>();
+        eventCountCol.textProperty().bind(eventCountLabelCol.textProperty());
+        eventCountCol.setPrefWidth(100);
+        eventCountCol.setCellValueFactory(cell ->
+                new javafx.beans.property.SimpleLongProperty(cell.getValue().eventCount()));
+        useFormattedIntegerCells(eventCountCol);
+
+        TableColumn<JfrMetadataEventType, String> fieldCountLabelCol =
+                localizedColumn("metadata.column.fieldCount");
+        TableColumn<JfrMetadataEventType, Number> fieldCountCol = new TableColumn<>();
+        fieldCountCol.textProperty().bind(fieldCountLabelCol.textProperty());
+        fieldCountCol.setPrefWidth(90);
+        fieldCountCol.setCellValueFactory(cell ->
+                new javafx.beans.property.SimpleIntegerProperty(cell.getValue().fieldCount()));
+        useFormattedIntegerCells(fieldCountCol);
+
+        metadataEventTypesTable.getColumns().setAll(List.of(categoryCol, nameCol, idCol,
+                eventCountCol, fieldCountCol));
+        metadataEventTypesTable.getSelectionModel().selectedItemProperty()
+                .addListener((observable, oldValue, eventType) -> {
+                    if (jfrMetadataViewModel != null) {
+                        jfrMetadataViewModel.selectedEventTypeProperty().set(eventType);
                     }
                 });
     }
@@ -3483,6 +3545,8 @@ public class AppShellController {
         eventThreadTab.textProperty().bind(i18n.text("events.details.thread"));
         eventStackTraceTab.textProperty().bind(i18n.text("events.details.stackTrace"));
         analysisTitleLabel.textProperty().bind(i18n.text("analysis.title"));
+        metadataTitleLabel.textProperty().bind(i18n.text("metadata.title"));
+        metadataDetailTitleLabel.textProperty().bind(i18n.text("metadata.detail.title"));
         advancedJfrTitleLabel.textProperty().bind(i18n.text("advancedJfr.title"));
         advancedJfrHeatmapTab.textProperty().bind(i18n.text("advancedJfr.heatmap.tab"));
         advancedJfrMemoryTab.textProperty().bind(i18n.text("advancedJfr.memory.tab"));
@@ -3923,6 +3987,7 @@ public class AppShellController {
         bindClassLoading(workspace == null ? null : workspace.classLoadingViewModel());
         bindVmOperations(workspace == null ? null : workspace.vmOperationsViewModel());
         bindEnvironment(workspace == null ? null : workspace.environmentViewModel());
+        bindJfrMetadata(workspace == null ? null : workspace.jfrMetadataViewModel());
         bindAdvancedJfr(workspace == null ? null : workspace.advancedJfrViewModel());
         loadedWorkspace = workspace;
         loadSelectedWorkspaceSection();
@@ -3981,6 +4046,27 @@ public class AppShellController {
         bindAdvancedJfrMemoryText(nextViewModel);
         advancedJfrHeatmapView.setOnCellSelected(nextViewModel::selectCell);
         advancedJfrHeatmapView.setHeatmap(nextViewModel.heatmapProperty().get());
+    }
+
+    private void bindJfrMetadata(JfrMetadataViewModel nextViewModel) {
+        if (jfrMetadataViewModel != null) {
+            jfrMetadataViewModel.selectedEventTypeProperty().removeListener(metadataSelectedEventTypeListener);
+        }
+        metadataSummaryLabel.textProperty().unbind();
+        metadataDetailArea.textProperty().unbind();
+        metadataEventTypesTable.setItems(FXCollections.emptyObservableList());
+        metadataEventTypesTable.getSelectionModel().clearSelection();
+        metadataSummaryLabel.setText(i18n.get("metadata.summary"));
+        metadataDetailArea.setText("");
+        jfrMetadataViewModel = nextViewModel;
+        if (nextViewModel == null) {
+            return;
+        }
+        metadataSummaryLabel.textProperty().bind(nextViewModel.summaryProperty());
+        metadataDetailArea.textProperty().bind(nextViewModel.selectedDetailProperty());
+        metadataEventTypesTable.setItems(nextViewModel.eventTypesProperty());
+        metadataEventTypesTable.getSelectionModel().select(nextViewModel.selectedEventTypeProperty().get());
+        nextViewModel.selectedEventTypeProperty().addListener(metadataSelectedEventTypeListener);
     }
 
     private void bindAdvancedJfrMemoryText(AdvancedJfrViewModel nextViewModel) {
@@ -4191,12 +4277,14 @@ public class AppShellController {
         SecurityViewModel security = javaAppService != null ? new SecurityViewModel(javaAppService) : null;
         NativeLibraryViewModel nativeLibraries = javaAppService != null ? new NativeLibraryViewModel(javaAppService) : null;
         ThreadDumpViewModel threadDumps = javaAppService != null ? new ThreadDumpViewModel(javaAppService) : null;
+        JfrMetadataViewModel metadata = jfrMetadataService != null
+                ? new JfrMetadataViewModel(jfrMetadataService) : null;
         AdvancedJfrViewModel advancedJfr = advancedJfrAnalysisService != null
                 ? new AdvancedJfrViewModel(advancedJfrAnalysisService) : null;
         return new PreparedRecordingWorkspace(recording, overview, events, analysis, profiling, exceptions, threads,
                 fileio, socketio, locks, heap, leakSuspects, tlab, jvmInfo, gcConfig, gcSummary, gcDetails,
                 compilationsVm, codeCache, classLoading, vmOperations, environment, javaAppOverview, security,
-                nativeLibraries, threadDumps, advancedJfr);
+                nativeLibraries, threadDumps, metadata, advancedJfr);
     }
 
     private void attachPreparedRecordingWorkspace(PreparedRecordingWorkspace prepared) {
@@ -4212,7 +4300,7 @@ public class AppShellController {
                 prepared.jvmInfo(), prepared.gcConfig(), prepared.gcSummary(), prepared.gcDetails(),
                 prepared.compilations(), prepared.codeCache(), prepared.classLoading(), prepared.vmOperations(),
                 prepared.environment(), prepared.javaAppOverview(), prepared.security(), prepared.nativeLibraries(),
-                prepared.threadDumps(), prepared.advancedJfr());
+                prepared.threadDumps(), prepared.metadata(), prepared.advancedJfr());
         viewModel.showStatus(i18n.format("status.openedRecording", prepared.recording().name()));
         setRecordingOpening(false);
     }
@@ -4368,6 +4456,7 @@ public class AppShellController {
         switch (sectionId) {
             case "analysis" -> workspace.ruleResultsViewModel().analyze(recording);
             case "events" -> workspace.eventBrowserViewModel().loadRecording(recording);
+            case "metadata" -> loadIfPresent(workspace.jfrMetadataViewModel(), recording);
             case "advancedJfr" -> loadIfPresent(workspace.advancedJfrViewModel(), recording);
             case "profiling" -> loadIfPresent(workspace.profilingViewModel(), recording);
             case "exceptions" -> loadIfPresent(workspace.exceptionViewModel(), recording);
@@ -4535,6 +4624,12 @@ public class AppShellController {
         }
     }
 
+    private void loadIfPresent(JfrMetadataViewModel viewModel, RecordingSummary recording) {
+        if (viewModel != null) {
+            viewModel.load(recording);
+        }
+    }
+
     private void loadIfPresent(AdvancedJfrViewModel viewModel, RecordingSummary recording) {
         if (viewModel != null) {
             viewModel.load(recording);
@@ -4568,6 +4663,7 @@ public class AppShellController {
             SecurityViewModel security,
             NativeLibraryViewModel nativeLibraries,
             ThreadDumpViewModel threadDumps,
+            JfrMetadataViewModel metadata,
             AdvancedJfrViewModel advancedJfr) {
     }
 
