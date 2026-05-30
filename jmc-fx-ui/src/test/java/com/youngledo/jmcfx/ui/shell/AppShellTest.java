@@ -392,7 +392,7 @@ class AppShellTest {
         List<Element> tabs = childElements(childElement(profilingTreeTabs, "tabs"), "Tab");
 
         assertEquals(List.of("profilingCallGraphTab", "profilingCallersFlameTab", "profilingCalleesFlameTab",
-                        "profilingCallersTab", "profilingCalleesTab"),
+                        "profilingDependencyGraphTab", "profilingCallersTab", "profilingCalleesTab"),
                 tabs.stream().map(tab -> tab.getAttribute("fx:id")).toList());
 
         Element callGraphTab = elementByFxId(document, "profilingCallGraphTab");
@@ -414,6 +414,13 @@ class AppShellTest {
 
         assertFlameGraphTab(document, "profilingCallersFlameContainer");
         assertFlameGraphTab(document, "profilingCalleesFlameContainer");
+        Element dependencyGraphTab = elementByFxId(document, "profilingDependencyGraphTab");
+        assertEquals("Tab", dependencyGraphTab.getTagName());
+        assertEquals("Spinner", elementByFxId(document, "profilingDependencyDepthSpinner").getTagName());
+        assertEquals("TableView", elementByFxId(document, "profilingDependencyTable").getTagName());
+        Element dependencyContainer = elementByFxId(document, "profilingDependencyGraphContainer");
+        assertEquals("VBox", dependencyContainer.getTagName());
+        assertTrue(hasStyleClass(dependencyContainer, "profiling-call-graph-container"));
         assertEquals("TreeView", elementByFxId(document, "profilingCallersTree").getTagName());
         assertEquals("TreeView", elementByFxId(document, "profilingCalleesTree").getTagName());
     }
@@ -439,6 +446,11 @@ class AppShellTest {
         assertTrue(controller.contains("@FXML private Button profilingCallGraphFitButton;"));
         assertTrue(controller.contains("@FXML private VBox profilingCallGraphContainer;"));
         assertTrue(controller.contains("private CallGraphView profilingCallGraphView;"));
+        assertTrue(controller.contains("@FXML private Tab profilingDependencyGraphTab;"));
+        assertTrue(controller.contains("@FXML private Spinner<Integer> profilingDependencyDepthSpinner;"));
+        assertTrue(controller.contains("@FXML private TableView<DependencyGraphEdge> profilingDependencyTable;"));
+        assertTrue(controller.contains("@FXML private VBox profilingDependencyGraphContainer;"));
+        assertTrue(controller.contains("private CallGraphView profilingDependencyGraphView;"));
         assertTrue(controller.contains("@FXML private Tab profilingCallersFlameTab;"));
         assertTrue(controller.contains("@FXML private Button profilingCallersFlameOrientationButton;"));
         assertTrue(controller.contains("@FXML private VBox profilingCallersFlameContainer;"));
@@ -448,23 +460,29 @@ class AppShellTest {
         assertTrue(controller.contains("private FlameGraphView profilingCallersFlameGraphView;"));
         assertTrue(controller.contains("private FlameGraphView profilingCalleesFlameGraphView;"));
         assertTrue(controller.contains("profilingCallGraphView.emptyTextProperty().bind(i18n.text(\"profiling.callGraph.empty\"))"));
+        assertTrue(controller.contains("profilingDependencyGraphView.emptyTextProperty().bind(i18n.text(\"profiling.dependency.empty\"))"));
         assertTrue(controller.contains("profilingCallGraphContainer.getChildren().setAll(profilingCallGraphView)"));
+        assertTrue(controller.contains("profilingDependencyGraphContainer.getChildren().setAll(profilingDependencyGraphView)"));
         assertTrue(controller.contains("profilingCallGraphView.setLayout(null)"));
+        assertTrue(controller.contains("profilingDependencyGraphView.setLayout(null)"));
         assertTrue(controller.contains("profilingCallersFlameContainer.getChildren().setAll(profilingCallersFlameGraphView)"));
         assertTrue(controller.contains("profilingCalleesFlameContainer.getChildren().setAll(profilingCalleesFlameGraphView)"));
         assertTrue(controller.contains("profilingCallersFlameGraphView.setLayout(null)"));
         assertTrue(controller.contains("profilingCalleesFlameGraphView.setLayout(null)"));
         assertTrue(controller.contains("currentProfilingViewModel.callGraphProperty().removeListener(callGraphListener)"));
+        assertTrue(controller.contains("currentProfilingViewModel.dependencyGraphProperty().removeListener(dependencyGraphListener)"));
         assertTrue(controller.contains("currentProfilingViewModel.callersTreeProperty().removeListener(callersTreeListener)"));
         assertTrue(controller.contains("currentProfilingViewModel.calleesTreeProperty().removeListener(calleesTreeListener)"));
         assertTrue(controller.contains("currentProfilingViewModel.callersFlameGraphProperty().removeListener(callersFlameGraphListener)"));
         assertTrue(controller.contains("currentProfilingViewModel.calleesFlameGraphProperty().removeListener(calleesFlameGraphListener)"));
         assertTrue(controller.contains("nextViewModel.callGraphProperty().addListener(callGraphListener)"));
+        assertTrue(controller.contains("nextViewModel.dependencyGraphProperty().addListener(dependencyGraphListener)"));
         assertTrue(controller.contains("nextViewModel.callersTreeProperty().addListener(callersTreeListener)"));
         assertTrue(controller.contains("nextViewModel.calleesTreeProperty().addListener(calleesTreeListener)"));
         assertTrue(controller.contains("nextViewModel.callersFlameGraphProperty().addListener(callersFlameGraphListener)"));
         assertTrue(controller.contains("nextViewModel.calleesFlameGraphProperty().addListener(calleesFlameGraphListener)"));
         assertTrue(controller.contains("nextViewModel.callGraphProperty().get()"));
+        assertTrue(controller.contains("nextViewModel.dependencyGraphProperty().get()"));
         assertTrue(controller.contains("nextViewModel.callersFlameGraphProperty().get()"));
         assertTrue(controller.contains("nextViewModel.calleesFlameGraphProperty().get()"));
         assertTrue(controller.contains("setCallGraphDirection"));
@@ -476,13 +494,16 @@ class AppShellTest {
         assertTrue(controller.contains("CallGraphDirection selectedDirection = profilingCallGraphDirectionCombo.getSelectionModel().getSelectedItem()"));
         assertTrue(controller.contains("profilingCallGraphDirectionCombo.getSelectionModel().select(selectedDirection)"));
         assertTrue(controller.contains("profilingCallGraphTab.textProperty().bind(i18n.text(\"profiling.tab.callGraph\"))"));
+        assertTrue(controller.contains("profilingDependencyGraphTab.textProperty().bind(i18n.text(\"profiling.tab.dependencyGraph\"))"));
         assertTrue(controller.contains("profilingCallGraphDirectionCombo.promptTextProperty().bind(i18n.text(\"profiling.callGraph.direction\"))"));
         assertTrue(controller.contains("profilingCallGraphDepthLabel.textProperty().bind(i18n.text(\"profiling.callGraph.depth\"))"));
+        assertTrue(controller.contains("profilingDependencyDepthLabel.textProperty().bind(i18n.text(\"profiling.dependency.depth\"))"));
         assertTrue(controller.contains("profilingCallersFlameTab.textProperty().bind(i18n.text(\"profiling.tab.callersFlame\"))"));
         assertTrue(controller.contains("profilingCalleesFlameTab.textProperty().bind(i18n.text(\"profiling.tab.calleesFlame\"))"));
         assertTrue(controller.contains("profilingCallersFlameGraphView.emptyTextProperty().bind(i18n.text(\"profiling.flame.empty\"))"));
         assertTrue(controller.contains("profilingCalleesFlameGraphView.emptyTextProperty().bind(i18n.text(\"profiling.flame.empty\"))"));
         assertTrue(controller.contains("configureGraphZoomButtons(profilingCallGraphView"));
+        assertTrue(controller.contains("configureGraphZoomButtons(profilingDependencyGraphView"));
         assertTrue(controller.contains("configureFlameGraphButtons(profilingCallersFlameGraphView"));
         assertTrue(controller.contains("toggleFlameGraphOrientation"));
         assertTrue(controller.contains("bindFlameGraphToolbarVisibility(profilingCallersFlameToolbar"));
@@ -510,6 +531,7 @@ class AppShellTest {
         assertTrue(css.contains(".profiling-graph-toolbar"));
         assertTrue(css.contains(".profiling-graph-tool-button"));
         assertTrue(english.contains("profiling.tab.callGraph=Call Graph"));
+        assertTrue(english.contains("profiling.tab.dependencyGraph=Dependency Graph"));
         assertTrue(english.contains("profiling.tab.callersFlame=Caller Flame Graph"));
         assertTrue(english.contains("profiling.tab.calleesFlame=Callee Flame Graph"));
         assertTrue(english.contains("profiling.callGraph.empty=Select a method to view the call graph."));
@@ -517,6 +539,12 @@ class AppShellTest {
         assertTrue(english.contains("profiling.callGraph.direction.callers=Callers"));
         assertTrue(english.contains("profiling.callGraph.direction.callees=Callees"));
         assertTrue(english.contains("profiling.callGraph.depth=Depth"));
+        assertTrue(english.contains("profiling.dependency.empty=No package dependencies found in execution samples."));
+        assertTrue(english.contains("profiling.dependency.depth=Package Depth"));
+        assertTrue(english.contains("profiling.dependency.column.source=Source"));
+        assertTrue(english.contains("profiling.dependency.column.target=Target"));
+        assertTrue(english.contains("profiling.dependency.column.count=Count"));
+        assertTrue(english.contains("profiling.dependency.column.percentage=Percentage"));
         assertTrue(english.contains("profiling.graph.zoomIn=Zoom in"));
         assertTrue(english.contains("profiling.graph.zoomOut=Zoom out"));
         assertTrue(english.contains("profiling.graph.resetZoom=Reset zoom"));
@@ -526,6 +554,7 @@ class AppShellTest {
         assertTrue(english.contains("profiling.flame.orientation.icicle=Icicle"));
         assertTrue(english.contains("profiling.flame.orientation.flame=Flame"));
         assertTrue(chinese.contains("profiling.tab.callGraph=调用图"));
+        assertTrue(chinese.contains("profiling.tab.dependencyGraph=依赖图"));
         assertTrue(chinese.contains("profiling.tab.callersFlame=调用者火焰图"));
         assertTrue(chinese.contains("profiling.tab.calleesFlame=被调用者火焰图"));
         assertTrue(chinese.contains("profiling.callGraph.empty=选择一个方法查看调用图。"));
@@ -533,6 +562,12 @@ class AppShellTest {
         assertTrue(chinese.contains("profiling.callGraph.direction.callers=调用者"));
         assertTrue(chinese.contains("profiling.callGraph.direction.callees=被调用者"));
         assertTrue(chinese.contains("profiling.callGraph.depth=深度"));
+        assertTrue(chinese.contains("profiling.dependency.empty=执行采样中未找到包依赖。"));
+        assertTrue(chinese.contains("profiling.dependency.depth=包深度"));
+        assertTrue(chinese.contains("profiling.dependency.column.source=来源"));
+        assertTrue(chinese.contains("profiling.dependency.column.target=目标"));
+        assertTrue(chinese.contains("profiling.dependency.column.count=次数"));
+        assertTrue(chinese.contains("profiling.dependency.column.percentage=百分比"));
         assertTrue(chinese.contains("profiling.graph.zoomIn=放大"));
         assertTrue(chinese.contains("profiling.graph.zoomOut=缩小"));
         assertTrue(chinese.contains("profiling.graph.resetZoom=重置缩放"));

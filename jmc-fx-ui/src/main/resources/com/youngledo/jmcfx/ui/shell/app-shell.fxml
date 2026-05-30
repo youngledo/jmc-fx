@@ -504,6 +504,28 @@
                                     </ScrollPane>
                                 </VBox>
                             </Tab>
+                            <Tab fx:id="profilingDependencyGraphTab" closable="false">
+                                <VBox styleClass="profiling-graph-tab-content" spacing="8">
+                                    <HBox fx:id="profilingDependencyToolbar" spacing="8" alignment="CENTER_LEFT">
+                                        <styleClass>
+                                            <String fx:value="page-toolbar"/>
+                                            <String fx:value="profiling-graph-toolbar"/>
+                                        </styleClass>
+                                        <Label fx:id="profilingDependencyDepthLabel"/>
+                                        <Spinner fx:id="profilingDependencyDepthSpinner" prefWidth="110"/>
+                                        <Button fx:id="profilingDependencyZoomOutButton" styleClass="profiling-graph-tool-button"/>
+                                        <Button fx:id="profilingDependencyResetZoomButton" styleClass="profiling-graph-tool-button"/>
+                                        <Button fx:id="profilingDependencyZoomInButton" styleClass="profiling-graph-tool-button"/>
+                                        <Button fx:id="profilingDependencyFitButton" styleClass="profiling-graph-tool-button"/>
+                                    </HBox>
+                                    <SplitPane VBox.vgrow="ALWAYS" DividerPositions="0.35">
+                                        <TableView fx:id="profilingDependencyTable" styleClass="dense-table" prefWidth="360"/>
+                                        <ScrollPane fx:id="profilingDependencyGraphScrollPane" fitToWidth="false" fitToHeight="false" pannable="true">
+                                            <VBox fx:id="profilingDependencyGraphContainer" styleClass="profiling-call-graph-container"/>
+                                        </ScrollPane>
+                                    </SplitPane>
+                                </VBox>
+                            </Tab>
                             <Tab fx:id="profilingCallersTab" closable="false">
                                 <TreeView fx:id="profilingCallersTree"/>
                             </Tab>

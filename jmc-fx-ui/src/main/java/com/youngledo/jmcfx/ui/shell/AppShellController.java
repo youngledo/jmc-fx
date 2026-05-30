@@ -20,6 +20,7 @@ import com.youngledo.jmcfx.domain.model.CodeCacheSweep;
 import com.youngledo.jmcfx.domain.model.CompilationEvent;
 import com.youngledo.jmcfx.domain.model.ConstantPoolEntry;
 import com.youngledo.jmcfx.domain.model.ConstantPoolType;
+import com.youngledo.jmcfx.domain.model.DependencyGraphEdge;
 import com.youngledo.jmcfx.domain.model.DiagnosticCommandInfo;
 import com.youngledo.jmcfx.domain.model.EnvironmentVariable;
 import com.youngledo.jmcfx.domain.model.EventColumn;
@@ -524,6 +525,17 @@ public class AppShellController {
     @FXML private Button profilingCallGraphFitButton;
     @FXML private ScrollPane profilingCallGraphScrollPane;
     @FXML private VBox profilingCallGraphContainer;
+    @FXML private Tab profilingDependencyGraphTab;
+    @FXML private HBox profilingDependencyToolbar;
+    @FXML private Label profilingDependencyDepthLabel;
+    @FXML private Spinner<Integer> profilingDependencyDepthSpinner;
+    @FXML private Button profilingDependencyZoomOutButton;
+    @FXML private Button profilingDependencyResetZoomButton;
+    @FXML private Button profilingDependencyZoomInButton;
+    @FXML private Button profilingDependencyFitButton;
+    @FXML private TableView<DependencyGraphEdge> profilingDependencyTable;
+    @FXML private ScrollPane profilingDependencyGraphScrollPane;
+    @FXML private VBox profilingDependencyGraphContainer;
     @FXML private Tab profilingCallersFlameTab;
     @FXML private HBox profilingCallersFlameToolbar;
     @FXML private Button profilingCallersFlameOrientationButton;
@@ -545,6 +557,7 @@ public class AppShellController {
     @FXML private Tab profilingCalleesTab;
     @FXML private TreeView<StackTreeNode> profilingCalleesTree;
     private CallGraphView profilingCallGraphView;
+    private CallGraphView profilingDependencyGraphView;
     private FlameGraphView profilingCallersFlameGraphView;
     private FlameGraphView profilingCalleesFlameGraphView;
     private boolean callGraphZoomGestureActive;
@@ -554,6 +567,8 @@ public class AppShellController {
             (observable, oldValue, newValue) -> rebuildStackTree(profilingCalleesTree, newValue);
     private final ChangeListener<CallGraphLayout> callGraphListener =
             (observable, oldValue, newValue) -> profilingCallGraphView.setLayout(newValue);
+    private final ChangeListener<CallGraphLayout> dependencyGraphListener =
+            (observable, oldValue, newValue) -> profilingDependencyGraphView.setLayout(newValue);
     private final ChangeListener<FlameGraphLayout> callersFlameGraphListener =
             (observable, oldValue, newValue) -> profilingCallersFlameGraphView.setLayout(newValue);
     private final ChangeListener<FlameGraphLayout> calleesFlameGraphListener =
@@ -2535,12 +2550,15 @@ public class AppShellController {
     private void configureProfilingTable() {
         profilingTable.setPlaceholder(localizedTablePlaceholder("profiling.empty"));
         profilingCallGraphView = new CallGraphView();
+        profilingDependencyGraphView = new CallGraphView();
         profilingCallersFlameGraphView = new FlameGraphView();
         profilingCalleesFlameGraphView = new FlameGraphView();
         profilingCallGraphView.emptyTextProperty().bind(i18n.text("profiling.callGraph.empty"));
+        profilingDependencyGraphView.emptyTextProperty().bind(i18n.text("profiling.dependency.empty"));
         profilingCallersFlameGraphView.emptyTextProperty().bind(i18n.text("profiling.flame.empty"));
         profilingCalleesFlameGraphView.emptyTextProperty().bind(i18n.text("profiling.flame.empty"));
         profilingCallGraphContainer.getChildren().setAll(profilingCallGraphView);
+        profilingDependencyGraphContainer.getChildren().setAll(profilingDependencyGraphView);
         profilingCallersFlameContainer.getChildren().setAll(profilingCallersFlameGraphView);
         profilingCalleesFlameContainer.getChildren().setAll(profilingCalleesFlameGraphView);
         profilingCallGraphDirectionCombo.setItems(FXCollections.observableArrayList(CallGraphDirection.values()));
@@ -2580,6 +2598,20 @@ public class AppShellController {
                 profilingCallGraphZoomInButton,
                 profilingCallGraphFitButton);
         configureCallGraphGestures(profilingCallGraphView, profilingCallGraphScrollPane);
+        profilingDependencyDepthSpinner.setValueFactory(
+                new SpinnerValueFactory.IntegerSpinnerValueFactory(1, 6, 2));
+        profilingDependencyDepthSpinner.valueProperty()
+                .addListener((obs, old, val) -> {
+                    if (profilingViewModel != null && val != null) {
+                        profilingViewModel.setDependencyPackageDepth(val);
+                    }
+                });
+        configureGraphZoomButtons(profilingDependencyGraphView,
+                profilingDependencyZoomOutButton,
+                profilingDependencyResetZoomButton,
+                profilingDependencyZoomInButton,
+                profilingDependencyFitButton);
+        configureCallGraphGestures(profilingDependencyGraphView, profilingDependencyGraphScrollPane);
         configureFlameGraphButtons(profilingCallersFlameGraphView,
                 profilingCallersFlameOrientationButton,
                 profilingCallersFlameZoomOutButton,
@@ -2620,6 +2652,37 @@ public class AppShellController {
         profilingTable.getColumns().setAll(List.of(methodCol, frameTypeCol, countCol, pctCol));
         profilingTable.getSelectionModel().selectedItemProperty()
                 .addListener((obs, old, val) -> selectProfilingMethod(val));
+
+        TableColumn<DependencyGraphEdge, String> sourceCol = new TableColumn<>();
+        sourceCol.textProperty().bind(i18n.text("profiling.dependency.column.source"));
+        sourceCol.setPrefWidth(150);
+        sourceCol.setCellValueFactory(cell -> new ReadOnlyStringWrapper(cell.getValue().source()));
+
+        TableColumn<DependencyGraphEdge, String> targetCol = new TableColumn<>();
+        targetCol.textProperty().bind(i18n.text("profiling.dependency.column.target"));
+        targetCol.setPrefWidth(150);
+        targetCol.setCellValueFactory(cell -> new ReadOnlyStringWrapper(cell.getValue().target()));
+
+        TableColumn<DependencyGraphEdge, Number> dependencyCountCol = new TableColumn<>();
+        dependencyCountCol.textProperty().bind(i18n.text("profiling.dependency.column.count"));
+        dependencyCountCol.setPrefWidth(80);
+        dependencyCountCol.setCellValueFactory(cell -> new javafx.beans.property.SimpleIntegerProperty(cell.getValue().count()));
+        useFormattedIntegerCells(dependencyCountCol);
+
+        TableColumn<DependencyGraphEdge, String> dependencyPctCol = new TableColumn<>();
+        dependencyPctCol.textProperty().bind(i18n.text("profiling.dependency.column.percentage"));
+        dependencyPctCol.setPrefWidth(90);
+        dependencyPctCol.setCellValueFactory(cell -> new ReadOnlyStringWrapper(
+                DisplayFormats.formatPercent(cell.getValue().percentage())));
+
+        profilingDependencyTable.setPlaceholder(localizedTablePlaceholder("profiling.dependency.empty"));
+        profilingDependencyTable.getColumns().setAll(List.of(sourceCol, targetCol, dependencyCountCol, dependencyPctCol));
+        profilingDependencyTable.getSelectionModel().selectedItemProperty()
+                .addListener((obs, old, val) -> {
+                    if (profilingViewModel != null) {
+                        profilingViewModel.selectedDependencyEdgeProperty().set(val);
+                    }
+                });
 
         profilingCallersTree.setShowRoot(false);
         profilingCallersTree.setCellFactory(tree -> new javafx.scene.control.TreeCell<>() {
@@ -3028,15 +3091,18 @@ public class AppShellController {
         ProfilingViewModel currentProfilingViewModel = profilingViewModel;
         if (currentProfilingViewModel != null) {
             currentProfilingViewModel.callGraphProperty().removeListener(callGraphListener);
+            currentProfilingViewModel.dependencyGraphProperty().removeListener(dependencyGraphListener);
             currentProfilingViewModel.callersTreeProperty().removeListener(callersTreeListener);
             currentProfilingViewModel.calleesTreeProperty().removeListener(calleesTreeListener);
             currentProfilingViewModel.callersFlameGraphProperty().removeListener(callersFlameGraphListener);
             currentProfilingViewModel.calleesFlameGraphProperty().removeListener(calleesFlameGraphListener);
         }
         profilingTable.setItems(FXCollections.emptyObservableList());
+        profilingDependencyTable.setItems(FXCollections.emptyObservableList());
         profilingCallersTree.setRoot(new TreeItem<>());
         profilingCalleesTree.setRoot(new TreeItem<>());
         profilingCallGraphView.setLayout(null);
+        profilingDependencyGraphView.setLayout(null);
         profilingCallersFlameGraphView.setLayout(null);
         profilingCalleesFlameGraphView.setLayout(null);
         profilingViewModel = nextViewModel;
@@ -3044,7 +3110,9 @@ public class AppShellController {
             return;
         }
         profilingTable.setItems(nextViewModel.hotMethodsProperty());
+        profilingDependencyTable.setItems(nextViewModel.dependencyEdgesProperty());
         nextViewModel.callGraphProperty().addListener(callGraphListener);
+        nextViewModel.dependencyGraphProperty().addListener(dependencyGraphListener);
         nextViewModel.callersTreeProperty().addListener(callersTreeListener);
         nextViewModel.calleesTreeProperty().addListener(calleesTreeListener);
         nextViewModel.callersFlameGraphProperty().addListener(callersFlameGraphListener);
@@ -3052,10 +3120,12 @@ public class AppShellController {
         rebuildStackTree(profilingCallersTree, nextViewModel.callersTreeProperty().get());
         rebuildStackTree(profilingCalleesTree, nextViewModel.calleesTreeProperty().get());
         profilingCallGraphView.setLayout(nextViewModel.callGraphProperty().get());
+        profilingDependencyGraphView.setLayout(nextViewModel.dependencyGraphProperty().get());
         profilingCallersFlameGraphView.setLayout(nextViewModel.callersFlameGraphProperty().get());
         profilingCalleesFlameGraphView.setLayout(nextViewModel.calleesFlameGraphProperty().get());
         profilingCallGraphDirectionCombo.getSelectionModel().select(nextViewModel.callGraphDirectionProperty().get());
         profilingCallGraphDepthSpinner.getValueFactory().setValue(nextViewModel.callGraphMaxDepthProperty().get());
+        profilingDependencyDepthSpinner.getValueFactory().setValue(nextViewModel.dependencyPackageDepthProperty().get());
     }
 
     private void bindExceptions(ExceptionViewModel nextViewModel) {
@@ -3658,6 +3728,8 @@ public class AppShellController {
         profilingCallGraphTab.textProperty().bind(i18n.text("profiling.tab.callGraph"));
         profilingCallGraphDirectionCombo.promptTextProperty().bind(i18n.text("profiling.callGraph.direction"));
         profilingCallGraphDepthLabel.textProperty().bind(i18n.text("profiling.callGraph.depth"));
+        profilingDependencyGraphTab.textProperty().bind(i18n.text("profiling.tab.dependencyGraph"));
+        profilingDependencyDepthLabel.textProperty().bind(i18n.text("profiling.dependency.depth"));
         profilingCallersFlameTab.textProperty().bind(i18n.text("profiling.tab.callersFlame"));
         profilingCalleesFlameTab.textProperty().bind(i18n.text("profiling.tab.calleesFlame"));
         profilingCallersTab.textProperty().bind(i18n.text("profiling.tab.callers"));
