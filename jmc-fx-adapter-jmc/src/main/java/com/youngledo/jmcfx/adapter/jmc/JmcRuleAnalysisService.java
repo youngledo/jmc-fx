@@ -16,6 +16,7 @@ import org.openjdk.jmc.flightrecorder.rules.ResultToolkit;
 import org.openjdk.jmc.flightrecorder.rules.RuleRegistry;
 import org.openjdk.jmc.flightrecorder.rules.Severity;
 import org.openjdk.jmc.flightrecorder.rules.TypedResult;
+import org.openjdk.jmc.flightrecorder.rules.util.JfrRuleTopics;
 import org.openjdk.jmc.flightrecorder.rules.util.RulesToolkit;
 
 import com.youngledo.jmcfx.domain.model.RecordingSummary;
@@ -50,9 +51,6 @@ public class JmcRuleAnalysisService implements RuleAnalysisService {
 					continue;
 				}
 				Severity jmcSeverity = result.getSeverity();
-				if (jmcSeverity == Severity.NA || jmcSeverity == Severity.IGNORE) {
-					continue;
-				}
 				IRule rule = entry.getKey();
 				results.add(new RuleResult(
 						rule.getId(),
@@ -61,7 +59,10 @@ public class JmcRuleAnalysisService implements RuleAnalysisService {
 						severityToScore(jmcSeverity),
 						rule.getTopic(),
 						formatPlainText(rule, result, result.getSummary()),
-						buildExplanation(rule, result)));
+						buildExplanation(rule, result),
+						"",
+						buildRecommendation(rule, result),
+						relatedPageIdFor(rule.getTopic())));
 			} catch (Exception exception) {
 				// Skip rules that fail to evaluate
 			}
@@ -78,7 +79,8 @@ public class JmcRuleAnalysisService implements RuleAnalysisService {
 			case OK -> com.youngledo.jmcfx.domain.model.Severity.OK;
 			case INFO -> com.youngledo.jmcfx.domain.model.Severity.INFO;
 			case WARNING -> com.youngledo.jmcfx.domain.model.Severity.WARNING;
-			case NA, IGNORE -> com.youngledo.jmcfx.domain.model.Severity.UNKNOWN;
+			case NA -> com.youngledo.jmcfx.domain.model.Severity.UNAVAILABLE;
+			case IGNORE -> com.youngledo.jmcfx.domain.model.Severity.IGNORED;
 		};
 	}
 
@@ -105,6 +107,48 @@ public class JmcRuleAnalysisService implements RuleAnalysisService {
 			sb.append(solution);
 		}
 		return sb.toString();
+	}
+
+	static String buildRecommendation(IRule rule, IResult result) {
+		return formatPlainText(rule, result, result.getSolution());
+	}
+
+	static String relatedPageIdFor(String topic) {
+		if (topic == null || topic.isBlank()) {
+			return "";
+		}
+		return switch (topic) {
+			case JfrRuleTopics.AGENT_INFORMATION -> "agents";
+			case JfrRuleTopics.BIASED_LOCKING, JfrRuleTopics.LOCK_INSTANCES -> "locks";
+			case JfrRuleTopics.CLASS_LOADING -> "classLoading";
+			case JfrRuleTopics.CODE_CACHE -> "codeCache";
+			case JfrRuleTopics.COMPILATIONS -> "compilations";
+			case JfrRuleTopics.CONSTANT_POOLS -> "constantPools";
+			case JfrRuleTopics.ENVIRONMENT_VARIABLES -> "envVars";
+			case JfrRuleTopics.EXCEPTIONS -> "exceptions";
+			case JfrRuleTopics.FILE_IO -> "fileio";
+			case JfrRuleTopics.GARBAGE_COLLECTION -> "gcDetails";
+			case JfrRuleTopics.GC_CONFIGURATION -> "gcConfig";
+			case JfrRuleTopics.GC_SUMMARY -> "gcSummary";
+			case JfrRuleTopics.HEAP -> "heap";
+			case JfrRuleTopics.JAVA_APPLICATION -> "javaApplication";
+			case JfrRuleTopics.JVM_INFORMATION, JfrRuleTopics.SYSTEM_INFORMATION -> "jvmInfo";
+			case JfrRuleTopics.MEMORY_LEAK -> "leaks";
+			case JfrRuleTopics.METHOD_PROFILING -> "profiling";
+			case JfrRuleTopics.NATIVE_LIBRARY -> "nativeLibraries";
+			case JfrRuleTopics.PROCESSES -> "processes";
+			case JfrRuleTopics.RECORDING -> "recordingInfo";
+			case JfrRuleTopics.SOCKET_IO -> "socketio";
+			case JfrRuleTopics.SYSTEM_PROPERTIES -> "sysProps";
+			case JfrRuleTopics.THREAD_DUMPS -> "threadDumps";
+			case JfrRuleTopics.THREADS -> "threads";
+			case JfrRuleTopics.TLAB -> "tlab";
+			case JfrRuleTopics.VM_OPERATIONS -> "vmOperations";
+			case "DMS" -> "recordingInfo";
+			case "javaFx" -> "javaFxEvents";
+			case "security" -> "security";
+			default -> "";
+		};
 	}
 
 	/// Resolves placeholders without HTML, then strips any remaining tags

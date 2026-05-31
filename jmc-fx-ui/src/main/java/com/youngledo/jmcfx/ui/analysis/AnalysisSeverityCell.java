@@ -23,6 +23,8 @@ public class AnalysisSeverityCell<S> extends TableCell<S, Severity> {
 
     static String severitySymbol(Severity severity) {
         return switch (severity) {
+            case IGNORED -> "–";
+            case UNAVAILABLE -> "N/A";
             case OK -> "✓";
             case INFO -> "ℹ";
             case WARNING -> "⚠";
@@ -33,6 +35,8 @@ public class AnalysisSeverityCell<S> extends TableCell<S, Severity> {
 
     static String severityStyle(Severity severity) {
         return switch (severity) {
+            case IGNORED -> "severity-ignored";
+            case UNAVAILABLE -> "severity-unavailable";
             case OK -> "severity-ok";
             case INFO -> "severity-info";
             case WARNING -> "severity-warning";

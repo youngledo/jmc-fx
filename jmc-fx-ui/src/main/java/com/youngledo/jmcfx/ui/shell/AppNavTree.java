@@ -38,10 +38,13 @@ final class AppNavTree extends TreeView<AppNavItem> {
         rootItem = new TreeItem<>(AppNavItem.group("nav.root", Material2AL.ACCOUNT_TREE));
         TreeItem<AppNavItem> global = group("nav.group.global", Material2AL.HOME, NavIconTone.WORKSPACE);
         TreeItem<AppNavItem> recording = group("nav.group.recording", Material2AL.ANALYTICS, NavIconTone.RECORDING);
-        TreeItem<AppNavItem> javaApp = group("nav.group.javaApplication", Material2AL.INSIGHTS, NavIconTone.JAVA);
+        TreeItem<AppNavItem> javaApp = pageGroup("javaApplication", "nav.group.javaApplication",
+                Material2AL.INSIGHTS, NavIconTone.JAVA);
         TreeItem<AppNavItem> memoryAnalysis = group("nav.group.memoryAnalysis", Material2MZ.MEMORY, NavIconTone.MEMORY);
-        TreeItem<AppNavItem> jvmInternals = group("nav.group.jvmInternals", Material2MZ.MEMORY, NavIconTone.JVM);
-        TreeItem<AppNavItem> environment = group("nav.group.environment", Material2MZ.PUBLIC, NavIconTone.ENVIRONMENT);
+        TreeItem<AppNavItem> jvmInternals = pageGroup("jvmInternals", "nav.group.jvmInternals",
+                Material2MZ.MEMORY, NavIconTone.JVM);
+        TreeItem<AppNavItem> environment = pageGroup("environment", "nav.group.environment",
+                Material2MZ.PUBLIC, NavIconTone.ENVIRONMENT);
         TreeItem<AppNavItem> home = page("home", "nav.home", Material2AL.HOME, false, NavIconTone.WORKSPACE);
         TreeItem<AppNavItem> jvms = page("jvms", "jvms.title", Material2MZ.MEMORY, AppWorkspaceKind.LIVE_JVM,
                 NavIconTone.WORKSPACE);
@@ -114,6 +117,9 @@ final class AppNavTree extends TreeView<AppNavItem> {
         pageItems.put("events", events);
         pageItems.put("metadata", metadata);
         pageItems.put("advancedJfr", advancedJfr);
+        pageItems.put("javaApplication", javaApp);
+        pageItems.put("jvmInternals", jvmInternals);
+        pageItems.put("environment", environment);
         pageItems.put("profiling", profiling);
         pageItems.put("exceptions", exceptions);
         pageItems.put("threads", threads);
@@ -274,6 +280,11 @@ final class AppNavTree extends TreeView<AppNavItem> {
 
     private static TreeItem<AppNavItem> group(String titleKey, org.kordamp.ikonli.Ikon icon, NavIconTone iconTone) {
         return new TreeItem<>(AppNavItem.group(titleKey, icon, iconTone));
+    }
+
+    private static TreeItem<AppNavItem> pageGroup(String sectionId, String titleKey, org.kordamp.ikonli.Ikon icon,
+            NavIconTone iconTone) {
+        return new TreeItem<>(AppNavItem.recordingPageGroup(sectionId, titleKey, icon, iconTone));
     }
 
     private static TreeItem<AppNavItem> page(String sectionId, String titleKey, org.kordamp.ikonli.Ikon icon,

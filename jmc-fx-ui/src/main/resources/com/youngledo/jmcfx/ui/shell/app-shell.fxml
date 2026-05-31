@@ -4,6 +4,7 @@
 <?import javafx.scene.control.ComboBox?>
 <?import javafx.scene.control.Label?>
 <?import javafx.scene.control.ListView?>
+<?import javafx.scene.control.CheckBox?>
 <?import javafx.scene.control.MenuButton?>
 <?import javafx.scene.control.ProgressBar?>
 <?import javafx.scene.control.RadioButton?>
@@ -21,6 +22,7 @@
 <?import javafx.geometry.Insets?>
 <?import javafx.scene.layout.BorderPane?>
 <?import javafx.scene.layout.FlowPane?>
+<?import javafx.scene.layout.GridPane?>
 <?import javafx.scene.layout.HBox?>
 <?import javafx.scene.layout.StackPane?>
 <?import javafx.scene.layout.VBox?>
@@ -120,21 +122,46 @@
                 </TabPane>
             </VBox>
             <VBox fx:id="analysisPane" spacing="8">
+                <styleClass>
+                    <String fx:value="split-table-detail-page"/>
+                </styleClass>
                 <Label fx:id="analysisTitleLabel" styleClass="view-title"/>
+                <HBox fx:id="analysisFilterBar" spacing="8">
+                    <styleClass>
+                        <String fx:value="page-toolbar"/>
+                        <String fx:value="analysis-filter-bar"/>
+                    </styleClass>
+                    <children>
+                        <TextField fx:id="analysisSearchField" prefWidth="220"/>
+                        <Label fx:id="analysisMinimumScoreLabel"/>
+                        <Spinner fx:id="analysisMinimumScoreSpinner" prefWidth="92"/>
+                        <CheckBox fx:id="analysisShowOkCheckBox"/>
+                        <CheckBox fx:id="analysisShowIgnoredCheckBox"/>
+                        <CheckBox fx:id="analysisShowUnavailableCheckBox"/>
+                    </children>
+                </HBox>
                 <SplitPane orientation="VERTICAL" VBox.vgrow="ALWAYS" DividerPositions="0.6">
                     <items>
                         <TableView fx:id="analysisTable" styleClass="dense-table" prefHeight="400"/>
-                        <VBox>
+                        <VBox fx:id="analysisDetailPane" spacing="6">
                             <styleClass>
                                 <String fx:value="detail-panel"/>
                             </styleClass>
                             <children>
-                                <Label fx:id="analysisDetailTitle">
+                                <Label fx:id="analysisDetailExplanationCaption" styleClass="detail-section-label"/>
+                                <TextArea fx:id="analysisDetailExplanationArea" wrapText="true" editable="false" VBox.vgrow="ALWAYS">
                                     <styleClass>
-                                        <String fx:value="detail-panel-title"/>
+                                        <String fx:value="detail-panel-body"/>
                                     </styleClass>
-                                </Label>
-                                <TextArea fx:id="analysisDetailExplanation" wrapText="true" editable="false" VBox.vgrow="ALWAYS">
+                                </TextArea>
+                                <Label fx:id="analysisDetailEvidenceCaption" styleClass="detail-section-label"/>
+                                <TextArea fx:id="analysisDetailEvidenceArea" wrapText="true" editable="false">
+                                    <styleClass>
+                                        <String fx:value="detail-panel-body"/>
+                                    </styleClass>
+                                </TextArea>
+                                <Label fx:id="analysisDetailRecommendationCaption" styleClass="detail-section-label"/>
+                                <TextArea fx:id="analysisDetailRecommendationArea" wrapText="true" editable="false">
                                     <styleClass>
                                         <String fx:value="detail-panel-body"/>
                                     </styleClass>
@@ -630,6 +657,154 @@
                         </tabs>
                     </TabPane>
                 </SplitPane>
+            </VBox>
+            <VBox fx:id="javaApplicationPane" visible="false" managed="false">
+                <styleClass>
+                    <String fx:value="page"/>
+                    <String fx:value="overview-page"/>
+                    <String fx:value="java-application-overview-page"/>
+                </styleClass>
+                <VBox styleClass="page-header">
+                    <Label fx:id="javaApplicationTitleLabel" styleClass="view-title"/>
+                    <Label fx:id="javaApplicationSummaryLabel" wrapText="true"/>
+                </VBox>
+                <GridPane fx:id="javaApplicationSummaryGrid" hgap="12" vgap="12">
+                    <styleClass>
+                        <String fx:value="metric-grid"/>
+                    </styleClass>
+                    <VBox styleClass="summary-panel" spacing="6" GridPane.columnIndex="0" GridPane.rowIndex="0">
+                        <Label fx:id="javaApplicationProfilingTitleLabel" styleClass="detail-title"/>
+                        <Label fx:id="javaApplicationProfilingSummaryLabel" wrapText="true"/>
+                        <Button fx:id="javaApplicationProfilingButton"/>
+                    </VBox>
+                    <VBox styleClass="summary-panel" spacing="6" GridPane.columnIndex="1" GridPane.rowIndex="0">
+                        <Label fx:id="javaApplicationIoTitleLabel" styleClass="detail-title"/>
+                        <Label fx:id="javaApplicationIoSummaryLabel" wrapText="true"/>
+                        <Button fx:id="javaApplicationIoButton"/>
+                    </VBox>
+                    <VBox styleClass="summary-panel" spacing="6" GridPane.columnIndex="0" GridPane.rowIndex="1">
+                        <Label fx:id="javaApplicationLocksTitleLabel" styleClass="detail-title"/>
+                        <Label fx:id="javaApplicationLocksSummaryLabel" wrapText="true"/>
+                        <Button fx:id="javaApplicationLocksButton"/>
+                    </VBox>
+                    <VBox styleClass="summary-panel" spacing="6" GridPane.columnIndex="1" GridPane.rowIndex="1">
+                        <Label fx:id="javaApplicationThreadsTitleLabel" styleClass="detail-title"/>
+                        <Label fx:id="javaApplicationThreadsSummaryLabel" wrapText="true"/>
+                        <Button fx:id="javaApplicationThreadsButton"/>
+                    </VBox>
+                    <VBox styleClass="summary-panel" spacing="6" GridPane.columnIndex="0" GridPane.rowIndex="2">
+                        <Label fx:id="javaApplicationExceptionsTitleLabel" styleClass="detail-title"/>
+                        <Label fx:id="javaApplicationExceptionsSummaryLabel" wrapText="true"/>
+                        <Button fx:id="javaApplicationExceptionsButton"/>
+                    </VBox>
+                    <VBox styleClass="summary-panel" spacing="6" GridPane.columnIndex="1" GridPane.rowIndex="2">
+                        <Label fx:id="javaApplicationClassLoadingTitleLabel" styleClass="detail-title"/>
+                        <Label fx:id="javaApplicationClassLoadingSummaryLabel" wrapText="true"/>
+                        <Button fx:id="javaApplicationClassLoadingButton"/>
+                    </VBox>
+                    <VBox styleClass="summary-panel" spacing="6" GridPane.columnIndex="0" GridPane.rowIndex="3">
+                        <Label fx:id="javaApplicationAllocationTitleLabel" styleClass="detail-title"/>
+                        <Label fx:id="javaApplicationAllocationSummaryLabel" wrapText="true"/>
+                        <Button fx:id="javaApplicationAllocationButton"/>
+                    </VBox>
+                </GridPane>
+            </VBox>
+            <VBox fx:id="jvmInternalsPane" visible="false" managed="false">
+                <styleClass>
+                    <String fx:value="page"/>
+                    <String fx:value="overview-page"/>
+                    <String fx:value="jvm-internals-overview-page"/>
+                </styleClass>
+                <VBox styleClass="page-header">
+                    <Label fx:id="jvmInternalsTitleLabel" styleClass="view-title"/>
+                    <Label fx:id="jvmInternalsSummaryLabel" wrapText="true"/>
+                </VBox>
+                <GridPane fx:id="jvmInternalsSummaryGrid" hgap="12" vgap="12">
+                    <styleClass>
+                        <String fx:value="metric-grid"/>
+                    </styleClass>
+                    <VBox styleClass="summary-panel" spacing="6" GridPane.columnIndex="0" GridPane.rowIndex="0">
+                        <Label fx:id="jvmInternalsInformationTitleLabel" styleClass="detail-title"/>
+                        <Label fx:id="jvmInternalsInformationSummaryLabel" wrapText="true"/>
+                        <Button fx:id="jvmInternalsInformationButton"/>
+                    </VBox>
+                    <VBox styleClass="summary-panel" spacing="6" GridPane.columnIndex="1" GridPane.rowIndex="0">
+                        <Label fx:id="jvmInternalsGcTitleLabel" styleClass="detail-title"/>
+                        <Label fx:id="jvmInternalsGcSummaryLabel" wrapText="true"/>
+                        <Button fx:id="jvmInternalsGcButton"/>
+                    </VBox>
+                    <VBox styleClass="summary-panel" spacing="6" GridPane.columnIndex="0" GridPane.rowIndex="1">
+                        <Label fx:id="jvmInternalsG1TitleLabel" styleClass="detail-title"/>
+                        <Label fx:id="jvmInternalsG1SummaryLabel" wrapText="true"/>
+                        <Button fx:id="jvmInternalsG1Button"/>
+                    </VBox>
+                    <VBox styleClass="summary-panel" spacing="6" GridPane.columnIndex="1" GridPane.rowIndex="1">
+                        <Label fx:id="jvmInternalsCompilationTitleLabel" styleClass="detail-title"/>
+                        <Label fx:id="jvmInternalsCompilationSummaryLabel" wrapText="true"/>
+                        <Button fx:id="jvmInternalsCompilationButton"/>
+                    </VBox>
+                    <VBox styleClass="summary-panel" spacing="6" GridPane.columnIndex="0" GridPane.rowIndex="2">
+                        <Label fx:id="jvmInternalsCodeCacheTitleLabel" styleClass="detail-title"/>
+                        <Label fx:id="jvmInternalsCodeCacheSummaryLabel" wrapText="true"/>
+                        <Button fx:id="jvmInternalsCodeCacheButton"/>
+                    </VBox>
+                    <VBox styleClass="summary-panel" spacing="6" GridPane.columnIndex="1" GridPane.rowIndex="2">
+                        <Label fx:id="jvmInternalsClassLoadingTitleLabel" styleClass="detail-title"/>
+                        <Label fx:id="jvmInternalsClassLoadingSummaryLabel" wrapText="true"/>
+                        <Button fx:id="jvmInternalsClassLoadingButton"/>
+                    </VBox>
+                    <VBox styleClass="summary-panel" spacing="6" GridPane.columnIndex="0" GridPane.rowIndex="3">
+                        <Label fx:id="jvmInternalsVmOperationsTitleLabel" styleClass="detail-title"/>
+                        <Label fx:id="jvmInternalsVmOperationsSummaryLabel" wrapText="true"/>
+                        <Button fx:id="jvmInternalsVmOperationsButton"/>
+                    </VBox>
+                </GridPane>
+            </VBox>
+            <VBox fx:id="environmentPane" visible="false" managed="false">
+                <styleClass>
+                    <String fx:value="page"/>
+                    <String fx:value="overview-page"/>
+                    <String fx:value="environment-overview-page"/>
+                </styleClass>
+                <VBox styleClass="page-header">
+                    <Label fx:id="environmentTitleLabel" styleClass="view-title"/>
+                    <Label fx:id="environmentSummaryLabel" wrapText="true"/>
+                </VBox>
+                <GridPane fx:id="environmentSummaryGrid" hgap="12" vgap="12">
+                    <styleClass>
+                        <String fx:value="metric-grid"/>
+                    </styleClass>
+                    <VBox styleClass="summary-panel" spacing="6" GridPane.columnIndex="0" GridPane.rowIndex="0">
+                        <Label fx:id="environmentProcessesTitleLabel" styleClass="detail-title"/>
+                        <Label fx:id="environmentProcessesSummaryLabel" wrapText="true"/>
+                        <Button fx:id="environmentProcessesButton"/>
+                    </VBox>
+                    <VBox styleClass="summary-panel" spacing="6" GridPane.columnIndex="1" GridPane.rowIndex="0">
+                        <Label fx:id="environmentVariablesTitleLabel" styleClass="detail-title"/>
+                        <Label fx:id="environmentVariablesSummaryLabel" wrapText="true"/>
+                        <Button fx:id="environmentVariablesButton"/>
+                    </VBox>
+                    <VBox styleClass="summary-panel" spacing="6" GridPane.columnIndex="0" GridPane.rowIndex="1">
+                        <Label fx:id="environmentPropertiesTitleLabel" styleClass="detail-title"/>
+                        <Label fx:id="environmentPropertiesSummaryLabel" wrapText="true"/>
+                        <Button fx:id="environmentPropertiesButton"/>
+                    </VBox>
+                    <VBox styleClass="summary-panel" spacing="6" GridPane.columnIndex="1" GridPane.rowIndex="1">
+                        <Label fx:id="environmentRecordingTitleLabel" styleClass="detail-title"/>
+                        <Label fx:id="environmentRecordingSummaryLabel" wrapText="true"/>
+                        <Button fx:id="environmentRecordingButton"/>
+                    </VBox>
+                    <VBox styleClass="summary-panel" spacing="6" GridPane.columnIndex="0" GridPane.rowIndex="2">
+                        <Label fx:id="environmentAgentsTitleLabel" styleClass="detail-title"/>
+                        <Label fx:id="environmentAgentsSummaryLabel" wrapText="true"/>
+                        <Button fx:id="environmentAgentsButton"/>
+                    </VBox>
+                    <VBox styleClass="summary-panel" spacing="6" GridPane.columnIndex="1" GridPane.rowIndex="2">
+                        <Label fx:id="environmentConstantPoolsTitleLabel" styleClass="detail-title"/>
+                        <Label fx:id="environmentConstantPoolsSummaryLabel" wrapText="true"/>
+                        <Button fx:id="environmentConstantPoolsButton"/>
+                    </VBox>
+                </GridPane>
             </VBox>
             <VBox fx:id="exceptionsPane" spacing="8">
                 <Label fx:id="exceptionsTitleLabel" styleClass="view-title"/>

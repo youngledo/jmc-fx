@@ -2,6 +2,7 @@ package com.youngledo.jmcfx.ui.shell;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertFalse;
+import static org.junit.jupiter.api.Assertions.assertNull;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 
 import java.io.IOException;
@@ -217,6 +218,28 @@ class AppShellTest {
         assertTrue("true".equals(elementByFxId(document, "homeJvmWorkflowDescriptionLabel").getAttribute("wrapText")));
 
         assertEquals("analysisPane", elementByFxId(document, "analysisPane").getAttribute("fx:id"));
+        assertTrue(hasStyleClass(elementByFxId(document, "analysisPane"), "split-table-detail-page"));
+        assertEquals("HBox", elementByFxId(document, "analysisFilterBar").getTagName());
+        assertTrue(hasStyleClass(elementByFxId(document, "analysisFilterBar"), "page-toolbar"));
+        assertEquals("TextField", elementByFxId(document, "analysisSearchField").getTagName());
+        assertEquals("Spinner", elementByFxId(document, "analysisMinimumScoreSpinner").getTagName());
+        assertEquals("CheckBox", elementByFxId(document, "analysisShowOkCheckBox").getTagName());
+        assertEquals("CheckBox", elementByFxId(document, "analysisShowIgnoredCheckBox").getTagName());
+        assertEquals("CheckBox", elementByFxId(document, "analysisShowUnavailableCheckBox").getTagName());
+        assertTrue(hasStyleClass(elementByFxId(document, "analysisDetailPane"), "detail-panel"));
+        assertEquals("6", elementByFxId(document, "analysisDetailPane").getAttribute("spacing"));
+        assertNull(elementByFxIdOrNull(document, "analysisDetailTitle"));
+        assertNull(elementByFxIdOrNull(document, "analysisRelatedPageButton"));
+        assertNull(elementByFxIdOrNull(document, "analysisDetailMeta"));
+        assertNull(elementByFxIdOrNull(document, "analysisDetailResultIdLabel"));
+        assertNull(elementByFxIdOrNull(document, "analysisDetailSummaryCaption"));
+        assertNull(elementByFxIdOrNull(document, "analysisDetailSummaryArea"));
+        assertTrue(hasStyleClass(elementByFxId(document, "analysisDetailExplanationCaption"), "detail-section-label"));
+        assertTrue(hasStyleClass(elementByFxId(document, "analysisDetailEvidenceCaption"), "detail-section-label"));
+        assertTrue(hasStyleClass(elementByFxId(document, "analysisDetailRecommendationCaption"), "detail-section-label"));
+        assertTrue(hasStyleClass(elementByFxId(document, "analysisDetailExplanationArea"), "detail-panel-body"));
+        assertTrue(hasStyleClass(elementByFxId(document, "analysisDetailEvidenceArea"), "detail-panel-body"));
+        assertTrue(hasStyleClass(elementByFxId(document, "analysisDetailRecommendationArea"), "detail-panel-body"));
         Element metadataPane = elementByFxId(document, "metadataPane");
         assertEquals("VBox", metadataPane.getTagName());
         assertTrue(hasStyleClass(metadataPane, "page"));
@@ -255,6 +278,43 @@ class AppShellTest {
         assertEquals("TextArea", elementByFxId(document, "advancedJfrMemoryDetailArea").getTagName());
         assertEquals("false", elementByFxId(document, "advancedJfrMemoryDetailArea").getAttribute("editable"));
         assertEquals("true", elementByFxId(document, "advancedJfrMemoryDetailArea").getAttribute("wrapText"));
+        Element javaApplicationPane = elementByFxId(document, "javaApplicationPane");
+        assertEquals("VBox", javaApplicationPane.getTagName());
+        assertTrue(hasStyleClass(javaApplicationPane, "page"));
+        assertTrue(hasStyleClass(javaApplicationPane, "overview-page"));
+        assertEquals("Label", elementByFxId(document, "javaApplicationTitleLabel").getTagName());
+        assertEquals("GridPane", elementByFxId(document, "javaApplicationSummaryGrid").getTagName());
+        assertTrue(hasStyleClass(elementByFxId(document, "javaApplicationSummaryGrid"), "metric-grid"));
+        for (String fxId : List.of("javaApplicationProfilingButton", "javaApplicationIoButton",
+                "javaApplicationLocksButton", "javaApplicationThreadsButton",
+                "javaApplicationExceptionsButton", "javaApplicationClassLoadingButton",
+                "javaApplicationAllocationButton")) {
+            assertEquals("Button", elementByFxId(document, fxId).getTagName());
+        }
+        Element jvmInternalsPane = elementByFxId(document, "jvmInternalsPane");
+        assertEquals("VBox", jvmInternalsPane.getTagName());
+        assertTrue(hasStyleClass(jvmInternalsPane, "page"));
+        assertTrue(hasStyleClass(jvmInternalsPane, "overview-page"));
+        assertEquals("Label", elementByFxId(document, "jvmInternalsTitleLabel").getTagName());
+        assertEquals("GridPane", elementByFxId(document, "jvmInternalsSummaryGrid").getTagName());
+        assertTrue(hasStyleClass(elementByFxId(document, "jvmInternalsSummaryGrid"), "metric-grid"));
+        for (String fxId : List.of("jvmInternalsInformationButton", "jvmInternalsGcButton",
+                "jvmInternalsG1Button", "jvmInternalsCompilationButton", "jvmInternalsCodeCacheButton",
+                "jvmInternalsClassLoadingButton", "jvmInternalsVmOperationsButton")) {
+            assertEquals("Button", elementByFxId(document, fxId).getTagName());
+        }
+        Element environmentPane = elementByFxId(document, "environmentPane");
+        assertEquals("VBox", environmentPane.getTagName());
+        assertTrue(hasStyleClass(environmentPane, "page"));
+        assertTrue(hasStyleClass(environmentPane, "overview-page"));
+        assertEquals("Label", elementByFxId(document, "environmentTitleLabel").getTagName());
+        assertEquals("GridPane", elementByFxId(document, "environmentSummaryGrid").getTagName());
+        assertTrue(hasStyleClass(elementByFxId(document, "environmentSummaryGrid"), "metric-grid"));
+        for (String fxId : List.of("environmentProcessesButton", "environmentVariablesButton",
+                "environmentPropertiesButton", "environmentRecordingButton", "environmentAgentsButton",
+                "environmentConstantPoolsButton")) {
+            assertEquals("Button", elementByFxId(document, fxId).getTagName());
+        }
         Element heapDumpPane = elementByFxId(document, "heapDumpAnalysisPane");
         assertTrue(hasStyleClass(heapDumpPane, "page"));
         assertTrue(hasStyleClass(heapDumpPane, "split-table-detail-page"));
@@ -799,7 +859,48 @@ class AppShellTest {
 
         assertTrue(css.contains(".advanced-jfr-memory-content"));
         assertTrue(css.contains(".detail-panel"));
+        assertTrue(css.contains(".analysis-filter-bar"));
 
+        assertTrue(controller.contains("@FXML private TextField analysisSearchField;"));
+        assertTrue(controller.contains("@FXML private Spinner<Integer> analysisMinimumScoreSpinner;"));
+        assertTrue(controller.contains("@FXML private CheckBox analysisShowOkCheckBox;"));
+        assertTrue(controller.contains("@FXML private CheckBox analysisShowIgnoredCheckBox;"));
+        assertTrue(controller.contains("@FXML private CheckBox analysisShowUnavailableCheckBox;"));
+        assertTrue(controller.contains("analysisSearchField.textProperty().bindBidirectional"));
+        assertTrue(controller.contains("analysisMinimumScoreSpinner.getValueFactory().valueProperty().bindBidirectional"));
+        assertTrue(controller.contains("analysisShowOkCheckBox.selectedProperty().bindBidirectional"));
+        assertTrue(controller.contains("analysisShowIgnoredCheckBox.selectedProperty().bindBidirectional"));
+        assertTrue(controller.contains("analysisShowUnavailableCheckBox.selectedProperty().bindBidirectional"));
+        assertTrue(controller.contains("localizedColumn(\"analysis.column.resultId\")"));
+        assertTrue(controller.contains("localizedColumn(\"analysis.column.rulePage\")"));
+        assertTrue(controller.contains("analysisViewModel.selectedResultProperty().set(val)"));
+        assertTrue(controller.contains("analysisTable.setRowFactory(table ->"));
+        assertTrue(controller.contains("event.getButton() == MouseButton.PRIMARY"));
+        assertTrue(controller.contains("event.getClickCount() == 2"));
+        assertTrue(controller.contains("openAnalysisRelatedPage(row.getItem())"));
+        assertTrue(controller.contains("viewModel.showSection(detail.relatedPageId())"));
+        assertFalse(controller.contains("analysisRelatedPageButton"));
+        assertFalse(controller.contains("analysisDetailTitle"));
+        assertFalse(controller.contains("analysisDetailSummaryArea"));
+        assertFalse(controller.contains("analysisDetailResultIdLabel"));
+        assertFalse(controller.contains("analysisDetailMeta"));
+        assertTrue(controller.contains("analysisDetailEvidenceArea.setText(detail.evidence())"));
+        assertTrue(controller.contains("analysisDetailRecommendationArea.setText(detail.recommendation())"));
+
+        assertTrue(english.contains("analysis.filter.search=Search"));
+        assertTrue(english.contains("analysis.filter.minimumScore=Min score"));
+        assertTrue(english.contains("analysis.filter.showOk=OK"));
+        assertTrue(english.contains("analysis.filter.showIgnored=Ignored"));
+        assertTrue(english.contains("analysis.filter.showUnavailable=Unavailable"));
+        assertTrue(english.contains("analysis.column.resultId=Result ID"));
+        assertTrue(english.contains("analysis.column.rulePage=Page"));
+        assertFalse(english.contains("analysis.detail.title="));
+        assertFalse(english.contains("analysis.detail.summary="));
+        assertFalse(english.contains("analysis.detail.resultId="));
+        assertFalse(english.contains("analysis.detail.openRelatedPage="));
+        assertTrue(english.contains("analysis.detail.evidence=Evidence"));
+        assertTrue(english.contains("analysis.detail.recommendation=Recommendation"));
+        assertTrue(english.contains("events.metadata.title=Events / Metadata"));
         assertTrue(english.contains("advancedJfr.heatmap.tab=Heatmap"));
         assertTrue(english.contains("advancedJfr.memory.tab=Memory Analysis"));
         assertTrue(english.contains("advancedJfr.memory.summary=Open a recording to load memory analysis."));
@@ -819,6 +920,20 @@ class AppShellTest {
         assertTrue(english.contains("advancedJfr.memory.detail.evidence=Evidence: {0}"));
         assertTrue(english.contains("advancedJfr.memory.detail.recommendation=Recommendation: {0}"));
 
+        assertTrue(chinese.contains("analysis.filter.search=搜索"));
+        assertTrue(chinese.contains("analysis.filter.minimumScore=最低分数"));
+        assertTrue(chinese.contains("analysis.filter.showOk=OK"));
+        assertTrue(chinese.contains("analysis.filter.showIgnored=已忽略"));
+        assertTrue(chinese.contains("analysis.filter.showUnavailable=不可用"));
+        assertTrue(chinese.contains("analysis.column.resultId=结果ID"));
+        assertTrue(chinese.contains("analysis.column.rulePage=页面"));
+        assertFalse(chinese.contains("analysis.detail.title="));
+        assertFalse(chinese.contains("analysis.detail.summary="));
+        assertFalse(chinese.contains("analysis.detail.resultId="));
+        assertFalse(chinese.contains("analysis.detail.openRelatedPage="));
+        assertTrue(chinese.contains("analysis.detail.evidence=证据"));
+        assertTrue(chinese.contains("analysis.detail.recommendation=建议"));
+        assertTrue(chinese.contains("events.metadata.title=事件 / 元数据"));
         assertTrue(chinese.contains("advancedJfr.heatmap.tab=热力图"));
         assertTrue(chinese.contains("advancedJfr.memory.tab=内存分析"));
         assertTrue(chinese.contains("advancedJfr.memory.summary=打开JFR记录后加载内存分析。"));
@@ -1103,6 +1218,7 @@ class AppShellTest {
 
         assertLoadedStyleClass(loader, "advancedJfrMemoryDetailTitleLabel", "detail-panel-title");
         assertLoadedStyleClass(loader, "advancedJfrMemoryDetailPane", "detail-panel");
+        assertLoadedStyleClass(loader, "analysisDetailExplanationArea", "detail-panel-body");
         assertLoadedStyleClass(loader, "metadataDetailTitleLabel", "detail-panel-title");
         assertLoadedStyleClass(loader, "metadataDetailPane", "detail-panel");
         assertLoadedStyleClass(loader, "heapDumpIssueDetailTitleLabel", "detail-panel-title");
@@ -2218,6 +2334,14 @@ class AppShellTest {
                 .map(Map.Entry::getValue)
                 .findFirst()
                 .orElseThrow(() -> new AssertionError("Missing fx:id " + fxId));
+    }
+
+    private static Element elementByFxIdOrNull(Document document, String fxId) {
+        return elements(document).entrySet().stream()
+                .filter(entry -> fxId.equals(entry.getValue().getAttribute("fx:id")))
+                .map(Map.Entry::getValue)
+                .findFirst()
+                .orElse(null);
     }
 
     private static boolean hasFxId(Document document, String fxId) {

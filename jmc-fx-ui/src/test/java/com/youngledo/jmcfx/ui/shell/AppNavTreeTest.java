@@ -19,6 +19,7 @@ import com.youngledo.jmcfx.ui.i18n.I18n;
 import com.youngledo.jmcfx.ui.i18n.LanguageMode;
 
 import javafx.application.Platform;
+import javafx.scene.control.TreeItem;
 
 class AppNavTreeTest {
 
@@ -164,6 +165,9 @@ class AppNavTreeTest {
         tree.setActiveWorkspaceKindForTesting(AppWorkspaceKind.RECORDING);
 
         assertEquals("events", tree.search("events").getFirst().sectionId());
+        assertEquals("javaApplication", tree.search("java application").getFirst().sectionId());
+        assertEquals("jvmInternals", tree.search("jvm internals").getFirst().sectionId());
+        assertEquals("environment", tree.search("environment").getFirst().sectionId());
         assertEquals("home", tree.search("home").getFirst().sectionId());
         assertEquals("settings", tree.search("settings").getFirst().sectionId());
         assertTrue(tree.search("heap dump").isEmpty());
@@ -188,9 +192,29 @@ class AppNavTreeTest {
 
         viewModel.openRecording(recording());
 
-        assertVisibleSections(tree, "home", "settings", "analysis", "overview", "events", "advancedJfr");
-        assertExpandedSections(tree, "analysis", "overview", "events", "advancedJfr");
+        assertVisibleSections(tree, "home", "settings", "analysis", "overview", "events", "advancedJfr",
+                "javaApplication", "jvmInternals", "environment");
+        assertGroupUsesGroupItselfAsOverviewEntry(tree, "javaApplication", "profiling");
+        assertGroupUsesGroupItselfAsOverviewEntry(tree, "jvmInternals", "jvmInfo");
+        assertGroupUsesGroupItselfAsOverviewEntry(tree, "environment", "processes");
+        assertExpandedSections(tree, "analysis", "overview", "events", "advancedJfr", "javaApplication",
+                "jvmInternals", "environment");
         assertTrue(tree.search("events").stream().anyMatch(result -> "events".equals(result.sectionId())));
+    }
+
+    @Test
+    void recordingParentGroupsNavigateToTheirOwnOverviewPages() {
+        AppNavTree tree = new AppNavTree(new I18n(Locale.ENGLISH));
+        tree.setRecordingOpenForTesting(true);
+        tree.setActiveWorkspaceKindForTesting(AppWorkspaceKind.RECORDING);
+        java.util.List<String> navigatedSections = new java.util.ArrayList<>();
+        tree.setNavigationHandler(navigatedSections::add);
+
+        tree.navigateToSection("javaApplication");
+        tree.navigateToSection("jvmInternals");
+        tree.navigateToSection("environment");
+
+        assertEquals(List.of("javaApplication", "jvmInternals", "environment"), navigatedSections);
     }
 
     @Test
@@ -208,7 +232,8 @@ class AppNavTreeTest {
 
     private static void assertVisibleSections(AppNavTree tree, String... sectionIds) {
         List<String> visibleSectionIds = tree.getRoot().getChildren().stream()
-                .flatMap(group -> group.getChildren().stream())
+                .flatMap(group -> java.util.stream.Stream.concat(java.util.stream.Stream.of(group),
+                        group.getChildren().stream()))
                 .map(item -> item.getValue().sectionId())
                 .toList();
         for (String sectionId : sectionIds) {
@@ -219,7 +244,8 @@ class AppNavTreeTest {
 
     private static void assertNotVisibleSections(AppNavTree tree, String... sectionIds) {
         List<String> visibleSectionIds = tree.getRoot().getChildren().stream()
-                .flatMap(group -> group.getChildren().stream())
+                .flatMap(group -> java.util.stream.Stream.concat(java.util.stream.Stream.of(group),
+                        group.getChildren().stream()))
                 .map(item -> item.getValue().sectionId())
                 .toList();
         for (String sectionId : sectionIds) {
@@ -238,6 +264,20 @@ class AppNavTreeTest {
             assertTrue(expandedSectionIds.contains(sectionId),
                     () -> "Expected expanded section " + sectionId + " in " + expandedSectionIds);
         }
+    }
+
+    private static void assertGroupUsesGroupItselfAsOverviewEntry(AppNavTree tree, String groupSectionId,
+            String expectedChildSectionId) {
+        TreeItem<AppNavItem> groupItem = tree.getRoot().getChildren().stream()
+                .filter(group -> groupSectionId.equals(group.getValue().sectionId()))
+                .findFirst()
+                .orElseThrow();
+
+        assertTrue(groupItem.getValue().page());
+        assertFalse(groupItem.getChildren().stream()
+                .anyMatch(child -> groupSectionId.equals(child.getValue().sectionId())));
+        assertTrue(groupItem.getChildren().stream()
+                .anyMatch(child -> expectedChildSectionId.equals(child.getValue().sectionId())));
     }
 
     private static RecordingSummary recording() {

@@ -20,8 +20,10 @@ import org.junit.jupiter.api.Test;
 
 import com.youngledo.jmcfx.domain.model.EventColumnKind;
 import com.youngledo.jmcfx.domain.model.EventDetails;
+import com.youngledo.jmcfx.domain.model.EventFieldCondition;
 import com.youngledo.jmcfx.domain.model.EventFieldDescriptor;
 import com.youngledo.jmcfx.domain.model.EventFilter;
+import com.youngledo.jmcfx.domain.model.EventFilterOperator;
 import com.youngledo.jmcfx.domain.model.EventLoadState;
 import com.youngledo.jmcfx.domain.model.EventProperty;
 import com.youngledo.jmcfx.domain.model.EventRow;
@@ -139,10 +141,14 @@ class EventBrowserViewModelTest {
 
         viewModel.loadRecording(recording());
         viewModel.selectAllEventTypes();
-        viewModel.setFilter(new EventFilter("Thread Start", "main", null, null, List.of()));
+        viewModel.setFilter(new EventFilter("Thread Start", "main", Instant.EPOCH, Instant.EPOCH.plusSeconds(1),
+                List.of(new EventFieldCondition("duration", EventFilterOperator.GREATER_THAN, "10 ms"))));
 
         assertEquals("Thread Start", service.lastWindowRequest().filter().text());
         assertEquals("main", service.lastWindowRequest().filter().thread());
+        assertEquals(List.of("Text: Thread Start", "Thread: main",
+                "Time: 1970-01-01T00:00:00Z - 1970-01-01T00:00:01Z",
+                "duration > 10 ms"), viewModel.filterChipsProperty());
     }
 
     @Test

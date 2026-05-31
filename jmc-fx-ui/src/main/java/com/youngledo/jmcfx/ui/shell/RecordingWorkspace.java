@@ -2,7 +2,9 @@ package com.youngledo.jmcfx.ui.shell;
 
 import java.util.UUID;
 import java.util.Objects;
+import java.util.HashMap;
 import java.util.HashSet;
+import java.util.Map;
 import java.util.Set;
 
 import com.youngledo.jmcfx.domain.model.RecordingSummary;
@@ -47,6 +49,7 @@ public final class RecordingWorkspace {
     private final StringProperty selectedSection = new SimpleStringProperty("analysis");
     private final Set<String> loadedSections = new HashSet<>();
     private final Set<String> loadingSections = new HashSet<>();
+    private final Map<String, RecordingPageLayoutState> pageLayoutStates = new HashMap<>();
     private volatile String latestRequestedLoadSection = "analysis";
     private final OverviewViewModel overviewViewModel;
     private final EventBrowserViewModel eventBrowserViewModel;
@@ -259,6 +262,27 @@ public final class RecordingWorkspace {
     public void cancelPendingSectionLoads() {
         synchronized (loadedSections) {
             latestRequestedLoadSection = null;
+        }
+    }
+
+    public RecordingPageLayoutState pageLayoutState(String sectionId) {
+        RecordingPageDescriptor page = RecordingPageCatalog.page(sectionId)
+                .orElseThrow(() -> new IllegalArgumentException("Unknown recording page: " + sectionId));
+        synchronized (pageLayoutStates) {
+            return pageLayoutStates.computeIfAbsent(page.id(),
+                    id -> new RecordingPageLayoutState(id, page.defaultSplitPosition(), ""));
+        }
+    }
+
+    public void updatePageLayoutState(String sectionId, RecordingPageLayoutState state) {
+        Objects.requireNonNull(state, "state");
+        RecordingPageCatalog.page(sectionId)
+                .orElseThrow(() -> new IllegalArgumentException("Unknown recording page: " + sectionId));
+        if (!Objects.equals(sectionId, state.sectionId())) {
+            throw new IllegalArgumentException("state section does not match sectionId");
+        }
+        synchronized (pageLayoutStates) {
+            pageLayoutStates.put(sectionId, state);
         }
     }
 

@@ -125,6 +125,26 @@ class AppShellViewModelTest {
     }
 
     @Test
+    void recordingParentOverviewPagesAreRecordingSections() {
+        AppShellViewModel viewModel = new AppShellViewModel();
+        RecordingWorkspace workspace = viewModel.openRecording(
+                recording(), new OverviewViewModel(), eventBrowserViewModel(), ruleResultsViewModel());
+
+        viewModel.showSection("javaApplication");
+        assertEquals("javaApplication", viewModel.selectedSectionProperty().get());
+        assertEquals("javaApplication", workspace.selectedSectionProperty().get());
+
+        viewModel.showSection("jvmInternals");
+        assertEquals("jvmInternals", viewModel.selectedSectionProperty().get());
+        assertEquals("jvmInternals", workspace.selectedSectionProperty().get());
+
+        viewModel.showSection("environment");
+        assertEquals("environment", viewModel.selectedSectionProperty().get());
+        assertEquals("environment", workspace.selectedSectionProperty().get());
+        assertEquals(AppWorkspaceKind.RECORDING, viewModel.activeWorkspaceKindProperty().get());
+    }
+
+    @Test
     void jvmLauncherSwitchesFromExistingWorkspaceContext() {
         AppShellViewModel viewModel = new AppShellViewModel();
         viewModel.openRecording(recording(), new OverviewViewModel(), eventBrowserViewModel(), ruleResultsViewModel());
@@ -403,12 +423,13 @@ class AppShellViewModelTest {
     }
 
     @Test
-    void javaApplicationSubPagesAreRecordingSections() {
+    void javaApplicationOverviewAndSubPagesAreRecordingSections() {
         AppShellViewModel viewModel = new AppShellViewModel();
         RecordingWorkspace workspace = viewModel.openRecording(
                 recording(), new OverviewViewModel(), eventBrowserViewModel(), ruleResultsViewModel());
 
-        for (String sectionId : List.of("threadHistogram", "security", "nativeLibraries", "threadDumps")) {
+        for (String sectionId : List.of("javaApplication", "threadHistogram", "security",
+                "nativeLibraries", "threadDumps")) {
             viewModel.showSection(sectionId);
 
             assertEquals(sectionId, viewModel.selectedSectionProperty().get());

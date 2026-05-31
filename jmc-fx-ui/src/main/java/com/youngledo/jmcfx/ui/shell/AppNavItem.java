@@ -20,7 +20,15 @@ record AppNavItem(String sectionId, String titleKey, Ikon icon, NavIconTone icon
     }
 
     static AppNavItem group(String titleKey, Ikon icon, NavIconTone iconTone) {
-        return new AppNavItem("", titleKey, icon, iconTone, AppWorkspaceKind.GLOBAL, true, false, false);
+        return group("", titleKey, icon, iconTone);
+    }
+
+    static AppNavItem group(String sectionId, String titleKey, Ikon icon, NavIconTone iconTone) {
+        return new AppNavItem(sectionId, titleKey, icon, iconTone, AppWorkspaceKind.GLOBAL, true, false, false);
+    }
+
+    static AppNavItem recordingPageGroup(String sectionId, String titleKey, Ikon icon, NavIconTone iconTone) {
+        return new AppNavItem(sectionId, titleKey, icon, iconTone, AppWorkspaceKind.RECORDING, true, false, false);
     }
 
     static AppNavItem page(String sectionId, String titleKey, Ikon icon, boolean recordingScoped) {
@@ -43,7 +51,7 @@ record AppNavItem(String sectionId, String titleKey, Ikon icon, NavIconTone icon
     }
 
     boolean page() {
-        return !group;
+        return !group || !sectionId.isBlank();
     }
 
     boolean unavailable(boolean recordingOpen) {
@@ -51,6 +59,8 @@ record AppNavItem(String sectionId, String titleKey, Ikon icon, NavIconTone icon
     }
 
     boolean visibleIn(AppWorkspaceKind activeWorkspaceKind) {
-        return group || workspaceKind == AppWorkspaceKind.GLOBAL || workspaceKind == activeWorkspaceKind;
+        return group && sectionId.isBlank()
+                || workspaceKind == AppWorkspaceKind.GLOBAL
+                || workspaceKind == activeWorkspaceKind;
     }
 }

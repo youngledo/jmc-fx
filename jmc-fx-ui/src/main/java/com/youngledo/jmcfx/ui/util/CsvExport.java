@@ -24,10 +24,15 @@ public final class CsvExport {
     /// @param target the file path to write to
     /// @throws IOException if writing fails
     public static void export(TableView<?> table, Path target) throws IOException {
+        export(table, target, CsvExportOptions.visibleColumns());
+    }
+
+    public static void export(TableView<?> table, Path target, CsvExportOptions options) throws IOException {
+        CsvExportOptions exportOptions = options == null ? CsvExportOptions.visibleColumns() : options;
         try (BufferedWriter writer = Files.newBufferedWriter(target, StandardCharsets.UTF_8)) {
             // Header row
             String header = table.getColumns().stream()
-                    .filter(col -> col.isVisible())
+                    .filter(col -> exportOptions.includeHiddenColumns() || col.isVisible())
                     .map(col -> escapeCsv(col.getText()))
                     .collect(Collectors.joining(","));
             writer.write(header);
@@ -36,7 +41,7 @@ public final class CsvExport {
             // Data rows
             for (Object item : table.getItems()) {
                 String row = table.getColumns().stream()
-                        .filter(col -> col.isVisible())
+                        .filter(col -> exportOptions.includeHiddenColumns() || col.isVisible())
                         .map(col -> cellValue(col, item))
                         .collect(Collectors.joining(","));
                 writer.write(row);

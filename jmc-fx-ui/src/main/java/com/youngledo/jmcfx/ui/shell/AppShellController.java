@@ -174,7 +174,6 @@ import com.youngledo.jmcfx.ui.metadata.JfrMetadataViewModel;
 import com.youngledo.jmcfx.ui.chart.TimelineChart;
 import com.youngledo.jmcfx.ui.util.CsvExport;
 import com.youngledo.jmcfx.ui.util.DisplayFormats;
-import com.youngledo.jmcfx.ui.util.HtmlToTextFlow;
 import com.youngledo.jmcfx.ui.overview.OverviewViewModel;
 import com.youngledo.jmcfx.ui.preferences.AppTheme;
 import com.youngledo.jmcfx.ui.profiling.CallGraphDirection;
@@ -184,6 +183,7 @@ import com.youngledo.jmcfx.ui.profiling.CallGraphView;
 import com.youngledo.jmcfx.ui.profiling.FlameGraphLayout;
 import com.youngledo.jmcfx.ui.profiling.FlameGraphView;
 import com.youngledo.jmcfx.ui.profiling.ProfilingViewModel;
+import com.youngledo.jmcfx.ui.rules.RuleResultDetail;
 import com.youngledo.jmcfx.ui.rules.RuleResultsViewModel;
 import com.youngledo.jmcfx.ui.socketio.SocketIOViewModel;
 import com.youngledo.jmcfx.ui.threads.ThreadViewModel;
@@ -223,6 +223,7 @@ import javafx.scene.control.SpinnerValueFactory;
 import javafx.scene.control.Tab;
 import javafx.scene.control.TableCell;
 import javafx.scene.control.TableColumn;
+import javafx.scene.control.TableRow;
 import javafx.scene.control.TableView;
 import javafx.scene.control.TabPane;
 import javafx.scene.control.TextField;
@@ -362,6 +363,9 @@ public class AppShellController {
     @FXML private VBox advancedJfrPane;
     @FXML private VBox heapDumpAnalysisPane;
     @FXML private VBox jvmsPane;
+    @FXML private VBox javaApplicationPane;
+    @FXML private VBox jvmInternalsPane;
+    @FXML private VBox environmentPane;
     @FXML private VBox profilingPane;
     @FXML private VBox exceptionsPane;
     @FXML private VBox threadsPane;
@@ -433,9 +437,19 @@ public class AppShellController {
     @FXML private Label eventThreadLabel;
     @FXML private ListView<String> eventStackTraceList;
     @FXML private Label analysisTitleLabel;
+    @FXML private TextField analysisSearchField;
+    @FXML private Label analysisMinimumScoreLabel;
+    @FXML private Spinner<Integer> analysisMinimumScoreSpinner;
+    @FXML private CheckBox analysisShowOkCheckBox;
+    @FXML private CheckBox analysisShowIgnoredCheckBox;
+    @FXML private CheckBox analysisShowUnavailableCheckBox;
     @FXML private TableView<RuleResult> analysisTable;
-    @FXML private Label analysisDetailTitle;
-    @FXML private TextArea analysisDetailExplanation;
+    @FXML private Label analysisDetailExplanationCaption;
+    @FXML private TextArea analysisDetailExplanationArea;
+    @FXML private Label analysisDetailEvidenceCaption;
+    @FXML private TextArea analysisDetailEvidenceArea;
+    @FXML private Label analysisDetailRecommendationCaption;
+    @FXML private TextArea analysisDetailRecommendationArea;
     @FXML private Label metadataTitleLabel;
     @FXML private Label metadataSummaryLabel;
     @FXML private TableView<JfrMetadataEventType> metadataEventTypesTable;
@@ -458,6 +472,72 @@ public class AppShellController {
     @FXML private TableView<MemoryIssue> advancedJfrMemoryTable;
     @FXML private Label advancedJfrMemoryDetailTitleLabel;
     @FXML private TextArea advancedJfrMemoryDetailArea;
+    @FXML private Label javaApplicationTitleLabel;
+    @FXML private Label javaApplicationSummaryLabel;
+    @FXML private Label javaApplicationProfilingTitleLabel;
+    @FXML private Label javaApplicationProfilingSummaryLabel;
+    @FXML private Button javaApplicationProfilingButton;
+    @FXML private Label javaApplicationIoTitleLabel;
+    @FXML private Label javaApplicationIoSummaryLabel;
+    @FXML private Button javaApplicationIoButton;
+    @FXML private Label javaApplicationLocksTitleLabel;
+    @FXML private Label javaApplicationLocksSummaryLabel;
+    @FXML private Button javaApplicationLocksButton;
+    @FXML private Label javaApplicationThreadsTitleLabel;
+    @FXML private Label javaApplicationThreadsSummaryLabel;
+    @FXML private Button javaApplicationThreadsButton;
+    @FXML private Label javaApplicationExceptionsTitleLabel;
+    @FXML private Label javaApplicationExceptionsSummaryLabel;
+    @FXML private Button javaApplicationExceptionsButton;
+    @FXML private Label javaApplicationClassLoadingTitleLabel;
+    @FXML private Label javaApplicationClassLoadingSummaryLabel;
+    @FXML private Button javaApplicationClassLoadingButton;
+    @FXML private Label javaApplicationAllocationTitleLabel;
+    @FXML private Label javaApplicationAllocationSummaryLabel;
+    @FXML private Button javaApplicationAllocationButton;
+    @FXML private Label jvmInternalsTitleLabel;
+    @FXML private Label jvmInternalsSummaryLabel;
+    @FXML private Label jvmInternalsInformationTitleLabel;
+    @FXML private Label jvmInternalsInformationSummaryLabel;
+    @FXML private Button jvmInternalsInformationButton;
+    @FXML private Label jvmInternalsGcTitleLabel;
+    @FXML private Label jvmInternalsGcSummaryLabel;
+    @FXML private Button jvmInternalsGcButton;
+    @FXML private Label jvmInternalsG1TitleLabel;
+    @FXML private Label jvmInternalsG1SummaryLabel;
+    @FXML private Button jvmInternalsG1Button;
+    @FXML private Label jvmInternalsCompilationTitleLabel;
+    @FXML private Label jvmInternalsCompilationSummaryLabel;
+    @FXML private Button jvmInternalsCompilationButton;
+    @FXML private Label jvmInternalsCodeCacheTitleLabel;
+    @FXML private Label jvmInternalsCodeCacheSummaryLabel;
+    @FXML private Button jvmInternalsCodeCacheButton;
+    @FXML private Label jvmInternalsClassLoadingTitleLabel;
+    @FXML private Label jvmInternalsClassLoadingSummaryLabel;
+    @FXML private Button jvmInternalsClassLoadingButton;
+    @FXML private Label jvmInternalsVmOperationsTitleLabel;
+    @FXML private Label jvmInternalsVmOperationsSummaryLabel;
+    @FXML private Button jvmInternalsVmOperationsButton;
+    @FXML private Label environmentTitleLabel;
+    @FXML private Label environmentSummaryLabel;
+    @FXML private Label environmentProcessesTitleLabel;
+    @FXML private Label environmentProcessesSummaryLabel;
+    @FXML private Button environmentProcessesButton;
+    @FXML private Label environmentVariablesTitleLabel;
+    @FXML private Label environmentVariablesSummaryLabel;
+    @FXML private Button environmentVariablesButton;
+    @FXML private Label environmentPropertiesTitleLabel;
+    @FXML private Label environmentPropertiesSummaryLabel;
+    @FXML private Button environmentPropertiesButton;
+    @FXML private Label environmentRecordingTitleLabel;
+    @FXML private Label environmentRecordingSummaryLabel;
+    @FXML private Button environmentRecordingButton;
+    @FXML private Label environmentAgentsTitleLabel;
+    @FXML private Label environmentAgentsSummaryLabel;
+    @FXML private Button environmentAgentsButton;
+    @FXML private Label environmentConstantPoolsTitleLabel;
+    @FXML private Label environmentConstantPoolsSummaryLabel;
+    @FXML private Button environmentConstantPoolsButton;
     @FXML private Label heapDumpAnalysisTitleLabel;
     @FXML private TableView<HeapDumpIssue> heapDumpIssuesTable;
     @FXML private TabPane heapDumpDetailsTabs;
@@ -1130,6 +1210,9 @@ public class AppShellController {
         homeJfrTile.setOnMouseClicked(event -> openRecording());
         homeHeapDumpTile.setOnMouseClicked(event -> showOpenHeapDumpChooser());
         homeJvmTile.setOnMouseClicked(event -> viewModel.openLiveJvmWorkspace());
+        configureJavaApplicationOverviewActions();
+        configureJvmInternalsOverviewActions();
+        configureEnvironmentOverviewActions();
         configureRecordingTabs();
         jvmBrowserViewModel = jvmDiscoveryService != null && jmxConnectionService != null
                 ? new JvmBrowserViewModel(jvmDiscoveryService, jmxConnectionService, flightRecordingService,
@@ -1157,6 +1240,12 @@ public class AppShellController {
         heapDumpAnalysisPane.managedProperty().bind(heapDumpAnalysisPane.visibleProperty());
         jvmsPane.visibleProperty().bind(viewModel.selectedSectionProperty().isEqualTo("jvms"));
         jvmsPane.managedProperty().bind(jvmsPane.visibleProperty());
+        javaApplicationPane.visibleProperty().bind(viewModel.selectedSectionProperty().isEqualTo("javaApplication"));
+        javaApplicationPane.managedProperty().bind(javaApplicationPane.visibleProperty());
+        jvmInternalsPane.visibleProperty().bind(viewModel.selectedSectionProperty().isEqualTo("jvmInternals"));
+        jvmInternalsPane.managedProperty().bind(jvmInternalsPane.visibleProperty());
+        environmentPane.visibleProperty().bind(viewModel.selectedSectionProperty().isEqualTo("environment"));
+        environmentPane.managedProperty().bind(environmentPane.visibleProperty());
         profilingPane.visibleProperty().bind(viewModel.selectedSectionProperty().isEqualTo("profiling"));
         profilingPane.managedProperty().bind(profilingPane.visibleProperty());
         exceptionsPane.visibleProperty().bind(viewModel.selectedSectionProperty().isEqualTo("exceptions"));
@@ -1349,35 +1438,66 @@ public class AppShellController {
     }
 
     private RuleResultsViewModel analysisViewModel;
+    private javafx.beans.property.ObjectProperty<Integer> analysisMinimumScoreBinding;
 
     private void configureAnalysisTable() {
         analysisTable.setPlaceholder(localizedTablePlaceholder("analysis.empty"));
+        analysisMinimumScoreSpinner.setValueFactory(
+                new SpinnerValueFactory.IntegerSpinnerValueFactory(-3, 100, 0));
 
         TableColumn<RuleResult, Severity> severityCol = new TableColumn<>();
         severityCol.textProperty().bind(i18n.text("analysis.column.severity"));
         severityCol.setPrefWidth(80);
+        severityCol.setId("severity");
         severityCol.setCellValueFactory(cell -> new SimpleObjectProperty<>(cell.getValue().severity()));
         severityCol.setCellFactory(col -> new AnalysisSeverityCell<>());
 
-        TableColumn<RuleResult, String> nameCol = new TableColumn<>();
-        nameCol.textProperty().bind(i18n.text("analysis.column.name"));
-        nameCol.setPrefWidth(360);
-        nameCol.setCellValueFactory(cell -> new ReadOnlyStringWrapper(cell.getValue().name()));
-
         TableColumn<RuleResult, Number> scoreCol = new TableColumn<>();
         scoreCol.textProperty().bind(i18n.text("analysis.column.score"));
-        scoreCol.setPrefWidth(60);
+        scoreCol.setPrefWidth(72);
+        scoreCol.setId("score");
         scoreCol.setCellValueFactory(cell -> new javafx.beans.property.SimpleIntegerProperty(cell.getValue().score()));
         useFormattedIntegerCells(scoreCol);
 
-        TableColumn<RuleResult, String> summaryCol = new TableColumn<>();
-        summaryCol.textProperty().bind(i18n.text("analysis.column.summary"));
-        summaryCol.setPrefWidth(800);
+        TableColumn<RuleResult, String> pageCol = localizedColumn("analysis.column.rulePage");
+        pageCol.setPrefWidth(140);
+        pageCol.setId("rulePage");
+        pageCol.setCellValueFactory(cell -> new ReadOnlyStringWrapper(cell.getValue().topic()));
+
+        TableColumn<RuleResult, String> resultIdCol = localizedColumn("analysis.column.resultId");
+        resultIdCol.setPrefWidth(180);
+        resultIdCol.setId("resultId");
+        resultIdCol.setCellValueFactory(cell -> new ReadOnlyStringWrapper(cell.getValue().id()));
+
+        TableColumn<RuleResult, String> nameCol = localizedColumn("analysis.column.name");
+        nameCol.setPrefWidth(280);
+        nameCol.setId("rule");
+        nameCol.setCellValueFactory(cell -> new ReadOnlyStringWrapper(cell.getValue().name()));
+
+        TableColumn<RuleResult, String> summaryCol = localizedColumn("analysis.column.summary");
+        summaryCol.setPrefWidth(520);
+        summaryCol.setId("summary");
         summaryCol.setCellValueFactory(cell -> new ReadOnlyStringWrapper(cell.getValue().summary()));
 
-        analysisTable.getColumns().setAll(List.of(severityCol, nameCol, scoreCol, summaryCol));
+        analysisTable.getColumns().setAll(List.of(severityCol, scoreCol, pageCol, resultIdCol, nameCol, summaryCol));
         analysisTable.getSelectionModel().selectedItemProperty()
-                .addListener((obs, old, val) -> showAnalysisDetail(val));
+                .addListener((obs, old, val) -> {
+                    if (analysisViewModel != null) {
+                        analysisViewModel.selectedResultProperty().set(val);
+                    }
+                    showAnalysisDetail(val);
+                });
+        analysisTable.setRowFactory(table -> {
+            TableRow<RuleResult> row = new TableRow<>();
+            row.setOnMouseClicked(event -> {
+                if (event.getButton() == MouseButton.PRIMARY
+                        && event.getClickCount() == 2
+                        && !row.isEmpty()) {
+                    openAnalysisRelatedPage(row.getItem());
+                }
+            });
+            return row;
+        });
     }
 
     private void configureAdvancedJfrMemoryTable() {
@@ -3064,13 +3184,33 @@ public class AppShellController {
     private void bindAnalysis(RuleResultsViewModel nextViewModel) {
         analysisTable.placeholderProperty().unbind();
         analysisTable.setItems(FXCollections.emptyObservableList());
-        analysisDetailTitle.setText("");
-        analysisDetailExplanation.setText("");
+        if (analysisViewModel != null) {
+            analysisSearchField.textProperty().unbindBidirectional(analysisViewModel.searchTextProperty());
+            if (analysisMinimumScoreBinding != null) {
+                analysisMinimumScoreSpinner.getValueFactory().valueProperty().unbindBidirectional(
+                        analysisMinimumScoreBinding);
+                analysisMinimumScoreBinding = null;
+            }
+            analysisShowOkCheckBox.selectedProperty().unbindBidirectional(analysisViewModel.showOkResultsProperty());
+            analysisShowIgnoredCheckBox.selectedProperty().unbindBidirectional(
+                    analysisViewModel.showIgnoredResultsProperty());
+            analysisShowUnavailableCheckBox.selectedProperty().unbindBidirectional(
+                    analysisViewModel.showUnavailableResultsProperty());
+        }
+        showAnalysisDetail(null);
         analysisViewModel = nextViewModel;
         if (nextViewModel == null) {
             return;
         }
         analysisTable.setItems(nextViewModel.resultsProperty());
+        analysisSearchField.textProperty().bindBidirectional(nextViewModel.searchTextProperty());
+        analysisMinimumScoreBinding = nextViewModel.minimumScoreProperty().asObject();
+        analysisMinimumScoreSpinner.getValueFactory().valueProperty().bindBidirectional(
+                analysisMinimumScoreBinding);
+        analysisShowOkCheckBox.selectedProperty().bindBidirectional(nextViewModel.showOkResultsProperty());
+        analysisShowIgnoredCheckBox.selectedProperty().bindBidirectional(nextViewModel.showIgnoredResultsProperty());
+        analysisShowUnavailableCheckBox.selectedProperty().bindBidirectional(
+                nextViewModel.showUnavailableResultsProperty());
         analysisTable.placeholderProperty().bind(Bindings.createObjectBinding(
                 () -> analysisPlaceholder(nextViewModel),
                 nextViewModel.loadingProperty(),
@@ -3095,14 +3235,23 @@ public class AppShellController {
     }
 
     private void showAnalysisDetail(RuleResult result) {
-        if (result == null) {
-            analysisDetailTitle.setText("");
-            analysisDetailExplanation.setText("");
+        RuleResultDetail detail = RuleResultDetail.from(result);
+        if (detail == null) {
+            analysisDetailExplanationArea.setText("");
+            analysisDetailEvidenceArea.setText("");
+            analysisDetailRecommendationArea.setText("");
             return;
         }
-        analysisDetailTitle.setText(result.name());
-        analysisDetailExplanation.setText(
-                HtmlToTextFlow.toPlainText(result.explanation()));
+        analysisDetailExplanationArea.setText(detail.explanation());
+        analysisDetailEvidenceArea.setText(detail.evidence());
+        analysisDetailRecommendationArea.setText(detail.recommendation());
+    }
+
+    private void openAnalysisRelatedPage(RuleResult result) {
+        RuleResultDetail detail = RuleResultDetail.from(result);
+        if (detail != null && detail.hasRelatedPage()) {
+            viewModel.showSection(detail.relatedPageId());
+        }
     }
 
     private void configureProfilingTable() {
@@ -4223,6 +4372,14 @@ public class AppShellController {
         eventThreadTab.textProperty().bind(i18n.text("events.details.thread"));
         eventStackTraceTab.textProperty().bind(i18n.text("events.details.stackTrace"));
         analysisTitleLabel.textProperty().bind(i18n.text("analysis.title"));
+        analysisSearchField.promptTextProperty().bind(i18n.text("analysis.filter.search"));
+        analysisMinimumScoreLabel.textProperty().bind(i18n.text("analysis.filter.minimumScore"));
+        analysisShowOkCheckBox.textProperty().bind(i18n.text("analysis.filter.showOk"));
+        analysisShowIgnoredCheckBox.textProperty().bind(i18n.text("analysis.filter.showIgnored"));
+        analysisShowUnavailableCheckBox.textProperty().bind(i18n.text("analysis.filter.showUnavailable"));
+        analysisDetailExplanationCaption.textProperty().bind(i18n.text("analysis.detail.explanation"));
+        analysisDetailEvidenceCaption.textProperty().bind(i18n.text("analysis.detail.evidence"));
+        analysisDetailRecommendationCaption.textProperty().bind(i18n.text("analysis.detail.recommendation"));
         metadataTitleLabel.textProperty().bind(i18n.text("metadata.title"));
         metadataDetailTitleLabel.textProperty().bind(i18n.text("metadata.detail.title"));
         g1GcTitleLabel.textProperty().bind(i18n.text("g1Gc.title"));
@@ -4294,6 +4451,72 @@ public class AppShellController {
         jvmsApplyAgentConfigurationButton.textProperty().bind(i18n.text("jvms.agent.apply"));
         jvmsAgentConfigurationTitleLabel.textProperty().bind(i18n.text("jvms.agent.configuration"));
         profilingTitleLabel.textProperty().bind(i18n.text("profiling.title"));
+        javaApplicationTitleLabel.textProperty().bind(i18n.text("javaApplication.title"));
+        javaApplicationSummaryLabel.textProperty().bind(i18n.text("javaApplication.summary"));
+        javaApplicationProfilingTitleLabel.textProperty().bind(i18n.text("javaApplication.profiling.title"));
+        javaApplicationProfilingSummaryLabel.textProperty().bind(i18n.text("javaApplication.profiling.summary"));
+        javaApplicationProfilingButton.textProperty().bind(i18n.text("javaApplication.profiling.action"));
+        javaApplicationIoTitleLabel.textProperty().bind(i18n.text("javaApplication.io.title"));
+        javaApplicationIoSummaryLabel.textProperty().bind(i18n.text("javaApplication.io.summary"));
+        javaApplicationIoButton.textProperty().bind(i18n.text("javaApplication.io.action"));
+        javaApplicationLocksTitleLabel.textProperty().bind(i18n.text("javaApplication.locks.title"));
+        javaApplicationLocksSummaryLabel.textProperty().bind(i18n.text("javaApplication.locks.summary"));
+        javaApplicationLocksButton.textProperty().bind(i18n.text("javaApplication.locks.action"));
+        javaApplicationThreadsTitleLabel.textProperty().bind(i18n.text("javaApplication.threads.title"));
+        javaApplicationThreadsSummaryLabel.textProperty().bind(i18n.text("javaApplication.threads.summary"));
+        javaApplicationThreadsButton.textProperty().bind(i18n.text("javaApplication.threads.action"));
+        javaApplicationExceptionsTitleLabel.textProperty().bind(i18n.text("javaApplication.exceptions.title"));
+        javaApplicationExceptionsSummaryLabel.textProperty().bind(i18n.text("javaApplication.exceptions.summary"));
+        javaApplicationExceptionsButton.textProperty().bind(i18n.text("javaApplication.exceptions.action"));
+        javaApplicationClassLoadingTitleLabel.textProperty().bind(i18n.text("javaApplication.classLoading.title"));
+        javaApplicationClassLoadingSummaryLabel.textProperty().bind(i18n.text("javaApplication.classLoading.summary"));
+        javaApplicationClassLoadingButton.textProperty().bind(i18n.text("javaApplication.classLoading.action"));
+        javaApplicationAllocationTitleLabel.textProperty().bind(i18n.text("javaApplication.allocation.title"));
+        javaApplicationAllocationSummaryLabel.textProperty().bind(i18n.text("javaApplication.allocation.summary"));
+        javaApplicationAllocationButton.textProperty().bind(i18n.text("javaApplication.allocation.action"));
+        jvmInternalsTitleLabel.textProperty().bind(i18n.text("jvmInternals.title"));
+        jvmInternalsSummaryLabel.textProperty().bind(i18n.text("jvmInternals.summary"));
+        jvmInternalsInformationTitleLabel.textProperty().bind(i18n.text("jvmInternals.information.title"));
+        jvmInternalsInformationSummaryLabel.textProperty().bind(i18n.text("jvmInternals.information.summary"));
+        jvmInternalsInformationButton.textProperty().bind(i18n.text("jvmInternals.information.action"));
+        jvmInternalsGcTitleLabel.textProperty().bind(i18n.text("jvmInternals.gc.title"));
+        jvmInternalsGcSummaryLabel.textProperty().bind(i18n.text("jvmInternals.gc.summary"));
+        jvmInternalsGcButton.textProperty().bind(i18n.text("jvmInternals.gc.action"));
+        jvmInternalsG1TitleLabel.textProperty().bind(i18n.text("jvmInternals.g1.title"));
+        jvmInternalsG1SummaryLabel.textProperty().bind(i18n.text("jvmInternals.g1.summary"));
+        jvmInternalsG1Button.textProperty().bind(i18n.text("jvmInternals.g1.action"));
+        jvmInternalsCompilationTitleLabel.textProperty().bind(i18n.text("jvmInternals.compilation.title"));
+        jvmInternalsCompilationSummaryLabel.textProperty().bind(i18n.text("jvmInternals.compilation.summary"));
+        jvmInternalsCompilationButton.textProperty().bind(i18n.text("jvmInternals.compilation.action"));
+        jvmInternalsCodeCacheTitleLabel.textProperty().bind(i18n.text("jvmInternals.codeCache.title"));
+        jvmInternalsCodeCacheSummaryLabel.textProperty().bind(i18n.text("jvmInternals.codeCache.summary"));
+        jvmInternalsCodeCacheButton.textProperty().bind(i18n.text("jvmInternals.codeCache.action"));
+        jvmInternalsClassLoadingTitleLabel.textProperty().bind(i18n.text("jvmInternals.classLoading.title"));
+        jvmInternalsClassLoadingSummaryLabel.textProperty().bind(i18n.text("jvmInternals.classLoading.summary"));
+        jvmInternalsClassLoadingButton.textProperty().bind(i18n.text("jvmInternals.classLoading.action"));
+        jvmInternalsVmOperationsTitleLabel.textProperty().bind(i18n.text("jvmInternals.vmOperations.title"));
+        jvmInternalsVmOperationsSummaryLabel.textProperty().bind(i18n.text("jvmInternals.vmOperations.summary"));
+        jvmInternalsVmOperationsButton.textProperty().bind(i18n.text("jvmInternals.vmOperations.action"));
+        environmentTitleLabel.textProperty().bind(i18n.text("environment.title"));
+        environmentSummaryLabel.textProperty().bind(i18n.text("environment.summary"));
+        environmentProcessesTitleLabel.textProperty().bind(i18n.text("environment.processes.title"));
+        environmentProcessesSummaryLabel.textProperty().bind(i18n.text("environment.processes.summary"));
+        environmentProcessesButton.textProperty().bind(i18n.text("environment.processes.action"));
+        environmentVariablesTitleLabel.textProperty().bind(i18n.text("environment.variables.title"));
+        environmentVariablesSummaryLabel.textProperty().bind(i18n.text("environment.variables.summary"));
+        environmentVariablesButton.textProperty().bind(i18n.text("environment.variables.action"));
+        environmentPropertiesTitleLabel.textProperty().bind(i18n.text("environment.properties.title"));
+        environmentPropertiesSummaryLabel.textProperty().bind(i18n.text("environment.properties.summary"));
+        environmentPropertiesButton.textProperty().bind(i18n.text("environment.properties.action"));
+        environmentRecordingTitleLabel.textProperty().bind(i18n.text("environment.recording.title"));
+        environmentRecordingSummaryLabel.textProperty().bind(i18n.text("environment.recording.summary"));
+        environmentRecordingButton.textProperty().bind(i18n.text("environment.recording.action"));
+        environmentAgentsTitleLabel.textProperty().bind(i18n.text("environment.agents.title"));
+        environmentAgentsSummaryLabel.textProperty().bind(i18n.text("environment.agents.summary"));
+        environmentAgentsButton.textProperty().bind(i18n.text("environment.agents.action"));
+        environmentConstantPoolsTitleLabel.textProperty().bind(i18n.text("environment.constantPools.title"));
+        environmentConstantPoolsSummaryLabel.textProperty().bind(i18n.text("environment.constantPools.summary"));
+        environmentConstantPoolsButton.textProperty().bind(i18n.text("environment.constantPools.action"));
         profilingCallGraphTab.textProperty().bind(i18n.text("profiling.tab.callGraph"));
         profilingCallGraphDirectionCombo.promptTextProperty().bind(i18n.text("profiling.callGraph.direction"));
         profilingCallGraphDepthLabel.textProperty().bind(i18n.text("profiling.callGraph.depth"));
@@ -4549,6 +4772,35 @@ public class AppShellController {
         configureActionButton(homeOpenRecordingButton, Material2AL.FOLDER_OPEN, i18n.get("home.openRecording"));
         configureActionButton(homeOpenHeapDumpButton, Material2MZ.STORAGE, i18n.get("home.openHeapDump"));
         configureActionButton(homeConnectJvmButton, Material2MZ.MEMORY, i18n.get("home.connectJvm"));
+    }
+
+    private void configureJavaApplicationOverviewActions() {
+        javaApplicationProfilingButton.setOnAction(event -> viewModel.showSection("profiling"));
+        javaApplicationIoButton.setOnAction(event -> viewModel.showSection("fileio"));
+        javaApplicationLocksButton.setOnAction(event -> viewModel.showSection("locks"));
+        javaApplicationThreadsButton.setOnAction(event -> viewModel.showSection("threadHistogram"));
+        javaApplicationExceptionsButton.setOnAction(event -> viewModel.showSection("exceptions"));
+        javaApplicationClassLoadingButton.setOnAction(event -> viewModel.showSection("classLoading"));
+        javaApplicationAllocationButton.setOnAction(event -> viewModel.showSection("tlab"));
+    }
+
+    private void configureJvmInternalsOverviewActions() {
+        jvmInternalsInformationButton.setOnAction(event -> viewModel.showSection("jvmInfo"));
+        jvmInternalsGcButton.setOnAction(event -> viewModel.showSection("gcSummary"));
+        jvmInternalsG1Button.setOnAction(event -> viewModel.showSection("g1Gc"));
+        jvmInternalsCompilationButton.setOnAction(event -> viewModel.showSection("compilations"));
+        jvmInternalsCodeCacheButton.setOnAction(event -> viewModel.showSection("codeCache"));
+        jvmInternalsClassLoadingButton.setOnAction(event -> viewModel.showSection("classLoading"));
+        jvmInternalsVmOperationsButton.setOnAction(event -> viewModel.showSection("vmOperations"));
+    }
+
+    private void configureEnvironmentOverviewActions() {
+        environmentProcessesButton.setOnAction(event -> viewModel.showSection("processes"));
+        environmentVariablesButton.setOnAction(event -> viewModel.showSection("envVars"));
+        environmentPropertiesButton.setOnAction(event -> viewModel.showSection("sysProps"));
+        environmentRecordingButton.setOnAction(event -> viewModel.showSection("recordingInfo"));
+        environmentAgentsButton.setOnAction(event -> viewModel.showSection("agents"));
+        environmentConstantPoolsButton.setOnAction(event -> viewModel.showSection("constantPools"));
     }
 
     private static void configureActionButton(Button button, Ikon icon, String accessibleText) {
@@ -5206,7 +5458,7 @@ public class AppShellController {
     private String canonicalLoadSectionId(String sectionId) {
         return switch (sectionId) {
             case null -> null;
-            case "home", "overview", "jvms", "settings" -> null;
+            case "home", "overview", "javaApplication", "jvmInternals", "environment", "jvms", "settings" -> null;
             case "envVars", "sysProps", "recordingInfo", "agents", "constantPools" -> "processes";
             default -> sectionId;
         };

@@ -3,7 +3,7 @@ package com.youngledo.jmcfx.ui.shell;
 import java.nio.file.Path;
 import java.util.List;
 import java.util.Objects;
-import java.util.Set;
+import java.util.Optional;
 
 import com.youngledo.jmcfx.domain.model.RecordingSummary;
 import com.youngledo.jmcfx.ui.advanced.AdvancedJfrViewModel;
@@ -60,12 +60,7 @@ public class AppShellViewModel {
     private static final String SETTINGS_SECTION = "settings";
     private static final String JVMS_SECTION = "jvms";
     private static final String HEAP_DUMP_ANALYSIS_SECTION = "heapDumpAnalysis";
-    private static final String DEFAULT_RECORDING_SECTION = "analysis";
-    private static final Set<String> RECORDING_SECTIONS = Set.of("analysis", "overview", "events", "metadata", "advancedJfr", "profiling",
-            "exceptions", "threads", "fileio", "socketio", "locks", "threadHistogram", "security",
-            "nativeLibraries", "threadDumps", "heap", "leaks", "tlab", "jvmInfo", "gcConfig", "gcSummary",
-            "gcDetails", "g1Gc", "javaFxEvents", "compilations", "codeCache", "classLoading", "vmOperations", "processes", "envVars",
-            "sysProps", "recordingInfo", "agents", "constantPools");
+    private static final String DEFAULT_RECORDING_SECTION = RecordingPageCatalog.defaultSectionId();
 
     private final ObservableList<RecordingWorkspace> recordingWorkspaces = FXCollections.observableArrayList();
     private final ObservableList<RecordingWorkspace> readOnlyRecordingWorkspaces =
@@ -133,6 +128,14 @@ public class AppShellViewModel {
 
     public ObservableList<RecordingWorkspace> recordingWorkspacesProperty() {
         return readOnlyRecordingWorkspaces;
+    }
+
+    public List<RecordingPageDescriptor> recordingPages() {
+        return RecordingPageCatalog.pages();
+    }
+
+    public Optional<RecordingPageDescriptor> recordingPage(String sectionId) {
+        return RecordingPageCatalog.page(sectionId);
     }
 
     public ReadOnlyObjectProperty<RecordingWorkspace> selectedWorkspaceProperty() {
@@ -493,7 +496,7 @@ public class AppShellViewModel {
     }
 
     private static boolean isRecordingSection(String sectionId) {
-        return sectionId != null && RECORDING_SECTIONS.contains(sectionId);
+        return sectionId != null && RecordingPageCatalog.contains(sectionId);
     }
 
     private static boolean knownSection(String sectionId) {

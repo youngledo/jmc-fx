@@ -38,6 +38,9 @@ class JfrMetadataViewModelTest {
 
         assertTrue(viewModel.selectedDetailProperty().get().contains("jdk.CPULoad"));
         assertTrue(viewModel.selectedDetailProperty().get().contains("jvmUser"));
+        assertTrue(viewModel.selectedDetailProperty().get().contains("Type: NUMBER"));
+        assertTrue(viewModel.selectedDetailProperty().get().contains("Filter value type: NUMBER"));
+        assertTrue(viewModel.selectedDetailProperty().get().contains("Unit: %"));
     }
 
     private static RecordingSummary recording() {

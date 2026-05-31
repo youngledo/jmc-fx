@@ -112,6 +112,11 @@ public class JfrMetadataViewModel {
         for (JfrMetadataField field : eventType.fields()) {
             String unit = field.unit().isBlank() ? "" : " [" + field.unit() + "]";
             detail.add("- " + field.label() + " (" + field.id() + "): " + field.valueType() + unit);
+            detail.add("  Type: " + field.valueType());
+            detail.add("  Filter value type: " + field.valueType());
+            if (!field.unit().isBlank()) {
+                detail.add("  Unit: " + field.unit());
+            }
             if (!field.description().isBlank()) {
                 detail.add("  " + field.description());
             }

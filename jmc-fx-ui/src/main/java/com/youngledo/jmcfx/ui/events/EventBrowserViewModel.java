@@ -1,6 +1,7 @@
 package com.youngledo.jmcfx.ui.events;
 
 import java.util.ArrayDeque;
+import java.util.ArrayList;
 import java.util.List;
 import java.util.concurrent.atomic.AtomicLong;
 
@@ -9,8 +10,10 @@ import org.apache.logging.log4j.Logger;
 
 import com.youngledo.jmcfx.domain.model.EventColumn;
 import com.youngledo.jmcfx.domain.model.EventDetails;
+import com.youngledo.jmcfx.domain.model.EventFieldCondition;
 import com.youngledo.jmcfx.domain.model.EventFieldDescriptor;
 import com.youngledo.jmcfx.domain.model.EventFilter;
+import com.youngledo.jmcfx.domain.model.EventFilterOperator;
 import com.youngledo.jmcfx.domain.model.EventRow;
 import com.youngledo.jmcfx.domain.model.EventSelectionProperties;
 import com.youngledo.jmcfx.domain.model.EventTypeNode;
@@ -58,6 +61,7 @@ public class EventBrowserViewModel implements AutoCloseable {
     private final ObjectProperty<EventFilter> activeFilter = new SimpleObjectProperty<>(EventFilter.empty());
     private final ObjectProperty<EventSelectionProperties> selectionProperties = new SimpleObjectProperty<>();
     private final ObservableList<EventFieldDescriptor> fieldDescriptors = FXCollections.observableArrayList();
+    private final ObservableList<String> filterChips = FXCollections.observableArrayList();
     private final ObservableList<EventColumn> columns = FXCollections.observableArrayList();
     private final ObservableList<EventRow> rows = FXCollections.observableArrayList();
     private final ObjectProperty<EventDetails> selectedDetails = new SimpleObjectProperty<>();
@@ -109,6 +113,10 @@ public class EventBrowserViewModel implements AutoCloseable {
 
     public ObservableList<EventFieldDescriptor> fieldDescriptorsProperty() {
         return fieldDescriptors;
+    }
+
+    public ObservableList<String> filterChipsProperty() {
+        return filterChips;
     }
 
     public ObservableList<EventRow> rowsProperty() {
@@ -201,7 +209,9 @@ public class EventBrowserViewModel implements AutoCloseable {
     }
 
     public void setFilter(EventFilter filter) {
-        activeFilter.set(filter == null ? EventFilter.empty() : filter);
+        EventFilter nextFilter = filter == null ? EventFilter.empty() : filter;
+        activeFilter.set(nextFilter);
+        filterChips.setAll(filterChips(nextFilter));
         showVisibleRange(0, DEFAULT_VISIBLE_ROWS);
     }
 
@@ -447,6 +457,7 @@ public class EventBrowserViewModel implements AutoCloseable {
         selectedEventTypeId.set("");
         selectedEventTypeSelection.set(null);
         activeFilter.set(EventFilter.empty());
+        filterChips.clear();
         selectionProperties.set(null);
         fieldDescriptors.clear();
         columns.clear();
@@ -493,6 +504,46 @@ public class EventBrowserViewModel implements AutoCloseable {
         } catch (RuntimeException exception) {
             runnable.run();
         }
+    }
+
+    private static List<String> filterChips(EventFilter filter) {
+        if (filter == null || !filter.active()) {
+            return List.of();
+        }
+        List<String> chips = new ArrayList<>();
+        if (!filter.text().isBlank()) {
+            chips.add("Text: " + filter.text());
+        }
+        if (!filter.thread().isBlank()) {
+            chips.add("Thread: " + filter.thread());
+        }
+        if (filter.startTime() != null || filter.endTime() != null) {
+            chips.add("Time: %s - %s".formatted(
+                    filter.startTime() == null ? "*" : filter.startTime(),
+                    filter.endTime() == null ? "*" : filter.endTime()));
+        }
+        filter.fieldConditions().stream()
+                .map(EventBrowserViewModel::fieldConditionChip)
+                .forEach(chips::add);
+        return List.copyOf(chips);
+    }
+
+    private static String fieldConditionChip(EventFieldCondition condition) {
+        return condition.fieldId() + " " + operatorSymbol(condition.operator()) + " " + condition.value();
+    }
+
+    private static String operatorSymbol(EventFilterOperator operator) {
+        return switch (operator) {
+            case CONTAINS -> "contains";
+            case EQUALS -> "=";
+            case NOT_EQUALS -> "!=";
+            case GREATER_THAN -> ">";
+            case GREATER_THAN_OR_EQUAL -> ">=";
+            case LESS_THAN -> "<";
+            case LESS_THAN_OR_EQUAL -> "<=";
+            case IS_TRUE -> "is true";
+            case IS_FALSE -> "is false";
+        };
     }
 
     private void runOnFxThread(Runnable runnable) {

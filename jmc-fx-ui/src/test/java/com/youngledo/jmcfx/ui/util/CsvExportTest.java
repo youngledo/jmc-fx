@@ -81,4 +81,33 @@ class CsvExportTest {
             Files.deleteIfExists(tempFile);
         }
     }
+
+    @Test
+    void export_canIncludeHiddenColumnsWhenRequested() throws IOException {
+        if (!toolkitReady) {
+            return; // Skip on headless CI
+        }
+
+        TableView<String> table = new TableView<>();
+        TableColumn<String, String> visible = new TableColumn<>("Visible");
+        visible.setCellValueFactory(data -> new ReadOnlyStringWrapper(data.getValue()));
+        TableColumn<String, String> hidden = new TableColumn<>("Hidden");
+        hidden.setVisible(false);
+        hidden.setCellValueFactory(data -> new ReadOnlyStringWrapper("hidden-" + data.getValue()));
+        table.getColumns().addAll(visible, hidden);
+        table.setItems(FXCollections.observableArrayList("row1"));
+
+        Path visibleOnly = Files.createTempFile("visible", ".csv");
+        Path allColumns = Files.createTempFile("all", ".csv");
+        try {
+            CsvExport.export(table, visibleOnly);
+            CsvExport.export(table, allColumns, CsvExportOptions.allColumns());
+
+            assertEquals("Visible\nrow1\n", Files.readString(visibleOnly));
+            assertEquals("Visible,Hidden\nrow1,hidden-row1\n", Files.readString(allColumns));
+        } finally {
+            Files.deleteIfExists(visibleOnly);
+            Files.deleteIfExists(allColumns);
+        }
+    }
 }

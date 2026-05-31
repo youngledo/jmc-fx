@@ -66,6 +66,20 @@
     -fx-spacing: 12px;
 }
 
+.overview-page {
+    -fx-spacing: 12px;
+}
+
+.metric-grid {
+    -fx-min-width: 0;
+}
+
+.java-application-overview-page .summary-panel,
+.jvm-internals-overview-page .summary-panel,
+.environment-overview-page .summary-panel {
+    -fx-min-width: 240px;
+}
+
 .heap-dump-page {
     -fx-spacing: 12px;
     -fx-min-width: 0;
@@ -580,6 +594,10 @@
     -fx-background-color: -color-bg-subtle;
 }
 
+.analysis-filter-bar {
+    -fx-spacing: 8px;
+}
+
 .event-window-status {
     -fx-text-fill: -color-fg-muted;
     -fx-padding: 4px 0 0 0;
@@ -742,6 +760,8 @@
 .severity-info { -fx-fill: -color-accent-fg; }
 .severity-warning { -fx-fill: -color-warning-fg; }
 .severity-critical { -fx-fill: -color-danger-fg; }
+.severity-ignored { -fx-fill: -color-fg-muted; }
+.severity-unavailable { -fx-fill: -color-fg-muted; }
 .severity-unknown { -fx-fill: -color-fg-muted; }
 
 /* Shared detail panels */
@@ -751,6 +771,14 @@
     -fx-padding: 4px 0 10px 0;
     -fx-font-weight: bold;
     -fx-font-size: 14px;
+}
+.detail-panel-meta {
+    -fx-text-fill: -color-fg-muted;
+}
+.detail-section-label {
+    -fx-padding: 8px 0 0 0;
+    -fx-font-weight: bold;
+    -fx-text-fill: -color-fg-muted;
 }
 .detail-panel-body {
     -fx-text-fill: -color-fg-default;
