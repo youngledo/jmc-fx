@@ -40,7 +40,6 @@ final class AppNavTree extends TreeView<AppNavItem> {
         TreeItem<AppNavItem> recording = group("nav.group.recording", Material2AL.ANALYTICS, NavIconTone.RECORDING);
         TreeItem<AppNavItem> javaApp = pageGroup("javaApplication", "nav.group.javaApplication",
                 Material2AL.INSIGHTS, NavIconTone.JAVA);
-        TreeItem<AppNavItem> memoryAnalysis = group("nav.group.memoryAnalysis", Material2MZ.MEMORY, NavIconTone.MEMORY);
         TreeItem<AppNavItem> jvmInternals = pageGroup("jvmInternals", "nav.group.jvmInternals",
                 Material2MZ.MEMORY, NavIconTone.JVM);
         TreeItem<AppNavItem> environment = pageGroup("environment", "nav.group.environment",
@@ -63,11 +62,11 @@ final class AppNavTree extends TreeView<AppNavItem> {
         TreeItem<AppNavItem> locks = page("locks", "nav.locks", Material2AL.LOCK, true, NavIconTone.JAVA);
         TreeItem<AppNavItem> threadHistogram = page("threadHistogram", "nav.threadHistogram", Material2AL.LIST, true, NavIconTone.JAVA);
         TreeItem<AppNavItem> security = page("security", "nav.security", Material2MZ.SECURITY, true, NavIconTone.JAVA);
-        TreeItem<AppNavItem> nativeLibraries = page("nativeLibraries", "nav.nativeLibraries", Material2MZ.STORAGE, true, NavIconTone.JAVA);
+        TreeItem<AppNavItem> nativeLibraries = page("nativeLibraries", "nav.nativeLibraries", Material2MZ.STORAGE, true, NavIconTone.ENVIRONMENT);
         TreeItem<AppNavItem> threadDumps = page("threadDumps", "nav.threadDumps", Material2MZ.VIEW_LIST, true, NavIconTone.JAVA);
-        TreeItem<AppNavItem> heap = page("heap", "nav.heap", Material2MZ.MEMORY, true, NavIconTone.MEMORY);
-        TreeItem<AppNavItem> leaks = page("leaks", "nav.leaks", Material2AL.BUG_REPORT, true, NavIconTone.MEMORY);
-        TreeItem<AppNavItem> tlab = page("tlab", "nav.tlab", Material2MZ.STORAGE, true, NavIconTone.MEMORY);
+        TreeItem<AppNavItem> heap = page("heap", "nav.heap", Material2MZ.MEMORY, true, NavIconTone.JAVA);
+        TreeItem<AppNavItem> leaks = page("leaks", "nav.leaks", Material2AL.BUG_REPORT, true, NavIconTone.JAVA);
+        TreeItem<AppNavItem> tlab = page("tlab", "nav.tlab", Material2MZ.STORAGE, true, NavIconTone.JVM);
         TreeItem<AppNavItem> processPage = page("processes", "nav.processes", Material2MZ.MEMORY, true, NavIconTone.ENVIRONMENT);
         TreeItem<AppNavItem> envVarsPage = page("envVars", "nav.envVars", Material2MZ.PUBLIC, true, NavIconTone.ENVIRONMENT);
         TreeItem<AppNavItem> sysPropsPage = page("sysProps", "nav.sysProps", Material2MZ.SETTINGS, true, NavIconTone.ENVIRONMENT);
@@ -89,15 +88,14 @@ final class AppNavTree extends TreeView<AppNavItem> {
         global.getChildren().setAll(List.of(home, settings));
         recording.getChildren().setAll(List.of(analysis, overview, events, metadata, advancedJfr));
         javaApp.getChildren().setAll(List.of(profiling, exceptions, threads, fileio, socketio, locks,
-                threadHistogram, security, nativeLibraries, threadDumps));
-        memoryAnalysis.getChildren().setAll(List.of(heap, leaks, tlab));
-        environment.getChildren().setAll(List.of(processPage, envVarsPage, sysPropsPage,
+                threadHistogram, security, threadDumps, heap, leaks));
+        environment.getChildren().setAll(List.of(processPage, envVarsPage, sysPropsPage, nativeLibraries,
                 recordingInfoPage, agentsPage, constantPoolsPage));
         jvmInternals.getChildren().setAll(List.of(jvmInfoPage, gcConfigPage, gcSummaryPage, gcDetailsPage, g1GcPage,
                 javaFxEventsPage,
-                compilationsPage, codeCachePage, classLoadingPage, vmOperationsPage));
+                compilationsPage, codeCachePage, classLoadingPage, vmOperationsPage, tlab));
         globalGroups = List.of(global);
-        recordingGroups = List.of(global, recording, javaApp, jvmInternals, memoryAnalysis, environment);
+        recordingGroups = List.of(global, recording, javaApp, jvmInternals, environment);
         heapDumpGroups = List.of(global, groupWith(heapDumpAnalysis));
         liveJvmGroups = List.of(global);
         rootItem.getChildren().setAll(globalGroups);
@@ -106,7 +104,6 @@ final class AppNavTree extends TreeView<AppNavItem> {
         recording.setExpanded(true);
         javaApp.setExpanded(true);
         jvmInternals.setExpanded(true);
-        memoryAnalysis.setExpanded(true);
         environment.setExpanded(true);
 
         pageItems = new HashMap<>();

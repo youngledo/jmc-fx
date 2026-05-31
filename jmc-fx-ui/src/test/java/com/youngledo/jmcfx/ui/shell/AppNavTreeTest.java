@@ -194,6 +194,15 @@ class AppNavTreeTest {
 
         assertVisibleSections(tree, "home", "settings", "analysis", "overview", "events", "advancedJfr",
                 "javaApplication", "jvmInternals", "environment");
+        assertNotVisibleSections(tree, "memoryAnalysis");
+        assertGroupHasChildren(tree, "javaApplication", "heap", "leaks");
+        assertGroupHasChildren(tree, "jvmInternals", "tlab");
+        assertGroupHasChildren(tree, "environment", "nativeLibraries");
+        assertGroupDoesNotHaveChildren(tree, "javaApplication", "nativeLibraries");
+        assertGroupDoesNotHaveChildren(tree, "jvmInternals", "heap", "leaks");
+        assertChildrenUseTone(tree, "javaApplication", NavIconTone.JAVA, "heap", "leaks");
+        assertChildrenUseTone(tree, "jvmInternals", NavIconTone.JVM, "tlab");
+        assertChildrenUseTone(tree, "environment", NavIconTone.ENVIRONMENT, "nativeLibraries");
         assertGroupUsesGroupItselfAsOverviewEntry(tree, "javaApplication", "profiling");
         assertGroupUsesGroupItselfAsOverviewEntry(tree, "jvmInternals", "jvmInfo");
         assertGroupUsesGroupItselfAsOverviewEntry(tree, "environment", "processes");
@@ -278,6 +287,57 @@ class AppNavTreeTest {
                 .anyMatch(child -> groupSectionId.equals(child.getValue().sectionId())));
         assertTrue(groupItem.getChildren().stream()
                 .anyMatch(child -> expectedChildSectionId.equals(child.getValue().sectionId())));
+    }
+
+    private static void assertGroupHasChildren(AppNavTree tree, String groupSectionId, String... childSectionIds) {
+        List<String> actualChildren = childrenOfGroup(tree, groupSectionId);
+        for (String childSectionId : childSectionIds) {
+            assertTrue(actualChildren.contains(childSectionId),
+                    () -> "Expected group " + groupSectionId + " to contain " + childSectionId
+                            + " in " + actualChildren);
+        }
+    }
+
+    private static void assertGroupDoesNotHaveChildren(AppNavTree tree, String groupSectionId,
+            String... childSectionIds) {
+        List<String> actualChildren = childrenOfGroup(tree, groupSectionId);
+        for (String childSectionId : childSectionIds) {
+            assertFalse(actualChildren.contains(childSectionId),
+                    () -> "Expected group " + groupSectionId + " not to contain " + childSectionId
+                            + " in " + actualChildren);
+        }
+    }
+
+    private static void assertChildrenUseTone(AppNavTree tree, String groupSectionId, NavIconTone expectedTone,
+            String... childSectionIds) {
+        List<TreeItem<AppNavItem>> actualChildren = childItemsOfGroup(tree, groupSectionId);
+        for (String childSectionId : childSectionIds) {
+            AppNavItem child = actualChildren.stream()
+                    .map(TreeItem::getValue)
+                    .filter(item -> childSectionId.equals(item.sectionId()))
+                    .findFirst()
+                    .orElseThrow();
+            assertEquals(expectedTone, child.iconTone(),
+                    () -> "Expected " + childSectionId + " under " + groupSectionId
+                            + " to use icon tone " + expectedTone);
+        }
+    }
+
+    private static List<String> childrenOfGroup(AppNavTree tree, String groupSectionId) {
+        return childItemsOfGroup(tree, groupSectionId)
+                .stream()
+                .map(child -> child.getValue().sectionId())
+                .toList();
+    }
+
+    private static List<TreeItem<AppNavItem>> childItemsOfGroup(AppNavTree tree, String groupSectionId) {
+        return tree.getRoot().getChildren().stream()
+                .filter(group -> groupSectionId.equals(group.getValue().sectionId()))
+                .findFirst()
+                .orElseThrow()
+                .getChildren()
+                .stream()
+                .toList();
     }
 
     private static RecordingSummary recording() {

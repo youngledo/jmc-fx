@@ -52,6 +52,11 @@ class RecordingPageCatalogTest {
         assertEquals("environment", environment.groupId());
         assertEquals(RecordingPageTemplate.OVERVIEW, environment.template());
         assertTrue(pages.indexOf(environment) < pages.indexOf(RecordingPageCatalog.page("processes").orElseThrow()));
+
+        assertEquals("javaApplication", RecordingPageCatalog.page("heap").orElseThrow().groupId());
+        assertEquals("javaApplication", RecordingPageCatalog.page("leaks").orElseThrow().groupId());
+        assertEquals("jvmInternals", RecordingPageCatalog.page("tlab").orElseThrow().groupId());
+        assertEquals("environment", RecordingPageCatalog.page("nativeLibraries").orElseThrow().groupId());
     }
 
     @Test
