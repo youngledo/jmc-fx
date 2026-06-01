@@ -91,8 +91,7 @@ class JmcFxApplicationPackagingTest {
                 "jdk.jfr",
                 "jdk.management.agent",
                 "jdk.unsupported",
-                "javafx.controls",
-                "javafx.fxml");
+                "javafx.controls");
     }
 
     @Test

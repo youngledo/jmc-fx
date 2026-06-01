@@ -106,6 +106,30 @@ class AppShellTest {
     }
 
     @Test
+    void productionUiNoLongerUsesFxml() throws Exception {
+        List<String> matches = java.nio.file.Files.walk(java.nio.file.Path.of("src/main"))
+                .filter(java.nio.file.Files::isRegularFile)
+                .filter(path -> path.toString().endsWith(".java")
+                        || path.toString().endsWith(".fxml"))
+                .flatMap(path -> {
+                    try {
+                        String text = java.nio.file.Files.readString(path);
+                        if (text.contains("FXMLLoader") || text.contains("@FXML")
+                                || path.toString().endsWith(".fxml")) {
+                            return java.util.stream.Stream.of(path.toString());
+                        }
+                        return java.util.stream.Stream.empty();
+                    } catch (java.io.IOException exception) {
+                        throw new java.io.UncheckedIOException(exception);
+                    }
+                })
+                .sorted()
+                .toList();
+
+        assertEquals(List.of(), matches);
+    }
+
+    @Test
     void factoryPassesSavedTargetsAndJdpDiscoveryToShellController() throws Exception {
         FakeSavedJvmTargetRepository savedTargets = new FakeSavedJvmTargetRepository();
         FakeJdpDiscoveryService jdpDiscovery = new FakeJdpDiscoveryService();

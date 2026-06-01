@@ -79,13 +79,13 @@ Baseline date: 2026-05-31.
 - Uses AtlantaFX as the base theme and application CSS afterward.
 - Supports Follow System, Light, and Dark theme preferences.
 - Supports English and Simplified Chinese resource bundles.
+- Uses code-first JavaFX view classes for shell and Live JVM workspace layout;
+  production UI no longer depends on FXML loading.
 - Loads the Live JVM workspace through a dedicated pane/controller boundary so
   Live JVM controls, tables, charts, and bindings are no longer owned by the
   central shell controller.
-- Documents the active direction toward code-first JavaFX views while existing
-  FXML files are migrated incrementally.
-- Includes UI/UX contract tests for FXML, CSS, navigation, localized strings,
-  and important shell invariants.
+- Includes UI/UX contract tests for JavaFX view classes, CSS, navigation,
+  localized strings, and important shell invariants.
 
 ### Packaging And Release Infrastructure
 
@@ -131,20 +131,9 @@ verification result or product decision explicitly changes the order.
     to switch among multiple simultaneous notification sources.
   - It does not yet surface active/listening state per subscription.
 
-- Migrate UI layout from FXML to code-first JavaFX views.
-  - Spec: `docs/superpowers/specs/2026-06-01-code-first-javafx-ui-design.md`.
-  - Plan: `docs/superpowers/plans/2026-06-01-code-first-javafx-ui.md`.
-  - Do not add new FXML files.
-  - Replace `live-jvm-pane.fxml` with `LiveJvmPaneView`.
-  - Replace `app-shell.fxml` with `AppShellView`.
-  - Remove production FXML infrastructure after both existing FXML files are
-    migrated.
-  - Preserve JavaFX, AtlantaFX, CSS, reactive i18n, typed workspaces, and
-    existing UI/UX contracts.
-
 - Continue splitting `AppShellController` responsibilities as part of the
-  code-first JavaFX migration.
-  - Completed first phase: Live JVM workspace FXML and controller ownership are
+  code-first JavaFX architecture.
+  - Completed first phase: Live JVM workspace view and controller ownership are
     separated from the central shell while preserving shell navigation and
     workspace selection.
   - Move remaining feature-specific binding and table setup out of the central
@@ -161,8 +150,8 @@ verification result or product decision explicitly changes the order.
   - Avoid adding a dependency injection framework unless the project has a
     separate product reason to do so.
   - Keep tests able to provide fakes without long positional constructor chains.
-  - Prefer cleanup that supports direct Java view assembly rather than expanding
-    FXML controller-factory wiring.
+  - Prefer cleanup that supports direct Java view assembly and keeps startup
+    wiring explicit.
 
 ### P2
 
@@ -233,7 +222,6 @@ verification result or product decision explicitly changes the order.
 Future work should be split into independent Superpowers specs and plans:
 
 - Live JVM JMX notification management expansion.
-- Code-first JavaFX UI migration.
 - Shell controller decomposition on top of code-first views.
 - App shell dependency bundle cleanup.
 - HPROF/JOverflow browsing improvements.

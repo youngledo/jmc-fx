@@ -729,7 +729,7 @@ git commit -m "refactor(ui): migrate app shell to java view"
 - Modify: `jmc-fx-ui/src/test/java/com/youngledo/jmcfx/ui/shell/AppShellTest.java`
 - Modify: `docs/roadmap.md`
 
-- [ ] **Step 1: Add final no-production-FXML test**
+- [x] **Step 1: Add final no-production-FXML test**
 
 In `AppShellTest`, add:
 
@@ -759,7 +759,7 @@ void productionUiNoLongerUsesFxml() throws Exception {
 }
 ```
 
-- [ ] **Step 2: Run the final FXML usage test**
+- [x] **Step 2: Run the final FXML usage test**
 
 Run:
 
@@ -773,7 +773,7 @@ Expected:
 Tests run: 1, Failures: 0, Errors: 0
 ```
 
-- [ ] **Step 3: Remove `javafx-fxml` dependency if unused**
+- [x] **Step 3: Remove `javafx-fxml` dependency if unused**
 
 Check usage:
 
@@ -787,7 +787,7 @@ If only POM dependency entries remain, remove `javafx-fxml` from
 Do not remove `javafx-fxml` if a transitive dependency or plugin still requires
 it for a documented runtime reason.
 
-- [ ] **Step 4: Update roadmap final code-first status**
+- [x] **Step 4: Update roadmap final code-first status**
 
 In `docs/roadmap.md`, update UI Shell current capabilities:
 
@@ -799,7 +799,7 @@ In `docs/roadmap.md`, update UI Shell current capabilities:
 Update P1 to remove completed code-first migration work and keep any remaining
 controller decomposition or dependency cleanup as follow-on items.
 
-- [ ] **Step 5: Run final verification**
+- [x] **Step 5: Run final verification**
 
 Run:
 

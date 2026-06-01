@@ -110,7 +110,6 @@
                                 <addModule>jdk.management.agent</addModule>
                                 <addModule>jdk.unsupported</addModule>
                                 <addModule>javafx.controls</addModule>
-                                <addModule>javafx.fxml</addModule>
                             </addModules>
                             <noHeaderFiles>true</noHeaderFiles>
                             <noManPages>true</noManPages>
