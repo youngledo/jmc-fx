@@ -53,9 +53,9 @@ Baseline date: 2026-05-31.
 - Provides trigger rules based on live metric samples and actions.
 - Provides JMX attribute monitoring, retained samples, and persisted monitoring
   preferences.
-- Provides a first-phase JMX notification workflow from the Monitoring tab:
-  create a subscription from the selected MBean, start or stop listening, and
-  retain observed events.
+- Provides the completed first-phase JMX notification workflow from the
+  Monitoring tab: create a subscription from the selected MBean, start or stop
+  listening, and retain observed events.
 - Provides JMC Agent status, preset loading, and configuration application when
   the target supports it.
 
@@ -122,12 +122,14 @@ Baseline date: 2026-05-31.
 P1 items should be implemented in the order listed here unless a subsequent
 verification result or product decision explicitly changes the order.
 
-- Expand Live JVM JMX notification management beyond the first-phase toolbar
-  workflow.
-  - Add a dedicated notification-subscription list only if users need to manage
-    multiple simultaneous notification sources.
-  - Surface active/listening state per subscription when multi-subscription
-    management is introduced.
+- Expand Live JVM JMX notification management only if the product needs
+  second-phase multi-subscription management beyond the completed first-phase
+  toolbar workflow.
+  - Current implementation already has persisted notification subscriptions,
+    start/stop actions, and retained notification events.
+  - It does not yet expose a dedicated notification-subscription list for users
+    to switch among multiple simultaneous notification sources.
+  - It does not yet surface active/listening state per subscription.
 
 - Migrate UI layout from FXML to code-first JavaFX views.
   - Spec: `docs/superpowers/specs/2026-06-01-code-first-javafx-ui-design.md`.
