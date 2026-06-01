@@ -101,6 +101,28 @@ class AppShellTest {
     }
 
     @Test
+    void codeFirstMigrationTracksRemainingFxmlFilesExplicitly() throws Exception {
+        List<String> fxmlFiles = java.nio.file.Files.walk(java.nio.file.Path.of("src/main/resources"))
+                .filter(path -> path.toString().endsWith(".fxml"))
+                .map(path -> java.nio.file.Path.of("src/main/resources").relativize(path).toString())
+                .sorted()
+                .toList();
+
+        assertEquals(List.of(
+                "com/youngledo/jmcfx/ui/shell/app-shell.fxml",
+                "com/youngledo/jmcfx/ui/shell/live-jvm-pane.fxml"), fxmlFiles);
+    }
+
+    @Test
+    void appShellFactoryStillUsesFxmlLoaderUntilShellViewMigration() throws Exception {
+        String source = java.nio.file.Files.readString(
+                java.nio.file.Path.of("src/main/java/com/youngledo/jmcfx/ui/shell/AppShellFactory.java"));
+
+        assertTrue(source.contains("new FXMLLoader("));
+        assertTrue(source.contains("controllerFor("));
+    }
+
+    @Test
     void factoryPassesSavedTargetsAndJdpDiscoveryToShellController() {
         FakeSavedJvmTargetRepository savedTargets = new FakeSavedJvmTargetRepository();
         FakeJdpDiscoveryService jdpDiscovery = new FakeJdpDiscoveryService();

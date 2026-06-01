@@ -82,7 +82,7 @@ P1 roadmap items ahead of it are complete or explicitly deferred.
 - Modify: `jmc-fx-ui/src/test/java/com/youngledo/jmcfx/ui/shell/AppShellTest.java`
 - Modify: `jmc-fx-ui/src/test/java/com/youngledo/jmcfx/ui/shell/LiveJvmPaneControllerTest.java`
 
-- [ ] **Step 1: Add source-contract test for no new FXML files after migration starts**
+- [x] **Step 1: Add source-contract test for no new FXML files after migration starts**
 
 In `AppShellTest`, add this test near the FXML/source contract tests:
 
@@ -104,7 +104,7 @@ void codeFirstMigrationTracksRemainingFxmlFilesExplicitly() throws Exception {
 This test intentionally allows only the two known FXML files at the start of
 the migration. Later tasks update it as each file is removed.
 
-- [ ] **Step 2: Add source-contract test for current FXML loader boundary**
+- [x] **Step 2: Add source-contract test for current FXML loader boundary**
 
 In `AppShellTest`, add:
 
@@ -122,7 +122,7 @@ void appShellFactoryStillUsesFxmlLoaderUntilShellViewMigration() throws Exceptio
 This test documents the current boundary before it is removed. It will be
 changed in Task 3.
 
-- [ ] **Step 3: Run the guardrail tests**
+- [x] **Step 3: Run the guardrail tests**
 
 Run:
 
@@ -136,7 +136,7 @@ Expected:
 Tests run: 2, Failures: 0, Errors: 0
 ```
 
-- [ ] **Step 4: Commit guardrails**
+- [x] **Step 4: Commit guardrails**
 
 Run:
 
