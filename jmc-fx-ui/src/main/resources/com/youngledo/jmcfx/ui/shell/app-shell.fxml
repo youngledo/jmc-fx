@@ -502,6 +502,9 @@
                                             <FlowPane fx:id="jvmsMonitoringToolbar" styleClass="page-toolbar" hgap="8" vgap="8">
                                                 <Button fx:id="jvmsAddMonitoringSubscriptionButton"/>
                                                 <Button fx:id="jvmsSampleSubscriptionButton"/>
+                                                <Button fx:id="jvmsAddNotificationSubscriptionButton"/>
+                                                <Button fx:id="jvmsStartNotificationsButton"/>
+                                                <Button fx:id="jvmsStopNotificationsButton"/>
                                             </FlowPane>
                                             <SplitPane orientation="VERTICAL" DividerPositions="0.42" VBox.vgrow="ALWAYS">
                                                 <items>

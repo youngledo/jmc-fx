@@ -53,8 +53,9 @@ Baseline date: 2026-05-31.
 - Provides trigger rules based on live metric samples and actions.
 - Provides JMX attribute monitoring, retained samples, and persisted monitoring
   preferences.
-- Provides JMX notification model, storage, and service support, but the
-  notification UI workflow is not yet complete.
+- Provides a first-phase JMX notification workflow from the Monitoring tab:
+  create a subscription from the selected MBean, start or stop listening, and
+  retain observed events.
 - Provides JMC Agent status, preset loading, and configuration application when
   the target supports it.
 
@@ -113,12 +114,12 @@ Baseline date: 2026-05-31.
 
 ### P1
 
-- Complete the Live JVM JMX monitoring notification workflow.
-  - Add user-facing controls for creating/selecting notification
-    subscriptions.
-  - Add start and stop actions for notification listeners.
-  - Surface active/listening state and failure state in the monitoring page.
-  - Preserve persisted notification subscriptions and retained events.
+- Expand Live JVM JMX notification management beyond the first-phase toolbar
+  workflow.
+  - Add a dedicated notification-subscription list only if users need to manage
+    multiple simultaneous notification sources.
+  - Surface active/listening state per subscription when multi-subscription
+    management is introduced.
 
 - Split `AppShellController` and `app-shell.fxml` responsibilities.
   - Move feature-specific binding and table setup out of the central shell
@@ -203,7 +204,7 @@ Baseline date: 2026-05-31.
 
 Future work should be split into independent Superpowers specs and plans:
 
-- Live JVM JMX monitoring notification workflow.
+- Live JVM JMX notification management expansion.
 - Shell controller and FXML decomposition.
 - App shell dependency bundle cleanup.
 - HPROF/JOverflow browsing improvements.

@@ -627,6 +627,9 @@ public class AppShellController {
     @FXML private Tab jvmsMonitoringTab;
     @FXML private Button jvmsAddMonitoringSubscriptionButton;
     @FXML private Button jvmsSampleSubscriptionButton;
+    @FXML private Button jvmsAddNotificationSubscriptionButton;
+    @FXML private Button jvmsStartNotificationsButton;
+    @FXML private Button jvmsStopNotificationsButton;
     @FXML private TableView<JmxAttributeSubscription> jvmsMonitoringSubscriptionsTable;
     @FXML private LineChart<Number, Number> jvmsMonitoringChart;
     @FXML private TableView<JmxSubscriptionSample> jvmsMonitoringSamplesTable;
@@ -2096,6 +2099,9 @@ public class AppShellController {
             jvmsMonitoringChart.getData().clear();
             jvmsAddMonitoringSubscriptionButton.setDisable(true);
             jvmsSampleSubscriptionButton.setDisable(true);
+            jvmsAddNotificationSubscriptionButton.setDisable(true);
+            jvmsStartNotificationsButton.setDisable(true);
+            jvmsStopNotificationsButton.setDisable(true);
             jvmsMonitoringErrorLabel.setVisible(false);
             jvmsMonitoringErrorLabel.setManaged(false);
             jvmsAgentPresetCombo.setItems(FXCollections.emptyObservableList());
@@ -2232,6 +2238,9 @@ public class AppShellController {
         jvmsEvaluateTriggersButton.setOnAction(event -> jvmBrowserViewModel.evaluateTriggersNow());
         jvmsAddMonitoringSubscriptionButton.setOnAction(event -> addSelectedMonitoringSubscription());
         jvmsSampleSubscriptionButton.setOnAction(event -> jvmBrowserViewModel.sampleSelectedJmxSubscriptionNow());
+        jvmsAddNotificationSubscriptionButton.setOnAction(event -> addSelectedNotificationSubscription());
+        jvmsStartNotificationsButton.setOnAction(event -> jvmBrowserViewModel.startSelectedJmxNotifications());
+        jvmsStopNotificationsButton.setOnAction(event -> jvmBrowserViewModel.stopSelectedJmxNotifications());
         jvmsRefreshAgentButton.setOnAction(event -> jvmBrowserViewModel.refreshJmcAgent());
         jvmsLoadAgentPresetButton.setOnAction(event -> jvmBrowserViewModel.loadSelectedJmcAgentPreset());
         jvmsApplyAgentConfigurationButton.setOnAction(event -> jvmBrowserViewModel.applyJmcAgentConfiguration());
@@ -2471,6 +2480,15 @@ public class AppShellController {
                 .or(jvmBrowserViewModel.selectedMBeanProperty().isNull()));
         jvmsSampleSubscriptionButton.disableProperty().bind(jvmBrowserViewModel.jmxMonitoringLoadingProperty()
                 .or(jvmBrowserViewModel.selectedJmxAttributeSubscriptionProperty().isNull()));
+        jvmsAddNotificationSubscriptionButton.disableProperty().bind(jvmBrowserViewModel.jmxMonitoringAvailableProperty().not()
+                .or(jvmBrowserViewModel.selectedMBeanProperty().isNull())
+                .or(jvmBrowserViewModel.jmxMonitoringLoadingProperty()));
+        jvmsStartNotificationsButton.disableProperty().bind(jvmBrowserViewModel.jmxMonitoringAvailableProperty().not()
+                .or(jvmBrowserViewModel.selectedJmxNotificationSubscriptionProperty().isNull())
+                .or(jvmBrowserViewModel.jmxMonitoringLoadingProperty()));
+        jvmsStopNotificationsButton.disableProperty().bind(jvmBrowserViewModel.jmxMonitoringAvailableProperty().not()
+                .or(jvmBrowserViewModel.selectedJmxNotificationSubscriptionProperty().isNull())
+                .or(jvmBrowserViewModel.jmxMonitoringLoadingProperty()));
     }
 
     private void bindJmcAgentManager() {
@@ -2642,6 +2660,16 @@ public class AppShellController {
                 jvmsMBeanAttributesTable.getSelectionModel().getSelectedItem(),
                 java.time.Duration.ofSeconds(1),
                 120,
+                true);
+    }
+
+    private void addSelectedNotificationSubscription() {
+        if (jvmBrowserViewModel == null) {
+            return;
+        }
+        jvmBrowserViewModel.addMBeanNotificationSubscription(
+                jvmBrowserViewModel.selectedMBeanProperty().get(),
+                100,
                 true);
     }
 
@@ -4445,6 +4473,9 @@ public class AppShellController {
         jvmsEvaluateTriggersButton.textProperty().bind(i18n.text("jvms.triggers.evaluate"));
         jvmsAddMonitoringSubscriptionButton.textProperty().bind(i18n.text("jvms.monitoring.addSubscription"));
         jvmsSampleSubscriptionButton.textProperty().bind(i18n.text("jvms.monitoring.sampleNow"));
+        jvmsAddNotificationSubscriptionButton.textProperty().bind(i18n.text("jvms.monitoring.addNotification"));
+        jvmsStartNotificationsButton.textProperty().bind(i18n.text("jvms.monitoring.startNotifications"));
+        jvmsStopNotificationsButton.textProperty().bind(i18n.text("jvms.monitoring.stopNotifications"));
         jvmsAgentPresetCombo.promptTextProperty().bind(i18n.text("jvms.agent.preset"));
         jvmsRefreshAgentButton.textProperty().bind(i18n.text("jvms.agent.refresh"));
         jvmsLoadAgentPresetButton.textProperty().bind(i18n.text("jvms.agent.loadPreset"));

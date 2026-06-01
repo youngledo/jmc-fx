@@ -988,6 +988,34 @@ public class JvmBrowserViewModel implements AutoCloseable {
         clearJmxMonitoringError();
     }
 
+    public void addMBeanNotificationSubscription(MBeanNode node, int maxEvents, boolean persisted) {
+        JvmSessionSnapshot snapshot = selectedSession.get();
+        if (snapshot == null || !jmxMonitoringAvailable.get() || jmxMonitoringService == null) {
+            failJmxMonitoring("Select a connected JVM with JMX monitoring available.");
+            return;
+        }
+        if (node == null || node.domain()) {
+            failJmxMonitoring("Select an MBean object to subscribe to notifications.");
+            return;
+        }
+        String label = node.name() == null || node.name().isBlank() ? node.objectName() : node.name();
+        JmxNotificationSubscription subscription = new JmxNotificationSubscription(
+                "",
+                snapshot.connection().id(),
+                node.objectName(),
+                label,
+                maxEvents,
+                true,
+                persisted);
+        jmxNotificationSubscriptions.add(subscription);
+        selectedJmxNotificationSubscription.set(subscription);
+        if (persisted && jmxMonitoringRepository != null) {
+            jmxMonitoringRepository.saveNotificationSubscription(subscription);
+        }
+        updateOverviewPersistenceSummary();
+        clearJmxMonitoringError();
+    }
+
     public void sampleSelectedJmxSubscriptionNow() {
         JvmSessionSnapshot snapshot = selectedSession.get();
         JmxAttributeSubscription subscription = selectedJmxAttributeSubscription.get();
@@ -1018,6 +1046,16 @@ public class JvmBrowserViewModel implements AutoCloseable {
         });
     }
 
+    public void startSelectedJmxNotifications() {
+        JvmSessionSnapshot snapshot = selectedSession.get();
+        JmxNotificationSubscription subscription = selectedJmxNotificationSubscription.get();
+        if (snapshot == null || subscription == null || jmxMonitoringService == null) {
+            failJmxMonitoring("Select a JMX notification subscription to start.");
+            return;
+        }
+        startJmxNotifications(subscription);
+    }
+
     public void startJmxNotifications(JmxNotificationSubscription subscription) {
         JvmSessionSnapshot snapshot = selectedSession.get();
         if (snapshot == null || subscription == null || jmxMonitoringService == null) {
@@ -1044,6 +1082,32 @@ public class JvmBrowserViewModel implements AutoCloseable {
                         return;
                     }
                     initialEvents.forEach(event -> appendNotificationEvent(subscription, event));
+                    jmxMonitoringLoading.set(false);
+                    clearJmxMonitoringError();
+                });
+            } catch (RuntimeException exception) {
+                failJmxMonitoring(generation, snapshot, exception);
+            }
+        });
+    }
+
+    public void stopSelectedJmxNotifications() {
+        JvmSessionSnapshot snapshot = selectedSession.get();
+        JmxNotificationSubscription subscription = selectedJmxNotificationSubscription.get();
+        if (snapshot == null || subscription == null || jmxMonitoringService == null) {
+            failJmxMonitoring("Select a JMX notification subscription to stop.");
+            return;
+        }
+        long generation = nextJmxMonitoringGeneration();
+        jmxMonitoringLoading.set(true);
+        clearJmxMonitoringError();
+        executor.execute(() -> {
+            try {
+                jmxMonitoringService.stopNotifications(snapshot.connection(), subscription.id());
+                runOnFx(() -> {
+                    if (!isCurrentJmxMonitoringGeneration(generation, snapshot)) {
+                        return;
+                    }
                     jmxMonitoringLoading.set(false);
                     clearJmxMonitoringError();
                 });

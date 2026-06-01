@@ -1451,6 +1451,52 @@ class JvmBrowserViewModelTest {
     }
 
     @Test
+    void addMBeanNotificationSubscriptionCreatesPersistedSubscription() {
+        FakeJmxConnectionService jmx = new FakeJmxConnectionService();
+        FakeMBeanBrowserService mbeans = new FakeMBeanBrowserService();
+        FakeJmxMonitoringService monitoring = new FakeJmxMonitoringService();
+        FakeJmxMonitoringRepository repository = new FakeJmxMonitoringRepository();
+        JvmBrowserViewModel viewModel = viewModel(new FakeJvmDiscoveryService(), jmx, mbeans, monitoring, repository);
+        JvmConnection connected = connectedWithMBeans(viewModel, jmx);
+        MBeanNode notifier = MBeanNode.objectName("demo:type=Notifier", "Notifier");
+        mbeans.setTree(connected.id(), List.of(MBeanNode.domain("demo", List.of(notifier))));
+        mbeans.setAttributes(connected.id(), notifier.objectName(), List.of());
+        mbeans.setOperations(connected.id(), notifier.objectName(), List.of());
+        viewModel.selectedConnectionProperty().set(connected);
+        viewModel.selectedMBeanProperty().set(notifier);
+
+        viewModel.addMBeanNotificationSubscription(notifier, 100, true);
+
+        assertEquals(1, viewModel.jmxNotificationSubscriptionsProperty().size());
+        JmxNotificationSubscription subscription = viewModel.jmxNotificationSubscriptionsProperty().getFirst();
+        assertEquals(connected.id(), subscription.connectionId());
+        assertEquals("demo:type=Notifier", subscription.objectName());
+        assertEquals("Notifier", subscription.label());
+        assertEquals(100, subscription.maxEvents());
+        assertTrue(subscription.enabled());
+        assertTrue(subscription.persisted());
+        assertEquals(subscription, viewModel.selectedJmxNotificationSubscriptionProperty().get());
+        assertEquals(List.of(subscription), repository.findNotificationSubscriptions(connected.id()));
+    }
+
+    @Test
+    void addMBeanNotificationSubscriptionRejectsDomainNode() {
+        FakeJmxConnectionService jmx = new FakeJmxConnectionService();
+        FakeJmxMonitoringService monitoring = new FakeJmxMonitoringService();
+        FakeJmxMonitoringRepository repository = new FakeJmxMonitoringRepository();
+        JvmBrowserViewModel viewModel = viewModel(new FakeJvmDiscoveryService(), jmx, null, monitoring, repository);
+        JvmConnection connected = connectedWithMBeans(viewModel, jmx);
+        viewModel.selectedConnectionProperty().set(connected);
+
+        viewModel.addMBeanNotificationSubscription(MBeanNode.domain("demo", List.of()), 100, true);
+
+        assertTrue(viewModel.jmxMonitoringErrorProperty().get());
+        assertEquals("Select an MBean object to subscribe to notifications.",
+                viewModel.jmxMonitoringErrorMessageProperty().get());
+        assertTrue(viewModel.jmxNotificationSubscriptionsProperty().isEmpty());
+    }
+
+    @Test
     void sampleSelectedSubscriptionAppendsSampleAndPersistsIt() {
         FakeJmxConnectionService jmx = new FakeJmxConnectionService();
         FakeJmxMonitoringService monitoring = new FakeJmxMonitoringService();
@@ -1493,6 +1539,56 @@ class JvmBrowserViewModelTest {
 
         assertEquals(List.of(second), viewModel.jmxNotificationEventsProperty());
         assertEquals(List.of(second), repository.findNotificationEvents("notif-1"));
+    }
+
+    @Test
+    void startSelectedJmxNotificationsAppendsInitialEvents() {
+        FakeJmxConnectionService jmx = new FakeJmxConnectionService();
+        FakeJmxMonitoringService monitoring = new FakeJmxMonitoringService();
+        FakeJmxMonitoringRepository repository = new FakeJmxMonitoringRepository();
+        JvmBrowserViewModel viewModel = viewModel(new FakeJvmDiscoveryService(), jmx, null, monitoring, repository);
+        JvmConnection connected = connectedWithMBeans(viewModel, jmx);
+        JmxNotificationSubscription subscription = new JmxNotificationSubscription(
+                "notif-1", connected.id(), "demo:type=Notifier", "Notifier", 2, true, true);
+        JmxNotificationEvent first = new JmxNotificationEvent(
+                "notif-1", Instant.EPOCH, "demo.first", "source", 1, "first", "");
+        JmxNotificationEvent second = new JmxNotificationEvent(
+                "notif-1", Instant.EPOCH.plusSeconds(1), "demo.second", "source", 2, "second", "");
+        monitoring.setNotificationEvents(connected.id(), subscription.id(), List.of(first, second));
+        viewModel.selectedConnectionProperty().set(connected);
+        viewModel.selectedJmxNotificationSubscriptionProperty().set(subscription);
+
+        viewModel.startSelectedJmxNotifications();
+
+        assertEquals(List.of(first, second), viewModel.jmxNotificationEventsProperty());
+        assertEquals(List.of(subscription), repository.findNotificationSubscriptions(connected.id()));
+        assertEquals(List.of(first, second), repository.findNotificationEvents(subscription.id()));
+        assertFalse(viewModel.jmxMonitoringLoadingProperty().get());
+        assertFalse(viewModel.jmxMonitoringErrorProperty().get());
+    }
+
+    @Test
+    void stopSelectedJmxNotificationsStopsServiceAndKeepsEvents() {
+        FakeJmxConnectionService jmx = new FakeJmxConnectionService();
+        FakeJmxMonitoringService monitoring = new FakeJmxMonitoringService();
+        FakeJmxMonitoringRepository repository = new FakeJmxMonitoringRepository();
+        JvmBrowserViewModel viewModel = viewModel(new FakeJvmDiscoveryService(), jmx, null, monitoring, repository);
+        JvmConnection connected = connectedWithMBeans(viewModel, jmx);
+        JmxNotificationSubscription subscription = new JmxNotificationSubscription(
+                "notif-1", connected.id(), "demo:type=Notifier", "Notifier", 2, true, false);
+        JmxNotificationEvent event = new JmxNotificationEvent(
+                "notif-1", Instant.EPOCH, "demo", "source", 1, "message", "");
+        repository.saveNotificationSubscription(subscription);
+        repository.appendNotificationEvent(event);
+        viewModel.selectedConnectionProperty().set(connected);
+        viewModel.selectedJmxNotificationSubscriptionProperty().set(subscription);
+
+        viewModel.stopSelectedJmxNotifications();
+
+        assertEquals(List.of(subscription.id()), monitoring.stoppedNotificationIds());
+        assertEquals(List.of(event), viewModel.jmxNotificationEventsProperty());
+        assertFalse(viewModel.jmxMonitoringLoadingProperty().get());
+        assertFalse(viewModel.jmxMonitoringErrorProperty().get());
     }
 
     @Test

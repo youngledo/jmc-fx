@@ -464,6 +464,9 @@ class AppShellTest {
         assertTrue(hasStyleClass(elementByFxId(document, "jvmsMonitoringToolbar"), "page-toolbar"));
         assertEquals("Button", elementByFxId(document, "jvmsAddMonitoringSubscriptionButton").getTagName());
         assertEquals("Button", elementByFxId(document, "jvmsSampleSubscriptionButton").getTagName());
+        assertEquals("Button", elementByFxId(document, "jvmsAddNotificationSubscriptionButton").getTagName());
+        assertEquals("Button", elementByFxId(document, "jvmsStartNotificationsButton").getTagName());
+        assertEquals("Button", elementByFxId(document, "jvmsStopNotificationsButton").getTagName());
         assertEquals("TableView", elementByFxId(document, "jvmsMonitoringSubscriptionsTable").getTagName());
         assertTrue(hasStyleClass(elementByFxId(document, "jvmsMonitoringSubscriptionsTable"), "dense-table"));
         assertEquals("LineChart", elementByFxId(document, "jvmsMonitoringChart").getTagName());
@@ -808,6 +811,40 @@ class AppShellTest {
         assertTrue(chinese.contains("jvms.overview.persistence.summary=已为"));
         assertTrue(chinese.contains("jvms.overview.metrics.empty=尚未采样总览指标。"));
         assertTrue(chinese.contains("jvms.overview.axis.memory=内存"));
+    }
+
+    @Test
+    void liveJvmMonitoringWiresNotificationToolbarActions() throws Exception {
+        String controller = java.nio.file.Files.readString(
+                java.nio.file.Path.of("src/main/java/com/youngledo/jmcfx/ui/shell/AppShellController.java"));
+        String english = java.nio.file.Files.readString(
+                java.nio.file.Path.of("src/main/resources/com/youngledo/jmcfx/ui/i18n/messages.properties"));
+        String chinese = java.nio.file.Files.readString(
+                java.nio.file.Path.of("src/main/resources/com/youngledo/jmcfx/ui/i18n/messages_zh_CN.properties"));
+
+        assertTrue(controller.contains("@FXML private Button jvmsAddNotificationSubscriptionButton;"));
+        assertTrue(controller.contains("@FXML private Button jvmsStartNotificationsButton;"));
+        assertTrue(controller.contains("@FXML private Button jvmsStopNotificationsButton;"));
+        assertTrue(controller.contains(
+                "jvmsAddNotificationSubscriptionButton.setOnAction(event -> addSelectedNotificationSubscription())"));
+        assertTrue(controller.contains(
+                "jvmsStartNotificationsButton.setOnAction(event -> jvmBrowserViewModel.startSelectedJmxNotifications())"));
+        assertTrue(controller.contains(
+                "jvmsStopNotificationsButton.setOnAction(event -> jvmBrowserViewModel.stopSelectedJmxNotifications())"));
+        assertTrue(controller.contains(
+                "jvmsAddNotificationSubscriptionButton.textProperty().bind(i18n.text(\"jvms.monitoring.addNotification\"))"));
+        assertTrue(controller.contains(
+                "jvmsStartNotificationsButton.textProperty().bind(i18n.text(\"jvms.monitoring.startNotifications\"))"));
+        assertTrue(controller.contains(
+                "jvmsStopNotificationsButton.textProperty().bind(i18n.text(\"jvms.monitoring.stopNotifications\"))"));
+        assertTrue(english.contains("jvms.monitoring.addSubscription=Add Attribute"));
+        assertTrue(english.contains("jvms.monitoring.addNotification=Add Notification"));
+        assertTrue(english.contains("jvms.monitoring.startNotifications=Start Notifications"));
+        assertTrue(english.contains("jvms.monitoring.stopNotifications=Stop Notifications"));
+        assertTrue(chinese.contains("jvms.monitoring.addSubscription=添加属性"));
+        assertTrue(chinese.contains("jvms.monitoring.addNotification=添加通知"));
+        assertTrue(chinese.contains("jvms.monitoring.startNotifications=开始通知"));
+        assertTrue(chinese.contains("jvms.monitoring.stopNotifications=停止通知"));
     }
 
     @Test
