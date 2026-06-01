@@ -615,6 +615,9 @@ public class AppShellFactory {
                     advancedJfrAnalysisService,
                     savedTargetRepository, jdpDiscoveryService, heapDumpAnalysisService, i18n);
         }
+        if (type == LiveJvmPaneController.class) {
+            return new LiveJvmPaneController();
+        }
         throw new IllegalArgumentException("Unsupported controller: " + type.getName());
     }
 

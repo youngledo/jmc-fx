@@ -91,6 +91,16 @@ class AppShellTest {
     }
 
     @Test
+    void factorySupportsIncludedLiveJvmPaneController() {
+        AppShellFactory factory = new AppShellFactory(new FakeRecordingRepository(), new FakeEventQueryService(),
+                new FakeRuleAnalysisService());
+
+        Object controller = factory.controllerFor(LiveJvmPaneController.class, new AppShellViewModel());
+
+        assertEquals(LiveJvmPaneController.class, controller.getClass());
+    }
+
+    @Test
     void factoryPassesSavedTargetsAndJdpDiscoveryToShellController() {
         FakeSavedJvmTargetRepository savedTargets = new FakeSavedJvmTargetRepository();
         FakeJdpDiscoveryService jdpDiscovery = new FakeJdpDiscoveryService();
