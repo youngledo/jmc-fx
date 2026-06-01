@@ -484,7 +484,7 @@ git commit -m "refactor(ui): migrate live jvm pane to java view"
 - Modify: `jmc-fx-ui/src/test/java/com/youngledo/jmcfx/ui/shell/AppShellTest.java`
 - Delete: `jmc-fx-ui/src/main/resources/com/youngledo/jmcfx/ui/shell/app-shell.fxml`
 
-- [ ] **Step 1: Add failing `AppShellView` structure test**
+- [x] **Step 1: Add failing `AppShellView` structure test**
 
 In `AppShellTest`, add:
 
@@ -505,7 +505,7 @@ void appShellViewBuildsRootShellAndWorkspaceRegions() {
 Expected before implementation: compilation failure because `AppShellView`
 does not exist.
 
-- [ ] **Step 2: Run the failing shell view test**
+- [x] **Step 2: Run the failing shell view test**
 
 Run:
 
@@ -519,7 +519,7 @@ Expected:
 Compilation failure mentioning AppShellView
 ```
 
-- [ ] **Step 3: Create `AppShellView` skeleton**
+- [x] **Step 3: Create `AppShellView` skeleton**
 
 Create `AppShellView.java`:
 
@@ -545,7 +545,7 @@ final class AppShellView {
 }
 ```
 
-- [ ] **Step 4: Port `app-shell.fxml` node tree to `AppShellView`**
+- [x] **Step 4: Port `app-shell.fxml` node tree to `AppShellView`**
 
 Move the current FXML shell nodes into Java code, preserving field names used by
 `AppShellController`.
@@ -569,7 +569,7 @@ The view should create:
 
 Do not change page order or text keys.
 
-- [ ] **Step 5: Update `AppShellController` to use `AppShellView`**
+- [x] **Step 5: Update `AppShellController` to use `AppShellView`**
 
 Change constructor shape by adding a view seam:
 
@@ -594,7 +594,7 @@ public AppShellController(AppShellViewModel viewModel, RecordingRepository recor
 }
 ```
 
-- [ ] **Step 6: Replace `AppShellFactory.create()` FXML loading**
+- [x] **Step 6: Replace `AppShellFactory.create()` FXML loading**
 
 Replace:
 
@@ -628,7 +628,7 @@ If `initialize()` is currently private or FXML-only, make a package-private
 startup method such as `void initializeView()` and call that from the factory.
 Do not keep `FXMLLoader` solely to call `initialize`.
 
-- [ ] **Step 7: Delete `app-shell.fxml` and update guardrails**
+- [x] **Step 7: Delete `app-shell.fxml` and update guardrails**
 
 Delete:
 
@@ -657,7 +657,7 @@ void appShellFactoryUsesDirectJavaViewAssembly() throws Exception {
 }
 ```
 
-- [ ] **Step 8: Remove FXML test helpers and XML imports**
+- [x] **Step 8: Remove FXML test helpers and XML imports**
 
 In `AppShellTest` and `LiveJvmPaneControllerTest`, remove helpers that only
 parse FXML:
@@ -677,7 +677,7 @@ hasStyleClass(Element ...)
 
 Keep Java view tests that inspect actual JavaFX nodes and style class lists.
 
-- [ ] **Step 9: Run shell Java view targeted tests**
+- [x] **Step 9: Run shell Java view targeted tests**
 
 Run:
 
@@ -691,7 +691,7 @@ Expected:
 Tests run: ... Failures: 0, Errors: 0
 ```
 
-- [ ] **Step 10: Run app startup smoke check**
+- [x] **Step 10: Run app startup smoke check**
 
 Run:
 
@@ -705,7 +705,7 @@ Expected:
 Application starts without FXML LoadException
 ```
 
-- [ ] **Step 11: Commit shell Java view migration**
+- [x] **Step 11: Commit shell Java view migration**
 
 Run:
 

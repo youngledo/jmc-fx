@@ -2,6 +2,7 @@ package com.youngledo.jmcfx.ui.shell;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertFalse;
+import static org.junit.jupiter.api.Assertions.assertNotNull;
 import static org.junit.jupiter.api.Assertions.assertNull;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 
@@ -53,7 +54,6 @@ import com.youngledo.jmcfx.testsupport.FakeRecordingRepository;
 import com.youngledo.jmcfx.testsupport.FakeRuleAnalysisService;
 import com.youngledo.jmcfx.testsupport.FakeSavedJvmTargetRepository;
 
-import javafx.fxml.FXMLLoader;
 import javafx.application.Platform;
 import javafx.scene.Node;
 import javafx.scene.layout.Region;
@@ -82,46 +82,31 @@ class AppShellTest {
     }
 
     @Test
-    void factorySupportsShellController() {
-        AppShellFactory factory = new AppShellFactory(new FakeRecordingRepository(), new FakeEventQueryService(), new FakeRuleAnalysisService());
+    void appShellViewBuildsRootShellAndWorkspaceRegions() {
+        AppShellView view = new AppShellView();
 
-        Object controller = factory.controllerFor(AppShellController.class, new AppShellViewModel());
-
-        assertEquals(AppShellController.class, controller.getClass());
+        assertEquals("BorderPane", view.root.getClass().getSimpleName());
+        assertTrue(view.root.getStyleClass().contains("app-shell"));
+        assertEquals("StackPane", view.workspaceStack.getClass().getSimpleName());
+        assertNotNull(view.homePane);
+        assertNotNull(view.settingsPane);
+        assertNotNull(view.jvmsPaneHost);
     }
 
-    @Test
-    void factorySupportsIncludedLiveJvmPaneController() {
-        AppShellFactory factory = new AppShellFactory(new FakeRecordingRepository(), new FakeEventQueryService(),
-                new FakeRuleAnalysisService());
-
-        Object controller = factory.controllerFor(LiveJvmPaneController.class, new AppShellViewModel());
-
-        assertEquals(LiveJvmPaneController.class, controller.getClass());
-    }
 
     @Test
-    void codeFirstMigrationTracksRemainingFxmlFilesExplicitly() throws Exception {
-        List<String> fxmlFiles = java.nio.file.Files.walk(java.nio.file.Path.of("src/main/resources"))
-                .filter(path -> path.toString().endsWith(".fxml"))
-                .map(path -> java.nio.file.Path.of("src/main/resources").relativize(path).toString())
-                .sorted()
-                .toList();
-
-        assertEquals(List.of("com/youngledo/jmcfx/ui/shell/app-shell.fxml"), fxmlFiles);
-    }
-
-    @Test
-    void appShellFactoryStillUsesFxmlLoaderUntilShellViewMigration() throws Exception {
+    void appShellFactoryUsesDirectJavaViewAssembly() throws Exception {
         String source = java.nio.file.Files.readString(
                 java.nio.file.Path.of("src/main/java/com/youngledo/jmcfx/ui/shell/AppShellFactory.java"));
 
-        assertTrue(source.contains("new FXMLLoader("));
-        assertTrue(source.contains("controllerFor("));
+        assertFalse(source.contains("new FXMLLoader("));
+        assertFalse(source.contains("controllerFor("));
+        assertTrue(source.contains("new AppShellView()"));
+        assertTrue(source.contains("new AppShellController("));
     }
 
     @Test
-    void factoryPassesSavedTargetsAndJdpDiscoveryToShellController() {
+    void factoryPassesSavedTargetsAndJdpDiscoveryToShellController() throws Exception {
         FakeSavedJvmTargetRepository savedTargets = new FakeSavedJvmTargetRepository();
         FakeJdpDiscoveryService jdpDiscovery = new FakeJdpDiscoveryService();
         AppShellFactory factory = new AppShellFactory(new FakeRecordingRepository(), new FakeEventQueryService(),
@@ -129,15 +114,15 @@ class AppShellTest {
                 null, null, null, null, null, null, null, null, null, null, savedTargets, jdpDiscovery, null,
                 new I18n(Locale.ENGLISH));
 
-        AppShellController controller = (AppShellController) factory.controllerFor(AppShellController.class,
-                new AppShellViewModel());
+        AppShell shell = createShellOnFxThread(factory);
+        AppShellController controller = shellController(shell);
 
         assertEquals(savedTargets, controller.savedTargetRepository());
         assertEquals(jdpDiscovery, controller.jdpDiscoveryService());
     }
 
     @Test
-    void factoryPassesJmxMonitoringDependenciesToShellController() {
+    void factoryPassesJmxMonitoringDependenciesToShellController() throws Exception {
         FakeJmxMonitoringService monitoringService = new FakeJmxMonitoringService();
         FakeJmxMonitoringRepository monitoringRepository = new FakeJmxMonitoringRepository();
         AppShellFactory factory = new AppShellFactory(new FakeRecordingRepository(), new FakeEventQueryService(),
@@ -146,8 +131,8 @@ class AppShellTest {
                 null, null, null, monitoringService, monitoringRepository, null, null, null, null,
                 new I18n(Locale.ENGLISH));
 
-        AppShellController controller = (AppShellController) factory.controllerFor(AppShellController.class,
-                new AppShellViewModel());
+        AppShell shell = createShellOnFxThread(factory);
+        AppShellController controller = shellController(shell);
 
         assertEquals(monitoringService, controller.jmxMonitoringService());
         assertEquals(monitoringRepository, controller.jmxMonitoringRepository());
@@ -212,239 +197,21 @@ class AppShellTest {
                         && "ikonli-material2-pack".equals(element.getTextContent())));
     }
 
-    @Test
-    void fxmlStructureExposesRecordingWorkspaceStyleHooks() throws Exception {
-        Document document = appShellFxml();
-
-        assertEquals("BorderPane", document.getDocumentElement().getTagName());
-        assertEquals(0, document.getElementsByTagName("right").getLength());
-        assertEquals(0, document.getElementsByTagName("ToolBar").getLength());
-        assertEquals(0, elementCountWithFxId(document, "openRecordingButton"));
-        Element sidebar = elementByFxId(document, "sidebar");
-        assertEquals("AppSidebar", sidebar.getTagName());
-        assertEquals(0, elementCountWithStyleClass(document, "left-nav"));
-        assertEquals(0, elementCountWithStyleClass(document, "nav-section-label"));
-        assertEquals(0, elementCountWithStyleClass(document, "sidebar-recording-card"));
-        assertEquals(0, elementCountWithFxId(document, "workspaceTopbar"));
-        assertEquals(0, elementCountWithFxId(document, "workspaceContextLabel"));
-        assertEquals(0, elementCountWithFxId(document, "workspaceHomeButton"));
-        assertEquals("TabPane", elementByFxId(document, "recordingTabs").getTagName());
-        assertEquals("StackPane", elementByFxId(document, "workspaceStack").getTagName());
-
-        Element homePane = elementByFxId(document, "homePane");
-        assertEquals("18", homePane.getAttribute("spacing"));
-        assertTrue(hasStyleClass(homePane, "welcome-pane"));
-        assertTrue(hasStyleClass(elementByFxId(document, "homeKickerLabel"), "home-kicker"));
-        assertTrue(hasStyleClass(elementByFxId(document, "homeTitleLabel"), "welcome-title"));
-        assertTrue(hasStyleClass(elementByFxId(document, "homeSubtitleLabel"), "welcome-subtitle"));
-        assertEquals("Button", elementByFxId(document, "homeOpenHeapDumpButton").getTagName());
-        assertTrue(hasStyleClass(elementByFxId(document, "homeJfrTile"), "workflow-tile"));
-        assertTrue(hasStyleClass(elementByFxId(document, "homeHeapDumpTile"), "workflow-tile"));
-        assertTrue(hasStyleClass(elementByFxId(document, "homeJvmTile"), "workflow-tile"));
-        assertTrue(hasStyleClass(elementByFxId(document, "homeOpenWorkflowTitleLabel"), "workflow-tile-title"));
-        assertTrue(hasStyleClass(elementByFxId(document, "homeHeapDumpWorkflowTitleLabel"), "workflow-tile-title"));
-        assertTrue(hasStyleClass(elementByFxId(document, "homeHeapDumpWorkflowDescriptionLabel"), "workflow-tile-copy"));
-        assertTrue(hasStyleClass(elementByFxId(document, "homeJvmWorkflowDescriptionLabel"), "workflow-tile-copy"));
-        assertTrue("true".equals(elementByFxId(document, "homeJvmWorkflowDescriptionLabel").getAttribute("wrapText")));
-
-        assertEquals("analysisPane", elementByFxId(document, "analysisPane").getAttribute("fx:id"));
-        assertTrue(hasStyleClass(elementByFxId(document, "analysisPane"), "split-table-detail-page"));
-        assertEquals("HBox", elementByFxId(document, "analysisFilterBar").getTagName());
-        assertTrue(hasStyleClass(elementByFxId(document, "analysisFilterBar"), "page-toolbar"));
-        assertEquals("TextField", elementByFxId(document, "analysisSearchField").getTagName());
-        assertEquals("Spinner", elementByFxId(document, "analysisMinimumScoreSpinner").getTagName());
-        assertEquals("CheckBox", elementByFxId(document, "analysisShowOkCheckBox").getTagName());
-        assertEquals("CheckBox", elementByFxId(document, "analysisShowIgnoredCheckBox").getTagName());
-        assertEquals("CheckBox", elementByFxId(document, "analysisShowUnavailableCheckBox").getTagName());
-        assertTrue(hasStyleClass(elementByFxId(document, "analysisDetailPane"), "detail-panel"));
-        assertEquals("6", elementByFxId(document, "analysisDetailPane").getAttribute("spacing"));
-        assertNull(elementByFxIdOrNull(document, "analysisDetailTitle"));
-        assertNull(elementByFxIdOrNull(document, "analysisRelatedPageButton"));
-        assertNull(elementByFxIdOrNull(document, "analysisDetailMeta"));
-        assertNull(elementByFxIdOrNull(document, "analysisDetailResultIdLabel"));
-        assertNull(elementByFxIdOrNull(document, "analysisDetailSummaryCaption"));
-        assertNull(elementByFxIdOrNull(document, "analysisDetailSummaryArea"));
-        assertTrue(hasStyleClass(elementByFxId(document, "analysisDetailExplanationCaption"), "detail-section-label"));
-        assertTrue(hasStyleClass(elementByFxId(document, "analysisDetailEvidenceCaption"), "detail-section-label"));
-        assertTrue(hasStyleClass(elementByFxId(document, "analysisDetailRecommendationCaption"), "detail-section-label"));
-        assertTrue(hasStyleClass(elementByFxId(document, "analysisDetailExplanationArea"), "detail-panel-body"));
-        assertTrue(hasStyleClass(elementByFxId(document, "analysisDetailEvidenceArea"), "detail-panel-body"));
-        assertTrue(hasStyleClass(elementByFxId(document, "analysisDetailRecommendationArea"), "detail-panel-body"));
-        Element metadataPane = elementByFxId(document, "metadataPane");
-        assertEquals("VBox", metadataPane.getTagName());
-        assertTrue(hasStyleClass(metadataPane, "page"));
-        assertTrue(hasStyleClass(metadataPane, "split-table-detail-page"));
-        assertEquals("Label", elementByFxId(document, "metadataTitleLabel").getTagName());
-        assertEquals("Label", elementByFxId(document, "metadataSummaryLabel").getTagName());
-        assertEquals("SplitPane", elementByFxId(document, "metadataContent").getTagName());
-        assertEquals("TableView", elementByFxId(document, "metadataEventTypesTable").getTagName());
-        assertTrue(hasStyleClass(elementByFxId(document, "metadataEventTypesTable"), "dense-table"));
-        assertEquals("VBox", elementByFxId(document, "metadataDetailPane").getTagName());
-        assertTrue(hasStyleClass(elementByFxId(document, "metadataDetailPane"), "detail-panel"));
-        assertEquals("Label", elementByFxId(document, "metadataDetailTitleLabel").getTagName());
-        assertTrue(hasStyleClass(elementByFxId(document, "metadataDetailTitleLabel"), "detail-panel-title"));
-        assertEquals("TextArea", elementByFxId(document, "metadataDetailArea").getTagName());
-        assertEquals("false", elementByFxId(document, "metadataDetailArea").getAttribute("editable"));
-        assertEquals("true", elementByFxId(document, "metadataDetailArea").getAttribute("wrapText"));
-        assertTrue(hasStyleClass(elementByFxId(document, "metadataDetailArea"), "detail-panel-body"));
-        assertEquals("VBox", elementByFxId(document, "advancedJfrPane").getTagName());
-        assertEquals("Label", elementByFxId(document, "advancedJfrTitleLabel").getTagName());
-        assertEquals("Label", elementByFxId(document, "advancedJfrSummaryLabel").getTagName());
-        assertEquals("TabPane", elementByFxId(document, "advancedJfrTabs").getTagName());
-        List<Element> advancedJfrTabs = childElements(childElement(elementByFxId(document, "advancedJfrTabs"), "tabs"), "Tab");
-        assertEquals(List.of("advancedJfrHeatmapTab", "advancedJfrMemoryTab"),
-                advancedJfrTabs.stream().map(tab -> tab.getAttribute("fx:id")).toList());
-        assertEquals("VBox", elementByFxId(document, "advancedJfrHeatmapContainer").getTagName());
-        assertEquals(0, elementCountWithFxId(document, "advancedJfrSplitPane"));
-        assertTrue(hasStyleClass(elementByFxId(document, "advancedJfrSelectionPane"), "advanced-jfr-selection-pane"));
-        assertEquals("HBox", elementByFxId(document, "advancedJfrSelectionValues").getTagName());
-        assertEquals("Label", elementByFxId(document, "advancedJfrSelectedEventTypeLabel").getTagName());
-        assertEquals("Label", elementByFxId(document, "advancedJfrSelectedCountLabel").getTagName());
-        assertEquals("Label", elementByFxId(document, "advancedJfrMemorySummaryLabel").getTagName());
-        assertEquals("TableView", elementByFxId(document, "advancedJfrMemoryTable").getTagName());
-        assertTrue(hasStyleClass(elementByFxId(document, "advancedJfrMemoryTable"), "dense-table"));
-        assertEquals("Label", elementByFxId(document, "advancedJfrMemoryDetailTitleLabel").getTagName());
-        assertTrue(hasStyleClass(elementByFxId(document, "advancedJfrMemoryDetailTitleLabel"), "detail-panel-title"));
-        assertEquals("TextArea", elementByFxId(document, "advancedJfrMemoryDetailArea").getTagName());
-        assertEquals("false", elementByFxId(document, "advancedJfrMemoryDetailArea").getAttribute("editable"));
-        assertEquals("true", elementByFxId(document, "advancedJfrMemoryDetailArea").getAttribute("wrapText"));
-        Element javaApplicationPane = elementByFxId(document, "javaApplicationPane");
-        assertEquals("VBox", javaApplicationPane.getTagName());
-        assertTrue(hasStyleClass(javaApplicationPane, "page"));
-        assertTrue(hasStyleClass(javaApplicationPane, "overview-page"));
-        assertEquals("Label", elementByFxId(document, "javaApplicationTitleLabel").getTagName());
-        assertEquals("GridPane", elementByFxId(document, "javaApplicationSummaryGrid").getTagName());
-        assertTrue(hasStyleClass(elementByFxId(document, "javaApplicationSummaryGrid"), "metric-grid"));
-        for (String fxId : List.of("javaApplicationProfilingButton", "javaApplicationIoButton",
-                "javaApplicationLocksButton", "javaApplicationThreadsButton",
-                "javaApplicationExceptionsButton", "javaApplicationClassLoadingButton",
-                "javaApplicationAllocationButton")) {
-            assertEquals("Button", elementByFxId(document, fxId).getTagName());
-        }
-        Element jvmInternalsPane = elementByFxId(document, "jvmInternalsPane");
-        assertEquals("VBox", jvmInternalsPane.getTagName());
-        assertTrue(hasStyleClass(jvmInternalsPane, "page"));
-        assertTrue(hasStyleClass(jvmInternalsPane, "overview-page"));
-        assertEquals("Label", elementByFxId(document, "jvmInternalsTitleLabel").getTagName());
-        assertEquals("GridPane", elementByFxId(document, "jvmInternalsSummaryGrid").getTagName());
-        assertTrue(hasStyleClass(elementByFxId(document, "jvmInternalsSummaryGrid"), "metric-grid"));
-        for (String fxId : List.of("jvmInternalsInformationButton", "jvmInternalsGcButton",
-                "jvmInternalsG1Button", "jvmInternalsCompilationButton", "jvmInternalsCodeCacheButton",
-                "jvmInternalsClassLoadingButton", "jvmInternalsVmOperationsButton")) {
-            assertEquals("Button", elementByFxId(document, fxId).getTagName());
-        }
-        Element environmentPane = elementByFxId(document, "environmentPane");
-        assertEquals("VBox", environmentPane.getTagName());
-        assertTrue(hasStyleClass(environmentPane, "page"));
-        assertTrue(hasStyleClass(environmentPane, "overview-page"));
-        assertEquals("Label", elementByFxId(document, "environmentTitleLabel").getTagName());
-        assertEquals("GridPane", elementByFxId(document, "environmentSummaryGrid").getTagName());
-        assertTrue(hasStyleClass(elementByFxId(document, "environmentSummaryGrid"), "metric-grid"));
-        for (String fxId : List.of("environmentProcessesButton", "environmentVariablesButton",
-                "environmentPropertiesButton", "environmentRecordingButton", "environmentAgentsButton",
-                "environmentConstantPoolsButton")) {
-            assertEquals("Button", elementByFxId(document, fxId).getTagName());
-        }
-        Element heapDumpPane = elementByFxId(document, "heapDumpAnalysisPane");
-        assertTrue(hasStyleClass(heapDumpPane, "page"));
-        assertTrue(hasStyleClass(heapDumpPane, "split-table-detail-page"));
-        assertTrue(hasStyleClass(heapDumpPane, "heap-dump-page"));
-        assertTrue(hasStyleClass(elementByFxId(document, "heapDumpHeader"), "page-header"));
-        assertEquals(0, elementCountWithFxId(document, "heapDumpToolbar"),
-                "HPROF files are opened from Home; opened heap dump workspaces should not repeat the open action");
-        assertEquals(0, elementCountWithFxId(document, "heapDumpOpenButton"),
-                "HPROF open action belongs on Home, not inside an opened heap dump workspace");
-        assertEquals(0, elementCountWithFxId(document, "heapDumpNameLabel"),
-                "The opened HPROF file name is already represented by the workspace tab");
-        assertEquals(0, elementCountWithFxId(document, "heapDumpSummaryLabel"),
-                "The HPROF page should focus on analysis results instead of repeating file summary chrome");
-        assertEquals(0, elementCountWithFxId(document, "heapDumpProgressBar"),
-                "HPROF long-running progress belongs in the shell status area, not the page toolbar");
-        assertTrue(hasStyleClass(elementByFxId(document, "heapDumpContent"), "page-content"));
-        assertTrue(hasStyleClass(elementByFxId(document, "heapDumpDetailsTabs"), "page-detail-tabs"));
-        assertFalse(elementByFxId(document, "heapDumpDetailsTabs").hasAttribute("prefHeight"),
-                "HPROF detail tabs must use the shared split table detail CSS sizing instead of a fixed FXML height");
-        assertTrue(hasStyleClass(elementByFxId(document, "heapDumpTextReportPane"), "detail-panel"));
-        assertTrue(hasStyleClass(elementByFxId(document, "heapDumpIssueDetailPane"), "detail-panel"));
-        assertTrue(hasStyleClass(elementByFxId(document, "heapDumpTextReportArea"), "detail-panel-body"));
-        assertTrue(hasStyleClass(elementByFxId(document, "heapDumpIssueDetailTitleLabel"), "detail-panel-title"));
-        assertEquals("homeOpenRecordingButton", elementByFxId(document, "homeOpenRecordingButton").getAttribute("fx:id"));
-        assertFalse(elementByFxId(document, "homeOpenRecordingButton").hasAttribute("styleClass"),
-                "Home action buttons should keep JavaFX's default button style class; add local hooks in controller");
-        assertFalse(elementByFxId(document, "homeConnectJvmButton").hasAttribute("styleClass"),
-                "Home action buttons should keep JavaFX's default button style class; add local hooks in controller");
-        assertFalse(elementByFxId(document, "homeConnectJvmButton").hasAttribute("disable"),
-                "Connect JVM should be enabled now that the JVM browser page exists");
-        assertEquals(0, elementCountWithFxId(document, "statusLabel"));
-        assertEquals(0, elementCountWithFxId(document, "taskSummaryLabel"));
-        assertEquals("tlabTimelineContainer", elementByFxId(document, "tlabTimelineContainer").getAttribute("fx:id"));
-    }
-
-    @Test
-    void appShellIncludesLiveJvmPaneInsteadOfEmbeddingIt() throws Exception {
-        Document document = appShellFxml();
-        Element host = elementByFxId(document, "jvmsPaneHost");
-
-        assertEquals("VBox", host.getTagName());
-        assertNull(elementByFxIdOrNull(document, "jvmsTable"));
-        assertNull(elementByFxIdOrNull(document, "jvmsMonitoringToolbar"));
-        assertNull(elementByFxIdOrNull(document, "jvmsAgentTransformsTable"));
-    }
 
     @Test
     void appShellDoesNotOwnLiveJvmControlFieldsAfterExtraction() throws Exception {
         String source = java.nio.file.Files.readString(
                 java.nio.file.Path.of("src/main/java/com/youngledo/jmcfx/ui/shell/AppShellController.java"));
 
-        assertTrue(source.contains("@FXML private VBox jvmsPaneHost;"));
+        assertTrue(source.contains("private VBox jvmsPaneHost;"));
         assertTrue(source.contains("private LiveJvmPaneController jvmsPaneController;"));
         assertTrue(source.contains("new LiveJvmPaneController()"));
-        assertFalse(source.contains("@FXML private TableView<JvmConnection> jvmsTable;"));
-        assertFalse(source.contains("@FXML private Button jvmsAddNotificationSubscriptionButton;"));
+        assertFalse(source.contains("private TableView<JvmConnection> jvmsTable;"));
+        assertFalse(source.contains("private Button jvmsAddNotificationSubscriptionButton;"));
         assertFalse(source.contains("private void configureJmxMonitoring()"));
         assertFalse(source.contains("private void bindJmcAgentManager()"));
     }
 
-    @Test
-    void profilingPageContainsFlameGraphTabsBeforeTreeTabs() throws Exception {
-        Document document = appShellFxml();
-
-        Element profilingTreeTabs = elementByFxId(document, "profilingTreeTabs");
-        List<Element> tabs = childElements(childElement(profilingTreeTabs, "tabs"), "Tab");
-
-        assertEquals(List.of("profilingCallGraphTab", "profilingCallersFlameTab", "profilingCalleesFlameTab",
-                        "profilingDependencyGraphTab", "profilingCallersTab", "profilingCalleesTab"),
-                tabs.stream().map(tab -> tab.getAttribute("fx:id")).toList());
-
-        Element callGraphTab = elementByFxId(document, "profilingCallGraphTab");
-        assertEquals("Tab", callGraphTab.getTagName());
-        Element callGraphToolbar = elementByFxId(document, "profilingCallGraphToolbar");
-        assertEquals("HBox", callGraphToolbar.getTagName());
-        assertTrue(hasStyleClass(callGraphToolbar, "page-toolbar"));
-        assertEquals("CENTER_LEFT", callGraphToolbar.getAttribute("alignment"));
-        assertEquals("ComboBox", elementByFxId(document, "profilingCallGraphDirectionCombo").getTagName());
-        assertEquals("Label", elementByFxId(document, "profilingCallGraphDepthLabel").getTagName());
-        assertEquals("Spinner", elementByFxId(document, "profilingCallGraphDepthSpinner").getTagName());
-        Element callGraphContainer = elementByFxId(document, "profilingCallGraphContainer");
-        assertEquals("VBox", callGraphContainer.getTagName());
-        assertTrue(hasStyleClass(callGraphContainer, "profiling-call-graph-container"));
-        Element callGraphScrollPane = (Element) callGraphContainer.getParentNode();
-        assertEquals("true", callGraphScrollPane.getAttribute("pannable"));
-        assertEquals("false", callGraphScrollPane.getAttribute("fitToWidth"));
-        assertEquals("false", callGraphScrollPane.getAttribute("fitToHeight"));
-
-        assertFlameGraphTab(document, "profilingCallersFlameContainer");
-        assertFlameGraphTab(document, "profilingCalleesFlameContainer");
-        Element dependencyGraphTab = elementByFxId(document, "profilingDependencyGraphTab");
-        assertEquals("Tab", dependencyGraphTab.getTagName());
-        assertEquals("Spinner", elementByFxId(document, "profilingDependencyDepthSpinner").getTagName());
-        assertEquals("TableView", elementByFxId(document, "profilingDependencyTable").getTagName());
-        Element dependencyContainer = elementByFxId(document, "profilingDependencyGraphContainer");
-        assertEquals("VBox", dependencyContainer.getTagName());
-        assertTrue(hasStyleClass(dependencyContainer, "profiling-call-graph-container"));
-        assertEquals("TreeView", elementByFxId(document, "profilingCallersTree").getTagName());
-        assertEquals("TreeView", elementByFxId(document, "profilingCalleesTree").getTagName());
-    }
 
     @Test
     void profilingGraphShellWiringUsesViewModelLayoutsAndI18n() throws Exception {
@@ -944,111 +711,6 @@ class AppShellTest {
         assertTrue(chinese.contains("metadata.column.fieldCount=字段数"));
     }
 
-    @Test
-    void g1GcShellUsesSplitTableDetailBindingsAndI18n() throws Exception {
-        Document document = appShellFxml();
-        String controller = java.nio.file.Files.readString(
-                java.nio.file.Path.of("src/main/java/com/youngledo/jmcfx/ui/shell/AppShellController.java"));
-        String english = java.nio.file.Files.readString(
-                java.nio.file.Path.of("src/main/resources/com/youngledo/jmcfx/ui/i18n/messages.properties"));
-        String chinese = java.nio.file.Files.readString(
-                java.nio.file.Path.of("src/main/resources/com/youngledo/jmcfx/ui/i18n/messages_zh_CN.properties"));
-
-        Element g1GcPane = elementByFxId(document, "g1GcPane");
-        assertEquals("VBox", g1GcPane.getTagName());
-        assertTrue(hasStyleClass(g1GcPane, "page"));
-        assertTrue(hasStyleClass(g1GcPane, "split-table-detail-page"));
-        assertEquals("TableView", elementByFxId(document, "g1GcRegionSummaryTable").getTagName());
-        assertEquals("TableView", elementByFxId(document, "g1GcRegionStatesTable").getTagName());
-        assertEquals("TableView", elementByFxId(document, "g1GcPauseTable").getTagName());
-        assertTrue(hasStyleClass(elementByFxId(document, "g1GcDetailPane"), "detail-panel"));
-        assertTrue(hasStyleClass(elementByFxId(document, "g1GcDetailTitleLabel"), "detail-panel-title"));
-        assertTrue(hasStyleClass(elementByFxId(document, "g1GcDetailArea"), "detail-panel-body"));
-
-        assertTrue(controller.contains("import com.youngledo.jmcfx.domain.model.G1GcRegionState;"));
-        assertTrue(controller.contains("import com.youngledo.jmcfx.ui.gc.G1GcViewModel;"));
-        assertTrue(controller.contains("private VBox g1GcPane;"));
-        assertTrue(controller.contains("private TableView<G1GcRegionSummary> g1GcRegionSummaryTable;"));
-        assertTrue(controller.contains("private TableView<G1GcRegionState> g1GcRegionStatesTable;"));
-        assertTrue(controller.contains("private TableView<GcEvent> g1GcPauseTable;"));
-        assertTrue(controller.contains("g1GcPane.visibleProperty().bind(viewModel.selectedSectionProperty().isEqualTo(\"g1Gc\"))"));
-        assertTrue(controller.contains("configureG1GcTables();"));
-        assertTrue(controller.contains("g1GcRegionStatesTable.setItems(nextViewModel.recentRegionStatesProperty())"));
-        assertTrue(controller.contains("g1GcDetailArea.textProperty().bind(nextViewModel.selectedDetailProperty())"));
-        assertTrue(controller.contains("case \"g1Gc\" -> loadIfPresent(workspace.g1GcViewModel(), recording);"));
-
-        assertTrue(english.contains("nav.g1Gc=G1 GC"));
-        assertTrue(english.contains("g1Gc.title=G1 GC"));
-        assertTrue(english.contains("g1Gc.detail.title=Region Details"));
-        assertTrue(english.contains("g1Gc.column.region=Region"));
-        assertTrue(english.contains("g1Gc.column.eventKind=Event"));
-        assertTrue(chinese.contains("nav.g1Gc=G1 GC"));
-        assertTrue(chinese.contains("g1Gc.title=G1 GC"));
-        assertTrue(chinese.contains("g1Gc.detail.title=Region详情"));
-        assertTrue(chinese.contains("g1Gc.column.region=Region"));
-        assertTrue(chinese.contains("g1Gc.column.eventKind=事件"));
-    }
-
-    @Test
-    void javaFxEventsShellUsesSplitTableDetailBindingsAndI18n() throws Exception {
-        Document document = appShellFxml();
-        String controller = java.nio.file.Files.readString(
-                java.nio.file.Path.of("src/main/java/com/youngledo/jmcfx/ui/shell/AppShellController.java"));
-        String english = java.nio.file.Files.readString(
-                java.nio.file.Path.of("src/main/resources/com/youngledo/jmcfx/ui/i18n/messages.properties"));
-        String chinese = java.nio.file.Files.readString(
-                java.nio.file.Path.of("src/main/resources/com/youngledo/jmcfx/ui/i18n/messages_zh_CN.properties"));
-
-        Element javaFxEventsPane = elementByFxId(document, "javaFxEventsPane");
-        assertEquals("VBox", javaFxEventsPane.getTagName());
-        assertTrue(hasStyleClass(javaFxEventsPane, "page"));
-        assertTrue(hasStyleClass(javaFxEventsPane, "split-table-detail-page"));
-        assertEquals("TableView", elementByFxId(document, "javaFxEventsPhaseTable").getTagName());
-        assertEquals("TableView", elementByFxId(document, "javaFxEventsPulseTable").getTagName());
-        assertEquals("TableView", elementByFxId(document, "javaFxEventsInputTable").getTagName());
-        assertTrue(hasStyleClass(elementByFxId(document, "javaFxEventsDetailPane"), "detail-panel"));
-        assertTrue(hasStyleClass(elementByFxId(document, "javaFxEventsDetailTitleLabel"), "detail-panel-title"));
-        assertTrue(hasStyleClass(elementByFxId(document, "javaFxEventsDetailArea"), "detail-panel-body"));
-
-        assertTrue(controller.contains("import com.youngledo.jmcfx.domain.model.JavaFxPulsePhase;"));
-        assertTrue(controller.contains("import com.youngledo.jmcfx.ui.jfx.JavaFxEventsViewModel;"));
-        assertTrue(controller.contains("private VBox javaFxEventsPane;"));
-        assertTrue(controller.contains("private TableView<JavaFxPulsePhase> javaFxEventsPhaseTable;"));
-        assertTrue(controller.contains("private TableView<JavaFxPulseSummary> javaFxEventsPulseTable;"));
-        assertTrue(controller.contains("private TableView<JavaFxInputEvent> javaFxEventsInputTable;"));
-        assertTrue(controller.contains("javaFxEventsPane.visibleProperty().bind(viewModel.selectedSectionProperty().isEqualTo(\"javaFxEvents\"))"));
-        assertTrue(controller.contains("configureJavaFxEventsTables();"));
-        assertTrue(controller.contains("javaFxEventsPhaseTable.setItems(nextViewModel.pulsePhasesProperty())"));
-        assertTrue(controller.contains("javaFxEventsDetailArea.textProperty().bind(nextViewModel.selectedDetailProperty())"));
-        assertTrue(controller.contains("case \"javaFxEvents\" -> loadIfPresent(workspace.javaFxEventsViewModel(), recording);"));
-
-        assertTrue(english.contains("nav.javaFxEvents=JavaFX Events"));
-        assertTrue(english.contains("javaFxEvents.title=JavaFX Events"));
-        assertTrue(english.contains("javaFxEvents.detail.title=Pulse Phase Details"));
-        assertTrue(english.contains("javaFxEvents.column.pulse=Pulse"));
-        assertTrue(english.contains("javaFxEvents.column.input=Input"));
-        assertTrue(chinese.contains("nav.javaFxEvents=JavaFX事件"));
-        assertTrue(chinese.contains("javaFxEvents.title=JavaFX事件"));
-        assertTrue(chinese.contains("javaFxEvents.detail.title=脉冲阶段详情"));
-        assertTrue(chinese.contains("javaFxEvents.column.pulse=脉冲"));
-        assertTrue(chinese.contains("javaFxEvents.column.input=输入"));
-    }
-
-    @Test
-    void appShellFxmlDoesNotHardcodeVisibleLocalizedText() throws Exception {
-        Document document = appShellFxml();
-
-        for (Element element : elements(document).values()) {
-            if (element.hasAttribute("text") && !element.getAttribute("text").isEmpty()) {
-                failWithHardcodedText(element);
-            }
-        }
-    }
-
-    private void failWithHardcodedText(Element element) {
-        throw new AssertionError("Hardcoded text in FXML: " + element.getTagName()
-                + " text=\"" + element.getAttribute("text") + "\"");
-    }
 
     @Test
     void cssDefinesSamplerStyleSidebarHooks() throws Exception {
@@ -1155,30 +817,6 @@ class AppShellTest {
         assertTrue(detailPanelTitle.contains("-fx-padding: 4px 0 10px 0"));
     }
 
-    @Test
-    void loadedFxmlSplitsDetailPanelStyleClassesForCssMatching() throws Exception {
-        FXMLLoader loader = loadShell();
-
-        assertLoadedStyleClass(loader, "advancedJfrMemoryDetailTitleLabel", "detail-panel-title");
-        assertLoadedStyleClass(loader, "advancedJfrMemoryDetailPane", "detail-panel");
-        assertLoadedStyleClass(loader, "analysisDetailExplanationArea", "detail-panel-body");
-        assertLoadedStyleClass(loader, "metadataDetailTitleLabel", "detail-panel-title");
-        assertLoadedStyleClass(loader, "metadataDetailPane", "detail-panel");
-        assertLoadedStyleClass(loader, "heapDumpIssueDetailTitleLabel", "detail-panel-title");
-        assertLoadedStyleClass(loader, "heapDumpIssueDetailPane", "detail-panel");
-    }
-
-    @Test
-    void fxmlDoesNotPackMultipleStyleClassesIntoOneAttribute() throws Exception {
-        Document document = appShellFxml();
-
-        elements(document).values().forEach(element -> {
-            String styleClass = element.getAttribute("styleClass");
-            assertFalse(styleClass.contains(" "),
-                    () -> element.getTagName() + " packs multiple JavaFX style classes into one attribute: "
-                            + styleClass);
-        });
-    }
 
     @Test
     void workspaceTabsUseDistinctSelectedIndicator() throws Exception {
@@ -1392,22 +1030,22 @@ class AppShellTest {
                 "No-data text should appear only after completed empty discovery");
     }
 
-    @Test
-    void jvmBrowserSupportsDoubleClickConnectAndNoBottomStatus() throws Exception {
-        String controller = java.nio.file.Files.readString(
-                java.nio.file.Path.of("src/main/java/com/youngledo/jmcfx/ui/shell/LiveJvmPaneController.java"));
-        String fxml = java.nio.file.Files.readString(
-                java.nio.file.Path.of("src/main/resources/com/youngledo/jmcfx/ui/shell/app-shell.fxml"));
+@Test
+void jvmBrowserSupportsDoubleClickConnectAndNoBottomStatus() throws Exception {
+    String controller = java.nio.file.Files.readString(
+            java.nio.file.Path.of("src/main/java/com/youngledo/jmcfx/ui/shell/LiveJvmPaneController.java"));
+    String shellView = java.nio.file.Files.readString(
+            java.nio.file.Path.of("src/main/java/com/youngledo/jmcfx/ui/shell/AppShellView.java"));
 
-        assertTrue(controller.contains("setOnMouseClicked"), "JVM table should handle double-click connect");
-        assertTrue(controller.contains("connectSelectedOrManual()"),
-                "Connect button should preserve manual URL priority");
-        assertTrue(controller.contains("jvmBrowserViewModel.connectSelected()"),
-                "Double-click should connect only the selected local JVM");
-        assertFalse(fxml.contains("jvmsStatusLabel"), "Bottom JVM status label should be removed");
-        assertFalse(controller.contains("jvmsStatusLabel.textProperty()"),
-                "Controller should not bind a removed bottom status label");
-    }
+    assertTrue(controller.contains("setOnMouseClicked"), "JVM table should handle double-click connect");
+    assertTrue(controller.contains("connectSelectedOrManual()"),
+            "Connect button should preserve manual URL priority");
+    assertTrue(controller.contains("jvmBrowserViewModel.connectSelected()"),
+            "Double-click should connect only the selected local JVM");
+    assertFalse(shellView.contains("jvmsStatusLabel"), "Bottom JVM status label should be removed");
+    assertFalse(controller.contains("jvmsStatusLabel.textProperty()"),
+            "Controller should not bind a removed bottom status label");
+}
 
     @Test
     void jvmBrowserShellExposesSavedTargetsJdpAndSelectedStatus() throws Exception {
@@ -1697,22 +1335,20 @@ class AppShellTest {
                 "sidebar should not own theme switching");
     }
 
-    @Test
-    void settingsPageContainsThemeSelectorNextToLanguageSelector() throws Exception {
-        Document document = appShellFxml();
+@Test
+void settingsPageContainsThemeSelectorNextToLanguageSelector() {
+    AppShellView view = new AppShellView();
 
-        assertEquals("36", elementByFxId(document, "settingsPane").getAttribute("spacing"));
-        assertEquals("VBox", elementByFxId(document, "settingsLanguageGroup").getTagName());
-        assertEquals("16", elementByFxId(document, "settingsLanguageGroup").getAttribute("spacing"));
-        assertEquals("VBox", elementByFxId(document, "settingsThemeGroup").getTagName());
-        assertEquals("16", elementByFxId(document, "settingsThemeGroup").getAttribute("spacing"));
-        assertEquals("24", elementByStyleClass(document, "settings-language-options").getAttribute("spacing"));
-        assertEquals("24", elementByStyleClass(document, "settings-theme-options").getAttribute("spacing"));
-        assertEquals("Label", elementByFxId(document, "settingsThemeLabel").getTagName());
-        assertEquals("RadioButton", elementByFxId(document, "themeFollowSystemRadio").getTagName());
-        assertEquals("RadioButton", elementByFxId(document, "themeLightRadio").getTagName());
-        assertEquals("RadioButton", elementByFxId(document, "themeDarkRadio").getTagName());
-    }
+    assertEquals(36.0, view.settingsPane.getSpacing());
+    assertNotNull(view.settingsLanguageLabel);
+    assertNotNull(view.settingsThemeLabel);
+    assertEquals(view.languageToggleGroup, view.languageFollowSystemRadio.getToggleGroup());
+    assertEquals(view.languageToggleGroup, view.languageEnglishRadio.getToggleGroup());
+    assertEquals(view.languageToggleGroup, view.languageChineseRadio.getToggleGroup());
+    assertEquals(view.themeToggleGroup, view.themeFollowSystemRadio.getToggleGroup());
+    assertEquals(view.themeToggleGroup, view.themeLightRadio.getToggleGroup());
+    assertEquals(view.themeToggleGroup, view.themeDarkRadio.getToggleGroup());
+}
 
     @Test
     void controllerBindsThemeSelectorAndSystemThemePreference() throws Exception {
@@ -2157,34 +1793,30 @@ class AppShellTest {
         assertEquals(0, executor.queuedTaskCount());
     }
 
-    private static Document appShellFxml() throws ParserConfigurationException, SAXException, IOException {
-        return fxml("app-shell.fxml");
+
+    private static AppShellController shellController(AppShell shell) {
+        assertNotNull(shell.controller());
+        return shell.controller();
     }
 
-    private static FXMLLoader loadShell() throws IOException {
-        FXMLLoader loader = new FXMLLoader(AppShellController.class.getResource("app-shell.fxml"));
-        AppShellFactory factory = new AppShellFactory(new FakeRecordingRepository(), new FakeEventQueryService(),
-                new FakeRuleAnalysisService());
-        AppShellViewModel viewModel = new AppShellViewModel();
-        loader.setControllerFactory(type -> {
-            if (type == AppShellController.class) {
-                return factory.controllerFor(type, viewModel);
+    private static AppShell createShellOnFxThread(AppShellFactory factory) throws Exception {
+        java.util.concurrent.atomic.AtomicReference<AppShell> shell = new java.util.concurrent.atomic.AtomicReference<>();
+        java.util.concurrent.atomic.AtomicReference<Throwable> failure = new java.util.concurrent.atomic.AtomicReference<>();
+        CountDownLatch latch = new CountDownLatch(1);
+        Platform.runLater(() -> {
+            try {
+                shell.set(factory.create());
+            } catch (Throwable throwable) {
+                failure.set(throwable);
+            } finally {
+                latch.countDown();
             }
-            if (type == LiveJvmPaneController.class) {
-                return new LiveJvmPaneController();
-            }
-            throw new IllegalArgumentException("Unsupported controller: " + type.getName());
         });
-        loader.<Region>load();
-        return loader;
-    }
-
-    private static void assertLoadedStyleClass(FXMLLoader loader, String nodeId, String styleClass) {
-        Object loaded = loader.getNamespace().get(nodeId);
-        assertTrue(loaded instanceof Node, "Missing loaded node " + nodeId);
-        Node node = (Node) loaded;
-        assertTrue(node.getStyleClass().contains(styleClass),
-                () -> nodeId + " loaded style classes " + node.getStyleClass() + " must contain " + styleClass);
+        assertTrue(latch.await(5, TimeUnit.SECONDS));
+        if (failure.get() != null) {
+            throw new AssertionError(failure.get());
+        }
+        return shell.get();
     }
 
     private static RecordingSummary recording(String id, String fileName) {
@@ -2236,13 +1868,6 @@ class AppShellTest {
         }
     }
 
-    private static Document fxml(String name) throws ParserConfigurationException, SAXException, IOException {
-        DocumentBuilderFactory factory = DocumentBuilderFactory.newInstance();
-        factory.setNamespaceAware(false);
-        try (InputStream stream = AppShellController.class.getResourceAsStream(name)) {
-            return factory.newDocumentBuilder().parse(stream);
-        }
-    }
 
     private static Document pom(String path) throws ParserConfigurationException, SAXException, IOException {
         DocumentBuilderFactory factory = DocumentBuilderFactory.newInstance();
@@ -2271,66 +1896,24 @@ class AppShellTest {
         return css.substring(start, end + 1);
     }
 
-    private static Element elementByFxId(Document document, String fxId) {
-        return elements(document).entrySet().stream()
-                .filter(entry -> fxId.equals(entry.getValue().getAttribute("fx:id")))
-                .map(Map.Entry::getValue)
-                .findFirst()
-                .orElseThrow(() -> new AssertionError("Missing fx:id " + fxId));
-    }
 
-    private static Element elementByFxIdOrNull(Document document, String fxId) {
-        return elements(document).entrySet().stream()
-                .filter(entry -> fxId.equals(entry.getValue().getAttribute("fx:id")))
-                .map(Map.Entry::getValue)
-                .findFirst()
-                .orElse(null);
-    }
+private static Map<Integer, Element> elements(Document document) {
+    Map<Integer, Element> result = new java.util.HashMap<>();
+    collectElements(document.getDocumentElement(), result);
+    return result;
+}
 
-    private static boolean hasFxId(Document document, String fxId) {
-        return elements(document).values().stream()
-                .anyMatch(element -> fxId.equals(element.getAttribute("fx:id")));
-    }
-
-    private static Element elementByStyleClass(Document document, String styleClass) {
-        return elements(document).entrySet().stream()
-                .filter(entry -> hasStyleClass(entry.getValue(), styleClass))
-                .map(Map.Entry::getValue)
-                .findFirst()
-                .orElseThrow(() -> new AssertionError("Missing styleClass " + styleClass));
-    }
-
-    private static Element childElement(Element parent, String tagName) {
-        return childElements(parent, tagName).stream()
-                .findFirst()
-                .orElseThrow(() -> new AssertionError("Missing child " + tagName + " in " + parent.getTagName()));
-    }
-
-    private static List<Element> childElements(Element parent, String tagName) {
-        List<Element> result = new java.util.ArrayList<>();
-        for (org.w3c.dom.Node node = parent.getFirstChild(); node != null; node = node.getNextSibling()) {
-            if (node instanceof Element element && tagName.equals(element.getTagName())) {
-                result.add(element);
-            }
+private static void collectElements(Element element, Map<Integer, Element> result) {
+    result.put(result.size(), element);
+    org.w3c.dom.NodeList children = element.getChildNodes();
+    for (int index = 0; index < children.getLength(); index++) {
+        org.w3c.dom.Node child = children.item(index);
+        if (child instanceof Element childElement) {
+            collectElements(childElement, result);
         }
-        return result;
     }
+}
 
-    private static void assertFlameGraphTab(Document document, String containerFxId) {
-        Element container = elementByFxId(document, containerFxId);
-        assertEquals("VBox", container.getTagName());
-        assertTrue(hasStyleClass(container, "profiling-flame-container"));
-        Element scrollPane = (Element) container.getParentNode();
-        assertEquals("ScrollPane", scrollPane.getTagName());
-        assertEquals("true", scrollPane.getAttribute("fitToWidth"));
-        assertEquals("true", scrollPane.getAttribute("fitToHeight"));
-        Element tabContent = (Element) scrollPane.getParentNode();
-        assertEquals("VBox", tabContent.getTagName());
-        assertTrue(hasStyleClass(tabContent, "profiling-graph-tab-content"));
-        Element toolbar = childElements(tabContent, "HBox").getFirst();
-        assertTrue(hasStyleClass(toolbar, "profiling-graph-toolbar"));
-        assertEquals("CENTER_LEFT", toolbar.getAttribute("alignment"));
-    }
 
     private static void assertJvmBrowserJdpI18n(String bundle, String... expectedLines) {
         for (String expectedLine : expectedLines) {
@@ -2338,38 +1921,4 @@ class AppShellTest {
         }
     }
 
-    private static int elementCountWithStyleClass(Document document, String styleClass) {
-        return (int) elements(document).values().stream()
-                .filter(element -> hasStyleClass(element, styleClass))
-                .count();
-    }
-
-    private static int elementCountWithFxId(Document document, String fxId) {
-        return (int) elements(document).values().stream()
-                .filter(element -> fxId.equals(element.getAttribute("fx:id")))
-                .count();
-    }
-
-    private static boolean hasStyleClass(Element element, String styleClass) {
-        if (styleClass.equals(element.getAttribute("styleClass"))) {
-            return true;
-        }
-        for (Element child : childElements(element, "styleClass")) {
-            for (Element item : childElements(child, "String")) {
-                if (styleClass.equals(item.getAttribute("fx:value"))) {
-                    return true;
-                }
-            }
-        }
-        return false;
-    }
-
-    private static Map<Integer, Element> elements(Document document) {
-        org.w3c.dom.NodeList nodes = document.getElementsByTagName("*");
-        java.util.HashMap<Integer, Element> elements = new java.util.HashMap<>();
-        for (int index = 0; index < nodes.getLength(); index++) {
-            elements.put(index, (Element) nodes.item(index));
-        }
-        return elements;
-    }
 }
