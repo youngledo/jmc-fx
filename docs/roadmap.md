@@ -82,6 +82,8 @@ Baseline date: 2026-05-31.
 - Loads the Live JVM workspace through a dedicated pane/controller boundary so
   Live JVM controls, tables, charts, and bindings are no longer owned by the
   central shell controller.
+- Documents the active direction toward code-first JavaFX views while existing
+  FXML files are migrated incrementally.
 - Includes UI/UX contract tests for FXML, CSS, navigation, localized strings,
   and important shell invariants.
 
@@ -117,6 +119,9 @@ Baseline date: 2026-05-31.
 
 ### P1
 
+P1 items should be implemented in the order listed here unless a subsequent
+verification result or product decision explicitly changes the order.
+
 - Expand Live JVM JMX notification management beyond the first-phase toolbar
   workflow.
   - Add a dedicated notification-subscription list only if users need to manage
@@ -124,12 +129,25 @@ Baseline date: 2026-05-31.
   - Surface active/listening state per subscription when multi-subscription
     management is introduced.
 
-- Continue splitting `AppShellController` and `app-shell.fxml` responsibilities.
+- Migrate UI layout from FXML to code-first JavaFX views.
+  - Spec: `docs/superpowers/specs/2026-06-01-code-first-javafx-ui-design.md`.
+  - Plan: `docs/superpowers/plans/2026-06-01-code-first-javafx-ui.md`.
+  - Do not add new FXML files.
+  - Replace `live-jvm-pane.fxml` with `LiveJvmPaneView`.
+  - Replace `app-shell.fxml` with `AppShellView`.
+  - Remove production FXML infrastructure after both existing FXML files are
+    migrated.
+  - Preserve JavaFX, AtlantaFX, CSS, reactive i18n, typed workspaces, and
+    existing UI/UX contracts.
+
+- Continue splitting `AppShellController` responsibilities as part of the
+  code-first JavaFX migration.
   - Completed first phase: Live JVM workspace FXML and controller ownership are
     separated from the central shell while preserving shell navigation and
     workspace selection.
   - Move remaining feature-specific binding and table setup out of the central
-    shell controller where practical.
+    shell controller when a code-first view migration or active feature change
+    touches that area.
   - Keep the shell responsible for navigation, workspace selection, and global
     status.
   - Preserve existing UI/UX contracts and tests during each split.
@@ -141,6 +159,8 @@ Baseline date: 2026-05-31.
   - Avoid adding a dependency injection framework unless the project has a
     separate product reason to do so.
   - Keep tests able to provide fakes without long positional constructor chains.
+  - Prefer cleanup that supports direct Java view assembly rather than expanding
+    FXML controller-factory wiring.
 
 ### P2
 
@@ -211,7 +231,8 @@ Baseline date: 2026-05-31.
 Future work should be split into independent Superpowers specs and plans:
 
 - Live JVM JMX notification management expansion.
-- Shell controller and FXML decomposition.
+- Code-first JavaFX UI migration.
+- Shell controller decomposition on top of code-first views.
 - App shell dependency bundle cleanup.
 - HPROF/JOverflow browsing improvements.
 - Release checklist and packaging validation.
