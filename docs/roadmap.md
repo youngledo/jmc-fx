@@ -136,6 +136,207 @@ verification result or product decision explicitly changes the order.
   - Completed first phase: Live JVM workspace view and controller ownership are
     separated from the central shell while preserving shell navigation and
     workspace selection.
+  - Completed global-page phase: Home page actions/text/icons and Settings page
+    language/theme binding now live in focused code-first controllers instead
+    of the central shell controller.
+  - Completed global-page view phase: Home and Settings page node ownership and
+    layout construction now live in focused code-first view classes instead of
+    the monolithic shell view.
+  - Completed recording-overview phase: Java Application, JVM Internals, and
+    Environment overview page text/actions now live in a focused controller
+    instead of the central shell controller.
+  - Completed recording-overview view phase: Java Application, JVM Internals,
+    and Environment overview page node ownership, summary panels, metric
+    grids, and page layout construction now live in `RecordingOverviewPaneView`
+    instead of the monolithic shell view.
+  - Completed Java Application data view phase: Exceptions, Threads, Thread
+    Histogram, Security, Native Libraries, and Thread Dumps node ownership and
+    page layout construction now live in `ui.javaapp.JavaApplicationDataPaneView`
+    instead of the monolithic shell view.
+  - Completed I/O and Locks view phase: File I/O, Socket I/O, and Locks node
+    ownership, grouping bars, tab panes, charts, and dense tables now live in
+    focused package pane views instead of the monolithic shell view.
+  - Completed Memory view phase: Heap, Leak Suspects, and TLAB node ownership,
+    split panes, timeline chart containers, trees, and dense tables now live in
+    focused package pane views instead of the monolithic shell view.
+  - Completed JVM/GC view phase: JVM Info, GC Config/Summary/Details,
+    Compilations, Code Cache, Class Loading, VM Operations, G1 GC, and JavaFX
+    Events node ownership and page layout construction now live in focused
+    package pane views instead of the monolithic shell view.
+  - Completed Environment view phase: Processes, Environment Variables, System
+    Properties, Recording Info, Agents, and Constant Pools node ownership,
+    search fields, tabs, and dense tables now live in
+    `ui.environment.EnvironmentPaneView` instead of the monolithic shell view.
+  - Completed final AppShellView cleanup phase: `AppShellView` now only
+    aggregates shell/workspace pane views and exposes narrow page view records;
+    page-family node ownership and layout construction live in focused
+    code-first views.
+  - Completed AppShellView host-alias cleanup phase: workspace page host panes
+    stay owned by `ShellWorkspacePanes`, and `AppShellView` now wires focused
+    pane views through `workspacePanes` instead of mirroring every page host as
+    a separate `VBox` field.
+  - Completed main Overview page package phase: recording summary binding,
+    unavailable-state text, localized recording detail formatting, and locale
+    refresh handling now live in `ui.overview` behind a narrow page view
+    record.
+  - Completed main Overview page view phase: recording overview label node
+    ownership and summary-card layout construction now live in
+    `ui.overview.OverviewPaneView` instead of the monolithic shell view.
+  - Completed Analysis page package phase: Analysis table setup, filters,
+    detail rendering, placeholder state, and related-page navigation now live
+    in `ui.analysis` behind a narrow page view record.
+  - Completed Analysis page view phase: Analysis filter controls, rule table,
+    detail panel, split pane, and page layout construction now live in
+    `ui.analysis.AnalysisPaneView` instead of the monolithic shell view.
+  - Completed Event Browser page package phase: Event type tree wiring,
+    dynamic columns, filters, selection-driven details, and split divider
+    behavior now live in `ui.events` behind a narrow page view record.
+  - Completed Event Browser page view phase: Event Browser controls, dense
+    tables, detail tabs, filter bar, split pane, and page layout construction
+    now live in `ui.events.EventsPaneView` instead of the monolithic shell
+    view.
+  - Completed Metadata page package phase: JFR metadata table setup, localized
+    text, selection synchronization, summary binding, and detail binding now
+    live in `ui.metadata` behind a narrow page view record.
+  - Completed Metadata page view phase: JFR metadata title, summary,
+    event-type table, detail panel, split pane, and page layout construction
+    now live in `ui.metadata.MetadataPaneView` instead of the monolithic shell
+    view.
+  - Completed Advanced JFR page package phase: heatmap binding, tab text,
+    selected heatmap labels, memory issue table setup, memory detail binding,
+    and memory summary formatting now live in `ui.advanced` behind a narrow
+    page view record.
+  - Completed Advanced JFR page view phase: heatmap tab, memory tab,
+    selection labels, memory table/detail panel, tab pane, and page layout
+    construction now live in `ui.advanced.AdvancedJfrPaneView` instead of the
+    monolithic shell view.
+  - Completed Heap Dump Analysis page package phase: HPROF issue table setup,
+    localized tabs, selection synchronization, detail/report binding, and
+    rebind listener cleanup now live in `ui.heapdump` behind a narrow page
+    view record.
+  - Completed Heap Dump Analysis page view phase: HPROF issue table, detail
+    tabs, issue detail panel, text report panel, split pane, and page layout
+    construction now live in `ui.heapdump.HeapDumpAnalysisPaneView` instead of
+    the monolithic shell view.
+  - Completed Profiling page package phase: hot-method/dependency table setup,
+    call graph and flame graph controls, zoom/pan gestures, stack-tree
+    rendering, and profiling view-model binding now live in `ui.profiling`
+    behind a narrow page view record.
+  - Completed Profiling page view phase: profiling title, hot-method table,
+    graph tabs, graph toolbars, scroll panes, graph containers, dependency
+    table, stack trees, split pane, and page layout construction now live in
+    `ui.profiling.ProfilingPaneView` instead of the monolithic shell view.
+  - Completed recording workspace attach phase: recording-open success
+    attachment, status update, and prepared workspace transfer now live in a
+    focused shell attacher instead of the central shell controller.
+  - Completed constructor entry cleanup phase: `AppShellFactory` now uses the
+    bundle-based controller entry point directly, keeping positional service
+    conversion out of the central shell constructor path.
+  - Completed shell background-work phase: progress-bar visibility and
+    FX-thread dispatch now live in a focused shell controller instead of the
+    central shell controller.
+  - Completed workspace-selection test-hook cleanup phase: section-loading
+    tests now target the owning controllers/loaders directly, and the central
+    shell no longer exposes workspace-selection wrapper methods.
+  - Completed shell lazy-helper cleanup phase: lifecycle and workspace
+    selection collaborators are used directly instead of retained lazy helper
+    methods in the central shell.
+  - Completed Live JVM accessor cleanup phase: saved-target, JDP discovery,
+    and JMX monitoring dependency assertions now target `LiveJvmServices` and
+    `ShellLiveJvmWorkspaceController`, and the central shell no longer exposes
+    Live JVM service wrapper methods.
+  - Completed I18n accessor cleanup phase: locale default behavior is verified
+    against `I18n` directly, and the central shell no longer exposes its
+    internal i18n dependency as a test accessor.
+  - Completed recording workspace test-hook cleanup phase: lazy-loading tests
+    now prepare workspaces through `RecordingWorkspaceFactory`, and the
+    central shell no longer exposes a recording workspace preparation wrapper.
+  - Completed constructor compatibility cleanup phase: the central shell now
+    exposes only the bundle-based controller entry point and no longer imports
+    every domain service type for obsolete positional constructors.
+  - Completed stale page-remnant cleanup phase: Event Browser sizing constants
+    and Profiling graph zoom math are verified at their owning page controllers
+    instead of being exposed through the central shell controller.
+  - Completed constructor-state cleanup phase: root/sidebar stay owned by
+    `AppShellView`, and constructor-only recording collaborators are local
+    wiring variables instead of retained shell controller state.
+  - Completed shell runtime controller phase: runtime collaborator
+    construction, initialization ordering, lifecycle close, and recording-open
+    callback wiring now live in `ShellRuntimeController`, leaving
+    `AppShellController` as a thin facade over the code-first shell view.
+  - Completed Java Application data pages package phase: Exceptions, Threads,
+    Thread Histogram, Security, Native Libraries, and Thread Dumps table/chart
+    setup and view-model binding now live in `ui.exceptions`, `ui.threads`,
+    and `ui.javaapp` behind narrow page view records.
+  - Completed I/O and Locks pages package phase: File I/O, Socket I/O, and
+    Locks tab text, grouping actions, table setup, timeline binding, and
+    view-model binding now live in `ui.fileio`, `ui.socketio`, and `ui.locks`
+    behind narrow page view records.
+  - Completed Memory pages package phase: Heap, Leak Suspects, and TLAB title
+    binding, table setup, timeline binding, leak reference tree rendering,
+    TLAB placeholder state, selection handling, and rebind cleanup now live in
+    `ui.heap`, `ui.leaks`, and `ui.tlab` behind narrow page view records.
+  - Completed JVM Internals pages package phase: JVM information, GC
+    configuration, GC summary/details, compilations, code cache, class loading,
+    VM operations, G1 GC, and JavaFX Events title binding, table/chart setup,
+    selection-driven detail binding, and rebind cleanup now live in `ui.jvm`,
+    `ui.gc`, and `ui.jfx` behind narrow page view records.
+  - Completed Environment pages package phase: Processes, Environment
+    Variables, System Properties, Recording Info, Agents, and Constant Pools
+    title binding, search-field filtering, table setup, and view-model binding
+    now live in `ui.environment` behind a narrow page view record.
+  - Completed recording workspace lifecycle phase: recording summary opening,
+    recording-scoped view-model construction, prepared workspace transfer, and
+    lazy section loading now live behind focused shell package services instead
+    of the central shell controller.
+  - Completed workspace tabs phase: opened JFR, HPROF, and Live JVM workspace
+    tab construction, visibility, close handling, and selection synchronization
+    now live in a focused shell controller.
+  - Completed reusable export menu phase: CSV context-menu installation,
+    save-file chooser setup, export invocation, and export status handling now
+    live behind a focused shell installer.
+  - Completed workspace open coordinator phase: JFR/HPROF file chooser handling,
+    duplicate-open short-circuiting, background open work, and open progress
+    state now live behind a focused shell coordinator.
+  - Completed workspace pane visibility phase: selected-section visible and
+    managed bindings for global, recording, heap dump, and live JVM panes now
+    live behind a focused shell controller.
+  - Completed workspace pane host view phase: workspace section pane ownership
+    and workspace stack installation now live in `ShellWorkspacePanes` instead
+    of the monolithic shell view.
+  - Completed shell root view phase: root shell frame ownership, sidebar/tabs
+    node ownership, status bar progress node ownership, and shell frame layout
+    construction now live in `ShellRootView` instead of the monolithic shell
+    view.
+  - Completed workspace selection phase: selected workspace listeners, tab
+    selection, page-controller rebinding, and selected-section lazy loading now
+    live behind a focused shell controller.
+  - Completed shell lifecycle phase: Live JVM controller cleanup, workspace
+    close loops, live JVM view-model cleanup, heap dump analysis cleanup, and
+    recording executor shutdown now live behind a focused shell lifecycle
+    controller.
+  - Completed pane-field ownership cleanup: page-pane fields already owned by
+    `AppShellView` and `WorkspacePaneVisibilityController` are no longer
+    mirrored in the central shell controller.
+  - Completed shell page controller registry phase: recording and heap-dump page
+    controller construction, workspace page-controller assembly, overview
+    locale refresh, and page export-table enumeration now live behind a focused
+    shell registry.
+  - Completed Live JVM workspace controller phase: JVM browser view-model
+    construction, Live JVM pane installation/configuration, section-open
+    refresh wiring, and lifecycle registration now live behind a focused shell
+    controller.
+  - Completed heap dump workspace controller phase: heap dump analysis
+    view-model construction and lifecycle registration now live behind a
+    focused shell controller.
+  - Removed migrated Live JVM helper remnants from the central shell
+    controller; Live JVM table helpers and recording filename formatting now
+    stay with `LiveJvmPaneController`, event timestamp formatting with
+    `EventsPageController`, and settings language labels with settings/i18n
+    bindings.
+  - Removed long-lived service bundle state from the central shell controller;
+    recording, Live JVM, and heap dump service bundles are now constructor
+    wiring inputs handed to focused collaborators.
   - Move remaining feature-specific binding and table setup out of the central
     shell controller when a code-first view migration or active feature change
     touches that area.
@@ -145,6 +346,17 @@ verification result or product decision explicitly changes the order.
 
 - Reduce constructor and dependency-chain growth in `AppShellFactory` and
   workspace creation.
+  - Completed first dependency-bundle phase: recording, live JVM, and heap dump
+    shell services now flow through explicit service records instead of being
+    retained as long parallel field chains in the shell factory and controller.
+  - Completed factory dependency-entry phase: `AppShellFactory` now uses a
+    single explicit dependency record as its canonical construction path, and
+    application startup assembles recording, live JVM, and heap dump service
+    bundles before creating the shell.
+  - Completed factory positional-constructor cleanup phase: obsolete long
+    `AppShellFactory` constructors were removed, leaving factory creation on
+    the bundled dependency entry point while adapter/service assembly stays in
+    the app module and service records.
   - Introduce focused dependency bundles such as recording, live JVM, and heap
     dump service groups.
   - Avoid adding a dependency injection framework unless the project has a

@@ -40,9 +40,11 @@ import com.youngledo.jmcfx.domain.model.RecordingSummary;
 import com.youngledo.jmcfx.domain.service.ProfilingService;
 import com.youngledo.jmcfx.domain.service.RuleAnalysisService;
 import com.youngledo.jmcfx.ui.events.EventBrowserViewModel;
+import com.youngledo.jmcfx.ui.events.EventsPageController;
 import com.youngledo.jmcfx.ui.i18n.I18n;
 import com.youngledo.jmcfx.ui.i18n.LanguageMode;
 import com.youngledo.jmcfx.ui.overview.OverviewViewModel;
+import com.youngledo.jmcfx.ui.profiling.ProfilingPageController;
 import com.youngledo.jmcfx.ui.rules.RuleResultsViewModel;
 import com.youngledo.jmcfx.testsupport.FakeEventQueryService;
 import com.youngledo.jmcfx.testsupport.FakeJdpDiscoveryService;
@@ -88,9 +90,125 @@ class AppShellTest {
         assertEquals("BorderPane", view.root.getClass().getSimpleName());
         assertTrue(view.root.getStyleClass().contains("app-shell"));
         assertEquals("StackPane", view.workspaceStack.getClass().getSimpleName());
-        assertNotNull(view.homePane);
-        assertNotNull(view.settingsPane);
-        assertNotNull(view.jvmsPaneHost);
+        assertNotNull(view.workspacePanes.homePane);
+        assertNotNull(view.workspacePanes.settingsPane);
+        assertNotNull(view.workspacePanes.jvmsPaneHost);
+    }
+
+    @Test
+    void shellRootFrameIsSplitOutOfAppShellView() throws Exception {
+        String appShellView = java.nio.file.Files.readString(
+                java.nio.file.Path.of("src/main/java/com/youngledo/jmcfx/ui/shell/AppShellView.java"));
+        String rootView = java.nio.file.Files.readString(
+                java.nio.file.Path.of("src/main/java/com/youngledo/jmcfx/ui/shell/ShellRootView.java"));
+
+        assertTrue(appShellView.contains("final ShellRootView shell = new ShellRootView(workspacePanes.stack);"));
+        assertFalse(appShellView.contains("final BorderPane root = new BorderPane();"));
+        assertFalse(appShellView.contains("final AppSidebar sidebar = new AppSidebar();"));
+        assertFalse(appShellView.contains("final TabPane recordingTabs = new TabPane();"));
+        assertFalse(appShellView.contains("final ProgressBar progressBar = new ProgressBar(0);"));
+        assertFalse(appShellView.contains("private void configureShell()"));
+
+        assertTrue(rootView.contains("final class ShellRootView"));
+        assertTrue(rootView.contains("final BorderPane root = new BorderPane();"));
+        assertTrue(rootView.contains("final AppSidebar sidebar = new AppSidebar();"));
+        assertTrue(rootView.contains("final TabPane recordingTabs = new TabPane();"));
+        assertTrue(rootView.contains("final ProgressBar progressBar = new ProgressBar(0);"));
+        assertTrue(rootView.contains("ShellRootView(StackPane workspaceStack)"));
+        assertTrue(rootView.contains("void configure(StackPane workspaceStack)"));
+        assertTrue(rootView.contains("styles(root, \"enterprise-shell\", \"app-shell\")"));
+        assertTrue(rootView.contains("workspaceShell.getChildren().setAll(recordingTabs, workspaceStack)"));
+    }
+
+    @Test
+    void globalPageViewConstructionIsSplitOutOfAppShellView() throws Exception {
+        String appShellView = java.nio.file.Files.readString(
+                java.nio.file.Path.of("src/main/java/com/youngledo/jmcfx/ui/shell/AppShellView.java"));
+        String homeView = java.nio.file.Files.readString(
+                java.nio.file.Path.of("src/main/java/com/youngledo/jmcfx/ui/shell/HomePaneView.java"));
+        String settingsView = java.nio.file.Files.readString(
+                java.nio.file.Path.of("src/main/java/com/youngledo/jmcfx/ui/shell/SettingsPaneView.java"));
+        String homeController = java.nio.file.Files.readString(
+                java.nio.file.Path.of("src/main/java/com/youngledo/jmcfx/ui/shell/HomePaneController.java"));
+        String settingsController = java.nio.file.Files.readString(
+                java.nio.file.Path.of("src/main/java/com/youngledo/jmcfx/ui/shell/SettingsPaneController.java"));
+
+        assertTrue(appShellView.contains("final HomePaneView home = new HomePaneView();"));
+        assertTrue(appShellView.contains("final SettingsPaneView settings = new SettingsPaneView();"));
+        assertFalse(appShellView.contains("final Button homeOpenRecordingButton"));
+        assertFalse(appShellView.contains("final Label homeKickerLabel"));
+        assertFalse(appShellView.contains("private void configureHome()"));
+        assertFalse(appShellView.contains("final Label settingsLanguageLabel"));
+        assertFalse(appShellView.contains("final ToggleGroup languageToggleGroup"));
+        assertFalse(appShellView.contains("private void configureSettings()"));
+
+        assertTrue(homeView.contains("final class HomePaneView"));
+        assertTrue(homeView.contains("final VBox pane = new VBox();"));
+        assertTrue(homeView.contains("final Button openRecordingButton = new Button();"));
+        assertTrue(homeView.contains("styles(pane, \"welcome-pane\")"));
+
+        assertTrue(settingsView.contains("final class SettingsPaneView"));
+        assertTrue(settingsView.contains("final VBox pane = new VBox();"));
+        assertTrue(settingsView.contains("final ToggleGroup languageToggleGroup = new ToggleGroup();"));
+        assertTrue(settingsView.contains("pane.setSpacing(36)"));
+
+        assertTrue(homeController.contains("private final HomePaneView view;"));
+        assertTrue(settingsController.contains("private final SettingsPaneView view;"));
+    }
+
+    @Test
+    void workspacePaneHostsAreSplitOutOfAppShellView() throws Exception {
+        String appShellView = java.nio.file.Files.readString(
+                java.nio.file.Path.of("src/main/java/com/youngledo/jmcfx/ui/shell/AppShellView.java"));
+        String workspacePanes = java.nio.file.Files.readString(
+                java.nio.file.Path.of("src/main/java/com/youngledo/jmcfx/ui/shell/ShellWorkspacePanes.java"));
+        String visibility = java.nio.file.Files.readString(
+                java.nio.file.Path.of("src/main/java/com/youngledo/jmcfx/ui/shell/WorkspacePaneVisibilityController.java"));
+        String liveJvm = java.nio.file.Files.readString(
+                java.nio.file.Path.of("src/main/java/com/youngledo/jmcfx/ui/shell/ShellLiveJvmWorkspaceController.java"));
+
+        assertTrue(appShellView.contains("final ShellWorkspacePanes workspacePanes = new ShellWorkspacePanes(home.pane, settings.pane);"));
+        assertFalse(appShellView.contains("final StackPane workspaceStack = new StackPane();"));
+        assertFalse(appShellView.contains("final VBox overviewPane = new VBox();"));
+        assertFalse(appShellView.contains("final VBox jvmsPaneHost = new VBox();"));
+        assertFalse(appShellView.contains("workspaceStack.getChildren().setAll("));
+
+        assertTrue(workspacePanes.contains("final class ShellWorkspacePanes"));
+        assertTrue(workspacePanes.contains("final StackPane stack = new StackPane();"));
+        assertTrue(workspacePanes.contains("final VBox overviewPane = new VBox();"));
+        assertTrue(workspacePanes.contains("final VBox jvmsPaneHost = new VBox();"));
+        assertTrue(workspacePanes.contains("void install()"));
+        assertTrue(workspacePanes.contains("stack.getChildren().setAll("));
+
+        assertTrue(visibility.contains("ShellWorkspacePanes panes = view.workspacePanes;"));
+        assertTrue(visibility.contains("bind(panes.homePane, \"home\")"));
+        assertTrue(visibility.contains("bind(panes.settingsPane, \"settings\")"));
+        assertTrue(liveJvm.contains("view.workspacePanes.jvmsPaneHost.getChildren().setAll("));
+    }
+
+    @Test
+    void appShellViewDoesNotMirrorWorkspacePaneHosts() throws Exception {
+        String appShellView = java.nio.file.Files.readString(
+                java.nio.file.Path.of("src/main/java/com/youngledo/jmcfx/ui/shell/AppShellView.java"));
+
+        assertFalse(appShellView.contains("import javafx.scene.layout.VBox;"));
+        for (String paneField : List.of("homePane", "overviewPane", "eventsPane", "analysisPane", "metadataPane",
+                "advancedJfrPane", "heapDumpAnalysisPane", "jvmsPaneHost", "javaApplicationPane",
+                "jvmInternalsPane", "environmentPane", "profilingPane", "exceptionsPane", "threadsPane",
+                "fileioPane", "socketioPane", "locksPane", "threadHistogramPane", "securityPane",
+                "nativeLibrariesPane", "threadDumpsPane", "heapPane", "leaksPane", "tlabPane",
+                "jvmInfoPane", "gcConfigPane", "gcSummaryPane", "gcDetailsPane", "g1GcPane",
+                "javaFxEventsPane", "compilationsPane", "codeCachePane", "classLoadingPane",
+                "vmOperationsPane", "processesPane", "envVarsPane", "sysPropsPane", "recordingInfoPane",
+                "agentsPane", "constantPoolsPane", "settingsPane")) {
+            assertFalse(appShellView.contains("final VBox " + paneField + " = workspacePanes." + paneField + ";"),
+                    () -> paneField + " should be accessed through workspacePanes");
+        }
+
+        assertTrue(appShellView.contains("new OverviewPaneView(workspacePanes.overviewPane)"));
+        assertTrue(appShellView.contains("new RecordingOverviewPaneView(workspacePanes.javaApplicationPane,"));
+        assertTrue(appShellView.contains("new JavaApplicationDataPaneView(workspacePanes.exceptionsPane,"));
+        assertTrue(appShellView.contains("new EnvironmentPaneView(workspacePanes.processesPane,"));
     }
 
 
@@ -130,52 +248,538 @@ class AppShellTest {
     }
 
     @Test
-    void factoryPassesSavedTargetsAndJdpDiscoveryToShellController() throws Exception {
+    void recordingWorkspaceLifecycleIsSplitOutOfShellController() throws Exception {
+        String shell = java.nio.file.Files.readString(
+                java.nio.file.Path.of("src/main/java/com/youngledo/jmcfx/ui/shell/AppShellController.java"));
+        String runtime = shellRuntimeSource();
+        String factory = java.nio.file.Files.readString(
+                java.nio.file.Path.of("src/main/java/com/youngledo/jmcfx/ui/shell/RecordingWorkspaceFactory.java"));
+        String loader = java.nio.file.Files.readString(
+                java.nio.file.Path.of("src/main/java/com/youngledo/jmcfx/ui/shell/RecordingSectionLoader.java"));
+        String prepared = java.nio.file.Files.readString(
+                java.nio.file.Path.of("src/main/java/com/youngledo/jmcfx/ui/shell/PreparedRecordingWorkspace.java"));
+
+        assertTrue(runtime.contains("private final RecordingSectionLoader recordingSectionLoader;"));
+        assertTrue(runtime.contains("RecordingWorkspaceFactory recordingWorkspaceFactory = new RecordingWorkspaceFactory("));
+        assertFalse(shell.contains("record PreparedRecordingWorkspace("),
+                "The prepared recording workspace data carrier belongs in its own source file");
+        assertFalse(shell.contains("private void loadWorkspaceSectionNow("),
+                "Per-section load dispatch belongs in RecordingSectionLoader");
+        assertFalse(shell.contains("private void loadIfPresent("),
+                "Feature-specific nullable load helpers belong in RecordingSectionLoader");
+
+        assertTrue(factory.contains("final class RecordingWorkspaceFactory"));
+        assertTrue(factory.contains("private final RecordingServices services;"));
+        assertTrue(factory.contains("RecordingWorkspaceFactory(RecordingServices services, I18n i18n)"));
+        assertTrue(factory.contains("PreparedRecordingWorkspace prepare(Path path)"));
+        assertTrue(factory.contains("services.recordingRepository().open(path)"));
+
+        assertTrue(loader.contains("final class RecordingSectionLoader"));
+        assertTrue(loader.contains("void load(RecordingWorkspace workspace, String sectionId)"));
+        assertTrue(loader.contains("private void loadWorkspaceSectionNow("));
+
+        assertTrue(prepared.contains("record PreparedRecordingWorkspace("));
+    }
+
+    @Test
+    void shellDependenciesAreGroupedIntoFocusedBundles() throws Exception {
+        String shell = java.nio.file.Files.readString(
+                java.nio.file.Path.of("src/main/java/com/youngledo/jmcfx/ui/shell/AppShellController.java"));
+        String factory = java.nio.file.Files.readString(
+                java.nio.file.Path.of("src/main/java/com/youngledo/jmcfx/ui/shell/AppShellFactory.java"));
+        String recordingServices = java.nio.file.Files.readString(
+                java.nio.file.Path.of("src/main/java/com/youngledo/jmcfx/ui/shell/RecordingServices.java"));
+        String liveJvmServices = java.nio.file.Files.readString(
+                java.nio.file.Path.of("src/main/java/com/youngledo/jmcfx/ui/shell/LiveJvmServices.java"));
+        String heapDumpServices = java.nio.file.Files.readString(
+                java.nio.file.Path.of("src/main/java/com/youngledo/jmcfx/ui/shell/HeapDumpServices.java"));
+
+        assertTrue(shell.contains("AppShellController(AppShellView view, AppShellViewModel viewModel, RecordingServices recordingServices,"));
+        assertTrue(shell.contains("LiveJvmServices liveJvmServices, HeapDumpServices heapDumpServices, I18n i18n,"));
+        assertFalse(shell.contains("private final RecordingServices recordingServices;"));
+        assertFalse(shell.contains("private final LiveJvmServices liveJvmServices;"));
+        assertFalse(shell.contains("private final HeapDumpServices heapDumpServices;"));
+        assertFalse(shell.contains("private final RecordingRepository recordingRepository;"));
+        assertFalse(shell.contains("private final JvmDiscoveryService jvmDiscoveryService;"));
+        assertFalse(shell.contains("private final HeapDumpAnalysisService heapDumpAnalysisService;"));
+
+        assertTrue(factory.contains("private final AppShellFactoryDependencies dependencies;"));
+        assertFalse(factory.contains("private final RecordingServices recordingServices;"));
+        assertFalse(factory.contains("private final LiveJvmServices liveJvmServices;"));
+        assertFalse(factory.contains("private final HeapDumpServices heapDumpServices;"));
+
+        assertTrue(recordingServices.contains("record RecordingServices("));
+        assertTrue(recordingServices.contains("RecordingRepository recordingRepository"));
+        assertTrue(recordingServices.contains("AdvancedJfrAnalysisService advancedJfrAnalysisService"));
+        assertTrue(liveJvmServices.contains("record LiveJvmServices("));
+        assertTrue(liveJvmServices.contains("JvmDiscoveryService jvmDiscoveryService"));
+        assertTrue(liveJvmServices.contains("JmxMonitoringRepository jmxMonitoringRepository"));
+        assertTrue(heapDumpServices.contains("record HeapDumpServices("));
+        assertTrue(heapDumpServices.contains("HeapDumpAnalysisService heapDumpAnalysisService"));
+    }
+
+    @Test
+    void appShellFactoryUsesBundledDependencyEntryPoint() throws Exception {
+        String factory = java.nio.file.Files.readString(
+                java.nio.file.Path.of("src/main/java/com/youngledo/jmcfx/ui/shell/AppShellFactory.java"));
+        String dependencies = java.nio.file.Files.readString(
+                java.nio.file.Path.of("src/main/java/com/youngledo/jmcfx/ui/shell/AppShellFactoryDependencies.java"));
+        String app = java.nio.file.Files.readString(
+                java.nio.file.Path.of("../jmc-fx-app/src/main/java/com/youngledo/jmcfx/app/JmcFxApplication.java"));
+
+        assertTrue(factory.contains("private final AppShellFactoryDependencies dependencies;"));
+        assertTrue(factory.contains("public AppShellFactory(AppShellFactoryDependencies dependencies)"));
+        assertFalse(factory.contains("private final RecordingServices recordingServices;"));
+        assertFalse(factory.contains("private final LiveJvmServices liveJvmServices;"));
+        assertFalse(factory.contains("private final HeapDumpServices heapDumpServices;"));
+        assertFalse(factory.contains("private final I18n i18n;"));
+        assertFalse(factory.contains("private final AppPreferences preferences;"));
+
+        assertTrue(dependencies.contains("public record AppShellFactoryDependencies("));
+        assertTrue(dependencies.contains("RecordingServices recordingServices"));
+        assertTrue(dependencies.contains("LiveJvmServices liveJvmServices"));
+        assertTrue(dependencies.contains("HeapDumpServices heapDumpServices"));
+        assertTrue(dependencies.contains("I18n i18n"));
+        assertTrue(dependencies.contains("AppPreferences preferences"));
+
+        assertFalse(factory.contains("new AppShellFactoryDependencies("));
+        assertTrue(factory.contains("dependencies.preferences()"));
+        assertTrue(factory.contains("dependencies.i18n()"));
+        assertTrue(factory.contains("dependencies.recordingServices()"));
+        assertTrue(app.contains("new AppShellFactoryDependencies("));
+        assertFalse(app.contains("new AppShellFactory(new JmcRecordingRepository(),"));
+    }
+
+    @Test
+    void appShellFactoryHasSingleBundledEntryPoint() throws Exception {
+        String factory = java.nio.file.Files.readString(
+                java.nio.file.Path.of("src/main/java/com/youngledo/jmcfx/ui/shell/AppShellFactory.java"));
+
+        assertTrue(factory.contains("public AppShellFactory(AppShellFactoryDependencies dependencies)"));
+        assertFalse(factory.contains("AppShellFactory(RecordingRepository"));
+        assertFalse(factory.contains("private AppShellFactory(RecordingRepository"));
+        assertFalse(factory.contains("import com.youngledo.jmcfx.domain.service."));
+        assertFalse(factory.contains("new RecordingServices("));
+        assertFalse(factory.contains("new LiveJvmServices("));
+        assertFalse(factory.contains("new HeapDumpServices("));
+        assertFalse(factory.contains("new JavaAppPreferences()"));
+    }
+
+    @Test
+    void workspaceTabsAreSplitOutOfShellController() throws Exception {
+        String shell = java.nio.file.Files.readString(
+                java.nio.file.Path.of("src/main/java/com/youngledo/jmcfx/ui/shell/AppShellController.java"));
+        String runtime = shellRuntimeSource();
+        String tabs = java.nio.file.Files.readString(
+                java.nio.file.Path.of("src/main/java/com/youngledo/jmcfx/ui/shell/WorkspaceTabsController.java"));
+
+        assertTrue(runtime.contains("private WorkspaceTabsController workspaceTabsController;"));
+        assertTrue(runtime.contains("workspaceTabsController = new WorkspaceTabsController(view.recordingTabs, viewModel);"));
+        assertFalse(shell.contains("private boolean updatingRecordingTabs;"));
+        assertFalse(shell.contains("private TabPane recordingTabs;"));
+        assertFalse(shell.contains("private void configureRecordingTabs("));
+        assertFalse(shell.contains("private void rebuildRecordingTabs("));
+        assertFalse(shell.contains("private Tab toWorkspaceTab("));
+        assertFalse(shell.contains("private void selectWorkspaceTab("));
+
+        assertTrue(tabs.contains("final class WorkspaceTabsController"));
+        assertTrue(tabs.contains("private final TabPane tabs;"));
+        assertTrue(tabs.contains("private boolean updatingTabs;"));
+        assertTrue(tabs.contains("void configure()"));
+        assertTrue(tabs.contains("void select(RecordingWorkspace recordingWorkspace, HeapDumpWorkspace heapDumpWorkspace,"));
+        assertTrue(tabs.contains("static String tabTitleFor(RecordingWorkspace workspace)"));
+        assertTrue(tabs.contains("static boolean shouldShowWorkspaceTabs(int recordingWorkspaceCount, int heapDumpWorkspaceCount,"));
+    }
+
+    @Test
+    void exportMenuInstallationIsSplitOutOfShellController() throws Exception {
+        String shell = java.nio.file.Files.readString(
+                java.nio.file.Path.of("src/main/java/com/youngledo/jmcfx/ui/shell/AppShellController.java"));
+        String runtime = shellRuntimeSource();
+        String installer = java.nio.file.Files.readString(
+                java.nio.file.Path.of("src/main/java/com/youngledo/jmcfx/ui/shell/ExportMenuInstaller.java"));
+        String registry = shellPageControllerRegistrySource();
+
+        assertTrue(runtime.contains("private ExportMenuInstaller exportMenuInstaller;"));
+        assertTrue(runtime.contains("exportMenuInstaller = new ExportMenuInstaller(view.root, viewModel, i18n);"));
+        assertTrue(runtime.contains("pageControllerRegistry.installExportMenus(exportMenuInstaller)"));
+        assertTrue(registry.contains("installer.install(analysisPageController.table())"));
+        assertFalse(shell.contains("private void attachExportMenu("));
+        assertFalse(shell.contains("CsvExport.export(table, target.toPath())"));
+        assertFalse(shell.contains("new MenuItem(i18n.get(\"context.exportCsv\"))"));
+
+        assertTrue(installer.contains("final class ExportMenuInstaller"));
+        assertTrue(installer.contains("void install(TableView<?> table)"));
+        assertTrue(installer.contains("new MenuItem(i18n.get(\"context.exportCsv\"))"));
+        assertTrue(installer.contains("chooser.setTitle(i18n.get(\"fileChooser.saveCsv.title\"))"));
+        assertTrue(installer.contains("CsvExport.export(table, target.toPath())"));
+        assertTrue(installer.contains("viewModel.showStatus(i18n.format(\"status.exported\", target.getName()))"));
+    }
+
+    @Test
+    void workspaceOpenFlowIsSplitOutOfShellController() throws Exception {
+        String shell = java.nio.file.Files.readString(
+                java.nio.file.Path.of("src/main/java/com/youngledo/jmcfx/ui/shell/AppShellController.java"));
+        String runtime = shellRuntimeSource();
+        String coordinator = java.nio.file.Files.readString(
+                java.nio.file.Path.of("src/main/java/com/youngledo/jmcfx/ui/shell/WorkspaceOpenCoordinator.java"));
+
+        assertTrue(runtime.contains("private WorkspaceOpenCoordinator workspaceOpenCoordinator;"));
+        assertTrue(runtime.contains("this.workspaceOpenCoordinator = new WorkspaceOpenCoordinator("));
+        assertTrue(runtime.contains("workspaceOpenCoordinator::openRecording"));
+        assertTrue(runtime.contains("workspaceOpenCoordinator::showOpenHeapDumpChooser"));
+        assertTrue(runtime.contains("workspaceOpenCoordinator.openRecordingInBackground(path)"));
+        assertFalse(shell.contains("private void showOpenRecordingChooser("));
+        assertFalse(shell.contains("private void openRecordingInBackground("));
+        assertFalse(shell.contains("private void openHeapDumpInBackground("));
+        assertFalse(shell.contains("private boolean selectExistingRecordingWorkspace("));
+        assertFalse(shell.contains("private void showOpenRecordingFailure("));
+        assertFalse(shell.contains("PreparedRecordingWorkspace prepareRecordingWorkspace(Path path)"));
+
+        assertTrue(coordinator.contains("final class WorkspaceOpenCoordinator"));
+        assertTrue(coordinator.contains("void openRecording()"));
+        assertTrue(coordinator.contains("void showOpenHeapDumpChooser()"));
+        assertTrue(coordinator.contains("void openRecordingInBackground(Path path)"));
+        assertTrue(coordinator.contains("PreparedRecordingWorkspace prepareRecordingWorkspace(Path path)"));
+        assertTrue(coordinator.contains("private void openHeapDumpInBackground(Path path)"));
+        assertTrue(coordinator.contains("selectExistingRecordingWorkspace(path)"));
+        assertTrue(coordinator.contains("selectExistingHeapDumpWorkspace(path)"));
+        assertTrue(coordinator.contains("recordingOpenExecutor.execute("));
+        assertTrue(coordinator.contains("HeapDumpAnalysisViewModel nextViewModel"));
+    }
+
+    @Test
+    void recordingWorkspaceAttachHandlingIsSplitOutOfShellController() throws Exception {
+        String shell = java.nio.file.Files.readString(
+                java.nio.file.Path.of("src/main/java/com/youngledo/jmcfx/ui/shell/AppShellController.java"));
+        String runtime = shellRuntimeSource();
+        String attacher = java.nio.file.Files.readString(
+                java.nio.file.Path.of("src/main/java/com/youngledo/jmcfx/ui/shell/ShellRecordingWorkspaceAttacher.java"));
+        String coordinator = java.nio.file.Files.readString(
+                java.nio.file.Path.of("src/main/java/com/youngledo/jmcfx/ui/shell/WorkspaceOpenCoordinator.java"));
+
+        assertTrue(runtime.contains("ShellRecordingWorkspaceAttacher recordingWorkspaceAttacher ="));
+        assertTrue(runtime.contains("recordingWorkspaceAttacher::attach"));
+        assertFalse(shell.contains("private void attachPreparedRecordingWorkspace("));
+        assertFalse(shell.contains("prepared.overview().showRecording("));
+        assertFalse(shell.contains("viewModel.openRecording(prepared.recording()"));
+        assertFalse(shell.contains("workspaceOpenCoordinator.finishRecordingOpen();"));
+
+        assertTrue(attacher.contains("final class ShellRecordingWorkspaceAttacher"));
+        assertTrue(attacher.contains("void attach(PreparedRecordingWorkspace prepared)"));
+        assertTrue(attacher.contains("prepared.overview().showRecording("));
+        assertTrue(attacher.contains("pageControllerRegistry.formatRecordingDetails(prepared.recording())"));
+        assertTrue(attacher.contains("viewModel.openRecording(prepared.recording()"));
+        assertTrue(attacher.contains("viewModel.showStatus(i18n.format(\"status.openedRecording\""));
+
+        assertTrue(coordinator.contains("finishRecordingOpen();"));
+        assertTrue(coordinator.contains("recordingWorkspaceConsumer.accept(preparedWorkspace);"));
+    }
+
+    @Test
+    void shellFactoryUsesBundleBasedControllerEntryPoint() throws Exception {
+        String shell = java.nio.file.Files.readString(
+                java.nio.file.Path.of("src/main/java/com/youngledo/jmcfx/ui/shell/AppShellController.java"));
+        String factory = java.nio.file.Files.readString(
+                java.nio.file.Path.of("src/main/java/com/youngledo/jmcfx/ui/shell/AppShellFactory.java"));
+
+        assertTrue(shell.contains("AppShellController(AppShellView view, AppShellViewModel viewModel,"));
+        assertTrue(shell.contains("RecordingServices recordingServices"));
+        assertTrue(shell.contains("LiveJvmServices liveJvmServices"));
+        assertTrue(shell.contains("HeapDumpServices heapDumpServices"));
+        assertFalse(shell.contains(
+                "AppShellController(AppShellView view, AppShellViewModel viewModel, RecordingRepository recordingRepository"));
+        assertFalse(shell.contains("public AppShellController(AppShellViewModel viewModel"));
+        assertFalse(shell.contains("private AppShellController(AppShellViewModel viewModel"));
+        assertFalse(shell.contains("import com.youngledo.jmcfx.domain.service.RecordingRepository;"));
+        assertFalse(shell.contains("import com.youngledo.jmcfx.domain.service.JmxConnectionService;"));
+        assertFalse(shell.contains("import com.youngledo.jmcfx.domain.service.HeapDumpAnalysisService;"));
+
+        assertTrue(factory.contains("new AppShellController(view, viewModel, dependencies.recordingServices(),"));
+        assertTrue(factory.contains("dependencies.liveJvmServices(), dependencies.heapDumpServices(), i18n,"));
+        assertFalse(factory.contains("new AppShellController(view, viewModel, recordingServices.recordingRepository()"));
+    }
+
+    @Test
+    void backgroundWorkHandlingIsSplitOutOfShellController() throws Exception {
+        String shell = java.nio.file.Files.readString(
+                java.nio.file.Path.of("src/main/java/com/youngledo/jmcfx/ui/shell/AppShellController.java"));
+        String runtime = shellRuntimeSource();
+        String controller = java.nio.file.Files.readString(
+                java.nio.file.Path.of("src/main/java/com/youngledo/jmcfx/ui/shell/ShellBackgroundWorkController.java"));
+
+        assertTrue(runtime.contains("private final ShellBackgroundWorkController backgroundWorkController;"));
+        assertTrue(runtime.contains("backgroundWorkController::setVisible"));
+        assertTrue(runtime.contains("backgroundWorkController::onFxThread"));
+        assertTrue(runtime.contains("backgroundWorkController.configure()"));
+        assertFalse(shell.contains("private ProgressBar progressBar;"));
+        assertFalse(shell.contains("private void setBackgroundWorkVisible("));
+        assertFalse(shell.contains("private void onFxThread(Runnable runnable)"));
+        assertFalse(shell.contains("progressBar.setProgress("));
+        assertFalse(shell.contains("Platform.isFxApplicationThread()"));
+
+        assertTrue(controller.contains("final class ShellBackgroundWorkController"));
+        assertTrue(controller.contains("ShellBackgroundWorkController(ProgressBar progressBar)"));
+        assertTrue(controller.contains("void configure()"));
+        assertTrue(controller.contains("void setVisible(boolean visible)"));
+        assertTrue(controller.contains("void onFxThread(Runnable runnable)"));
+        assertTrue(controller.contains("ProgressBar.INDETERMINATE_PROGRESS"));
+        assertTrue(controller.contains("Platform.runLater(runnable)"));
+    }
+
+    @Test
+    void workspacePaneVisibilityIsSplitOutOfShellController() throws Exception {
+        String shell = java.nio.file.Files.readString(
+                java.nio.file.Path.of("src/main/java/com/youngledo/jmcfx/ui/shell/AppShellController.java"));
+        String runtime = shellRuntimeSource();
+        String visibility = java.nio.file.Files.readString(
+                java.nio.file.Path.of("src/main/java/com/youngledo/jmcfx/ui/shell/WorkspacePaneVisibilityController.java"));
+
+        assertTrue(runtime.contains("private WorkspacePaneVisibilityController workspacePaneVisibilityController;"));
+        assertTrue(runtime.contains("workspacePaneVisibilityController = new WorkspacePaneVisibilityController(view, viewModel);"));
+        assertTrue(runtime.contains("workspacePaneVisibilityController.configure();"));
+        assertFalse(shell.contains("homePane.visibleProperty().bind("));
+        assertFalse(shell.contains("settingsPane.managedProperty().bind("));
+        assertFalse(shell.contains("jvmsPaneHost.visibleProperty().bind("));
+
+        assertTrue(visibility.contains("final class WorkspacePaneVisibilityController"));
+        assertTrue(visibility.contains("void configure()"));
+        assertTrue(visibility.contains("ShellWorkspacePanes panes = view.workspacePanes;"));
+        assertTrue(visibility.contains("bind(panes.homePane, \"home\")"));
+        assertTrue(visibility.contains("bind(panes.jvmsPaneHost, \"jvms\")"));
+        assertTrue(visibility.contains("bind(panes.settingsPane, \"settings\")"));
+        assertTrue(visibility.contains("pane.managedProperty().bind(pane.visibleProperty())"));
+    }
+
+    @Test
+    void workspaceSelectionIsSplitOutOfShellController() throws Exception {
+        String shell = java.nio.file.Files.readString(
+                java.nio.file.Path.of("src/main/java/com/youngledo/jmcfx/ui/shell/AppShellController.java"));
+        String runtime = shellRuntimeSource();
+        String selection = java.nio.file.Files.readString(
+                java.nio.file.Path.of("src/main/java/com/youngledo/jmcfx/ui/shell/WorkspaceSelectionController.java"));
+
+        assertTrue(runtime.contains("private WorkspaceSelectionController workspaceSelectionController;"));
+        assertTrue(runtime.contains("workspaceSelectionController = new WorkspaceSelectionController("));
+        assertTrue(runtime.contains("workspaceSelectionController.configure();"));
+        assertFalse(shell.contains("private WorkspaceSelectionController workspaceSelectionController()"));
+        assertFalse(shell.contains("workspaceSelectionController().loadSelectedWorkspaceSection();"));
+        assertFalse(shell.contains("workspaceSelectionController().loadWorkspaceSection(workspace, sectionId);"));
+        assertFalse(shell.contains("void preloadRecordingWorkspace(RecordingWorkspace workspace)"));
+        assertFalse(shell.contains("void loadWorkspaceSection(RecordingWorkspace workspace, String sectionId)"));
+        assertFalse(shell.contains("static List<String> preloadedWorkspaceSections()"));
+        assertFalse(shell.contains("private RecordingWorkspace loadedWorkspace;"));
+        assertFalse(shell.contains("private void bindWorkspaceSelection("));
+        assertFalse(shell.contains("private void showWorkspace("));
+        assertFalse(shell.contains("private void showHeapDumpWorkspace("));
+        assertFalse(shell.contains("private void showLiveJvmWorkspace("));
+
+        assertTrue(selection.contains("final class WorkspaceSelectionController"));
+        assertTrue(selection.contains("private RecordingWorkspace loadedWorkspace;"));
+        assertTrue(selection.contains("void configure()"));
+        assertTrue(selection.contains("private void showWorkspace(RecordingWorkspace workspace)"));
+        assertTrue(selection.contains("private void showHeapDumpWorkspace(HeapDumpWorkspace workspace)"));
+        assertTrue(selection.contains("private void showLiveJvmWorkspace(LiveJvmWorkspace workspace)"));
+        assertTrue(selection.contains("void loadSelectedWorkspaceSection()"));
+        assertTrue(selection.contains("void preloadRecordingWorkspace(RecordingWorkspace workspace)"));
+        assertTrue(selection.contains("static java.util.List<String> preloadedWorkspaceSections()"));
+        assertTrue(selection.contains("void loadWorkspaceSection(RecordingWorkspace workspace, String sectionId)"));
+    }
+
+    @Test
+    void shellLifecycleIsSplitOutOfShellController() throws Exception {
+        String shell = java.nio.file.Files.readString(
+                java.nio.file.Path.of("src/main/java/com/youngledo/jmcfx/ui/shell/AppShellController.java"));
+        String runtime = shellRuntimeSource();
+        String lifecycle = java.nio.file.Files.readString(
+                java.nio.file.Path.of("src/main/java/com/youngledo/jmcfx/ui/shell/ShellLifecycleController.java"));
+
+        assertTrue(runtime.contains("private ShellLifecycleController shellLifecycleController;"));
+        assertFalse(shell.contains("private ShellLifecycleController shellLifecycleController()"));
+        assertTrue(runtime.contains("shellLifecycleController.close();"));
+        assertFalse(shell.contains("List.copyOf(viewModel.recordingWorkspacesProperty()).forEach(viewModel::closeWorkspace);"));
+        assertFalse(shell.contains("recordingOpenExecutor.close();"));
+
+        assertTrue(lifecycle.contains("final class ShellLifecycleController"));
+        assertTrue(lifecycle.contains("void close()"));
+        assertTrue(lifecycle.contains("jvmsPaneController.close();"));
+        assertTrue(lifecycle.contains("List.copyOf(viewModel.recordingWorkspacesProperty()).forEach(viewModel::closeWorkspace);"));
+        assertTrue(lifecycle.contains("List.copyOf(viewModel.heapDumpWorkspacesProperty()).forEach(viewModel::closeHeapDumpWorkspace);"));
+        assertTrue(lifecycle.contains("jvmBrowserViewModel.close();"));
+        assertTrue(lifecycle.contains("heapDumpAnalysisViewModel.close();"));
+        assertTrue(lifecycle.contains("recordingOpenExecutor.close();"));
+    }
+
+    @Test
+    void shellControllerDoesNotMirrorPagePaneFields() throws Exception {
+        String shell = java.nio.file.Files.readString(
+                java.nio.file.Path.of("src/main/java/com/youngledo/jmcfx/ui/shell/AppShellController.java"));
+
+        for (String paneField : List.of("homePane", "overviewPane", "eventsPane", "analysisPane", "metadataPane",
+                "advancedJfrPane", "heapDumpAnalysisPane", "javaApplicationPane", "jvmInternalsPane",
+                "environmentPane", "profilingPane", "exceptionsPane", "threadsPane", "fileioPane", "socketioPane",
+                "locksPane", "threadHistogramPane", "securityPane", "nativeLibrariesPane", "threadDumpsPane",
+                "heapPane", "leaksPane", "tlabPane", "jvmInfoPane", "gcConfigPane", "gcSummaryPane",
+                "gcDetailsPane", "g1GcPane", "javaFxEventsPane", "compilationsPane", "codeCachePane",
+                "classLoadingPane", "vmOperationsPane", "processesPane", "envVarsPane", "sysPropsPane",
+                "recordingInfoPane", "agentsPane", "constantPoolsPane", "settingsPane")) {
+            assertFalse(shell.contains("private VBox " + paneField + ";"),
+                    () -> paneField + " should stay owned by AppShellView");
+            assertFalse(shell.contains("this." + paneField + " = view." + paneField + ";"),
+                    () -> paneField + " should not be mirrored in AppShellController");
+        }
+
+        assertFalse(shell.contains("private VBox jvmsPaneHost;"),
+                "Live JVM host ownership belongs in ShellLiveJvmWorkspaceController");
+    }
+
+    @Test
+    void shellControllerDoesNotRetainViewMirrorsOrConstructorOnlyCollaborators() throws Exception {
+        String shell = java.nio.file.Files.readString(
+                java.nio.file.Path.of("src/main/java/com/youngledo/jmcfx/ui/shell/AppShellController.java"));
+        String runtime = shellRuntimeSource();
+
+        assertFalse(shell.contains("private BorderPane root;"));
+        assertFalse(shell.contains("private AppSidebar sidebar;"));
+        assertFalse(shell.contains("private final RecordingOpenExecutor recordingOpenExecutor;"));
+        assertFalse(shell.contains("private final RecordingWorkspaceFactory recordingWorkspaceFactory;"));
+        assertFalse(shell.contains("private final ShellRecordingWorkspaceAttacher recordingWorkspaceAttacher;"));
+        assertFalse(shell.contains("assignViewFields("));
+        assertFalse(shell.contains("this.root = view.root;"));
+        assertFalse(shell.contains("this.sidebar = view.sidebar;"));
+        assertTrue(shell.contains("return view.root;"));
+        assertTrue(runtime.contains("view.sidebar.bind(viewModel);"));
+        assertTrue(runtime.contains("RecordingWorkspaceFactory recordingWorkspaceFactory = new RecordingWorkspaceFactory("));
+        assertTrue(runtime.contains("ShellRecordingWorkspaceAttacher recordingWorkspaceAttacher ="));
+        assertTrue(runtime.contains("new ShellRecordingWorkspaceAttacher(viewModel, pageControllerRegistry, i18n)"));
+    }
+
+    @Test
+    void appShellControllerIsThinFacadeOverRuntimeController() throws Exception {
+        String shell = java.nio.file.Files.readString(
+                java.nio.file.Path.of("src/main/java/com/youngledo/jmcfx/ui/shell/AppShellController.java"));
+        java.nio.file.Path runtimePath = java.nio.file.Path.of(
+                "src/main/java/com/youngledo/jmcfx/ui/shell/ShellRuntimeController.java");
+
+        assertTrue(java.nio.file.Files.exists(runtimePath));
+        String runtime = java.nio.file.Files.readString(runtimePath);
+
+        assertTrue(shell.contains("private final ShellRuntimeController runtimeController;"));
+        assertTrue(shell.contains("this.runtimeController = new ShellRuntimeController("));
+        assertTrue(shell.contains("runtimeController.initialize();"));
+        assertTrue(shell.contains("runtimeController.close();"));
+        assertTrue(shell.contains("runtimeController.openRecordingInBackground(path);"));
+        assertFalse(shell.contains("new HomePaneController("));
+        assertFalse(shell.contains("new SettingsPaneController("));
+        assertFalse(shell.contains("new WorkspaceTabsController("));
+        assertFalse(shell.contains("new WorkspacePaneVisibilityController("));
+        assertFalse(shell.contains("new WorkspaceSelectionController("));
+        assertFalse(shell.contains("new ExportMenuInstaller("));
+        assertFalse(shell.contains("new ShellPageControllerRegistry("));
+        assertFalse(shell.contains("new ShellLiveJvmWorkspaceController("));
+        assertFalse(shell.contains("new ShellHeapDumpWorkspaceController("));
+        assertFalse(shell.contains("new WorkspaceOpenCoordinator("));
+        assertFalse(shell.contains("new RecordingSectionLoader("));
+        assertFalse(shell.contains("new ShellBackgroundWorkController("));
+        assertFalse(shell.contains("private HomePaneController"));
+        assertFalse(shell.contains("private ShellPageControllerRegistry"));
+        assertFalse(shell.contains("private WorkspaceTabsController"));
+        assertFalse(shell.contains("private WorkspaceOpenCoordinator"));
+        assertFalse(shell.contains("private ShellLifecycleController"));
+
+        assertTrue(runtime.contains("final class ShellRuntimeController"));
+        assertTrue(runtime.contains("new HomePaneController("));
+        assertTrue(runtime.contains("new SettingsPaneController("));
+        assertTrue(runtime.contains("new WorkspaceTabsController("));
+        assertTrue(runtime.contains("new WorkspacePaneVisibilityController("));
+        assertTrue(runtime.contains("new WorkspaceSelectionController("));
+        assertTrue(runtime.contains("new WorkspaceOpenCoordinator("));
+        assertTrue(runtime.contains("void openRecordingInBackground(Path path)"));
+        assertTrue(runtime.contains("void close()"));
+    }
+
+    @Test
+    void shellControllerDelegatesPageControllerRegistry() throws Exception {
+        String shell = java.nio.file.Files.readString(
+                java.nio.file.Path.of("src/main/java/com/youngledo/jmcfx/ui/shell/AppShellController.java"));
+        String runtime = shellRuntimeSource();
+        java.nio.file.Path registryPath = java.nio.file.Path.of(
+                "src/main/java/com/youngledo/jmcfx/ui/shell/ShellPageControllerRegistry.java");
+        assertTrue(java.nio.file.Files.exists(registryPath), "ShellPageControllerRegistry should own page controllers");
+        String registry = java.nio.file.Files.readString(registryPath);
+
+        assertTrue(runtime.contains("private ShellPageControllerRegistry pageControllerRegistry;"));
+        assertTrue(runtime.contains("pageControllerRegistry = new ShellPageControllerRegistry("));
+        assertTrue(runtime.contains("pageControllerRegistry.configure();"));
+        assertTrue(runtime.contains("pageControllerRegistry.workspacePageControllers()"));
+        assertTrue(runtime.contains("pageControllerRegistry.installExportMenus(exportMenuInstaller)"));
+
+        for (String field : List.of("overviewPageController", "analysisPageController", "eventsPageController",
+                "metadataPageController", "advancedJfrPageController", "heapDumpAnalysisPageController",
+                "profilingPageController", "exceptionsPageController", "threadsPageController",
+                "javaApplicationDataPagesController", "fileIoPageController", "socketIoPageController",
+                "locksPageController", "heapPageController", "leakSuspectsPageController", "tlabPageController",
+                "jvmInternalsPagesController", "g1GcPageController", "javaFxEventsPageController",
+                "environmentPagesController")) {
+            assertFalse(shell.contains("private " + field), () -> field + " should be owned by the registry");
+        }
+        assertFalse(shell.contains("private void attachExportMenus()"),
+                "Page export table enumeration belongs in the page controller registry");
+
+        assertTrue(registry.contains("final class ShellPageControllerRegistry"));
+        assertTrue(registry.contains("WorkspacePageControllers workspacePageControllers()"));
+        assertTrue(registry.contains("void installExportMenus(ExportMenuInstaller installer)"));
+    }
+
+    @Test
+    void liveJvmServicesCarrySavedTargetsAndJdpDiscoveryDependencies() {
         FakeSavedJvmTargetRepository savedTargets = new FakeSavedJvmTargetRepository();
         FakeJdpDiscoveryService jdpDiscovery = new FakeJdpDiscoveryService();
-        AppShellFactory factory = new AppShellFactory(new FakeRecordingRepository(), new FakeEventQueryService(),
-                new FakeRuleAnalysisService(), null, null, null, null, null, null, null, null, null, null,
-                null, null, null, null, null, null, null, null, null, null, savedTargets, jdpDiscovery, null,
-                new I18n(Locale.ENGLISH));
+        LiveJvmServices services = new LiveJvmServices(null, null, null, null, null, null, null, null, null,
+                savedTargets, jdpDiscovery);
 
-        AppShell shell = createShellOnFxThread(factory);
-        AppShellController controller = shellController(shell);
-
-        assertEquals(savedTargets, controller.savedTargetRepository());
-        assertEquals(jdpDiscovery, controller.jdpDiscoveryService());
+        assertEquals(savedTargets, services.savedTargetRepository());
+        assertEquals(jdpDiscovery, services.jdpDiscoveryService());
     }
 
     @Test
-    void factoryPassesJmxMonitoringDependenciesToShellController() throws Exception {
+    void liveJvmServicesCarryMonitoringDependencies() {
         FakeJmxMonitoringService monitoringService = new FakeJmxMonitoringService();
         FakeJmxMonitoringRepository monitoringRepository = new FakeJmxMonitoringRepository();
-        AppShellFactory factory = new AppShellFactory(new FakeRecordingRepository(), new FakeEventQueryService(),
-                new FakeRuleAnalysisService(), null, null, null, null, null, null, null, null, null, null,
-                null, null, new FakeJvmDiscoveryService(), new FakeJmxConnectionService(), null, null,
-                null, null, null, monitoringService, monitoringRepository, null, null, null, null,
-                new I18n(Locale.ENGLISH));
+        LiveJvmServices services = new LiveJvmServices(null, null, null, null, null, null, null,
+                monitoringService, monitoringRepository, null, null);
 
-        AppShell shell = createShellOnFxThread(factory);
-        AppShellController controller = shellController(shell);
-
-        assertEquals(monitoringService, controller.jmxMonitoringService());
-        assertEquals(monitoringRepository, controller.jmxMonitoringRepository());
+        assertEquals(monitoringService, services.jmxMonitoringService());
+        assertEquals(monitoringRepository, services.jmxMonitoringRepository());
     }
 
     @Test
-    void shellControllerDefaultsToEnglishUiLocale() {
-        AppShellController controller = new AppShellController(
-                new AppShellViewModel(),
-                new FakeRecordingRepository(),
-                new FakeEventQueryService(),
-                new FakeRuleAnalysisService(),
-                null, null, null,
-                null, null, null,
-                null, null, null,
-                null, null, null,
-                new I18n(java.util.Locale.SIMPLIFIED_CHINESE));
+    void shellControllerDoesNotExposeLiveJvmServiceAccessors() throws Exception {
+        String shell = java.nio.file.Files.readString(
+                java.nio.file.Path.of("src/main/java/com/youngledo/jmcfx/ui/shell/AppShellController.java"));
+        String liveJvmController = java.nio.file.Files.readString(java.nio.file.Path.of(
+                "src/main/java/com/youngledo/jmcfx/ui/shell/ShellLiveJvmWorkspaceController.java"));
 
-        assertEquals(java.util.Locale.ENGLISH, controller.i18n().localeProperty().get());
+        for (String method : List.of("savedTargetRepository()", "jdpDiscoveryService()",
+                "jmxMonitoringService()", "jmxMonitoringRepository()")) {
+            assertFalse(shell.contains(method), () -> method + " should not be exposed by AppShellController");
+            assertTrue(liveJvmController.contains(method), () -> method + " should stay with the Live JVM controller");
+        }
+    }
+
+    @Test
+    void i18nDefaultsToEnglishUiLocale() {
+        I18n i18n = new I18n(java.util.Locale.SIMPLIFIED_CHINESE);
+
+        assertEquals(java.util.Locale.ENGLISH, i18n.localeProperty().get());
+    }
+
+    @Test
+    void shellControllerDoesNotExposeI18nAccessor() throws Exception {
+        String shell = java.nio.file.Files.readString(
+                java.nio.file.Path.of("src/main/java/com/youngledo/jmcfx/ui/shell/AppShellController.java"));
+
+        assertFalse(shell.contains("I18n i18n()"));
     }
 
     @Test
@@ -193,23 +797,41 @@ class AppShellTest {
 
     @Test
     void callGraphZoomKeepsViewportAnchorStable() {
-        assertEquals(0.5, AppShellController.scrollValueAfterZoom(
+        assertEquals(0.5, ProfilingPageController.scrollValueAfterZoom(
                 0.5, 1000, 2000, 200, 100), 0.000001);
-        assertEquals(0, AppShellController.scrollValueAfterZoom(
+        assertEquals(0, ProfilingPageController.scrollValueAfterZoom(
                 0, 1000, 2000, 200, 0), 0.000001);
-        assertEquals(1, AppShellController.scrollValueAfterZoom(
+        assertEquals(1, ProfilingPageController.scrollValueAfterZoom(
                 1, 1000, 2000, 200, 200), 0.000001);
-        assertEquals(0, AppShellController.scrollValueAfterZoom(
+        assertEquals(0, ProfilingPageController.scrollValueAfterZoom(
                 0.5, 1000, 150, 200, 100), 0.000001);
     }
 
     @Test
+    void shellControllerDoesNotExposePageOwnedConstantsOrUtilityWrappers() throws Exception {
+        String shell = java.nio.file.Files.readString(
+                java.nio.file.Path.of("src/main/java/com/youngledo/jmcfx/ui/shell/AppShellController.java"));
+        String events = java.nio.file.Files.readString(
+                java.nio.file.Path.of("src/main/java/com/youngledo/jmcfx/ui/events/EventsPageController.java"));
+        String profiling = java.nio.file.Files.readString(
+                java.nio.file.Path.of("src/main/java/com/youngledo/jmcfx/ui/profiling/ProfilingPageController.java"));
+
+        for (String constant : List.of("MIN_EVENT_TYPES_WIDTH", "DEFAULT_EVENT_TYPES_WIDTH",
+                "MAX_EVENT_TYPES_WIDTH", "DEFAULT_EVENT_TYPES_DIVIDER_POSITION")) {
+            assertFalse(shell.contains(constant), () -> constant + " should not be owned by AppShellController");
+            assertTrue(events.contains(constant), () -> constant + " should stay with EventsPageController");
+        }
+        assertFalse(shell.contains("scrollValueAfterZoom("));
+        assertTrue(profiling.contains("scrollValueAfterZoom("));
+    }
+
+    @Test
     void workspaceTabsIncludeSingletonLiveJvmWorkspace() {
-        assertFalse(AppShellController.shouldShowWorkspaceTabs(0, 0, false));
-        assertTrue(AppShellController.shouldShowWorkspaceTabs(0, 0, true));
-        assertTrue(AppShellController.shouldShowWorkspaceTabs(1, 0, false));
-        assertTrue(AppShellController.shouldShowWorkspaceTabs(0, 1, false));
-        assertEquals("JVM", AppShellController.tabTitleFor(new LiveJvmWorkspace("JVM")));
+        assertFalse(WorkspaceTabsController.shouldShowWorkspaceTabs(0, 0, false));
+        assertTrue(WorkspaceTabsController.shouldShowWorkspaceTabs(0, 0, true));
+        assertTrue(WorkspaceTabsController.shouldShowWorkspaceTabs(1, 0, false));
+        assertTrue(WorkspaceTabsController.shouldShowWorkspaceTabs(0, 1, false));
+        assertEquals("JVM", WorkspaceTabsController.tabTitleFor(new LiveJvmWorkspace("JVM")));
     }
 
     @Test
@@ -226,117 +848,748 @@ class AppShellTest {
     void appShellDoesNotOwnLiveJvmControlFieldsAfterExtraction() throws Exception {
         String source = java.nio.file.Files.readString(
                 java.nio.file.Path.of("src/main/java/com/youngledo/jmcfx/ui/shell/AppShellController.java"));
+        String liveJvmWorkspace = java.nio.file.Files.readString(
+                java.nio.file.Path.of("src/main/java/com/youngledo/jmcfx/ui/shell/ShellLiveJvmWorkspaceController.java"));
 
-        assertTrue(source.contains("private VBox jvmsPaneHost;"));
-        assertTrue(source.contains("private LiveJvmPaneController jvmsPaneController;"));
-        assertTrue(source.contains("new LiveJvmPaneController()"));
+        assertFalse(source.contains("private VBox jvmsPaneHost;"));
+        assertFalse(source.contains("private LiveJvmPaneController jvmsPaneController;"));
+        assertFalse(source.contains("new LiveJvmPaneController()"));
+        assertTrue(liveJvmWorkspace.contains("private LiveJvmPaneController jvmsPaneController;"));
+        assertTrue(liveJvmWorkspace.contains("new LiveJvmPaneController()"));
         assertFalse(source.contains("private TableView<JvmConnection> jvmsTable;"));
         assertFalse(source.contains("private Button jvmsAddNotificationSubscriptionButton;"));
         assertFalse(source.contains("private void configureJmxMonitoring()"));
         assertFalse(source.contains("private void bindJmcAgentManager()"));
     }
 
+    @Test
+    void shellControllerDelegatesLiveJvmWorkspaceController() throws Exception {
+        String shell = java.nio.file.Files.readString(
+                java.nio.file.Path.of("src/main/java/com/youngledo/jmcfx/ui/shell/AppShellController.java"));
+        String runtime = shellRuntimeSource();
+        java.nio.file.Path controllerPath = java.nio.file.Path.of(
+                "src/main/java/com/youngledo/jmcfx/ui/shell/ShellLiveJvmWorkspaceController.java");
+        assertTrue(java.nio.file.Files.exists(controllerPath),
+                "ShellLiveJvmWorkspaceController should own Live JVM workspace setup");
+        String liveJvmWorkspace = java.nio.file.Files.readString(controllerPath);
+
+        assertTrue(runtime.contains("private ShellLiveJvmWorkspaceController liveJvmWorkspaceController;"));
+        assertTrue(runtime.contains("liveJvmWorkspaceController = new ShellLiveJvmWorkspaceController("));
+        assertTrue(runtime.contains("liveJvmWorkspaceController.configure();"));
+        assertFalse(shell.contains("private VBox jvmsPaneHost;"));
+        assertFalse(shell.contains("private JvmBrowserViewModel jvmBrowserViewModel;"));
+        assertFalse(shell.contains("private LiveJvmPaneController jvmsPaneController;"));
+        assertFalse(shell.contains("new LiveJvmPaneController()"));
+        assertFalse(shell.contains("jvmsPaneHost.getChildren().setAll("));
+        assertFalse(shell.contains("\"jvms\".equals(newValue) && jvmsPaneController != null"));
+
+        assertTrue(liveJvmWorkspace.contains("final class ShellLiveJvmWorkspaceController"));
+        assertTrue(liveJvmWorkspace.contains("new JvmBrowserViewModel("));
+        assertTrue(liveJvmWorkspace.contains("new LiveJvmPaneController()"));
+        assertTrue(liveJvmWorkspace.contains("view.workspacePanes.jvmsPaneHost.getChildren().setAll("));
+        assertTrue(liveJvmWorkspace.contains("\"jvms\".equals(newValue) && jvmsPaneController != null"));
+    }
+
+    @Test
+    void shellControllerDelegatesHeapDumpWorkspaceController() throws Exception {
+        String shell = java.nio.file.Files.readString(
+                java.nio.file.Path.of("src/main/java/com/youngledo/jmcfx/ui/shell/AppShellController.java"));
+        String runtime = shellRuntimeSource();
+        java.nio.file.Path controllerPath = java.nio.file.Path.of(
+                "src/main/java/com/youngledo/jmcfx/ui/shell/ShellHeapDumpWorkspaceController.java");
+        assertTrue(java.nio.file.Files.exists(controllerPath),
+                "ShellHeapDumpWorkspaceController should own heap dump analysis lifecycle setup");
+        String heapDumpWorkspace = java.nio.file.Files.readString(controllerPath);
+
+        assertTrue(runtime.contains("private ShellHeapDumpWorkspaceController heapDumpWorkspaceController;"));
+        assertTrue(runtime.contains("heapDumpWorkspaceController = new ShellHeapDumpWorkspaceController("));
+        assertTrue(runtime.contains("heapDumpWorkspaceController.configure();"));
+        assertFalse(shell.contains("private HeapDumpAnalysisViewModel heapDumpAnalysisViewModel;"));
+        assertFalse(shell.contains("new HeapDumpAnalysisViewModel("));
+        assertFalse(shell.contains("new VirtualThreadHeapDumpAnalysisExecutor()"));
+        assertFalse(shell.contains("setHeapDumpAnalysisViewModel(heapDumpAnalysisViewModel)"));
+
+        assertTrue(heapDumpWorkspace.contains("final class ShellHeapDumpWorkspaceController"));
+        assertTrue(heapDumpWorkspace.contains("private HeapDumpAnalysisViewModel heapDumpAnalysisViewModel;"));
+        assertTrue(heapDumpWorkspace.contains("new HeapDumpAnalysisViewModel("));
+        assertTrue(heapDumpWorkspace.contains("new VirtualThreadHeapDumpAnalysisExecutor()"));
+        assertTrue(heapDumpWorkspace.contains("lifecycleController.setHeapDumpAnalysisViewModel(heapDumpAnalysisViewModel)"));
+    }
+
+    @Test
+    void shellControllerDoesNotRetainLiveJvmHelperRemnants() throws Exception {
+        String shell = java.nio.file.Files.readString(
+                java.nio.file.Path.of("src/main/java/com/youngledo/jmcfx/ui/shell/AppShellController.java"));
+        String liveJvm = java.nio.file.Files.readString(
+                java.nio.file.Path.of("src/main/java/com/youngledo/jmcfx/ui/shell/LiveJvmPaneController.java"));
+        String events = java.nio.file.Files.readString(
+                java.nio.file.Path.of("src/main/java/com/youngledo/jmcfx/ui/events/EventsPageController.java"));
+        String settings = java.nio.file.Files.readString(
+                java.nio.file.Path.of("src/main/java/com/youngledo/jmcfx/ui/shell/SettingsPaneController.java"));
+
+        for (String helper : List.of("useFormattedIntegerCells", "localizedTablePlaceholder", "localizedColumn",
+                "bindLocalizedText", "emptyTablePlaceholder", "formatEventTime(", "formatEventTimeForDisplay",
+                "saveRecordingInitialFileName", "languageModeDisplayName", "canDisconnectJvm")) {
+            assertFalse(shell.contains(helper), () -> helper + " should not remain in AppShellController");
+        }
+        assertFalse(shell.contains("liveJvmOverviewRefreshTimeline"));
+        assertFalse(shell.contains("JfrMetadataViewModel"));
+        assertFalse(shell.contains("AdvancedJfrViewModel"));
+
+        assertTrue(liveJvm.contains("private static Region emptyTablePlaceholder()"));
+        assertTrue(liveJvm.contains("private static String saveRecordingInitialFileName("));
+        assertTrue(liveJvm.contains("private static boolean canDisconnectJvm("));
+        assertTrue(liveJvm.contains("private static String formatEventTimeForDisplay("));
+        assertTrue(events.contains("static String formatEventTimeForDisplay("));
+        assertTrue(settings.contains("view.languageFollowSystemRadio.textProperty().bind(i18n.text(\"settings.language.followSystem\"))"));
+        assertTrue(settings.contains("view.languageEnglishRadio.textProperty().bind(i18n.text(\"settings.language.english\"))"));
+        assertTrue(settings.contains("view.languageChineseRadio.textProperty().bind(i18n.text(\"settings.language.chineseSimplified\"))"));
+    }
+
+    @Test
+    void appShellDelegatesAnalysisPageToDomainPackagedController() throws Exception {
+        java.nio.file.Path controllerPath = java.nio.file.Path.of(
+                "src/main/java/com/youngledo/jmcfx/ui/analysis/AnalysisPageController.java");
+        java.nio.file.Path viewPath = java.nio.file.Path.of(
+                "src/main/java/com/youngledo/jmcfx/ui/analysis/AnalysisPageView.java");
+        assertTrue(java.nio.file.Files.exists(controllerPath));
+        assertTrue(java.nio.file.Files.exists(viewPath));
+
+        String shell = java.nio.file.Files.readString(
+                java.nio.file.Path.of("src/main/java/com/youngledo/jmcfx/ui/shell/AppShellController.java"));
+        String registry = shellPageControllerRegistrySource();
+        String selection = workspaceSelectionSource();
+        String controller = java.nio.file.Files.readString(controllerPath);
+        String pageView = java.nio.file.Files.readString(viewPath);
+
+        assertTrue(registry.contains("private AnalysisPageController analysisPageController;"));
+        assertTrue(registry.contains("new AnalysisPageController("));
+        assertTrue(registry.contains("view.analysisPage()"));
+        assertTrue(selection.contains("pages.analysisPageController().bind("));
+        assertFalse(shell.contains("private TableView<RuleResult> analysisTable;"));
+        assertFalse(shell.contains("private Label analysisDetailExplanationCaption;"));
+        assertFalse(shell.contains("private void configureAnalysisTable()"));
+        assertFalse(shell.contains("private void bindAnalysis("));
+        assertFalse(shell.contains("private void showAnalysisDetail("));
+        assertFalse(shell.contains("private void openAnalysisRelatedPage("));
+
+        assertTrue(controller.contains("package com.youngledo.jmcfx.ui.analysis;"));
+        assertTrue(controller.contains("class AnalysisPageController"));
+        assertTrue(controller.contains("TableColumn<RuleResult, Severity>"));
+        assertTrue(controller.contains("new AnalysisSeverityCell<>()"));
+        assertTrue(controller.contains("analysis.column.severity"));
+        assertTrue(controller.contains("analysis.filter.search"));
+        assertTrue(controller.contains("analysis.detail.recommendation"));
+        assertTrue(controller.contains("analysisPlaceholder("));
+        assertTrue(controller.contains("relatedPageNavigator.accept(detail.relatedPageId())"));
+        assertTrue(pageView.contains("public record AnalysisPageView("));
+        assertTrue(pageView.contains("TableView<RuleResult> table"));
+    }
+
+    @Test
+    void analysisPaneNodeOwnershipIsSplitOutOfAppShellView() throws Exception {
+        String appShellView = java.nio.file.Files.readString(
+                java.nio.file.Path.of("src/main/java/com/youngledo/jmcfx/ui/shell/AppShellView.java"));
+        String analysisPaneView = java.nio.file.Files.readString(
+                java.nio.file.Path.of("src/main/java/com/youngledo/jmcfx/ui/analysis/AnalysisPaneView.java"));
+
+        assertTrue(appShellView.contains("final AnalysisPaneView analysis = new AnalysisPaneView(workspacePanes.analysisPane);"));
+        assertTrue(appShellView.contains("AnalysisPageView analysisPage()"));
+        assertTrue(appShellView.contains("return analysis.view();"));
+        assertFalse(appShellView.contains("final Label analysisTitleLabel = new Label();"));
+        assertFalse(appShellView.contains("final TextField analysisSearchField = new TextField();"));
+        assertFalse(appShellView.contains("final Spinner<Integer> analysisMinimumScoreSpinner = new Spinner<>();"));
+        assertFalse(appShellView.contains("final CheckBox analysisShowOkCheckBox = new CheckBox();"));
+        assertFalse(appShellView.contains("final TableView<RuleResult> analysisTable = denseTable();"));
+        assertFalse(appShellView.contains("final TextArea analysisDetailExplanationArea = textArea();"));
+        assertFalse(appShellView.contains("private void configureAnalysis()"));
+
+        assertTrue(analysisPaneView.contains("package com.youngledo.jmcfx.ui.analysis;"));
+        assertTrue(analysisPaneView.contains("public final class AnalysisPaneView"));
+        assertTrue(analysisPaneView.contains("private final TableView<RuleResult> table = denseTable();"));
+        assertTrue(analysisPaneView.contains("private final TextArea detailExplanationArea = textArea();"));
+        assertTrue(analysisPaneView.contains("public AnalysisPaneView(VBox pane)"));
+        assertTrue(analysisPaneView.contains("public AnalysisPageView view()"));
+        assertTrue(analysisPaneView.contains("styles(pane, \"split-table-detail-page\")"));
+        assertTrue(analysisPaneView.contains("pane.getChildren().setAll(titleLabel, filterBar, split);"));
+    }
+
+    @Test
+    void metadataPaneNodeOwnershipIsSplitOutOfAppShellView() throws Exception {
+        String appShellView = java.nio.file.Files.readString(
+                java.nio.file.Path.of("src/main/java/com/youngledo/jmcfx/ui/shell/AppShellView.java"));
+        String metadataPaneView = java.nio.file.Files.readString(
+                java.nio.file.Path.of("src/main/java/com/youngledo/jmcfx/ui/metadata/MetadataPaneView.java"));
+
+        assertTrue(appShellView.contains("final MetadataPaneView metadata = new MetadataPaneView(workspacePanes.metadataPane);"));
+        assertTrue(appShellView.contains("MetadataPageView metadataPage()"));
+        assertTrue(appShellView.contains("return metadata.view();"));
+        assertFalse(appShellView.contains("final Label metadataTitleLabel = new Label();"));
+        assertFalse(appShellView.contains("final Label metadataSummaryLabel = new Label();"));
+        assertFalse(appShellView.contains("final TableView<JfrMetadataEventType> metadataEventTypesTable = denseTable();"));
+        assertFalse(appShellView.contains("final Label metadataDetailTitleLabel = new Label();"));
+        assertFalse(appShellView.contains("final TextArea metadataDetailArea = textArea();"));
+        assertFalse(appShellView.contains("private void configureMetadata()"));
+
+        assertTrue(metadataPaneView.contains("package com.youngledo.jmcfx.ui.metadata;"));
+        assertTrue(metadataPaneView.contains("public final class MetadataPaneView"));
+        assertTrue(metadataPaneView.contains("private final TableView<JfrMetadataEventType> eventTypesTable = denseTable();"));
+        assertTrue(metadataPaneView.contains("private final TextArea detailArea = textArea();"));
+        assertTrue(metadataPaneView.contains("public MetadataPaneView(VBox pane)"));
+        assertTrue(metadataPaneView.contains("public MetadataPageView view()"));
+        assertTrue(metadataPaneView.contains("styles(pane, \"page\", \"split-table-detail-page\")"));
+        assertTrue(metadataPaneView.contains("pane.getChildren().setAll(header, split);"));
+    }
+
+    @Test
+    void advancedJfrPaneNodeOwnershipIsSplitOutOfAppShellView() throws Exception {
+        String appShellView = java.nio.file.Files.readString(
+                java.nio.file.Path.of("src/main/java/com/youngledo/jmcfx/ui/shell/AppShellView.java"));
+        String advancedJfrPaneView = java.nio.file.Files.readString(
+                java.nio.file.Path.of("src/main/java/com/youngledo/jmcfx/ui/advanced/AdvancedJfrPaneView.java"));
+
+        assertTrue(appShellView.contains("final AdvancedJfrPaneView advancedJfr = new AdvancedJfrPaneView(workspacePanes.advancedJfrPane);"));
+        assertTrue(appShellView.contains("AdvancedJfrPageView advancedJfrPage()"));
+        assertTrue(appShellView.contains("return advancedJfr.view();"));
+        assertFalse(appShellView.contains("final Label advancedJfrTitleLabel = new Label();"));
+        assertFalse(appShellView.contains("final TabPane advancedJfrTabs = new TabPane();"));
+        assertFalse(appShellView.contains("final Tab advancedJfrHeatmapTab = tab();"));
+        assertFalse(appShellView.contains("final VBox advancedJfrHeatmapContainer = new VBox();"));
+        assertFalse(appShellView.contains("final TableView<MemoryIssue> advancedJfrMemoryTable = denseTable();"));
+        assertFalse(appShellView.contains("final TextArea advancedJfrMemoryDetailArea = textArea();"));
+        assertFalse(appShellView.contains("private void configureAdvancedJfr()"));
+
+        assertTrue(advancedJfrPaneView.contains("package com.youngledo.jmcfx.ui.advanced;"));
+        assertTrue(advancedJfrPaneView.contains("public final class AdvancedJfrPaneView"));
+        assertTrue(advancedJfrPaneView.contains("private final TabPane tabs = new TabPane();"));
+        assertTrue(advancedJfrPaneView.contains("private final VBox heatmapContainer = new VBox();"));
+        assertTrue(advancedJfrPaneView.contains("private final TableView<MemoryIssue> memoryTable = denseTable();"));
+        assertTrue(advancedJfrPaneView.contains("private final TextArea memoryDetailArea = textArea();"));
+        assertTrue(advancedJfrPaneView.contains("public AdvancedJfrPaneView(VBox pane)"));
+        assertTrue(advancedJfrPaneView.contains("public AdvancedJfrPageView view()"));
+        assertTrue(advancedJfrPaneView.contains("tabs.getTabs().setAll(heatmapTab, memoryTab);"));
+        assertTrue(advancedJfrPaneView.contains("pane.getChildren().setAll(titleLabel, summaryLabel, tabs);"));
+    }
+
+    @Test
+    void heapDumpAnalysisPaneNodeOwnershipIsSplitOutOfAppShellView() throws Exception {
+        String appShellView = java.nio.file.Files.readString(
+                java.nio.file.Path.of("src/main/java/com/youngledo/jmcfx/ui/shell/AppShellView.java"));
+        String heapDumpPaneView = java.nio.file.Files.readString(
+                java.nio.file.Path.of("src/main/java/com/youngledo/jmcfx/ui/heapdump/HeapDumpAnalysisPaneView.java"));
+
+        assertTrue(appShellView.contains("final HeapDumpAnalysisPaneView heapDumpAnalysis = new HeapDumpAnalysisPaneView(workspacePanes.heapDumpAnalysisPane);"));
+        assertTrue(appShellView.contains("HeapDumpAnalysisPageView heapDumpAnalysisPage()"));
+        assertTrue(appShellView.contains("return heapDumpAnalysis.view();"));
+        assertFalse(appShellView.contains("final Label heapDumpAnalysisTitleLabel = new Label();"));
+        assertFalse(appShellView.contains("final TableView<HeapDumpIssue> heapDumpIssuesTable = denseTable();"));
+        assertFalse(appShellView.contains("final TabPane heapDumpDetailsTabs = new TabPane();"));
+        assertFalse(appShellView.contains("final Tab heapDumpIssueDetailTab = tab();"));
+        assertFalse(appShellView.contains("final TextArea heapDumpIssueDetailArea = textArea();"));
+        assertFalse(appShellView.contains("final TextArea heapDumpTextReportArea = textArea();"));
+        assertFalse(appShellView.contains("private void configureHeapDump()"));
+
+        assertTrue(heapDumpPaneView.contains("package com.youngledo.jmcfx.ui.heapdump;"));
+        assertTrue(heapDumpPaneView.contains("public final class HeapDumpAnalysisPaneView"));
+        assertTrue(heapDumpPaneView.contains("private final TableView<HeapDumpIssue> issuesTable = denseTable();"));
+        assertTrue(heapDumpPaneView.contains("private final TabPane detailsTabs = new TabPane();"));
+        assertTrue(heapDumpPaneView.contains("private final TextArea issueDetailArea = textArea();"));
+        assertTrue(heapDumpPaneView.contains("private final TextArea textReportArea = textArea();"));
+        assertTrue(heapDumpPaneView.contains("public HeapDumpAnalysisPaneView(VBox pane)"));
+        assertTrue(heapDumpPaneView.contains("public HeapDumpAnalysisPageView view()"));
+        assertTrue(heapDumpPaneView.contains("styles(pane, \"page\", \"split-table-detail-page\", \"heap-dump-page\")"));
+        assertTrue(heapDumpPaneView.contains("pane.getChildren().setAll(header, content);"));
+    }
+
+    @Test
+    void profilingPaneNodeOwnershipIsSplitOutOfAppShellView() throws Exception {
+        String appShellView = java.nio.file.Files.readString(
+                java.nio.file.Path.of("src/main/java/com/youngledo/jmcfx/ui/shell/AppShellView.java"));
+        String profilingPaneView = java.nio.file.Files.readString(
+                java.nio.file.Path.of("src/main/java/com/youngledo/jmcfx/ui/profiling/ProfilingPaneView.java"));
+
+        assertTrue(appShellView.contains("final ProfilingPaneView profiling = new ProfilingPaneView(workspacePanes.profilingPane);"));
+        assertTrue(appShellView.contains("ProfilingPageView profilingPage()"));
+        assertTrue(appShellView.contains("return profiling.view();"));
+        assertFalse(appShellView.contains("final Label profilingTitleLabel = new Label();"));
+        assertFalse(appShellView.contains("final TableView<HotMethod> profilingTable = denseTable();"));
+        assertFalse(appShellView.contains("final TabPane profilingTreeTabs = new TabPane();"));
+        assertFalse(appShellView.contains("final HBox profilingCallGraphToolbar = new HBox();"));
+        assertFalse(appShellView.contains("final TableView<DependencyGraphEdge> profilingDependencyTable = denseTable();"));
+        assertFalse(appShellView.contains("final TreeView<StackTreeNode> profilingCallersTree = new TreeView<>();"));
+        assertFalse(appShellView.contains("private void configureProfiling()"));
+        assertFalse(appShellView.contains("private void configureProfilingTab("));
+        assertFalse(appShellView.contains("private void configureFlameTab("));
+
+        assertTrue(profilingPaneView.contains("package com.youngledo.jmcfx.ui.profiling;"));
+        assertTrue(profilingPaneView.contains("public final class ProfilingPaneView"));
+        assertTrue(profilingPaneView.contains("private final TableView<HotMethod> hotMethodsTable = denseTable();"));
+        assertTrue(profilingPaneView.contains("private final TabPane treeTabs = new TabPane();"));
+        assertTrue(profilingPaneView.contains("private final HBox callGraphToolbar = new HBox();"));
+        assertTrue(profilingPaneView.contains("private final TableView<DependencyGraphEdge> dependencyTable = denseTable();"));
+        assertTrue(profilingPaneView.contains("private final TreeView<StackTreeNode> callersTree = new TreeView<>();"));
+        assertTrue(profilingPaneView.contains("public ProfilingPaneView(VBox pane)"));
+        assertTrue(profilingPaneView.contains("public ProfilingPageView view()"));
+        assertTrue(profilingPaneView.contains("treeTabs.getTabs().setAll(callGraphTab, callersFlameTab,"));
+        assertTrue(profilingPaneView.contains("pane.getChildren().setAll(titleLabel, split);"));
+    }
+
+    @Test
+    void recordingOverviewPaneNodeOwnershipIsSplitOutOfAppShellView() throws Exception {
+        String appShellView = java.nio.file.Files.readString(
+                java.nio.file.Path.of("src/main/java/com/youngledo/jmcfx/ui/shell/AppShellView.java"));
+        String overviewPaneView = java.nio.file.Files.readString(
+                java.nio.file.Path.of("src/main/java/com/youngledo/jmcfx/ui/shell/RecordingOverviewPaneView.java"));
+        String overviewPagesView = java.nio.file.Files.readString(
+                java.nio.file.Path.of("src/main/java/com/youngledo/jmcfx/ui/shell/RecordingOverviewPagesView.java"));
+        String overviewController = java.nio.file.Files.readString(
+                java.nio.file.Path.of("src/main/java/com/youngledo/jmcfx/ui/shell/RecordingOverviewPagesController.java"));
+        String registry = shellPageControllerRegistrySource();
+
+        assertTrue(appShellView.contains("final RecordingOverviewPaneView recordingOverviewPages ="));
+        assertTrue(appShellView.contains("new RecordingOverviewPaneView(workspacePanes.javaApplicationPane,"));
+        assertTrue(appShellView.contains("RecordingOverviewPagesView recordingOverviewPages()"));
+        assertTrue(appShellView.contains("return recordingOverviewPages.view();"));
+        assertFalse(appShellView.contains("final Label javaApplicationTitleLabel = new Label();"));
+        assertFalse(appShellView.contains("final Button javaApplicationProfilingButton = new Button();"));
+        assertFalse(appShellView.contains("final Label jvmInternalsTitleLabel = new Label();"));
+        assertFalse(appShellView.contains("final Button jvmInternalsGcButton = new Button();"));
+        assertFalse(appShellView.contains("final Label environmentTitleLabel = new Label();"));
+        assertFalse(appShellView.contains("final Button environmentProcessesButton = new Button();"));
+        assertFalse(appShellView.contains("private void configureOverviewPages()"));
+        assertFalse(appShellView.contains("private void configureActionOverview("));
+        assertFalse(appShellView.contains("private VBox summaryAction("));
+
+        assertTrue(overviewPaneView.contains("final class RecordingOverviewPaneView"));
+        assertTrue(overviewPaneView.contains("RecordingOverviewPaneView(VBox javaApplicationPane,"));
+        assertTrue(overviewPaneView.contains("RecordingOverviewPagesView view()"));
+        assertTrue(overviewPaneView.contains("configureActionOverview(javaApplicationPane, javaApplicationTitleLabel"));
+        assertTrue(overviewPaneView.contains("styles(pane, \"page\", \"overview-page\", pageClass)"));
+        assertTrue(overviewPaneView.contains("styles(panel, \"summary-panel\")"));
+
+        assertTrue(overviewPagesView.contains("record RecordingOverviewPagesView("));
+        assertTrue(overviewPagesView.contains("Label javaApplicationTitleLabel"));
+        assertTrue(overviewPagesView.contains("Button jvmInternalsGcButton"));
+        assertTrue(overviewPagesView.contains("Button environmentProcessesButton"));
+
+        assertTrue(overviewController.contains("private final RecordingOverviewPagesView view;"));
+        assertTrue(overviewController.contains("RecordingOverviewPagesController(RecordingOverviewPagesView view,"));
+        assertTrue(registry.contains("new RecordingOverviewPagesController(view.recordingOverviewPages(), viewModel, i18n)"));
+    }
+
+    @Test
+    void javaApplicationDataPaneNodeOwnershipIsSplitOutOfAppShellView() throws Exception {
+        String appShellView = java.nio.file.Files.readString(
+                java.nio.file.Path.of("src/main/java/com/youngledo/jmcfx/ui/shell/AppShellView.java"));
+        String javaApplicationPaneView = java.nio.file.Files.readString(
+                java.nio.file.Path.of("src/main/java/com/youngledo/jmcfx/ui/javaapp/JavaApplicationDataPaneView.java"));
+
+        assertTrue(appShellView.contains("final JavaApplicationDataPaneView javaApplicationData ="));
+        assertTrue(appShellView.contains("new JavaApplicationDataPaneView(workspacePanes.exceptionsPane,"));
+        assertTrue(appShellView.contains("ExceptionsPageView exceptionsPage()"));
+        assertTrue(appShellView.contains("return javaApplicationData.exceptionsPage();"));
+        assertTrue(appShellView.contains("ThreadsPageView threadsPage()"));
+        assertTrue(appShellView.contains("return javaApplicationData.threadsPage();"));
+        assertTrue(appShellView.contains("JavaApplicationDataPagesView javaApplicationDataPages()"));
+        assertTrue(appShellView.contains("return javaApplicationData.javaApplicationDataPages();"));
+
+        assertFalse(appShellView.contains("final Label exceptionsTitleLabel = new Label();"));
+        assertFalse(appShellView.contains("final TableView<ExceptionSummary> exceptionsTable = denseTable();"));
+        assertFalse(appShellView.contains("final Label threadsTitleLabel = new Label();"));
+        assertFalse(appShellView.contains("final TableView<ThreadSummary> threadsTable = denseTable();"));
+        assertFalse(appShellView.contains("final Label threadHistogramTitleLabel = new Label();"));
+        assertFalse(appShellView.contains("final TableView<ThreadDumpEntry> threadDumpsTable = denseTable();"));
+        assertFalse(appShellView.contains("configureTablePage(exceptionsPane, exceptionsTitleLabel"));
+        assertFalse(appShellView.contains("configureTablePage(threadsPane, threadsTitleLabel"));
+        assertFalse(appShellView.contains("configureTablePage(threadHistogramPane, threadHistogramTitleLabel"));
+        assertFalse(appShellView.contains("configureTablePage(securityPane, securityTitleLabel"));
+        assertFalse(appShellView.contains("configureTablePage(nativeLibrariesPane, nativeLibrariesTitleLabel"));
+        assertFalse(appShellView.contains("configureTablePage(threadDumpsPane, threadDumpsTitleLabel"));
+
+        assertTrue(javaApplicationPaneView.contains("package com.youngledo.jmcfx.ui.javaapp;"));
+        assertTrue(javaApplicationPaneView.contains("public final class JavaApplicationDataPaneView"));
+        assertTrue(javaApplicationPaneView.contains("public JavaApplicationDataPaneView(VBox exceptionsPane,"));
+        assertTrue(javaApplicationPaneView.contains("public ExceptionsPageView exceptionsPage()"));
+        assertTrue(javaApplicationPaneView.contains("public ThreadsPageView threadsPage()"));
+        assertTrue(javaApplicationPaneView.contains("public JavaApplicationDataPagesView javaApplicationDataPages()"));
+        assertTrue(javaApplicationPaneView.contains("configureTablePage(exceptionsPane, exceptionsTitleLabel"));
+        assertTrue(javaApplicationPaneView.contains("configureTablePage(threadDumpsPane, threadDumpsTitleLabel"));
+        assertTrue(javaApplicationPaneView.contains("styles(threadDumpTextArea, \"dump-text-area\")"));
+    }
+
+    @Test
+    void ioAndLocksPaneNodeOwnershipIsSplitOutOfAppShellView() throws Exception {
+        String appShellView = java.nio.file.Files.readString(
+                java.nio.file.Path.of("src/main/java/com/youngledo/jmcfx/ui/shell/AppShellView.java"));
+        String fileIoPaneView = java.nio.file.Files.readString(
+                java.nio.file.Path.of("src/main/java/com/youngledo/jmcfx/ui/fileio/FileIoPaneView.java"));
+        String socketIoPaneView = java.nio.file.Files.readString(
+                java.nio.file.Path.of("src/main/java/com/youngledo/jmcfx/ui/socketio/SocketIoPaneView.java"));
+        String locksPaneView = java.nio.file.Files.readString(
+                java.nio.file.Path.of("src/main/java/com/youngledo/jmcfx/ui/locks/LocksPaneView.java"));
+
+        assertTrue(appShellView.contains("final FileIoPaneView fileIo = new FileIoPaneView(workspacePanes.fileioPane);"));
+        assertTrue(appShellView.contains("final SocketIoPaneView socketIo = new SocketIoPaneView(workspacePanes.socketioPane);"));
+        assertTrue(appShellView.contains("final LocksPaneView locks = new LocksPaneView(workspacePanes.locksPane);"));
+        assertTrue(appShellView.contains("return fileIo.view();"));
+        assertTrue(appShellView.contains("return socketIo.view();"));
+        assertTrue(appShellView.contains("return locks.view();"));
+
+        assertFalse(appShellView.contains("final Label fileioTitleLabel = new Label();"));
+        assertFalse(appShellView.contains("final TableView<FileIOHistogram> fileioHistogramTable = denseTable();"));
+        assertFalse(appShellView.contains("final Label socketioTitleLabel = new Label();"));
+        assertFalse(appShellView.contains("final TableView<SocketIOEvent> socketioEventTable = denseTable();"));
+        assertFalse(appShellView.contains("final Label locksTitleLabel = new Label();"));
+        assertFalse(appShellView.contains("final TableView<LockHistogram> locksByClassTable = denseTable();"));
+        assertFalse(appShellView.contains("configureTablePage(fileioPane, fileioTitleLabel"));
+        assertFalse(appShellView.contains("configureTablePage(socketioPane, socketioTitleLabel"));
+        assertFalse(appShellView.contains("configureTablePage(locksPane, locksTitleLabel"));
+
+        assertTrue(fileIoPaneView.contains("package com.youngledo.jmcfx.ui.fileio;"));
+        assertTrue(fileIoPaneView.contains("public final class FileIoPaneView"));
+        assertTrue(fileIoPaneView.contains("public FileIoPaneView(VBox pane)"));
+        assertTrue(fileIoPaneView.contains("public FileIoPageView view()"));
+        assertTrue(fileIoPaneView.contains("tab(timelineTab, timelineContainer);"));
+        assertTrue(fileIoPaneView.contains("configureTablePage(pane, titleLabel, tabs);"));
+
+        assertTrue(socketIoPaneView.contains("package com.youngledo.jmcfx.ui.socketio;"));
+        assertTrue(socketIoPaneView.contains("public final class SocketIoPaneView"));
+        assertTrue(socketIoPaneView.contains("public SocketIoPaneView(VBox pane)"));
+        assertTrue(socketIoPaneView.contains("public SocketIoPageView view()"));
+        assertTrue(socketIoPaneView.contains("styles(groupingBar, \"socketio-grouping-bar\")"));
+        assertTrue(socketIoPaneView.contains("configureTablePage(pane, titleLabel, groupingBar, tabs);"));
+
+        assertTrue(locksPaneView.contains("package com.youngledo.jmcfx.ui.locks;"));
+        assertTrue(locksPaneView.contains("public final class LocksPaneView"));
+        assertTrue(locksPaneView.contains("public LocksPaneView(VBox pane)"));
+        assertTrue(locksPaneView.contains("public LocksPageView view()"));
+        assertTrue(locksPaneView.contains("styles(groupingBar, \"locks-grouping-bar\")"));
+        assertTrue(locksPaneView.contains("configureTablePage(pane, titleLabel, groupingBar, tabs);"));
+    }
+
+    @Test
+    void memoryPaneNodeOwnershipIsSplitOutOfAppShellView() throws Exception {
+        String appShellView = java.nio.file.Files.readString(
+                java.nio.file.Path.of("src/main/java/com/youngledo/jmcfx/ui/shell/AppShellView.java"));
+        String heapPaneView = java.nio.file.Files.readString(
+                java.nio.file.Path.of("src/main/java/com/youngledo/jmcfx/ui/heap/HeapPaneView.java"));
+        String leaksPaneView = java.nio.file.Files.readString(
+                java.nio.file.Path.of("src/main/java/com/youngledo/jmcfx/ui/leaks/LeakSuspectsPaneView.java"));
+        String tlabPaneView = java.nio.file.Files.readString(
+                java.nio.file.Path.of("src/main/java/com/youngledo/jmcfx/ui/tlab/TlabPaneView.java"));
+
+        assertTrue(appShellView.contains("final HeapPaneView heap = new HeapPaneView(workspacePanes.heapPane);"));
+        assertTrue(appShellView.contains("final LeakSuspectsPaneView leaks = new LeakSuspectsPaneView(workspacePanes.leaksPane);"));
+        assertTrue(appShellView.contains("final TlabPaneView tlab = new TlabPaneView(workspacePanes.tlabPane);"));
+        assertTrue(appShellView.contains("return heap.view();"));
+        assertTrue(appShellView.contains("return leaks.view();"));
+        assertTrue(appShellView.contains("return tlab.view();"));
+
+        assertFalse(appShellView.contains("final Label heapTitleLabel = new Label();"));
+        assertFalse(appShellView.contains("final TableView<HeapClassHistogram> heapTable = denseTable();"));
+        assertFalse(appShellView.contains("final Label leaksTitleLabel = new Label();"));
+        assertFalse(appShellView.contains("final TreeView<LeakReferenceNode> leaksReferenceTree = new TreeView<>();"));
+        assertFalse(appShellView.contains("final Label tlabTitleLabel = new Label();"));
+        assertFalse(appShellView.contains("final TableView<TlabAllocation> tlabTable = denseTable();"));
+        assertFalse(appShellView.contains("configureTablePage(heapPane, heapTitleLabel"));
+        assertFalse(appShellView.contains("configureTablePage(leaksPane, leaksTitleLabel"));
+        assertFalse(appShellView.contains("configureTablePage(tlabPane, tlabTitleLabel"));
+
+        assertTrue(heapPaneView.contains("package com.youngledo.jmcfx.ui.heap;"));
+        assertTrue(heapPaneView.contains("public final class HeapPaneView"));
+        assertTrue(heapPaneView.contains("public HeapPaneView(VBox pane)"));
+        assertTrue(heapPaneView.contains("public HeapPageView view()"));
+        assertTrue(heapPaneView.contains("timelineContainer.getChildren().setAll(timelineChart);"));
+        assertTrue(heapPaneView.contains("configureTablePage(pane, titleLabel, new SplitPane(table, timelineContainer));"));
+
+        assertTrue(leaksPaneView.contains("package com.youngledo.jmcfx.ui.leaks;"));
+        assertTrue(leaksPaneView.contains("public final class LeakSuspectsPaneView"));
+        assertTrue(leaksPaneView.contains("public LeakSuspectsPaneView(VBox pane)"));
+        assertTrue(leaksPaneView.contains("public LeakSuspectsPageView view()"));
+        assertTrue(leaksPaneView.contains("configureTablePage(pane, titleLabel, new SplitPane(table, referenceTree));"));
+
+        assertTrue(tlabPaneView.contains("package com.youngledo.jmcfx.ui.tlab;"));
+        assertTrue(tlabPaneView.contains("public final class TlabPaneView"));
+        assertTrue(tlabPaneView.contains("public TlabPaneView(VBox pane)"));
+        assertTrue(tlabPaneView.contains("public TlabPageView view()"));
+        assertTrue(tlabPaneView.contains("timelineContainer.getChildren().setAll(timelineChart);"));
+        assertTrue(tlabPaneView.contains("configureTablePage(pane, titleLabel, new SplitPane(table, timelineContainer));"));
+    }
+
+    @Test
+    void jvmInternalsPaneNodeOwnershipIsSplitOutOfAppShellView() throws Exception {
+        String appShellView = java.nio.file.Files.readString(
+                java.nio.file.Path.of("src/main/java/com/youngledo/jmcfx/ui/shell/AppShellView.java"));
+        String jvmPaneView = java.nio.file.Files.readString(
+                java.nio.file.Path.of("src/main/java/com/youngledo/jmcfx/ui/jvm/JvmInternalsPaneView.java"));
+        String g1PaneView = java.nio.file.Files.readString(
+                java.nio.file.Path.of("src/main/java/com/youngledo/jmcfx/ui/gc/G1GcPaneView.java"));
+        String javaFxPaneView = java.nio.file.Files.readString(
+                java.nio.file.Path.of("src/main/java/com/youngledo/jmcfx/ui/jfx/JavaFxEventsPaneView.java"));
+
+        assertTrue(appShellView.contains("final JvmInternalsPaneView jvmInternals ="));
+        assertTrue(appShellView.contains("new JvmInternalsPaneView(workspacePanes.jvmInfoPane,"));
+        assertTrue(appShellView.contains("final G1GcPaneView g1Gc = new G1GcPaneView(workspacePanes.g1GcPane);"));
+        assertTrue(appShellView.contains("final JavaFxEventsPaneView javaFxEvents = new JavaFxEventsPaneView(workspacePanes.javaFxEventsPane);"));
+        assertTrue(appShellView.contains("return jvmInternals.view();"));
+        assertTrue(appShellView.contains("return g1Gc.view();"));
+        assertTrue(appShellView.contains("return javaFxEvents.view();"));
+
+        assertFalse(appShellView.contains("final TableView<JvmFlag> jvmFlagsTable = denseTable();"));
+        assertFalse(appShellView.contains("final TableView<GcSummary> gcSummaryTable = denseTable();"));
+        assertFalse(appShellView.contains("final TableView<CompilationEvent> compilationsTable = denseTable();"));
+        assertFalse(appShellView.contains("final TableView<CodeCacheSweep> codeCacheSweepsTable = denseTable();"));
+        assertFalse(appShellView.contains("final TableView<ClassloaderSummary> classLoadingHistogramTable = denseTable();"));
+        assertFalse(appShellView.contains("final TableView<VmOperationSummary> vmOperationSummaryTable = denseTable();"));
+        assertFalse(appShellView.contains("final Label g1GcTitleLabel = new Label();"));
+        assertFalse(appShellView.contains("final TableView<G1GcRegionState> g1GcRegionStatesTable = denseTable();"));
+        assertFalse(appShellView.contains("final Label javaFxEventsTitleLabel = new Label();"));
+        assertFalse(appShellView.contains("final TableView<JavaFxPulsePhase> javaFxEventsPhaseTable = denseTable();"));
+        assertFalse(appShellView.contains("private void configureGcPages()"));
+
+        assertTrue(jvmPaneView.contains("package com.youngledo.jmcfx.ui.jvm;"));
+        assertTrue(jvmPaneView.contains("public final class JvmInternalsPaneView"));
+        assertTrue(jvmPaneView.contains("public JvmInternalsPaneView(VBox jvmInfoPane,"));
+        assertTrue(jvmPaneView.contains("public JvmInternalsPagesView view()"));
+        assertTrue(jvmPaneView.contains("configureTablePage(jvmInfoPane, jvmInfoTitleLabel"));
+        assertTrue(jvmPaneView.contains("configureTablePage(gcDetailsPane, gcDetailsTitleLabel"));
+        assertTrue(jvmPaneView.contains("configureTablePage(vmOperationsPane, vmOperationsTitleLabel"));
+
+        assertTrue(g1PaneView.contains("package com.youngledo.jmcfx.ui.gc;"));
+        assertTrue(g1PaneView.contains("public final class G1GcPaneView"));
+        assertTrue(g1PaneView.contains("public G1GcPaneView(VBox pane)"));
+        assertTrue(g1PaneView.contains("public G1GcPageView view()"));
+        assertTrue(g1PaneView.contains("configureDetailPage(pane, titleLabel, summaryLabel"));
+
+        assertTrue(javaFxPaneView.contains("package com.youngledo.jmcfx.ui.jfx;"));
+        assertTrue(javaFxPaneView.contains("public final class JavaFxEventsPaneView"));
+        assertTrue(javaFxPaneView.contains("public JavaFxEventsPaneView(VBox pane)"));
+        assertTrue(javaFxPaneView.contains("public JavaFxEventsPageView view()"));
+        assertTrue(javaFxPaneView.contains("configureDetailPage(pane, titleLabel, summaryLabel"));
+    }
+
+    @Test
+    void environmentPaneNodeOwnershipIsSplitOutOfAppShellView() throws Exception {
+        String appShellView = java.nio.file.Files.readString(
+                java.nio.file.Path.of("src/main/java/com/youngledo/jmcfx/ui/shell/AppShellView.java"));
+        String environmentPaneView = java.nio.file.Files.readString(
+                java.nio.file.Path.of("src/main/java/com/youngledo/jmcfx/ui/environment/EnvironmentPaneView.java"));
+
+        assertTrue(appShellView.contains("final EnvironmentPaneView environment ="));
+        assertTrue(appShellView.contains("new EnvironmentPaneView(workspacePanes.processesPane,"));
+        assertTrue(appShellView.contains("EnvironmentPagesView environmentPages()"));
+        assertTrue(appShellView.contains("return environment.view();"));
+
+        assertFalse(appShellView.contains("final TableView<ProcessInfo> processesTable = denseTable();"));
+        assertFalse(appShellView.contains("final TextField envVarsSearchField = new TextField();"));
+        assertFalse(appShellView.contains("final TableView<SystemProperty> sysPropsTable = denseTable();"));
+        assertFalse(appShellView.contains("final TabPane recordingInfoTabs = new TabPane();"));
+        assertFalse(appShellView.contains("final TableView<AgentInfo> agentsTable = denseTable();"));
+        assertFalse(appShellView.contains("final Label constantPoolsTitleLabel = new Label();"));
+        assertFalse(appShellView.contains("private void configureEnvironmentPages()"));
+        assertFalse(appShellView.contains("private void configureTablePage("));
+
+        assertTrue(environmentPaneView.contains("package com.youngledo.jmcfx.ui.environment;"));
+        assertTrue(environmentPaneView.contains("public final class EnvironmentPaneView"));
+        assertTrue(environmentPaneView.contains("public EnvironmentPaneView(VBox processesPane,"));
+        assertTrue(environmentPaneView.contains("public EnvironmentPagesView view()"));
+        assertTrue(environmentPaneView.contains("configureTablePage(processesPane, processesTitleLabel, processesTable);"));
+        assertTrue(environmentPaneView.contains("tab(recordingInfoRecordingsTab, recordingsTable);"));
+        assertTrue(environmentPaneView.contains("configureTablePage(constantPoolsPane, constantPoolsTitleLabel, constantPoolsTable);"));
+    }
+
+    @Test
+    void appShellDelegatesEventsPageToDomainPackagedController() throws Exception {
+        java.nio.file.Path controllerPath = java.nio.file.Path.of(
+                "src/main/java/com/youngledo/jmcfx/ui/events/EventsPageController.java");
+        java.nio.file.Path viewPath = java.nio.file.Path.of(
+                "src/main/java/com/youngledo/jmcfx/ui/events/EventsPageView.java");
+        assertTrue(java.nio.file.Files.exists(controllerPath));
+        assertTrue(java.nio.file.Files.exists(viewPath));
+
+        String shell = java.nio.file.Files.readString(
+                java.nio.file.Path.of("src/main/java/com/youngledo/jmcfx/ui/shell/AppShellController.java"));
+        String registry = shellPageControllerRegistrySource();
+        String selection = workspaceSelectionSource();
+        String controller = java.nio.file.Files.readString(controllerPath);
+        String pageView = java.nio.file.Files.readString(viewPath);
+
+        assertTrue(registry.contains("private EventsPageController eventsPageController;"));
+        assertTrue(registry.contains("new EventsPageController("));
+        assertTrue(registry.contains("view.eventsPage()"));
+        assertTrue(selection.contains("pages.eventsPageController().bind("));
+        assertFalse(shell.contains("private TreeView<EventTypeNode> eventTypesTree;"));
+        assertFalse(shell.contains("private TableView<EventRow> eventsTable;"));
+        assertFalse(shell.contains("private MenuButton columnsButton;"));
+        assertFalse(shell.contains("private void bindEvents()"));
+        assertFalse(shell.contains("private void bindEventBrowser("));
+        assertFalse(shell.contains("private void rebuildEventTypeTree()"));
+        assertFalse(shell.contains("private void rebuildEventColumns()"));
+        assertFalse(shell.contains("private void selectEventRow("));
+        assertFalse(shell.contains("private void clearEventFilters()"));
+        assertFalse(shell.contains("private List<EventFieldCondition> fieldConditions("));
+        assertFalse(shell.contains("private void showEventDetails("));
+        assertFalse(shell.contains("private void showSelectionProperties("));
+
+        assertTrue(controller.contains("package com.youngledo.jmcfx.ui.events;"));
+        assertTrue(controller.contains("public final class EventsPageController"));
+        assertTrue(controller.contains("DEFAULT_EVENT_TYPES_DIVIDER_POSITION"));
+        assertTrue(controller.contains("eventTypesTree().setCellFactory"));
+        assertTrue(controller.contains("selectEventType(newValue)"));
+        assertTrue(controller.contains("columnsButton().getItems().setAll"));
+        assertTrue(controller.contains("new CheckMenuItem(field.label())"));
+        assertTrue(controller.contains("new EventFilter("));
+        assertTrue(controller.contains("fieldConditions("));
+        assertTrue(controller.contains("showEventDetails("));
+        assertTrue(controller.contains("showSelectionProperties("));
+        assertTrue(controller.contains("shouldClearEventTypesTreeSelection"));
+        assertTrue(pageView.contains("public record EventsPageView("));
+        assertTrue(pageView.contains("TreeView<EventTypeNode> eventTypesTree"));
+        assertTrue(pageView.contains("TableView<EventRow> eventsTable"));
+    }
+
+    @Test
+    void eventsPaneNodeOwnershipIsSplitOutOfAppShellView() throws Exception {
+        String appShellView = java.nio.file.Files.readString(
+                java.nio.file.Path.of("src/main/java/com/youngledo/jmcfx/ui/shell/AppShellView.java"));
+        String eventsPaneView = java.nio.file.Files.readString(
+                java.nio.file.Path.of("src/main/java/com/youngledo/jmcfx/ui/events/EventsPaneView.java"));
+
+        assertTrue(appShellView.contains("final EventsPaneView events = new EventsPaneView(workspacePanes.eventsPane);"));
+        assertTrue(appShellView.contains("EventsPageView eventsPage()"));
+        assertTrue(appShellView.contains("return events.view();"));
+        assertFalse(appShellView.contains("final Label eventsTitleLabel = new Label();"));
+        assertFalse(appShellView.contains("final TreeView<EventTypeNode> eventTypesTree = new TreeView<>();"));
+        assertFalse(appShellView.contains("final TextField eventSearchField = new TextField();"));
+        assertFalse(appShellView.contains("final MenuButton columnsButton = new MenuButton();"));
+        assertFalse(appShellView.contains("final SplitPane eventsSplitPane = new SplitPane();"));
+        assertFalse(appShellView.contains("final TableView<EventRow> eventsTable = denseTable();"));
+        assertFalse(appShellView.contains("final TabPane eventDetailsTabs = new TabPane();"));
+        assertFalse(appShellView.contains("final TableView<EventProperty> eventPropertiesTable = denseTable();"));
+        assertFalse(appShellView.contains("private void configureEvents()"));
+
+        assertTrue(eventsPaneView.contains("package com.youngledo.jmcfx.ui.events;"));
+        assertTrue(eventsPaneView.contains("public final class EventsPaneView"));
+        assertTrue(eventsPaneView.contains("private final TreeView<EventTypeNode> eventTypesTree = new TreeView<>();"));
+        assertTrue(eventsPaneView.contains("private final TableView<EventRow> eventsTable = denseTable();"));
+        assertTrue(eventsPaneView.contains("public EventsPaneView(VBox pane)"));
+        assertTrue(eventsPaneView.contains("public EventsPageView view()"));
+        assertTrue(eventsPaneView.contains("eventsSplitPane.getItems().setAll(eventTypesTree, vbox(6, eventsTable, eventWindowStatusLabel));"));
+        assertTrue(eventsPaneView.contains("pane.getChildren().setAll(eventsTitleLabel, filters, eventsSplitPane, eventDetailsTabs);"));
+    }
+
 
     @Test
     void profilingGraphShellWiringUsesViewModelLayoutsAndI18n() throws Exception {
-        String controller = java.nio.file.Files.readString(
+        String shell = java.nio.file.Files.readString(
                 java.nio.file.Path.of("src/main/java/com/youngledo/jmcfx/ui/shell/AppShellController.java"));
+        String registry = shellPageControllerRegistrySource();
+        String selectionController = workspaceSelectionSource();
+        String pageController = java.nio.file.Files.readString(
+                java.nio.file.Path.of("src/main/java/com/youngledo/jmcfx/ui/profiling/ProfilingPageController.java"));
+        assertTrue(java.nio.file.Files.exists(
+                java.nio.file.Path.of("src/main/java/com/youngledo/jmcfx/ui/profiling/ProfilingPageView.java")));
         String english = java.nio.file.Files.readString(
                 java.nio.file.Path.of("src/main/resources/com/youngledo/jmcfx/ui/i18n/messages.properties"));
         String chinese = java.nio.file.Files.readString(
                 java.nio.file.Path.of("src/main/resources/com/youngledo/jmcfx/ui/i18n/messages_zh_CN.properties"));
         String css = appCss();
 
-        assertTrue(controller.contains("private Tab profilingCallGraphTab;"));
-        assertTrue(controller.contains("private HBox profilingCallGraphToolbar;"));
-        assertTrue(controller.contains("private ComboBox<CallGraphDirection> profilingCallGraphDirectionCombo;"));
-        assertTrue(controller.contains("private Label profilingCallGraphDepthLabel;"));
-        assertTrue(controller.contains("private Spinner<Integer> profilingCallGraphDepthSpinner;"));
-        assertTrue(controller.contains("private Button profilingCallGraphZoomOutButton;"));
-        assertTrue(controller.contains("private Button profilingCallGraphResetZoomButton;"));
-        assertTrue(controller.contains("private Button profilingCallGraphZoomInButton;"));
-        assertTrue(controller.contains("private Button profilingCallGraphFitButton;"));
-        assertTrue(controller.contains("private VBox profilingCallGraphContainer;"));
-        assertTrue(controller.contains("private CallGraphView profilingCallGraphView;"));
-        assertTrue(controller.contains("private Tab profilingDependencyGraphTab;"));
-        assertTrue(controller.contains("private Spinner<Integer> profilingDependencyDepthSpinner;"));
-        assertTrue(controller.contains("private TableView<DependencyGraphEdge> profilingDependencyTable;"));
-        assertTrue(controller.contains("private VBox profilingDependencyGraphContainer;"));
-        assertTrue(controller.contains("private CallGraphView profilingDependencyGraphView;"));
-        assertTrue(controller.contains("private Tab profilingCallersFlameTab;"));
-        assertTrue(controller.contains("private Button profilingCallersFlameOrientationButton;"));
-        assertTrue(controller.contains("private VBox profilingCallersFlameContainer;"));
-        assertTrue(controller.contains("private Tab profilingCalleesFlameTab;"));
-        assertTrue(controller.contains("private Button profilingCalleesFlameOrientationButton;"));
-        assertTrue(controller.contains("private VBox profilingCalleesFlameContainer;"));
-        assertTrue(controller.contains("private FlameGraphView profilingCallersFlameGraphView;"));
-        assertTrue(controller.contains("private FlameGraphView profilingCalleesFlameGraphView;"));
-        assertTrue(controller.contains("profilingCallGraphView.emptyTextProperty().bind(i18n.text(\"profiling.callGraph.empty\"))"));
-        assertTrue(controller.contains("profilingDependencyGraphView.emptyTextProperty().bind(i18n.text(\"profiling.dependency.empty\"))"));
-        assertTrue(controller.contains("profilingCallGraphContainer.getChildren().setAll(profilingCallGraphView)"));
-        assertTrue(controller.contains("profilingDependencyGraphContainer.getChildren().setAll(profilingDependencyGraphView)"));
-        assertTrue(controller.contains("profilingCallGraphView.setLayout(null)"));
-        assertTrue(controller.contains("profilingDependencyGraphView.setLayout(null)"));
-        assertTrue(controller.contains("profilingCallersFlameContainer.getChildren().setAll(profilingCallersFlameGraphView)"));
-        assertTrue(controller.contains("profilingCalleesFlameContainer.getChildren().setAll(profilingCalleesFlameGraphView)"));
-        assertTrue(controller.contains("profilingCallersFlameGraphView.setLayout(null)"));
-        assertTrue(controller.contains("profilingCalleesFlameGraphView.setLayout(null)"));
-        assertTrue(controller.contains("currentProfilingViewModel.callGraphProperty().removeListener(callGraphListener)"));
-        assertTrue(controller.contains("currentProfilingViewModel.dependencyGraphProperty().removeListener(dependencyGraphListener)"));
-        assertTrue(controller.contains("currentProfilingViewModel.callersTreeProperty().removeListener(callersTreeListener)"));
-        assertTrue(controller.contains("currentProfilingViewModel.calleesTreeProperty().removeListener(calleesTreeListener)"));
-        assertTrue(controller.contains("currentProfilingViewModel.callersFlameGraphProperty().removeListener(callersFlameGraphListener)"));
-        assertTrue(controller.contains("currentProfilingViewModel.calleesFlameGraphProperty().removeListener(calleesFlameGraphListener)"));
-        assertTrue(controller.contains("nextViewModel.callGraphProperty().addListener(callGraphListener)"));
-        assertTrue(controller.contains("nextViewModel.dependencyGraphProperty().addListener(dependencyGraphListener)"));
-        assertTrue(controller.contains("nextViewModel.callersTreeProperty().addListener(callersTreeListener)"));
-        assertTrue(controller.contains("nextViewModel.calleesTreeProperty().addListener(calleesTreeListener)"));
-        assertTrue(controller.contains("nextViewModel.callersFlameGraphProperty().addListener(callersFlameGraphListener)"));
-        assertTrue(controller.contains("nextViewModel.calleesFlameGraphProperty().addListener(calleesFlameGraphListener)"));
-        assertTrue(controller.contains("nextViewModel.callGraphProperty().get()"));
-        assertTrue(controller.contains("nextViewModel.dependencyGraphProperty().get()"));
-        assertTrue(controller.contains("nextViewModel.callersFlameGraphProperty().get()"));
-        assertTrue(controller.contains("nextViewModel.calleesFlameGraphProperty().get()"));
-        assertTrue(controller.contains("setCallGraphDirection"));
-        assertTrue(controller.contains("setCallGraphMaxDepth"));
-        assertTrue(controller.contains("profiling.callGraph.direction.callers"));
-        assertTrue(controller.contains("profiling.callGraph.direction.callees"));
-        assertTrue(controller.contains("i18n.localeProperty().addListener"));
-        assertTrue(controller.contains("refreshProfilingCallGraphDirectionLabel"));
-        assertTrue(controller.contains("CallGraphDirection selectedDirection = profilingCallGraphDirectionCombo.getSelectionModel().getSelectedItem()"));
-        assertTrue(controller.contains("profilingCallGraphDirectionCombo.getSelectionModel().select(selectedDirection)"));
-        assertTrue(controller.contains("profilingCallGraphTab.textProperty().bind(i18n.text(\"profiling.tab.callGraph\"))"));
-        assertTrue(controller.contains("profilingDependencyGraphTab.textProperty().bind(i18n.text(\"profiling.tab.dependencyGraph\"))"));
-        assertTrue(controller.contains("profilingCallGraphDirectionCombo.promptTextProperty().bind(i18n.text(\"profiling.callGraph.direction\"))"));
-        assertTrue(controller.contains("profilingCallGraphDepthLabel.textProperty().bind(i18n.text(\"profiling.callGraph.depth\"))"));
-        assertTrue(controller.contains("profilingDependencyDepthLabel.textProperty().bind(i18n.text(\"profiling.dependency.depth\"))"));
-        assertTrue(controller.contains("profilingCallersFlameTab.textProperty().bind(i18n.text(\"profiling.tab.callersFlame\"))"));
-        assertTrue(controller.contains("profilingCalleesFlameTab.textProperty().bind(i18n.text(\"profiling.tab.calleesFlame\"))"));
-        assertTrue(controller.contains("profilingCallersFlameGraphView.emptyTextProperty().bind(i18n.text(\"profiling.flame.empty\"))"));
-        assertTrue(controller.contains("profilingCalleesFlameGraphView.emptyTextProperty().bind(i18n.text(\"profiling.flame.empty\"))"));
-        assertTrue(controller.contains("configureGraphZoomButtons(profilingCallGraphView"));
-        assertTrue(controller.contains("configureGraphZoomButtons(profilingDependencyGraphView"));
-        assertTrue(controller.contains("configureFlameGraphButtons(profilingCallersFlameGraphView"));
-        assertTrue(controller.contains("toggleFlameGraphOrientation"));
-        assertTrue(controller.contains("bindFlameGraphToolbarVisibility(profilingCallersFlameToolbar"));
-        assertTrue(controller.contains("bindFlameGraphToolbarVisibility(profilingCalleesFlameToolbar"));
-        assertTrue(controller.contains("toolbar.visibleProperty().bind(graphView.hasFramesProperty())"));
-        assertTrue(controller.contains("toolbar.managedProperty().bind(toolbar.visibleProperty())"));
-        assertTrue(controller.contains("graphView.fitToWidth(graphViewportWidth(graphView))"));
-        assertTrue(controller.contains("configureCallGraphGestures"));
-        assertTrue(controller.contains("addEventFilter(ScrollEvent.SCROLL"));
-        assertTrue(controller.contains("addEventFilter(ZoomEvent.ZOOM_STARTED"));
-        assertTrue(controller.contains("zoomCallGraphAt"));
-        assertTrue(controller.contains("scrollValueAfterZoom"));
-        assertTrue(controller.contains("addEventFilter(ZoomEvent.ZOOM_FINISHED"));
-        assertFalse(controller.contains("PauseTransition"));
-        assertTrue(controller.contains("panCallGraphViewport"));
-        assertTrue(controller.contains("scrollPane.setHvalue"));
-        assertTrue(controller.contains("scrollPane.setVvalue"));
-        assertTrue(controller.contains("addEventFilter(ZoomEvent.ZOOM"));
-        assertTrue(controller.contains("addEventFilter(MouseEvent.MOUSE_CLICKED"));
-        assertTrue(controller.contains("event.isShortcutDown()"));
-        assertTrue(controller.contains("graphView.zoomBy"));
+        assertTrue(registry.contains("import com.youngledo.jmcfx.ui.profiling.ProfilingPageController;"));
+        assertTrue(registry.contains("private ProfilingPageController profilingPageController;"));
+        assertTrue(registry.contains("profilingPageController = new ProfilingPageController(view.profilingPage(), i18n);"));
+        assertTrue(registry.contains("profilingPageController.configure();"));
+        assertTrue(selectionController.contains("pages.profilingPageController().bind(workspace == null ? null : workspace.profilingViewModel())"));
+        assertFalse(shell.contains("private TableView<HotMethod> profilingTable;"));
+        assertFalse(shell.contains("private CallGraphView profilingCallGraphView;"));
+        assertFalse(shell.contains("private CallGraphView profilingDependencyGraphView;"));
+        assertFalse(shell.contains("private FlameGraphView profilingCallersFlameGraphView;"));
+        assertFalse(shell.contains("private FlameGraphView profilingCalleesFlameGraphView;"));
+        assertFalse(shell.contains("private void configureProfilingTable()"));
+        assertFalse(shell.contains("private void bindProfiling("));
+        assertFalse(shell.contains("private void selectProfilingMethod("));
+        assertFalse(shell.contains("private void rebuildStackTree("));
+        assertFalse(shell.contains("private String formatCallGraphDirection("));
+        assertFalse(shell.contains("private void refreshProfilingCallGraphDirectionLabel("));
+        assertFalse(shell.contains("private ListCell<CallGraphDirection> callGraphDirectionCell("));
+        assertFalse(shell.contains("private void configureGraphZoomButtons("));
+        assertFalse(shell.contains("private void configureCallGraphGestures("));
+        assertFalse(shell.contains("private void zoomCallGraphAt("));
+        assertFalse(shell.contains("private void panCallGraphViewport("));
+        assertFalse(shell.contains("private void configureFlameGraphButtons("));
+        assertFalse(shell.contains("private void bindFlameGraphToolbarVisibility("));
+        assertFalse(shell.contains("private void toggleFlameGraphOrientation("));
+        assertFalse(shell.contains("private double graphViewportWidth("));
+        assertTrue(pageController.contains("private CallGraphView profilingCallGraphView;"));
+        assertTrue(pageController.contains("private CallGraphView profilingDependencyGraphView;"));
+        assertTrue(pageController.contains("private FlameGraphView profilingCallersFlameGraphView;"));
+        assertTrue(pageController.contains("private FlameGraphView profilingCalleesFlameGraphView;"));
+        assertTrue(pageController.contains("profilingCallGraphView.emptyTextProperty().bind(i18n.text(\"profiling.callGraph.empty\"))"));
+        assertTrue(pageController.contains("profilingDependencyGraphView.emptyTextProperty().bind(i18n.text(\"profiling.dependency.empty\"))"));
+        assertTrue(pageController.contains("view.callGraphContainer().getChildren().setAll(profilingCallGraphView)"));
+        assertTrue(pageController.contains("view.dependencyGraphContainer().getChildren().setAll(profilingDependencyGraphView)"));
+        assertTrue(pageController.contains("profilingCallGraphView.setLayout(null)"));
+        assertTrue(pageController.contains("profilingDependencyGraphView.setLayout(null)"));
+        assertTrue(pageController.contains("view.callersFlameContainer().getChildren().setAll(profilingCallersFlameGraphView)"));
+        assertTrue(pageController.contains("view.calleesFlameContainer().getChildren().setAll(profilingCalleesFlameGraphView)"));
+        assertTrue(pageController.contains("profilingCallersFlameGraphView.setLayout(null)"));
+        assertTrue(pageController.contains("profilingCalleesFlameGraphView.setLayout(null)"));
+        assertTrue(pageController.contains("currentProfilingViewModel.callGraphProperty().removeListener(callGraphListener)"));
+        assertTrue(pageController.contains("currentProfilingViewModel.dependencyGraphProperty().removeListener(dependencyGraphListener)"));
+        assertTrue(pageController.contains("currentProfilingViewModel.callersTreeProperty().removeListener(callersTreeListener)"));
+        assertTrue(pageController.contains("currentProfilingViewModel.calleesTreeProperty().removeListener(calleesTreeListener)"));
+        assertTrue(pageController.contains("currentProfilingViewModel.callersFlameGraphProperty().removeListener(callersFlameGraphListener)"));
+        assertTrue(pageController.contains("currentProfilingViewModel.calleesFlameGraphProperty().removeListener(calleesFlameGraphListener)"));
+        assertTrue(pageController.contains("nextViewModel.callGraphProperty().addListener(callGraphListener)"));
+        assertTrue(pageController.contains("nextViewModel.dependencyGraphProperty().addListener(dependencyGraphListener)"));
+        assertTrue(pageController.contains("nextViewModel.callersTreeProperty().addListener(callersTreeListener)"));
+        assertTrue(pageController.contains("nextViewModel.calleesTreeProperty().addListener(calleesTreeListener)"));
+        assertTrue(pageController.contains("nextViewModel.callersFlameGraphProperty().addListener(callersFlameGraphListener)"));
+        assertTrue(pageController.contains("nextViewModel.calleesFlameGraphProperty().addListener(calleesFlameGraphListener)"));
+        assertTrue(pageController.contains("nextViewModel.callGraphProperty().get()"));
+        assertTrue(pageController.contains("nextViewModel.dependencyGraphProperty().get()"));
+        assertTrue(pageController.contains("nextViewModel.callersFlameGraphProperty().get()"));
+        assertTrue(pageController.contains("nextViewModel.calleesFlameGraphProperty().get()"));
+        assertTrue(pageController.contains("setCallGraphDirection"));
+        assertTrue(pageController.contains("setCallGraphMaxDepth"));
+        assertTrue(pageController.contains("profiling.callGraph.direction.callers"));
+        assertTrue(pageController.contains("profiling.callGraph.direction.callees"));
+        assertTrue(pageController.contains("i18n.localeProperty().addListener"));
+        assertTrue(pageController.contains("refreshProfilingCallGraphDirectionLabel"));
+        assertTrue(pageController.contains("CallGraphDirection selectedDirection = view.callGraphDirectionCombo().getSelectionModel().getSelectedItem()"));
+        assertTrue(pageController.contains("view.callGraphDirectionCombo().getSelectionModel().select(selectedDirection)"));
+        assertTrue(pageController.contains("view.callGraphTab().textProperty().bind(i18n.text(\"profiling.tab.callGraph\"))"));
+        assertTrue(pageController.contains("view.dependencyGraphTab().textProperty().bind(i18n.text(\"profiling.tab.dependencyGraph\"))"));
+        assertTrue(pageController.contains("view.callGraphDirectionCombo().promptTextProperty().bind(i18n.text(\"profiling.callGraph.direction\"))"));
+        assertTrue(pageController.contains("view.callGraphDepthLabel().textProperty().bind(i18n.text(\"profiling.callGraph.depth\"))"));
+        assertTrue(pageController.contains("view.dependencyDepthLabel().textProperty().bind(i18n.text(\"profiling.dependency.depth\"))"));
+        assertTrue(pageController.contains("view.callersFlameTab().textProperty().bind(i18n.text(\"profiling.tab.callersFlame\"))"));
+        assertTrue(pageController.contains("view.calleesFlameTab().textProperty().bind(i18n.text(\"profiling.tab.calleesFlame\"))"));
+        assertTrue(pageController.contains("profilingCallersFlameGraphView.emptyTextProperty().bind(i18n.text(\"profiling.flame.empty\"))"));
+        assertTrue(pageController.contains("profilingCalleesFlameGraphView.emptyTextProperty().bind(i18n.text(\"profiling.flame.empty\"))"));
+        assertTrue(pageController.contains("configureGraphZoomButtons(profilingCallGraphView"));
+        assertTrue(pageController.contains("configureGraphZoomButtons(profilingDependencyGraphView"));
+        assertTrue(pageController.contains("configureFlameGraphButtons(profilingCallersFlameGraphView"));
+        assertTrue(pageController.contains("toggleFlameGraphOrientation"));
+        assertTrue(pageController.contains("bindFlameGraphToolbarVisibility(view.callersFlameToolbar()"));
+        assertTrue(pageController.contains("bindFlameGraphToolbarVisibility(view.calleesFlameToolbar()"));
+        assertTrue(pageController.contains("toolbar.visibleProperty().bind(graphView.hasFramesProperty())"));
+        assertTrue(pageController.contains("toolbar.managedProperty().bind(toolbar.visibleProperty())"));
+        assertTrue(pageController.contains("graphView.fitToWidth(graphViewportWidth(graphView))"));
+        assertTrue(pageController.contains("configureCallGraphGestures"));
+        assertTrue(pageController.contains("addEventFilter(ScrollEvent.SCROLL"));
+        assertTrue(pageController.contains("addEventFilter(ZoomEvent.ZOOM_STARTED"));
+        assertTrue(pageController.contains("zoomCallGraphAt"));
+        assertTrue(pageController.contains("scrollValueAfterZoom"));
+        assertTrue(pageController.contains("addEventFilter(ZoomEvent.ZOOM_FINISHED"));
+        assertFalse(shell.contains("PauseTransition"));
+        assertTrue(pageController.contains("panCallGraphViewport"));
+        assertTrue(pageController.contains("scrollPane.setHvalue"));
+        assertTrue(pageController.contains("scrollPane.setVvalue"));
+        assertTrue(pageController.contains("addEventFilter(ZoomEvent.ZOOM"));
+        assertTrue(pageController.contains("addEventFilter(MouseEvent.MOUSE_CLICKED"));
+        assertTrue(pageController.contains("event.isShortcutDown()"));
+        assertTrue(pageController.contains("graphView.zoomBy"));
 
         assertTrue(css.contains(".profiling-call-graph-container"));
         assertTrue(css.contains(".profiling-graph-tab-content"));
@@ -546,80 +1799,91 @@ class AppShellTest {
 
     @Test
     void advancedJfrShellUsesTabbedHeatmapAndMemoryBindings() throws Exception {
-        String controller = java.nio.file.Files.readString(
+        String shell = java.nio.file.Files.readString(
                 java.nio.file.Path.of("src/main/java/com/youngledo/jmcfx/ui/shell/AppShellController.java"));
+        String registry = shellPageControllerRegistrySource();
+        String selectionController = workspaceSelectionSource();
+        String advancedController = java.nio.file.Files.readString(
+                java.nio.file.Path.of("src/main/java/com/youngledo/jmcfx/ui/advanced/AdvancedJfrPageController.java"));
+        assertTrue(java.nio.file.Files.exists(
+                java.nio.file.Path.of("src/main/java/com/youngledo/jmcfx/ui/advanced/AdvancedJfrPageView.java")));
+        String analysisController = java.nio.file.Files.readString(
+                java.nio.file.Path.of("src/main/java/com/youngledo/jmcfx/ui/analysis/AnalysisPageController.java"));
         String english = java.nio.file.Files.readString(
                 java.nio.file.Path.of("src/main/resources/com/youngledo/jmcfx/ui/i18n/messages.properties"));
         String chinese = java.nio.file.Files.readString(
                 java.nio.file.Path.of("src/main/resources/com/youngledo/jmcfx/ui/i18n/messages_zh_CN.properties"));
         String css = appCss();
 
-        assertTrue(controller.contains("import com.youngledo.jmcfx.domain.model.MemoryIssue;"));
-        assertTrue(controller.contains("private TabPane advancedJfrTabs;"));
-        assertTrue(controller.contains("private Tab advancedJfrHeatmapTab;"));
-        assertTrue(controller.contains("private Tab advancedJfrMemoryTab;"));
-        assertTrue(controller.contains("private Label advancedJfrMemorySummaryLabel;"));
-        assertTrue(controller.contains("private TableView<MemoryIssue> advancedJfrMemoryTable;"));
-        assertTrue(controller.contains("private Label advancedJfrMemoryDetailTitleLabel;"));
-        assertTrue(controller.contains("private TextArea advancedJfrMemoryDetailArea;"));
-        assertTrue(controller.contains("private boolean rebindingAdvancedJfrMemory;"));
-        assertTrue(controller.contains("configureAdvancedJfrMemoryTable();"));
-        assertTrue(controller.contains("advancedJfrHeatmapTab.textProperty().bind(i18n.text(\"advancedJfr.heatmap.tab\"))"));
-        assertTrue(controller.contains("advancedJfrMemoryTab.textProperty().bind(i18n.text(\"advancedJfr.memory.tab\"))"));
-        assertTrue(controller.contains("advancedJfrMemoryTable.setPlaceholder(localizedTablePlaceholder(\"advancedJfr.memory.empty\"))"));
-        assertTrue(controller.contains("localizedColumn(\"advancedJfr.memory.column.severity\")"));
-        assertTrue(controller.contains("localizedColumn(\"advancedJfr.memory.column.category\")"));
-        assertTrue(controller.contains("localizedColumn(\"advancedJfr.memory.column.subject\")"));
-        assertTrue(controller.contains("localizedColumn(\"advancedJfr.memory.column.estimatedBytes\")"));
-        assertTrue(controller.contains("localizedColumn(\"advancedJfr.memory.column.count\")"));
-        assertTrue(controller.contains("localizedColumn(\"advancedJfr.memory.column.score\")"));
-        assertTrue(controller.contains("advancedJfrMemoryTable.setItems(nextViewModel.memoryIssues())"));
-        assertTrue(controller.contains("if (!rebindingAdvancedJfrMemory && advancedJfrViewModel != null)"));
-        assertTrue(controller.contains("advancedJfrViewModel.selectMemoryIssue(issue)"));
-        assertTrue(controller.contains("rebindingAdvancedJfrMemory = true;"));
-        assertTrue(controller.contains("rebindingAdvancedJfrMemory = false;"));
-        assertTrue(controller.contains("bindAdvancedJfrMemoryText(nextViewModel)"));
-        assertTrue(controller.contains("formatAdvancedJfrMemorySummary"));
-        assertTrue(controller.contains("formatAdvancedJfrMemoryIssueTitle"));
-        assertTrue(controller.contains("formatAdvancedJfrMemoryIssueDetails"));
-        assertTrue(controller.contains("i18n.format(\"advancedJfr.memory.summary.format\""));
-        assertTrue(controller.contains("i18n.format(\"advancedJfr.memory.detail.category\""));
-        assertTrue(controller.contains("i18n.format(\"advancedJfr.memory.detail.recommendation\""));
-        assertFalse(controller.contains("memorySummaryProperty()"));
-        assertFalse(controller.contains("selectedMemoryIssueTitleProperty()"));
-        assertFalse(controller.contains("selectedMemoryIssueDetailsProperty()"));
-        assertTrue(controller.contains("advancedJfrMemoryTable.setItems(FXCollections.emptyObservableList())"));
-        assertTrue(controller.contains("advancedJfrMemoryTable.getSelectionModel().clearSelection()"));
+        assertFalse(shell.contains("import com.youngledo.jmcfx.domain.model.MemoryIssue;"));
+        assertTrue(registry.contains("import com.youngledo.jmcfx.ui.advanced.AdvancedJfrPageController;"));
+        assertTrue(registry.contains("private AdvancedJfrPageController advancedJfrPageController;"));
+        assertTrue(registry.contains("advancedJfrPageController = new AdvancedJfrPageController(view.advancedJfrPage(), i18n);"));
+        assertTrue(registry.contains("advancedJfrPageController.configure();"));
+        assertTrue(selectionController.contains("pages.advancedJfrPageController().bind(workspace == null ? null : workspace.advancedJfrViewModel());"));
+        assertFalse(shell.contains("private TabPane advancedJfrTabs;"));
+        assertFalse(shell.contains("private Tab advancedJfrHeatmapTab;"));
+        assertFalse(shell.contains("private Tab advancedJfrMemoryTab;"));
+        assertFalse(shell.contains("private TableView<MemoryIssue> advancedJfrMemoryTable;"));
+        assertFalse(shell.contains("advancedHeatmapListener"));
+        assertFalse(shell.contains("private boolean rebindingAdvancedJfrMemory;"));
+        assertFalse(shell.contains("private void configureAdvancedJfrMemoryTable()"));
+        assertFalse(shell.contains("private void bindAdvancedJfr("));
+        assertFalse(shell.contains("private void bindAdvancedJfrMemoryText("));
+        assertFalse(shell.contains("private String formatAdvancedJfrMemorySummary("));
+        assertFalse(shell.contains("private String formatAdvancedJfrMemoryIssueTitle("));
+        assertFalse(shell.contains("private String formatAdvancedJfrMemoryIssueDetails("));
+        assertTrue(advancedController.contains("view.heatmapTab().textProperty().bind(i18n.text(\"advancedJfr.heatmap.tab\"))"));
+        assertTrue(advancedController.contains("view.memoryTab().textProperty().bind(i18n.text(\"advancedJfr.memory.tab\"))"));
+        assertTrue(advancedController.contains("view.memoryTable().setPlaceholder(localizedTablePlaceholder(\"advancedJfr.memory.empty\"))"));
+        assertTrue(advancedController.contains("localizedColumn(\"advancedJfr.memory.column.severity\")"));
+        assertTrue(advancedController.contains("localizedColumn(\"advancedJfr.memory.column.category\")"));
+        assertTrue(advancedController.contains("localizedColumn(\"advancedJfr.memory.column.subject\")"));
+        assertTrue(advancedController.contains("localizedColumn(\"advancedJfr.memory.column.estimatedBytes\")"));
+        assertTrue(advancedController.contains("localizedColumn(\"advancedJfr.memory.column.count\")"));
+        assertTrue(advancedController.contains("localizedColumn(\"advancedJfr.memory.column.score\")"));
+        assertTrue(advancedController.contains("view.memoryTable().setItems(nextViewModel.memoryIssues())"));
+        assertTrue(advancedController.contains("if (!rebindingMemorySelection && viewModel != null)"));
+        assertTrue(advancedController.contains("viewModel.selectMemoryIssue(issue)"));
+        assertTrue(advancedController.contains("rebindingMemorySelection = true;"));
+        assertTrue(advancedController.contains("rebindingMemorySelection = false;"));
+        assertTrue(advancedController.contains("bindMemoryText(nextViewModel)"));
+        assertTrue(advancedController.contains("formatMemorySummary"));
+        assertTrue(advancedController.contains("formatMemoryIssueTitle"));
+        assertTrue(advancedController.contains("formatMemoryIssueDetails"));
+        assertTrue(advancedController.contains("i18n.format(\"advancedJfr.memory.summary.format\""));
+        assertTrue(advancedController.contains("i18n.format(\"advancedJfr.memory.detail.category\""));
+        assertTrue(advancedController.contains("i18n.format(\"advancedJfr.memory.detail.recommendation\""));
+        assertFalse(shell.contains("memorySummaryProperty()"));
+        assertFalse(shell.contains("selectedMemoryIssueTitleProperty()"));
+        assertFalse(shell.contains("selectedMemoryIssueDetailsProperty()"));
+        assertTrue(advancedController.contains("view.memoryTable().setItems(FXCollections.emptyObservableList())"));
+        assertTrue(advancedController.contains("view.memoryTable().getSelectionModel().clearSelection()"));
 
         assertTrue(css.contains(".advanced-jfr-memory-content"));
         assertTrue(css.contains(".detail-panel"));
         assertTrue(css.contains(".analysis-filter-bar"));
 
-        assertTrue(controller.contains("private TextField analysisSearchField;"));
-        assertTrue(controller.contains("private Spinner<Integer> analysisMinimumScoreSpinner;"));
-        assertTrue(controller.contains("private CheckBox analysisShowOkCheckBox;"));
-        assertTrue(controller.contains("private CheckBox analysisShowIgnoredCheckBox;"));
-        assertTrue(controller.contains("private CheckBox analysisShowUnavailableCheckBox;"));
-        assertTrue(controller.contains("analysisSearchField.textProperty().bindBidirectional"));
-        assertTrue(controller.contains("analysisMinimumScoreSpinner.getValueFactory().valueProperty().bindBidirectional"));
-        assertTrue(controller.contains("analysisShowOkCheckBox.selectedProperty().bindBidirectional"));
-        assertTrue(controller.contains("analysisShowIgnoredCheckBox.selectedProperty().bindBidirectional"));
-        assertTrue(controller.contains("analysisShowUnavailableCheckBox.selectedProperty().bindBidirectional"));
-        assertTrue(controller.contains("localizedColumn(\"analysis.column.resultId\")"));
-        assertTrue(controller.contains("localizedColumn(\"analysis.column.rulePage\")"));
-        assertTrue(controller.contains("analysisViewModel.selectedResultProperty().set(val)"));
-        assertTrue(controller.contains("analysisTable.setRowFactory(table ->"));
-        assertTrue(controller.contains("event.getButton() == MouseButton.PRIMARY"));
-        assertTrue(controller.contains("event.getClickCount() == 2"));
-        assertTrue(controller.contains("openAnalysisRelatedPage(row.getItem())"));
-        assertTrue(controller.contains("viewModel.showSection(detail.relatedPageId())"));
-        assertFalse(controller.contains("analysisRelatedPageButton"));
-        assertFalse(controller.contains("analysisDetailTitle"));
-        assertFalse(controller.contains("analysisDetailSummaryArea"));
-        assertFalse(controller.contains("analysisDetailResultIdLabel"));
-        assertFalse(controller.contains("analysisDetailMeta"));
-        assertTrue(controller.contains("analysisDetailEvidenceArea.setText(detail.evidence())"));
-        assertTrue(controller.contains("analysisDetailRecommendationArea.setText(detail.recommendation())"));
+        assertTrue(analysisController.contains("view.searchField().textProperty().bindBidirectional"));
+        assertTrue(analysisController.contains("view.minimumScoreSpinner().getValueFactory().valueProperty().bindBidirectional"));
+        assertTrue(analysisController.contains("view.showOkCheckBox().selectedProperty().bindBidirectional"));
+        assertTrue(analysisController.contains("view.showIgnoredCheckBox().selectedProperty().bindBidirectional"));
+        assertTrue(analysisController.contains("view.showUnavailableCheckBox().selectedProperty().bindBidirectional"));
+        assertTrue(analysisController.contains("localizedColumn(\"analysis.column.resultId\")"));
+        assertTrue(analysisController.contains("localizedColumn(\"analysis.column.rulePage\")"));
+        assertTrue(analysisController.contains("viewModel.selectedResultProperty().set(val)"));
+        assertTrue(analysisController.contains("view.table().setRowFactory(table ->"));
+        assertTrue(analysisController.contains("event.getButton() == MouseButton.PRIMARY"));
+        assertTrue(analysisController.contains("event.getClickCount() == 2"));
+        assertTrue(analysisController.contains("openRelatedPage(row.getItem())"));
+        assertTrue(analysisController.contains("relatedPageNavigator.accept(detail.relatedPageId())"));
+        assertFalse(analysisController.contains("analysisRelatedPageButton"));
+        assertFalse(analysisController.contains("analysisDetailTitle"));
+        assertFalse(analysisController.contains("analysisDetailSummaryArea"));
+        assertFalse(analysisController.contains("analysisDetailResultIdLabel"));
+        assertFalse(analysisController.contains("analysisDetailMeta"));
+        assertTrue(analysisController.contains("view.detailEvidenceArea().setText(detail.evidence())"));
+        assertTrue(analysisController.contains("view.detailRecommendationArea().setText(detail.recommendation())"));
 
         assertTrue(english.contains("analysis.filter.search=Search"));
         assertTrue(english.contains("analysis.filter.minimumScore=Min score"));
@@ -690,32 +1954,47 @@ class AppShellTest {
 
     @Test
     void metadataShellUsesSplitTableDetailBindingsAndI18n() throws Exception {
-        String controller = java.nio.file.Files.readString(
+        String shell = java.nio.file.Files.readString(
                 java.nio.file.Path.of("src/main/java/com/youngledo/jmcfx/ui/shell/AppShellController.java"));
+        String registry = shellPageControllerRegistrySource();
+        String visibilityController = java.nio.file.Files.readString(
+                java.nio.file.Path.of("src/main/java/com/youngledo/jmcfx/ui/shell/WorkspacePaneVisibilityController.java"));
+        String selectionController = workspaceSelectionSource();
+        String metadataController = java.nio.file.Files.readString(
+                java.nio.file.Path.of("src/main/java/com/youngledo/jmcfx/ui/metadata/MetadataPageController.java"));
+        String sectionLoader = java.nio.file.Files.readString(
+                java.nio.file.Path.of("src/main/java/com/youngledo/jmcfx/ui/shell/RecordingSectionLoader.java"));
+        assertTrue(java.nio.file.Files.exists(
+                java.nio.file.Path.of("src/main/java/com/youngledo/jmcfx/ui/metadata/MetadataPageView.java")));
         String english = java.nio.file.Files.readString(
                 java.nio.file.Path.of("src/main/resources/com/youngledo/jmcfx/ui/i18n/messages.properties"));
         String chinese = java.nio.file.Files.readString(
                 java.nio.file.Path.of("src/main/resources/com/youngledo/jmcfx/ui/i18n/messages_zh_CN.properties"));
 
-        assertTrue(controller.contains("import com.youngledo.jmcfx.domain.model.JfrMetadataEventType;"));
-        assertTrue(controller.contains("import com.youngledo.jmcfx.ui.metadata.JfrMetadataViewModel;"));
-        assertTrue(controller.contains("private VBox metadataPane;"));
-        assertTrue(controller.contains("private Label metadataTitleLabel;"));
-        assertTrue(controller.contains("private Label metadataSummaryLabel;"));
-        assertTrue(controller.contains("private TableView<JfrMetadataEventType> metadataEventTypesTable;"));
-        assertTrue(controller.contains("private Label metadataDetailTitleLabel;"));
-        assertTrue(controller.contains("private TextArea metadataDetailArea;"));
-        assertTrue(controller.contains("metadataPane.visibleProperty().bind(viewModel.selectedSectionProperty().isEqualTo(\"metadata\"))"));
-        assertTrue(controller.contains("configureMetadataTable();"));
-        assertTrue(controller.contains("metadataTitleLabel.textProperty().bind(i18n.text(\"metadata.title\"))"));
-        assertTrue(controller.contains("metadataEventTypesTable.setPlaceholder(localizedTablePlaceholder(\"metadata.empty\"))"));
-        assertTrue(controller.contains("localizedColumn(\"metadata.column.category\")"));
-        assertTrue(controller.contains("localizedColumn(\"metadata.column.name\")"));
-        assertTrue(controller.contains("localizedColumn(\"metadata.column.eventCount\")"));
-        assertTrue(controller.contains("localizedColumn(\"metadata.column.fieldCount\")"));
-        assertTrue(controller.contains("metadataEventTypesTable.setItems(nextViewModel.eventTypesProperty())"));
-        assertTrue(controller.contains("metadataDetailArea.textProperty().bind(nextViewModel.selectedDetailProperty())"));
-        assertTrue(controller.contains("case \"metadata\" -> loadIfPresent(workspace.jfrMetadataViewModel(), recording);"));
+        assertFalse(shell.contains("import com.youngledo.jmcfx.domain.model.JfrMetadataEventType;"));
+        assertTrue(registry.contains("import com.youngledo.jmcfx.ui.metadata.MetadataPageController;"));
+        assertTrue(registry.contains("private MetadataPageController metadataPageController;"));
+        assertTrue(visibilityController.contains("bind(panes.metadataPane, \"metadata\")"));
+        assertTrue(registry.contains("metadataPageController = new MetadataPageController(view.metadataPage(), i18n);"));
+        assertTrue(registry.contains("metadataPageController.configure();"));
+        assertTrue(selectionController.contains("pages.metadataPageController().bind(workspace == null ? null : workspace.jfrMetadataViewModel());"));
+        assertFalse(shell.contains("private void configureMetadataTable()"));
+        assertFalse(shell.contains("private void bindJfrMetadata("));
+        assertFalse(shell.contains("metadataSelectedEventTypeListener"));
+        assertFalse(shell.contains("private TableView<JfrMetadataEventType> metadataEventTypesTable;"));
+        assertTrue(sectionLoader.contains("case \"metadata\" -> loadIfPresent(workspace.jfrMetadataViewModel(), recording);"));
+        assertTrue(metadataController.contains("view.titleLabel().textProperty().bind(i18n.text(\"metadata.title\"))"));
+        assertTrue(metadataController.contains("view.detailTitleLabel().textProperty().bind(i18n.text(\"metadata.detail.title\"))"));
+        assertTrue(metadataController.contains("view.eventTypesTable().setPlaceholder(localizedTablePlaceholder(\"metadata.empty\"))"));
+        assertTrue(metadataController.contains("localizedColumn(\"metadata.column.category\")"));
+        assertTrue(metadataController.contains("localizedColumn(\"metadata.column.name\")"));
+        assertTrue(metadataController.contains("localizedColumn(\"metadata.column.id\")"));
+        assertTrue(metadataController.contains("localizedColumn(\"metadata.column.eventCount\")"));
+        assertTrue(metadataController.contains("localizedColumn(\"metadata.column.fieldCount\")"));
+        assertTrue(metadataController.contains("view.eventTypesTable().setItems(nextViewModel.eventTypesProperty())"));
+        assertTrue(metadataController.contains("view.detailArea().textProperty().bind(nextViewModel.selectedDetailProperty())"));
+        assertTrue(metadataController.contains("selectedEventTypeProperty().set(eventType)"));
+        assertTrue(metadataController.contains("useFormattedIntegerCells"));
 
         assertTrue(english.contains("metadata.title=JFR Metadata"));
         assertTrue(english.contains("metadata.empty=No event metadata for this recording."));
@@ -889,25 +2168,40 @@ class AppShellTest {
     void closingLastHeapDumpWorkspaceClearsBoundAnalysisViewModel() throws Exception {
         String source = java.nio.file.Files.readString(
                 java.nio.file.Path.of("src/main/java/com/youngledo/jmcfx/ui/shell/AppShellController.java"));
-        String method = source.substring(source.indexOf("private void showHeapDumpWorkspace"));
-        method = method.substring(0, method.indexOf("private void bindAdvancedJfr"));
+        String registry = shellPageControllerRegistrySource();
+        String selectionController = java.nio.file.Files.readString(
+                java.nio.file.Path.of("src/main/java/com/youngledo/jmcfx/ui/shell/WorkspaceSelectionController.java"));
+        String pageController = java.nio.file.Files.readString(
+                java.nio.file.Path.of("src/main/java/com/youngledo/jmcfx/ui/heapdump/HeapDumpAnalysisPageController.java"));
+        assertTrue(java.nio.file.Files.exists(
+                java.nio.file.Path.of("src/main/java/com/youngledo/jmcfx/ui/heapdump/HeapDumpAnalysisPageView.java")));
+        String method = selectionController.substring(selectionController.indexOf("private void showHeapDumpWorkspace"));
+        method = method.substring(0, method.indexOf("private void showLiveJvmWorkspace"));
 
-        assertTrue(method.contains("bindHeapDumpAnalysis(null)"),
+        assertTrue(registry.contains("import com.youngledo.jmcfx.ui.heapdump.HeapDumpAnalysisPageController;"));
+        assertTrue(registry.contains("private HeapDumpAnalysisPageController heapDumpAnalysisPageController;"));
+        assertTrue(registry.contains("heapDumpAnalysisPageController = new HeapDumpAnalysisPageController(view.heapDumpAnalysisPage(), i18n);"));
+        assertTrue(registry.contains("heapDumpAnalysisPageController.configure();"));
+        assertTrue(method.contains("pages.heapDumpAnalysisPageController().bind(null)"),
                 "Closing the last HPROF workspace must clear the previously bound analysis view model");
-        String bindMethod = source.substring(source.indexOf("private void bindHeapDumpAnalysis"));
-        bindMethod = bindMethod.substring(0, bindMethod.indexOf("private void showOpenHeapDumpChooser"));
-        assertTrue(bindMethod.contains("heapDumpAnalysisViewModel = null"),
+        assertTrue(method.contains("pages.heapDumpAnalysisPageController().bind(workspace.viewModel())"),
+                "Selecting an HPROF workspace must bind the selected analysis view model");
+        assertFalse(source.contains("private void configureHeapDumpAnalysis()"));
+        assertFalse(source.contains("private void bindHeapDumpAnalysis("));
+        assertFalse(source.contains("private void selectHeapDumpIssue("));
+        assertFalse(source.contains("private void selectHeapDumpIssueInTable("));
+        assertTrue(pageController.contains("viewModel = null"),
                 "Clearing HPROF binding must also clear the controller-level view model reference");
     }
 
     @Test
     void fileBackedWorkspaceOpenShortCircuitsWhenPathIsAlreadyOpen() throws Exception {
         String source = java.nio.file.Files.readString(
-                java.nio.file.Path.of("src/main/java/com/youngledo/jmcfx/ui/shell/AppShellController.java"));
-        String openRecording = source.substring(source.indexOf("private void openRecordingInBackground"),
+                java.nio.file.Path.of("src/main/java/com/youngledo/jmcfx/ui/shell/WorkspaceOpenCoordinator.java"));
+        String openRecording = source.substring(source.indexOf("void openRecordingInBackground"),
                 source.indexOf("PreparedRecordingWorkspace prepareRecordingWorkspace"));
         String openHeapDump = source.substring(source.indexOf("private void openHeapDumpInBackground"),
-                source.indexOf("private void showOpenRecordingFailure"));
+                source.indexOf("private boolean selectExistingRecordingWorkspace"));
 
         assertTrue(openRecording.contains("selectExistingRecordingWorkspace(path)"),
                 "Opening an already-open JFR should select the existing workspace before parsing");
@@ -917,7 +2211,7 @@ class AppShellTest {
         assertTrue(openHeapDump.contains("selectExistingHeapDumpWorkspace(path)"),
                 "Opening an already-open HPROF should select the existing workspace before analysis");
         assertTrue(openHeapDump.indexOf("selectExistingHeapDumpWorkspace(path)")
-                        < openHeapDump.indexOf("setBackgroundWorkVisible(true)"),
+                        < openHeapDump.indexOf("backgroundWorkVisibleConsumer.accept(true)"),
                 "HPROF duplicate detection must happen before starting analysis progress");
     }
 
@@ -925,17 +2219,35 @@ class AppShellTest {
     void heapDumpRebindingRemovesOldSelectionListenersBeforeClearingViewModel() throws Exception {
         String source = java.nio.file.Files.readString(
                 java.nio.file.Path.of("src/main/java/com/youngledo/jmcfx/ui/shell/AppShellController.java"));
-        String bindMethod = source.substring(source.indexOf("private void bindHeapDumpAnalysis"));
-        bindMethod = bindMethod.substring(0, bindMethod.indexOf("private void showOpenHeapDumpChooser"));
+        String pageController = java.nio.file.Files.readString(
+                java.nio.file.Path.of("src/main/java/com/youngledo/jmcfx/ui/heapdump/HeapDumpAnalysisPageController.java"));
+        String bindMethod = pageController.substring(pageController.indexOf("public void bind"));
+        bindMethod = bindMethod.substring(0, bindMethod.indexOf("private void selectHeapDumpIssue"));
 
-        assertTrue(source.contains("heapDumpTableSelectionListener"));
-        assertTrue(source.contains("heapDumpSelectedIssueListener"));
+        assertFalse(source.contains("heapDumpTableSelectionListener"));
+        assertFalse(source.contains("heapDumpSelectedIssueListener"));
+        assertTrue(pageController.contains("heapDumpTableSelectionListener"));
+        assertTrue(pageController.contains("heapDumpSelectedIssueListener"));
+        assertTrue(pageController.contains("view.titleLabel().textProperty().bind(i18n.text(\"heapDump.title\"))"));
+        assertTrue(pageController.contains("view.issueDetailTab().textProperty().bind(i18n.text(\"heapDump.detail.tab\"))"));
+        assertTrue(pageController.contains("view.textReportTab().textProperty().bind(i18n.text(\"heapDump.report.tab\"))"));
+        assertTrue(pageController.contains("view.issuesTable().setPlaceholder(localizedTablePlaceholder(\"heapDump.openPrompt\"))"));
+        assertTrue(pageController.contains("localizedColumn(\"heapDump.column.category\")"));
+        assertTrue(pageController.contains("localizedColumn(\"heapDump.column.subject\")"));
+        assertTrue(pageController.contains("localizedColumn(\"heapDump.column.wastedBytes\")"));
+        assertTrue(pageController.contains("i18n.text(\"heapDump.column.objectCount\")"));
+        assertTrue(pageController.contains("localizedColumn(\"heapDump.column.score\")"));
+        assertTrue(pageController.contains("view.issueDetailArea().textProperty().bind(viewModel.selectedIssueDetailsProperty())"));
+        assertTrue(pageController.contains("view.textReportArea().textProperty().bind(viewModel.textReportProperty())"));
+        assertTrue(pageController.contains("view.issuesTable().setItems(viewModel.issues())"));
+        assertTrue(pageController.contains("viewModel.selectIssue(issue)"));
+        assertTrue(pageController.contains("view.issuesTable().getSelectionModel().select(issue)"));
         assertTrue(bindMethod.indexOf("removeListener(heapDumpTableSelectionListener)")
-                        < bindMethod.indexOf("heapDumpAnalysisViewModel = null"),
+                        < bindMethod.indexOf("viewModel = null"),
                 "Table selection listener must be removed before the HPROF view model reference is cleared");
         assertTrue(bindMethod.contains("removeListener(heapDumpSelectedIssueListener)"),
                 "Selected issue listener must be removed when rebinding HPROF workspaces");
-        assertFalse(bindMethod.contains("addListener((observable, oldValue, newValue) -> heapDumpAnalysisViewModel"),
+        assertFalse(bindMethod.contains("addListener((observable, oldValue, newValue) -> viewModel"),
                 "HPROF table selection listener must not capture the mutable controller-level view model field");
     }
 
@@ -956,7 +2268,7 @@ class AppShellTest {
     @Test
     void openRecordingDialogIsDeferredUntilButtonActionCompletes() throws Exception {
         String source = java.nio.file.Files.readString(
-                java.nio.file.Path.of("src/main/java/com/youngledo/jmcfx/ui/shell/AppShellController.java"));
+                java.nio.file.Path.of("src/main/java/com/youngledo/jmcfx/ui/shell/WorkspaceOpenCoordinator.java"));
 
         assertTrue(source.contains("Platform.runLater(this::showOpenRecordingChooser)"),
                 "native file chooser should open after the button action finishes so pressed styling can clear");
@@ -965,23 +2277,537 @@ class AppShellTest {
     @Test
     void clearingProfilingSelectionPassesNullThroughToViewModel() throws Exception {
         String source = java.nio.file.Files.readString(
-                java.nio.file.Path.of("src/main/java/com/youngledo/jmcfx/ui/shell/AppShellController.java"));
+                java.nio.file.Path.of("src/main/java/com/youngledo/jmcfx/ui/profiling/ProfilingPageController.java"));
 
         assertFalse(source.contains("profilingViewModel == null || method == null"),
                 "Clearing table selection must still clear profiling stack details");
         assertTrue(source.contains("profilingViewModel.selectMethod(method == null ? null : method.method())"),
-                "Shell must pass null selection through to ProfilingViewModel");
+                "Profiling page controller must pass null selection through to ProfilingViewModel");
     }
 
     @Test
     void homeActionButtonsBothUseLeadingIcons() throws Exception {
         String source = java.nio.file.Files.readString(
+                java.nio.file.Path.of("src/main/java/com/youngledo/jmcfx/ui/shell/HomePaneController.java"));
+        String shell = java.nio.file.Files.readString(
                 java.nio.file.Path.of("src/main/java/com/youngledo/jmcfx/ui/shell/AppShellController.java"));
+        String runtime = shellRuntimeSource();
 
-        assertTrue(source.contains("configureActionButton(homeOpenRecordingButton"),
+        assertTrue(runtime.contains("new HomePaneController("),
+                "runtime should delegate Home page behavior to a focused controller");
+        assertFalse(shell.contains("private Button homeOpenRecordingButton;"));
+        assertFalse(shell.contains("private Button homeOpenHeapDumpButton;"));
+        assertFalse(shell.contains("private void configureActionIcons()"));
+        assertTrue(source.contains("configureActionButton(view.openRecordingButton"),
                 "Open recording home action should keep its leading icon");
-        assertTrue(source.contains("configureActionButton(homeConnectJvmButton"),
+        assertTrue(source.contains("configureActionButton(view.connectJvmButton"),
                 "Connect JVM home action should use the same leading icon treatment");
+    }
+
+    @Test
+    void settingsBehaviorLivesOutsideShellController() throws Exception {
+        String shell = java.nio.file.Files.readString(
+                java.nio.file.Path.of("src/main/java/com/youngledo/jmcfx/ui/shell/AppShellController.java"));
+        String runtime = shellRuntimeSource();
+        String settings = java.nio.file.Files.readString(
+                java.nio.file.Path.of("src/main/java/com/youngledo/jmcfx/ui/shell/SettingsPaneController.java"));
+
+        assertTrue(runtime.contains("new SettingsPaneController("),
+                "runtime should delegate Settings page behavior to a focused controller");
+        assertFalse(shell.contains("private ToggleGroup languageToggleGroup;"));
+        assertFalse(shell.contains("private ToggleGroup themeToggleGroup;"));
+        assertFalse(shell.contains("private void configureLanguageSelector()"));
+        assertFalse(shell.contains("private void configureThemeSelector()"));
+        assertTrue(settings.contains("class SettingsPaneController"));
+        assertTrue(settings.contains("void configure()"));
+        assertTrue(settings.contains("view.languageToggleGroup.selectToggle(modeToToggle("));
+        assertTrue(settings.contains("view.themeToggleGroup.selectToggle(themeToToggle("));
+        assertTrue(settings.contains("i18n.setLanguageMode(mode)"));
+    }
+
+    @Test
+    void recordingOverviewPageWiringLivesOutsideShellController() throws Exception {
+        String shell = java.nio.file.Files.readString(
+                java.nio.file.Path.of("src/main/java/com/youngledo/jmcfx/ui/shell/AppShellController.java"));
+        String registry = shellPageControllerRegistrySource();
+        String controller = java.nio.file.Files.readString(java.nio.file.Path.of(
+                "src/main/java/com/youngledo/jmcfx/ui/shell/RecordingOverviewPagesController.java"));
+
+        assertTrue(registry.contains("new RecordingOverviewPagesController("),
+                "registry should delegate recording overview page wiring to a focused controller");
+        assertFalse(shell.contains("private Label javaApplicationTitleLabel;"));
+        assertFalse(shell.contains("private Button jvmInternalsGcButton;"));
+        assertFalse(shell.contains("private Label environmentProcessesTitleLabel;"));
+        assertFalse(shell.contains("private void configureJavaApplicationOverviewActions()"));
+        assertFalse(shell.contains("private void configureJvmInternalsOverviewActions()"));
+        assertFalse(shell.contains("private void configureEnvironmentOverviewActions()"));
+        assertTrue(controller.contains("class RecordingOverviewPagesController"));
+        assertTrue(controller.contains("void configure()"));
+        assertTrue(controller.contains("view.javaApplicationTitleLabel().textProperty().bind(i18n.text(\"javaApplication.title\"))"));
+        assertTrue(controller.contains("view.jvmInternalsGcButton().setOnAction(event -> viewModel.showSection(\"gcSummary\"))"));
+        assertTrue(controller.contains("view.environmentProcessesButton().setOnAction(event -> viewModel.showSection(\"processes\"))"));
+    }
+
+    @Test
+    void appShellDelegatesOverviewPageToDomainPackagedController() throws Exception {
+        String shell = java.nio.file.Files.readString(
+                java.nio.file.Path.of("src/main/java/com/youngledo/jmcfx/ui/shell/AppShellController.java"));
+        String runtime = shellRuntimeSource();
+        String registry = shellPageControllerRegistrySource();
+        String selection = workspaceSelectionSource();
+        String appShellView = java.nio.file.Files.readString(
+                java.nio.file.Path.of("src/main/java/com/youngledo/jmcfx/ui/shell/AppShellView.java"));
+        String overviewController = java.nio.file.Files.readString(
+                java.nio.file.Path.of("src/main/java/com/youngledo/jmcfx/ui/overview/OverviewPageController.java"));
+        String overviewView = java.nio.file.Files.readString(
+                java.nio.file.Path.of("src/main/java/com/youngledo/jmcfx/ui/overview/OverviewPageView.java"));
+
+        assertTrue(registry.contains("private OverviewPageController overviewPageController;"));
+        assertTrue(registry.contains("overviewPageController = new OverviewPageController(view.overviewPage(), i18n);"));
+        assertTrue(registry.contains("overviewPageController.configure();"));
+        assertTrue(selection.contains("pages.overviewPageController().bind(workspace == null ? null : workspace.overviewViewModel())"));
+        assertTrue(runtime.contains("i18n.localeProperty().addListener((observable, oldValue, newValue) -> pageControllerRegistry.refreshOverviewLocale())"));
+        assertTrue(appShellView.contains("OverviewPageView overviewPage()"));
+
+        assertFalse(shell.contains("private OverviewViewModel overviewViewModel;"));
+        assertFalse(shell.contains("private Label overviewTitleLabel;"));
+        assertFalse(shell.contains("private Label overviewRecordingNameLabel;"));
+        assertFalse(shell.contains("private Label overviewRecordingDetailsLabel;"));
+        assertFalse(shell.contains("private Label overviewAnalysisTitleLabel;"));
+        assertFalse(shell.contains("private Label overviewAnalysisStatusLabel;"));
+        assertFalse(shell.contains("private Label overviewJvmsTitleLabel;"));
+        assertFalse(shell.contains("private Label overviewJvmStatusLabel;"));
+        assertFalse(shell.contains("private void bindOverview("));
+        assertFalse(shell.contains("private void refreshOverviewOnLocaleChange()"));
+
+        assertTrue(overviewController.contains("package com.youngledo.jmcfx.ui.overview;"));
+        assertTrue(overviewController.contains("public final class OverviewPageController"));
+        assertTrue(overviewController.contains("public void configure()"));
+        assertTrue(overviewController.contains("public void bind(OverviewViewModel nextViewModel)"));
+        assertTrue(overviewController.contains("public void refreshLocale()"));
+        assertTrue(overviewController.contains("DisplayFormats.formatDuration(recording.durationMillis())"));
+        assertTrue(overviewView.contains("public record OverviewPageView("));
+    }
+
+    @Test
+    void overviewPaneNodeOwnershipIsSplitOutOfAppShellView() throws Exception {
+        String appShellView = java.nio.file.Files.readString(
+                java.nio.file.Path.of("src/main/java/com/youngledo/jmcfx/ui/shell/AppShellView.java"));
+        String overviewPaneView = java.nio.file.Files.readString(
+                java.nio.file.Path.of("src/main/java/com/youngledo/jmcfx/ui/overview/OverviewPaneView.java"));
+
+        assertTrue(appShellView.contains("final OverviewPaneView overview = new OverviewPaneView(workspacePanes.overviewPane);"));
+        assertTrue(appShellView.contains("OverviewPageView overviewPage()"));
+        assertTrue(appShellView.contains("return overview.view();"));
+        assertFalse(appShellView.contains("final Label overviewTitleLabel = new Label();"));
+        assertFalse(appShellView.contains("final Label overviewRecordingNameLabel = new Label();"));
+        assertFalse(appShellView.contains("final Label overviewRecordingDetailsLabel = new Label();"));
+        assertFalse(appShellView.contains("final Label overviewAnalysisTitleLabel = new Label();"));
+        assertFalse(appShellView.contains("final Label overviewAnalysisStatusLabel = new Label();"));
+        assertFalse(appShellView.contains("final Label overviewJvmsTitleLabel = new Label();"));
+        assertFalse(appShellView.contains("final Label overviewJvmStatusLabel = new Label();"));
+        assertFalse(appShellView.contains("private void configureOverview()"));
+
+        assertTrue(overviewPaneView.contains("package com.youngledo.jmcfx.ui.overview;"));
+        assertTrue(overviewPaneView.contains("public final class OverviewPaneView"));
+        assertTrue(overviewPaneView.contains("private final Label titleLabel = new Label();"));
+        assertTrue(overviewPaneView.contains("public OverviewPaneView(VBox pane)"));
+        assertTrue(overviewPaneView.contains("public OverviewPageView view()"));
+        assertTrue(overviewPaneView.contains("pane.getChildren().setAll(titleLabel, recording, row);"));
+    }
+
+    @Test
+    void appShellDelegatesJavaApplicationDataPagesToDomainPackagedControllers() throws Exception {
+        String shell = java.nio.file.Files.readString(
+                java.nio.file.Path.of("src/main/java/com/youngledo/jmcfx/ui/shell/AppShellController.java"));
+        String registry = shellPageControllerRegistrySource();
+        String selection = workspaceSelectionSource();
+        String appShellView = java.nio.file.Files.readString(
+                java.nio.file.Path.of("src/main/java/com/youngledo/jmcfx/ui/shell/AppShellView.java"));
+        String exceptionsController = java.nio.file.Files.readString(
+                java.nio.file.Path.of("src/main/java/com/youngledo/jmcfx/ui/exceptions/ExceptionsPageController.java"));
+        String exceptionsView = java.nio.file.Files.readString(
+                java.nio.file.Path.of("src/main/java/com/youngledo/jmcfx/ui/exceptions/ExceptionsPageView.java"));
+        String threadsController = java.nio.file.Files.readString(
+                java.nio.file.Path.of("src/main/java/com/youngledo/jmcfx/ui/threads/ThreadsPageController.java"));
+        String threadsView = java.nio.file.Files.readString(
+                java.nio.file.Path.of("src/main/java/com/youngledo/jmcfx/ui/threads/ThreadsPageView.java"));
+        String javaAppController = java.nio.file.Files.readString(
+                java.nio.file.Path.of("src/main/java/com/youngledo/jmcfx/ui/javaapp/JavaApplicationDataPagesController.java"));
+        String javaAppView = java.nio.file.Files.readString(
+                java.nio.file.Path.of("src/main/java/com/youngledo/jmcfx/ui/javaapp/JavaApplicationDataPagesView.java"));
+
+        assertTrue(registry.contains("private ExceptionsPageController exceptionsPageController;"));
+        assertTrue(registry.contains("private ThreadsPageController threadsPageController;"));
+        assertTrue(registry.contains("private JavaApplicationDataPagesController javaApplicationDataPagesController;"));
+        assertTrue(registry.contains("exceptionsPageController = new ExceptionsPageController(view.exceptionsPage(), i18n);"));
+        assertTrue(registry.contains("threadsPageController = new ThreadsPageController(view.threadsPage(), i18n);"));
+        assertTrue(registry.contains("javaApplicationDataPagesController = new JavaApplicationDataPagesController(view.javaApplicationDataPages(), i18n);"));
+        assertTrue(selection.contains("pages.exceptionsPageController().bind(workspace == null ? null : workspace.exceptionViewModel())"));
+        assertTrue(selection.contains("pages.threadsPageController().bind(workspace == null ? null : workspace.threadViewModel())"));
+        assertTrue(selection.contains("pages.javaApplicationDataPagesController().bindThreadHistogram("));
+        assertTrue(selection.contains("workspace == null ? null : workspace.javaAppOverviewViewModel()"));
+        assertTrue(selection.contains("pages.javaApplicationDataPagesController().bindSecurity(workspace == null ? null : workspace.securityViewModel())"));
+        assertTrue(selection.contains("pages.javaApplicationDataPagesController().bindNativeLibraries("));
+        assertTrue(selection.contains("workspace == null ? null : workspace.nativeLibraryViewModel()"));
+        assertTrue(selection.contains("pages.javaApplicationDataPagesController().bindThreadDumps("));
+        assertTrue(selection.contains("workspace == null ? null : workspace.threadDumpViewModel()"));
+        assertTrue(registry.contains("installer.install(exceptionsPageController.table())"));
+        assertTrue(registry.contains("installer.install(threadsPageController.table())"));
+        assertTrue(registry.contains("javaApplicationDataPagesController.exportTables().forEach(installer::install)"));
+
+        assertFalse(shell.contains("private ExceptionViewModel exceptionViewModel;"));
+        assertFalse(shell.contains("private ThreadViewModel threadViewModel;"));
+        assertFalse(shell.contains("private JavaAppOverviewViewModel javaAppOverviewViewModel;"));
+        assertFalse(shell.contains("private SecurityViewModel securityViewModel;"));
+        assertFalse(shell.contains("private NativeLibraryViewModel nativeLibraryViewModel;"));
+        assertFalse(shell.contains("private ThreadDumpViewModel threadDumpViewModel;"));
+        assertFalse(shell.contains("private TableView<ExceptionSummary> exceptionsTable;"));
+        assertFalse(shell.contains("private TableView<ThreadSummary> threadsTable;"));
+        assertFalse(shell.contains("private TableView<ThreadHistogramRow> threadHistogramTable;"));
+        assertFalse(shell.contains("private TableView<X509CertificateEntry> securityTable;"));
+        assertFalse(shell.contains("private TableView<NativeLibraryEntry> nativeLibrariesTable;"));
+        assertFalse(shell.contains("private TableView<ThreadDumpEntry> threadDumpsTable;"));
+        assertFalse(shell.contains("private void configureExceptionTable()"));
+        assertFalse(shell.contains("private void configureThreadTable()"));
+        assertFalse(shell.contains("private void configureThreadHistogramTable()"));
+        assertFalse(shell.contains("private void configureSecurityTable()"));
+        assertFalse(shell.contains("private void configureNativeLibrariesTable()"));
+        assertFalse(shell.contains("private void configureThreadDumpsTable()"));
+        assertFalse(shell.contains("private void bindExceptions("));
+        assertFalse(shell.contains("private void bindThreads("));
+        assertFalse(shell.contains("private void bindThreadHistogram("));
+        assertFalse(shell.contains("private void bindSecurity("));
+        assertFalse(shell.contains("private void bindNativeLibraries("));
+        assertFalse(shell.contains("private void bindThreadDumps("));
+        assertFalse(shell.contains("private void setExceptionGrouping("));
+
+        assertTrue(appShellView.contains("ExceptionsPageView exceptionsPage()"));
+        assertTrue(appShellView.contains("ThreadsPageView threadsPage()"));
+        assertTrue(appShellView.contains("JavaApplicationDataPagesView javaApplicationDataPages()"));
+        assertTrue(exceptionsView.contains("public record ExceptionsPageView("));
+        assertTrue(threadsView.contains("public record ThreadsPageView("));
+        assertTrue(javaAppView.contains("public record JavaApplicationDataPagesView("));
+
+        assertTrue(exceptionsController.contains("package com.youngledo.jmcfx.ui.exceptions;"));
+        assertTrue(exceptionsController.contains("public final class ExceptionsPageController"));
+        assertTrue(exceptionsController.contains("view.titleLabel().textProperty().bind(i18n.text(\"exceptions.title\"))"));
+        assertTrue(exceptionsController.contains("view.groupByClassButton().setOnAction(event -> setExceptionGrouping(ExceptionGrouping.BY_CLASS))"));
+        assertTrue(exceptionsController.contains("view.table().setItems(nextViewModel.histogramProperty())"));
+        assertTrue(exceptionsController.contains("currentViewModel.timelineProperty().removeListener(timelineListener)"));
+        assertTrue(exceptionsController.contains("public TableView<ExceptionSummary> table()"));
+
+        assertTrue(threadsController.contains("package com.youngledo.jmcfx.ui.threads;"));
+        assertTrue(threadsController.contains("public final class ThreadsPageController"));
+        assertTrue(threadsController.contains("view.titleLabel().textProperty().bind(i18n.text(\"threads.title\"))"));
+        assertTrue(threadsController.contains("view.table().setItems(nextViewModel.threadSummariesProperty())"));
+        assertTrue(threadsController.contains("public TableView<ThreadSummary> table()"));
+
+        assertTrue(javaAppController.contains("package com.youngledo.jmcfx.ui.javaapp;"));
+        assertTrue(javaAppController.contains("public final class JavaApplicationDataPagesController"));
+        assertTrue(javaAppController.contains("view.threadHistogramTitleLabel().textProperty().bind(i18n.text(\"threadHistogram.title\"))"));
+        assertTrue(javaAppController.contains("view.securityTitleLabel().textProperty().bind(i18n.text(\"security.title\"))"));
+        assertTrue(javaAppController.contains("view.nativeLibrariesTitleLabel().textProperty().bind(i18n.text(\"nativeLibraries.title\"))"));
+        assertTrue(javaAppController.contains("view.threadDumpsTitleLabel().textProperty().bind(i18n.text(\"threadDumps.title\"))"));
+        assertTrue(javaAppController.contains("currentThreadHistogramViewModel.chartProperty().removeListener(threadHistogramChartListener)"));
+        assertTrue(javaAppController.contains("view.threadDumpsTable().getSelectionModel().selectedItemProperty().addListener"));
+        assertTrue(javaAppController.contains("public List<TableView<?>> exportTables()"));
+    }
+
+    @Test
+    void appShellDelegatesIoAndLocksPagesToDomainPackagedControllers() throws Exception {
+        String shell = java.nio.file.Files.readString(
+                java.nio.file.Path.of("src/main/java/com/youngledo/jmcfx/ui/shell/AppShellController.java"));
+        String registry = shellPageControllerRegistrySource();
+        String selection = workspaceSelectionSource();
+        String appShellView = java.nio.file.Files.readString(
+                java.nio.file.Path.of("src/main/java/com/youngledo/jmcfx/ui/shell/AppShellView.java"));
+        String fileIoController = java.nio.file.Files.readString(
+                java.nio.file.Path.of("src/main/java/com/youngledo/jmcfx/ui/fileio/FileIoPageController.java"));
+        String fileIoView = java.nio.file.Files.readString(
+                java.nio.file.Path.of("src/main/java/com/youngledo/jmcfx/ui/fileio/FileIoPageView.java"));
+        String socketIoController = java.nio.file.Files.readString(
+                java.nio.file.Path.of("src/main/java/com/youngledo/jmcfx/ui/socketio/SocketIoPageController.java"));
+        String socketIoView = java.nio.file.Files.readString(
+                java.nio.file.Path.of("src/main/java/com/youngledo/jmcfx/ui/socketio/SocketIoPageView.java"));
+        String locksController = java.nio.file.Files.readString(
+                java.nio.file.Path.of("src/main/java/com/youngledo/jmcfx/ui/locks/LocksPageController.java"));
+        String locksView = java.nio.file.Files.readString(
+                java.nio.file.Path.of("src/main/java/com/youngledo/jmcfx/ui/locks/LocksPageView.java"));
+
+        assertTrue(registry.contains("private FileIoPageController fileIoPageController;"));
+        assertTrue(registry.contains("private SocketIoPageController socketIoPageController;"));
+        assertTrue(registry.contains("private LocksPageController locksPageController;"));
+        assertTrue(registry.contains("fileIoPageController = new FileIoPageController(view.fileIoPage(), i18n);"));
+        assertTrue(registry.contains("socketIoPageController = new SocketIoPageController(view.socketIoPage(), i18n);"));
+        assertTrue(registry.contains("locksPageController = new LocksPageController(view.locksPage(), i18n);"));
+        assertTrue(selection.contains("pages.fileIoPageController().bind(workspace == null ? null : workspace.fileIOViewModel())"));
+        assertTrue(selection.contains("pages.socketIoPageController().bind(workspace == null ? null : workspace.socketIOViewModel())"));
+        assertTrue(selection.contains("pages.locksPageController().bind(workspace == null ? null : workspace.lockViewModel())"));
+        assertTrue(registry.contains("fileIoPageController.exportTables().forEach(installer::install)"));
+        assertTrue(registry.contains("socketIoPageController.exportTables().forEach(installer::install)"));
+        assertTrue(registry.contains("locksPageController.exportTables().forEach(installer::install)"));
+
+        assertFalse(shell.contains("private FileIOViewModel fileIOViewModel;"));
+        assertFalse(shell.contains("private SocketIOViewModel socketIOViewModel;"));
+        assertFalse(shell.contains("private LockViewModel lockViewModel;"));
+        assertFalse(shell.contains("private TableView<FileIOHistogram> fileioHistogramTable;"));
+        assertFalse(shell.contains("private TableView<FileIOEvent> fileioEventTable;"));
+        assertFalse(shell.contains("private TableView<SocketIOHistogram> socketioHistogramTable;"));
+        assertFalse(shell.contains("private TableView<SocketIOEvent> socketioEventTable;"));
+        assertFalse(shell.contains("private TableView<LockHistogram> locksByClassTable;"));
+        assertFalse(shell.contains("private TableView<LockHistogram> locksByAddressTable;"));
+        assertFalse(shell.contains("private TableView<LockHistogram> locksByThreadTable;"));
+        assertFalse(shell.contains("private void configureFileIOTable()"));
+        assertFalse(shell.contains("private void configureSocketIOTable()"));
+        assertFalse(shell.contains("private void configureLockTables()"));
+        assertFalse(shell.contains("private void configureSingleLockTable("));
+        assertFalse(shell.contains("private void bindFileIO("));
+        assertFalse(shell.contains("private void bindSocketIO("));
+        assertFalse(shell.contains("private void bindLocks("));
+        assertFalse(shell.contains("private void setSocketIOGrouping("));
+
+        assertTrue(appShellView.contains("FileIoPageView fileIoPage()"));
+        assertTrue(appShellView.contains("SocketIoPageView socketIoPage()"));
+        assertTrue(appShellView.contains("LocksPageView locksPage()"));
+        assertTrue(fileIoView.contains("public record FileIoPageView("));
+        assertTrue(socketIoView.contains("public record SocketIoPageView("));
+        assertTrue(locksView.contains("public record LocksPageView("));
+
+        assertTrue(fileIoController.contains("package com.youngledo.jmcfx.ui.fileio;"));
+        assertTrue(fileIoController.contains("public final class FileIoPageController"));
+        assertTrue(fileIoController.contains("view.titleLabel().textProperty().bind(i18n.text(\"fileio.title\"))"));
+        assertTrue(fileIoController.contains("view.timelineTab().textProperty().bind(i18n.text(\"fileio.tab.timeline\"))"));
+        assertTrue(fileIoController.contains("view.histogramTable().setItems(nextViewModel.histogramProperty())"));
+        assertTrue(fileIoController.contains("currentViewModel.timelineProperty().removeListener(timelineListener)"));
+        assertTrue(fileIoController.contains("public List<TableView<?>> exportTables()"));
+
+        assertTrue(socketIoController.contains("package com.youngledo.jmcfx.ui.socketio;"));
+        assertTrue(socketIoController.contains("public final class SocketIoPageController"));
+        assertTrue(socketIoController.contains("view.groupByHostAndPortButton().setOnAction(event -> setGrouping(SocketIOGrouping.BY_HOST_AND_PORT))"));
+        assertTrue(socketIoController.contains("view.histogramTable().setItems(nextViewModel.histogramProperty())"));
+        assertTrue(socketIoController.contains("currentViewModel.timelineProperty().removeListener(timelineListener)"));
+        assertTrue(socketIoController.contains("public List<TableView<?>> exportTables()"));
+
+        assertTrue(locksController.contains("package com.youngledo.jmcfx.ui.locks;"));
+        assertTrue(locksController.contains("public final class LocksPageController"));
+        assertTrue(locksController.contains("view.groupByClassButton().setOnAction(event -> setPrimaryGrouping(LockGrouping.BY_CLASS))"));
+        assertTrue(locksController.contains("view.byClassTable().setItems(nextViewModel.classHistogramProperty())"));
+        assertTrue(locksController.contains("public List<TableView<?>> exportTables()"));
+    }
+
+    @Test
+    void appShellDelegatesMemoryPagesToDomainPackagedControllers() throws Exception {
+        String shell = java.nio.file.Files.readString(
+                java.nio.file.Path.of("src/main/java/com/youngledo/jmcfx/ui/shell/AppShellController.java"));
+        String registry = shellPageControllerRegistrySource();
+        String selection = workspaceSelectionSource();
+        String appShellView = java.nio.file.Files.readString(
+                java.nio.file.Path.of("src/main/java/com/youngledo/jmcfx/ui/shell/AppShellView.java"));
+        String heapController = java.nio.file.Files.readString(
+                java.nio.file.Path.of("src/main/java/com/youngledo/jmcfx/ui/heap/HeapPageController.java"));
+        String heapView = java.nio.file.Files.readString(
+                java.nio.file.Path.of("src/main/java/com/youngledo/jmcfx/ui/heap/HeapPageView.java"));
+        String leaksController = java.nio.file.Files.readString(
+                java.nio.file.Path.of("src/main/java/com/youngledo/jmcfx/ui/leaks/LeakSuspectsPageController.java"));
+        String leaksView = java.nio.file.Files.readString(
+                java.nio.file.Path.of("src/main/java/com/youngledo/jmcfx/ui/leaks/LeakSuspectsPageView.java"));
+        String tlabController = java.nio.file.Files.readString(
+                java.nio.file.Path.of("src/main/java/com/youngledo/jmcfx/ui/tlab/TlabPageController.java"));
+        String tlabView = java.nio.file.Files.readString(
+                java.nio.file.Path.of("src/main/java/com/youngledo/jmcfx/ui/tlab/TlabPageView.java"));
+
+        assertTrue(registry.contains("private HeapPageController heapPageController;"));
+        assertTrue(registry.contains("private LeakSuspectsPageController leakSuspectsPageController;"));
+        assertTrue(registry.contains("private TlabPageController tlabPageController;"));
+        assertTrue(registry.contains("heapPageController = new HeapPageController(view.heapPage(), i18n);"));
+        assertTrue(registry.contains("leakSuspectsPageController = new LeakSuspectsPageController(view.leakSuspectsPage(), i18n);"));
+        assertTrue(registry.contains("tlabPageController = new TlabPageController(view.tlabPage(), i18n);"));
+        assertTrue(selection.contains("pages.heapPageController().bind(workspace == null ? null : workspace.heapViewModel())"));
+        assertTrue(selection.contains("pages.leakSuspectsPageController().bind(workspace == null ? null : workspace.leakSuspectsViewModel())"));
+        assertTrue(selection.contains("pages.tlabPageController().bind(workspace == null ? null : workspace.tlabViewModel())"));
+        assertTrue(registry.contains("installer.install(heapPageController.table())"));
+        assertTrue(registry.contains("installer.install(leakSuspectsPageController.table())"));
+        assertTrue(registry.contains("installer.install(tlabPageController.table())"));
+
+        assertFalse(shell.contains("private HeapViewModel heapViewModel;"));
+        assertFalse(shell.contains("private LeakSuspectsViewModel leaksViewModel;"));
+        assertFalse(shell.contains("private TlabViewModel tlabViewModel;"));
+        assertFalse(shell.contains("private TableView<HeapClassHistogram> heapTable;"));
+        assertFalse(shell.contains("private TableView<LeakCandidate> leaksTable;"));
+        assertFalse(shell.contains("private TableView<TlabAllocation> tlabTable;"));
+        assertFalse(shell.contains("private TreeView<LeakReferenceNode> leaksReferenceTree;"));
+        assertFalse(shell.contains("private void configureHeapTable()"));
+        assertFalse(shell.contains("private void configureLeaksTable()"));
+        assertFalse(shell.contains("private void configureTlabTable()"));
+        assertFalse(shell.contains("private void bindHeap("));
+        assertFalse(shell.contains("private void bindLeaks("));
+        assertFalse(shell.contains("private void bindTlab("));
+        assertFalse(shell.contains("private void updateTlabTablePlaceholder("));
+        assertFalse(shell.contains("private void updateLeakReferenceTree("));
+        assertFalse(shell.contains("private TreeItem<LeakReferenceNode> buildReferenceTreeItem("));
+
+        assertTrue(appShellView.contains("HeapPageView heapPage()"));
+        assertTrue(appShellView.contains("LeakSuspectsPageView leakSuspectsPage()"));
+        assertTrue(appShellView.contains("TlabPageView tlabPage()"));
+        assertTrue(heapView.contains("public record HeapPageView("));
+        assertTrue(leaksView.contains("public record LeakSuspectsPageView("));
+        assertTrue(tlabView.contains("public record TlabPageView("));
+
+        assertTrue(heapController.contains("package com.youngledo.jmcfx.ui.heap;"));
+        assertTrue(heapController.contains("public final class HeapPageController"));
+        assertTrue(heapController.contains("view.titleLabel().textProperty().bind(i18n.text(\"heap.title\"))"));
+        assertTrue(heapController.contains("view.table().setItems(nextViewModel.histogramProperty())"));
+        assertTrue(heapController.contains("currentViewModel.timelineProperty().removeListener(timelineListener)"));
+        assertTrue(heapController.contains("public TableView<HeapClassHistogram> table()"));
+
+        assertTrue(leaksController.contains("package com.youngledo.jmcfx.ui.leaks;"));
+        assertTrue(leaksController.contains("public final class LeakSuspectsPageController"));
+        assertTrue(leaksController.contains("view.titleLabel().textProperty().bind(i18n.text(\"leaks.title\"))"));
+        assertTrue(leaksController.contains("view.table().setItems(nextViewModel.candidatesProperty())"));
+        assertTrue(leaksController.contains("currentViewModel.referenceTreeProperty().removeListener(referenceTreeListener)"));
+        assertTrue(leaksController.contains("viewModel.selectCandidate(idx)"));
+        assertTrue(leaksController.contains("private TreeItem<LeakReferenceNode> buildReferenceTreeItem("));
+
+        assertTrue(tlabController.contains("package com.youngledo.jmcfx.ui.tlab;"));
+        assertTrue(tlabController.contains("public final class TlabPageController"));
+        assertTrue(tlabController.contains("view.titleLabel().textProperty().bind(i18n.text(\"tlab.title\"))"));
+        assertTrue(tlabController.contains("view.table().setItems(nextViewModel.allocationsProperty())"));
+        assertTrue(tlabController.contains("currentViewModel.timelineProperty().removeListener(timelineListener)"));
+        assertTrue(tlabController.contains("currentViewModel.loadingProperty().removeListener(placeholderListener)"));
+        assertTrue(tlabController.contains("currentViewModel.loadedProperty().removeListener(placeholderListener)"));
+        assertTrue(tlabController.contains("public TableView<TlabAllocation> table()"));
+    }
+
+    @Test
+    void appShellDelegatesJvmInternalsPagesToDomainPackagedControllers() throws Exception {
+        String shell = java.nio.file.Files.readString(
+                java.nio.file.Path.of("src/main/java/com/youngledo/jmcfx/ui/shell/AppShellController.java"));
+        String registry = shellPageControllerRegistrySource();
+        String selection = workspaceSelectionSource();
+        String appShellView = java.nio.file.Files.readString(
+                java.nio.file.Path.of("src/main/java/com/youngledo/jmcfx/ui/shell/AppShellView.java"));
+        String jvmController = java.nio.file.Files.readString(
+                java.nio.file.Path.of("src/main/java/com/youngledo/jmcfx/ui/jvm/JvmInternalsPagesController.java"));
+        String jvmView = java.nio.file.Files.readString(
+                java.nio.file.Path.of("src/main/java/com/youngledo/jmcfx/ui/jvm/JvmInternalsPagesView.java"));
+        String g1Controller = java.nio.file.Files.readString(
+                java.nio.file.Path.of("src/main/java/com/youngledo/jmcfx/ui/gc/G1GcPageController.java"));
+        String g1View = java.nio.file.Files.readString(
+                java.nio.file.Path.of("src/main/java/com/youngledo/jmcfx/ui/gc/G1GcPageView.java"));
+        String javaFxController = java.nio.file.Files.readString(
+                java.nio.file.Path.of("src/main/java/com/youngledo/jmcfx/ui/jfx/JavaFxEventsPageController.java"));
+        String javaFxView = java.nio.file.Files.readString(
+                java.nio.file.Path.of("src/main/java/com/youngledo/jmcfx/ui/jfx/JavaFxEventsPageView.java"));
+
+        assertTrue(registry.contains("private JvmInternalsPagesController jvmInternalsPagesController;"));
+        assertTrue(registry.contains("private G1GcPageController g1GcPageController;"));
+        assertTrue(registry.contains("private JavaFxEventsPageController javaFxEventsPageController;"));
+        assertTrue(registry.contains("jvmInternalsPagesController = new JvmInternalsPagesController(view.jvmInternalsPages(), i18n);"));
+        assertTrue(registry.contains("g1GcPageController = new G1GcPageController(view.g1GcPage(), i18n);"));
+        assertTrue(registry.contains("javaFxEventsPageController = new JavaFxEventsPageController(view.javaFxEventsPage(), i18n);"));
+        assertTrue(selection.contains("pages.jvmInternalsPagesController().bindJvmInfo(workspace == null ? null : workspace.jvmInfoViewModel())"));
+        assertTrue(selection.contains("pages.jvmInternalsPagesController().bindGcConfig(workspace == null ? null : workspace.gcConfigViewModel())"));
+        assertTrue(selection.contains("pages.jvmInternalsPagesController().bindGcSummary(workspace == null ? null : workspace.gcSummaryViewModel())"));
+        assertTrue(selection.contains("pages.jvmInternalsPagesController().bindGcDetails(workspace == null ? null : workspace.gcDetailsViewModel())"));
+        assertTrue(selection.contains("pages.g1GcPageController().bind(workspace == null ? null : workspace.g1GcViewModel())"));
+        assertTrue(selection.contains("pages.javaFxEventsPageController().bind(workspace == null ? null : workspace.javaFxEventsViewModel())"));
+        assertTrue(selection.contains("pages.jvmInternalsPagesController().bindCompilations(workspace == null ? null : workspace.compilationsViewModel())"));
+        assertTrue(selection.contains("pages.jvmInternalsPagesController().bindCodeCache(workspace == null ? null : workspace.codeCacheViewModel())"));
+        assertTrue(selection.contains("pages.jvmInternalsPagesController().bindClassLoading(workspace == null ? null : workspace.classLoadingViewModel())"));
+        assertTrue(selection.contains("pages.jvmInternalsPagesController().bindVmOperations(workspace == null ? null : workspace.vmOperationsViewModel())"));
+        assertTrue(registry.contains("jvmInternalsPagesController.exportTables().forEach(installer::install)"));
+        assertTrue(registry.contains("g1GcPageController.exportTables().forEach(installer::install)"));
+        assertTrue(registry.contains("javaFxEventsPageController.exportTables().forEach(installer::install)"));
+
+        assertFalse(shell.contains("private TableView<JvmFlag> jvmFlagsTable;"));
+        assertFalse(shell.contains("private G1GcViewModel g1GcViewModel;"));
+        assertFalse(shell.contains("private JavaFxEventsViewModel javaFxEventsViewModel;"));
+        assertFalse(shell.contains("private JvmInfoViewModel jvmInfoViewModel;"));
+        assertFalse(shell.contains("private void configureJvmFlagsTable()"));
+        assertFalse(shell.contains("private void configureG1GcTables()"));
+        assertFalse(shell.contains("private void configureJavaFxEventsTables()"));
+        assertFalse(shell.contains("private void bindJvmInfo("));
+        assertFalse(shell.contains("private void bindG1Gc("));
+        assertFalse(shell.contains("private void bindJavaFxEvents("));
+        assertFalse(shell.contains("private void bindCodeCache("));
+
+        assertTrue(appShellView.contains("JvmInternalsPagesView jvmInternalsPages()"));
+        assertTrue(appShellView.contains("G1GcPageView g1GcPage()"));
+        assertTrue(appShellView.contains("JavaFxEventsPageView javaFxEventsPage()"));
+        assertTrue(jvmView.contains("public record JvmInternalsPagesView("));
+        assertTrue(g1View.contains("public record G1GcPageView("));
+        assertTrue(javaFxView.contains("public record JavaFxEventsPageView("));
+
+        assertTrue(jvmController.contains("package com.youngledo.jmcfx.ui.jvm;"));
+        assertTrue(jvmController.contains("public final class JvmInternalsPagesController"));
+        assertTrue(jvmController.contains("public void bindJvmInfo(JvmInfoViewModel nextViewModel)"));
+        assertTrue(jvmController.contains("public void bindGcDetails(GcDetailsViewModel nextViewModel)"));
+        assertTrue(jvmController.contains("currentViewModel.heapChartProperty().removeListener(heapChartListener)"));
+        assertTrue(jvmController.contains("public List<TableView<?>> exportTables()"));
+
+        assertTrue(g1Controller.contains("package com.youngledo.jmcfx.ui.gc;"));
+        assertTrue(g1Controller.contains("public final class G1GcPageController"));
+        assertTrue(g1Controller.contains("currentViewModel.selectedRegionStateProperty().removeListener(selectedRegionStateListener)"));
+        assertTrue(g1Controller.contains("view.regionStatesTable().getSelectionModel().selectedItemProperty()"));
+        assertTrue(g1Controller.contains("public List<TableView<?>> exportTables()"));
+
+        assertTrue(javaFxController.contains("package com.youngledo.jmcfx.ui.jfx;"));
+        assertTrue(javaFxController.contains("public final class JavaFxEventsPageController"));
+        assertTrue(javaFxController.contains("currentViewModel.selectedPulsePhaseProperty().removeListener(selectedPulsePhaseListener)"));
+        assertTrue(javaFxController.contains("view.phaseTable().getSelectionModel().selectedItemProperty()"));
+        assertTrue(javaFxController.contains("public List<TableView<?>> exportTables()"));
+    }
+
+    @Test
+    void appShellDelegatesEnvironmentPagesToDomainPackagedController() throws Exception {
+        String shell = java.nio.file.Files.readString(
+                java.nio.file.Path.of("src/main/java/com/youngledo/jmcfx/ui/shell/AppShellController.java"));
+        String registry = shellPageControllerRegistrySource();
+        String selection = workspaceSelectionSource();
+        String appShellView = java.nio.file.Files.readString(
+                java.nio.file.Path.of("src/main/java/com/youngledo/jmcfx/ui/shell/AppShellView.java"));
+        String environmentController = java.nio.file.Files.readString(java.nio.file.Path.of(
+                "src/main/java/com/youngledo/jmcfx/ui/environment/EnvironmentPagesController.java"));
+        String environmentView = java.nio.file.Files.readString(java.nio.file.Path.of(
+                "src/main/java/com/youngledo/jmcfx/ui/environment/EnvironmentPagesView.java"));
+
+        assertTrue(registry.contains("private EnvironmentPagesController environmentPagesController;"));
+        assertTrue(registry.contains("environmentPagesController = new EnvironmentPagesController(view.environmentPages(), i18n);"));
+        assertTrue(registry.contains("environmentPagesController.configure();"));
+        assertTrue(selection.contains("pages.environmentPagesController().bind(workspace == null ? null : workspace.environmentViewModel())"));
+        assertTrue(registry.contains("environmentPagesController.exportTables().forEach(installer::install);"));
+        assertTrue(appShellView.contains("EnvironmentPagesView environmentPages()"));
+
+        assertFalse(shell.contains("private EnvironmentViewModel environmentViewModel;"));
+        assertFalse(shell.contains("private TableView<ProcessInfo> processesTable;"));
+        assertFalse(shell.contains("private TableView<EnvironmentVariable> envVarsTable;"));
+        assertFalse(shell.contains("private TableView<SystemProperty> sysPropsTable;"));
+        assertFalse(shell.contains("private TableView<ActiveRecordingInfo> recordingsTable;"));
+        assertFalse(shell.contains("private TableView<ActiveSetting> settingsTable;"));
+        assertFalse(shell.contains("private TableView<AgentInfo> agentsTable;"));
+        assertFalse(shell.contains("private TableView<ConstantPoolType> constantPoolsTable;"));
+        assertFalse(shell.contains("private TextField envVarsSearchField;"));
+        assertFalse(shell.contains("private TextField sysPropsSearchField;"));
+        assertFalse(shell.contains("private Label processesTitleLabel;"));
+        assertFalse(shell.contains("private Label constantPoolsTitleLabel;"));
+        assertFalse(shell.contains("private void configureProcessesTable()"));
+        assertFalse(shell.contains("private void configureEnvVarsTable()"));
+        assertFalse(shell.contains("private void configureSysPropsTable()"));
+        assertFalse(shell.contains("private void configureRecordingsTable()"));
+        assertFalse(shell.contains("private void configureSettingsTable()"));
+        assertFalse(shell.contains("private void configureAgentsTable()"));
+        assertFalse(shell.contains("private void configureConstantPoolsTable()"));
+        assertFalse(shell.contains("private void bindEnvironment("));
+
+        assertTrue(environmentController.contains("package com.youngledo.jmcfx.ui.environment;"));
+        assertTrue(environmentController.contains("public final class EnvironmentPagesController"));
+        assertTrue(environmentController.contains("public void configure()"));
+        assertTrue(environmentController.contains("public void bind(EnvironmentViewModel nextViewModel)"));
+        assertTrue(environmentController.contains("view.envVarsSearchField().textProperty().addListener"));
+        assertTrue(environmentController.contains("view.sysPropsSearchField().textProperty().addListener"));
+        assertTrue(environmentController.contains("public List<TableView<?>> exportTables()"));
+        assertTrue(environmentView.contains("public record EnvironmentPagesView("));
     }
 
     @Test
@@ -1022,16 +2848,16 @@ class AppShellTest {
     void jvmBrowserRefreshesWhenOpenedAndManuallyWithoutPeriodicTimer() throws Exception {
         String liveController = java.nio.file.Files.readString(
                 java.nio.file.Path.of("src/main/java/com/youngledo/jmcfx/ui/shell/LiveJvmPaneController.java"));
-        String shellController = java.nio.file.Files.readString(
-                java.nio.file.Path.of("src/main/java/com/youngledo/jmcfx/ui/shell/AppShellController.java"));
+        String liveJvmWorkspace = java.nio.file.Files.readString(
+                java.nio.file.Path.of("src/main/java/com/youngledo/jmcfx/ui/shell/ShellLiveJvmWorkspaceController.java"));
 
         assertTrue(liveController.contains("jvmsRefreshButton.setOnAction(event -> refresh())"),
                 "Manual refresh button should trigger JVM Browser refresh");
-        assertTrue(shellController.contains("selectedSectionProperty().addListener"),
+        assertTrue(liveJvmWorkspace.contains("selectedSectionProperty().addListener"),
                 "Opening JVM Browser should refresh the local JVM list");
-        assertTrue(shellController.contains("\"jvms\".equals(newValue) && jvmsPaneController != null"),
+        assertTrue(liveJvmWorkspace.contains("\"jvms\".equals(newValue) && jvmsPaneController != null"),
                 "JVM Browser should refresh when the JVMs section is opened");
-        assertTrue(shellController.contains("jvmsPaneController.refresh()"),
+        assertTrue(liveJvmWorkspace.contains("jvmsPaneController.refresh()"),
                 "Shell should delegate JVM refresh to the included Live JVM controller");
         assertFalse(liveController.contains("JVM_BROWSER_REFRESH_INTERVAL_SECONDS"),
                 "JVM Browser should not run periodic refresh");
@@ -1211,7 +3037,8 @@ void jvmBrowserSupportsDoubleClickConnectAndNoBottomStatus() throws Exception {
                 "Stop recording button should save and open a JFR file");
         String shellController = java.nio.file.Files.readString(
                 java.nio.file.Path.of("src/main/java/com/youngledo/jmcfx/ui/shell/AppShellController.java"));
-        assertTrue(shellController.contains("this::openRecordingInBackground"),
+        String shellRuntime = shellRuntimeSource();
+        assertTrue(shellRuntime.contains("this::openRecordingInBackground"),
                 "Saved recordings should reuse the existing shell recording open flow through the ViewModel callback");
     }
 
@@ -1236,18 +3063,16 @@ void jvmBrowserSupportsDoubleClickConnectAndNoBottomStatus() throws Exception {
     void appShellFactoryInjectsMBeanBrowserService() throws Exception {
         String factory = java.nio.file.Files.readString(
                 java.nio.file.Path.of("src/main/java/com/youngledo/jmcfx/ui/shell/AppShellFactory.java"));
-        String controller = java.nio.file.Files.readString(
-                java.nio.file.Path.of("src/main/java/com/youngledo/jmcfx/ui/shell/AppShellController.java"));
+        String liveJvmServices = java.nio.file.Files.readString(
+                java.nio.file.Path.of("src/main/java/com/youngledo/jmcfx/ui/shell/LiveJvmServices.java"));
+        String liveJvmController = java.nio.file.Files.readString(java.nio.file.Path.of(
+                "src/main/java/com/youngledo/jmcfx/ui/shell/ShellLiveJvmWorkspaceController.java"));
         String app = java.nio.file.Files.readString(
                 java.nio.file.Path.of("../jmc-fx-app/src/main/java/com/youngledo/jmcfx/app/JmcFxApplication.java"));
 
-        assertTrue(factory.contains("MBeanBrowserService mBeanBrowserService"),
-                "Factory should accept the MBean Browser port");
-        assertTrue(factory.contains("mBeanBrowserService"),
-                "Factory should pass the MBean Browser port to AppShellController");
-        assertTrue(controller.contains("MBeanBrowserService mBeanBrowserService"),
-                "Controller should inject the MBean Browser port");
-        assertTrue(controller.contains("flightRecordingService, mBeanBrowserService"),
+        assertTrue(liveJvmServices.contains("MBeanBrowserService mBeanBrowserService"),
+                "Live JVM service bundle should carry the MBean Browser port");
+        assertTrue(liveJvmController.contains("services.mBeanBrowserService()"),
                 "Controller should pass the MBean Browser port to JvmBrowserViewModel");
         assertTrue(app.contains("new JmcMBeanBrowserService(jmxConnectionService)"),
                 "Application assembly should reuse the existing JMX connection service for MBeans");
@@ -1257,20 +3082,19 @@ void jvmBrowserSupportsDoubleClickConnectAndNoBottomStatus() throws Exception {
     void appShellFactoryInjectsLiveDiagnosticsServices() throws Exception {
         String factory = java.nio.file.Files.readString(
                 java.nio.file.Path.of("src/main/java/com/youngledo/jmcfx/ui/shell/AppShellFactory.java"));
-        String controller = java.nio.file.Files.readString(
-                java.nio.file.Path.of("src/main/java/com/youngledo/jmcfx/ui/shell/AppShellController.java"));
+        String liveJvmServices = java.nio.file.Files.readString(
+                java.nio.file.Path.of("src/main/java/com/youngledo/jmcfx/ui/shell/LiveJvmServices.java"));
+        String liveJvmController = java.nio.file.Files.readString(java.nio.file.Path.of(
+                "src/main/java/com/youngledo/jmcfx/ui/shell/ShellLiveJvmWorkspaceController.java"));
         String app = java.nio.file.Files.readString(
                 java.nio.file.Path.of("../jmc-fx-app/src/main/java/com/youngledo/jmcfx/app/JmcFxApplication.java"));
 
-        assertTrue(factory.contains("DiagnosticCommandService diagnosticCommandService"),
-                "Factory should accept the Diagnostic Command port");
-        assertTrue(factory.contains("LiveMetricService liveMetricService"),
-                "Factory should accept the Live Metric port");
-        assertTrue(controller.contains("DiagnosticCommandService diagnosticCommandService"),
-                "Controller should inject the Diagnostic Command port");
-        assertTrue(controller.contains("LiveMetricService liveMetricService"),
-                "Controller should inject the Live Metric port");
-        assertTrue(controller.contains("mBeanBrowserService, diagnosticCommandService, liveMetricService"),
+        assertTrue(liveJvmServices.contains("DiagnosticCommandService diagnosticCommandService"),
+                "Live JVM service bundle should carry the Diagnostic Command port");
+        assertTrue(liveJvmServices.contains("LiveMetricService liveMetricService"),
+                "Live JVM service bundle should carry the Live Metric port");
+        assertTrue(liveJvmController.contains("services.diagnosticCommandService()"));
+        assertTrue(liveJvmController.contains("services.liveMetricService()"),
                 "Controller should pass diagnostics ports to JvmBrowserViewModel");
         assertTrue(app.contains("new JmcDiagnosticCommandService(jmxConnectionService)"),
                 "Application assembly should reuse the existing JMX connection service for diagnostic commands");
@@ -1320,17 +3144,17 @@ void jvmBrowserSupportsDoubleClickConnectAndNoBottomStatus() throws Exception {
     void appShellFactoryInjectsAdvancedJfrAnalysisService() throws Exception {
         String factory = java.nio.file.Files.readString(
                 java.nio.file.Path.of("src/main/java/com/youngledo/jmcfx/ui/shell/AppShellFactory.java"));
-        String controller = java.nio.file.Files.readString(
-                java.nio.file.Path.of("src/main/java/com/youngledo/jmcfx/ui/shell/AppShellController.java"));
+        String recordingServices = java.nio.file.Files.readString(
+                java.nio.file.Path.of("src/main/java/com/youngledo/jmcfx/ui/shell/RecordingServices.java"));
+        String workspaceFactory = java.nio.file.Files.readString(
+                java.nio.file.Path.of("src/main/java/com/youngledo/jmcfx/ui/shell/RecordingWorkspaceFactory.java"));
         String app = java.nio.file.Files.readString(
                 java.nio.file.Path.of("../jmc-fx-app/src/main/java/com/youngledo/jmcfx/app/JmcFxApplication.java"));
 
-        assertTrue(factory.contains("AdvancedJfrAnalysisService advancedJfrAnalysisService"),
-                "Factory should accept the advanced JFR analysis port");
-        assertTrue(controller.contains("AdvancedJfrAnalysisService advancedJfrAnalysisService"),
-                "Controller should inject the advanced JFR analysis port");
-        assertTrue(controller.contains("new AdvancedJfrViewModel(advancedJfrAnalysisService)"),
-                "Controller should create the advanced JFR workspace view model when the port is available");
+        assertTrue(recordingServices.contains("AdvancedJfrAnalysisService advancedJfrAnalysisService"),
+                "Recording service bundle should carry the advanced JFR analysis port");
+        assertTrue(workspaceFactory.contains("new AdvancedJfrViewModel(services.advancedJfrAnalysisService())"),
+                "Recording workspace factory should create the advanced JFR workspace view model when the port is available");
         assertTrue(app.contains("new JmcAdvancedJfrAnalysisService()"),
                 "Application assembly should use the JMC-backed advanced JFR analysis adapter");
     }
@@ -1363,27 +3187,27 @@ void jvmBrowserSupportsDoubleClickConnectAndNoBottomStatus() throws Exception {
 void settingsPageContainsThemeSelectorNextToLanguageSelector() {
     AppShellView view = new AppShellView();
 
-    assertEquals(36.0, view.settingsPane.getSpacing());
-    assertNotNull(view.settingsLanguageLabel);
-    assertNotNull(view.settingsThemeLabel);
-    assertEquals(view.languageToggleGroup, view.languageFollowSystemRadio.getToggleGroup());
-    assertEquals(view.languageToggleGroup, view.languageEnglishRadio.getToggleGroup());
-    assertEquals(view.languageToggleGroup, view.languageChineseRadio.getToggleGroup());
-    assertEquals(view.themeToggleGroup, view.themeFollowSystemRadio.getToggleGroup());
-    assertEquals(view.themeToggleGroup, view.themeLightRadio.getToggleGroup());
-    assertEquals(view.themeToggleGroup, view.themeDarkRadio.getToggleGroup());
+    assertEquals(36.0, view.settings.pane.getSpacing());
+    assertNotNull(view.settings.languageLabel);
+    assertNotNull(view.settings.themeLabel);
+    assertEquals(view.settings.languageToggleGroup, view.settings.languageFollowSystemRadio.getToggleGroup());
+    assertEquals(view.settings.languageToggleGroup, view.settings.languageEnglishRadio.getToggleGroup());
+    assertEquals(view.settings.languageToggleGroup, view.settings.languageChineseRadio.getToggleGroup());
+    assertEquals(view.settings.themeToggleGroup, view.settings.themeFollowSystemRadio.getToggleGroup());
+    assertEquals(view.settings.themeToggleGroup, view.settings.themeLightRadio.getToggleGroup());
+    assertEquals(view.settings.themeToggleGroup, view.settings.themeDarkRadio.getToggleGroup());
 }
 
     @Test
     void controllerBindsThemeSelectorAndSystemThemePreference() throws Exception {
         String source = java.nio.file.Files.readString(
-                java.nio.file.Path.of("src/main/java/com/youngledo/jmcfx/ui/shell/AppShellController.java"));
+                java.nio.file.Path.of("src/main/java/com/youngledo/jmcfx/ui/shell/SettingsPaneController.java"));
         String factory = java.nio.file.Files.readString(
                 java.nio.file.Path.of("src/main/java/com/youngledo/jmcfx/ui/shell/AppShellFactory.java"));
 
         assertTrue(source.contains("configureThemeSelector()"),
-                "settings page should configure the theme selector");
-        assertTrue(source.contains("themeToggleGroup.selectedToggleProperty()"),
+                "settings page controller should configure the theme selector");
+        assertTrue(source.contains("view.themeToggleGroup.selectedToggleProperty()"),
                 "theme selector should update the shell view model");
         assertTrue(source.contains("settings.theme.followSystem"),
                 "theme selector should expose follow-system text");
@@ -1394,7 +3218,7 @@ void settingsPageContainsThemeSelectorNextToLanguageSelector() {
     @Test
     void eventTimeFormatterDoesNotShowZoneSuffix() {
         assertEquals("1970-01-01 08:00:00.000",
-                AppShellController.formatEventTimeForDisplay(Instant.EPOCH, ZoneId.of("Asia/Shanghai")));
+                EventsPageController.formatEventTimeForDisplay(Instant.EPOCH, ZoneId.of("Asia/Shanghai")));
     }
 
     @Test
@@ -1458,40 +3282,40 @@ void settingsPageContainsThemeSelectorNextToLanguageSelector() {
 
     @Test
     void defaultEventTypesPaneWidthIsUsable() {
-        assertEquals(260, AppShellController.DEFAULT_EVENT_TYPES_WIDTH);
+        assertEquals(260, EventsPageController.DEFAULT_EVENT_TYPES_WIDTH);
     }
 
     @Test
     void defaultEventTypesDividerKeepsTreePaneNarrow() {
-        assertEquals(0.25, AppShellController.DEFAULT_EVENT_TYPES_DIVIDER_POSITION);
+        assertEquals(0.25, EventsPageController.DEFAULT_EVENT_TYPES_DIVIDER_POSITION);
     }
 
     @Test
     void eventTypesPaneWidthConstraintsAllowUserResizing() {
-        assertEquals(180, AppShellController.MIN_EVENT_TYPES_WIDTH);
-        assertEquals(360, AppShellController.MAX_EVENT_TYPES_WIDTH);
+        assertEquals(180, EventsPageController.MIN_EVENT_TYPES_WIDTH);
+        assertEquals(360, EventsPageController.MAX_EVENT_TYPES_WIDTH);
     }
 
     @Test
     void allEventsSelectionDoesNotSelectEventTypesTreeNode() {
-        assertEquals(false, AppShellController.shouldSelectEventTypesTreeNode(EventTypeSelection.ALL_ID));
-        assertEquals(false, AppShellController.shouldSelectEventTypesTreeNode(""));
-        assertEquals(true, AppShellController.shouldSelectEventTypesTreeNode("jdk.ThreadStart"));
+        assertEquals(false, EventsPageController.shouldSelectEventTypesTreeNode(EventTypeSelection.ALL_ID));
+        assertEquals(false, EventsPageController.shouldSelectEventTypesTreeNode(""));
+        assertEquals(true, EventsPageController.shouldSelectEventTypesTreeNode("jdk.ThreadStart"));
     }
 
     @Test
     void allEventsSelectionClearsEventTypesTreeSelection() {
-        assertEquals(true, AppShellController.shouldClearEventTypesTreeSelection(EventTypeSelection.ALL_ID));
-        assertEquals(true, AppShellController.shouldClearEventTypesTreeSelection(""));
-        assertEquals(true, AppShellController.shouldClearEventTypesTreeSelection(null));
-        assertEquals(false, AppShellController.shouldClearEventTypesTreeSelection("jdk.ThreadStart"));
+        assertEquals(true, EventsPageController.shouldClearEventTypesTreeSelection(EventTypeSelection.ALL_ID));
+        assertEquals(true, EventsPageController.shouldClearEventTypesTreeSelection(""));
+        assertEquals(true, EventsPageController.shouldClearEventTypesTreeSelection(null));
+        assertEquals(false, EventsPageController.shouldClearEventTypesTreeSelection("jdk.ThreadStart"));
     }
 
     @Test
     void eventTypesDividerInitializesOnlyWhenEventsPaneFirstBecomesVisible() {
-        assertEquals(true, AppShellController.shouldInitializeEventTypesDivider(false, true));
-        assertEquals(false, AppShellController.shouldInitializeEventTypesDivider(false, false));
-        assertEquals(false, AppShellController.shouldInitializeEventTypesDivider(true, true));
+        assertEquals(true, EventsPageController.shouldInitializeEventTypesDivider(false, true));
+        assertEquals(false, EventsPageController.shouldInitializeEventTypesDivider(false, false));
+        assertEquals(false, EventsPageController.shouldInitializeEventTypesDivider(true, true));
     }
 
     @Test
@@ -1510,42 +3334,44 @@ void settingsPageContainsThemeSelectorNextToLanguageSelector() {
                 null, null, null,
                 null);
 
-        assertEquals("first-recording.jfr", AppShellController.tabTitleFor(workspace));
+        assertEquals("first-recording.jfr", WorkspaceTabsController.tabTitleFor(workspace));
     }
 
     @Test
     void heapDumpTabTitleUsesHeapDumpFileName() {
         HeapDumpWorkspace workspace = new HeapDumpWorkspace(Path.of("/tmp/demo.hprof"), null);
 
-        assertEquals("demo.hprof", AppShellController.tabTitleFor(workspace));
+        assertEquals("demo.hprof", WorkspaceTabsController.tabTitleFor(workspace));
     }
 
     @Test
     void recordingTabsAreShownOnlyWhenWorkspacesExist() {
-        assertFalse(AppShellController.shouldShowRecordingTabs(0));
-        assertTrue(AppShellController.shouldShowRecordingTabs(1));
-        assertTrue(AppShellController.shouldShowRecordingTabs(2));
+        assertFalse(WorkspaceTabsController.shouldShowRecordingTabs(0));
+        assertTrue(WorkspaceTabsController.shouldShowRecordingTabs(1));
+        assertTrue(WorkspaceTabsController.shouldShowRecordingTabs(2));
     }
 
     @Test
     void workspaceTabsAreShownWhenAnyWorkspaceExists() {
-        assertFalse(AppShellController.shouldShowWorkspaceTabs(0, 0));
-        assertTrue(AppShellController.shouldShowWorkspaceTabs(1, 0));
-        assertTrue(AppShellController.shouldShowWorkspaceTabs(0, 1));
+        assertFalse(WorkspaceTabsController.shouldShowWorkspaceTabs(0, 0));
+        assertTrue(WorkspaceTabsController.shouldShowWorkspaceTabs(1, 0));
+        assertTrue(WorkspaceTabsController.shouldShowWorkspaceTabs(0, 1));
     }
 
     @Test
-    void emptyTablePlaceholderUsesBlankRegionInsteadOfLocalizedText() {
-        Region placeholder = AppShellController.emptyTablePlaceholder();
+    void liveJvmEmptyTablePlaceholderUsesBlankRegionInsteadOfLocalizedText() throws Exception {
+        java.lang.reflect.Method method = LiveJvmPaneController.class.getDeclaredMethod("emptyTablePlaceholder");
+        method.setAccessible(true);
+        Region placeholder = (Region) method.invoke(null);
 
         assertEquals(Region.class, placeholder.getClass());
         assertFalse(placeholder.isManaged());
     }
 
     @Test
-    void tablePlaceholdersUseLocalizedBindings() throws Exception {
+    void liveJvmTablePlaceholdersUseLocalizedBindings() throws Exception {
         String source = java.nio.file.Files.readString(
-                java.nio.file.Path.of("src/main/java/com/youngledo/jmcfx/ui/shell/AppShellController.java"));
+                java.nio.file.Path.of("src/main/java/com/youngledo/jmcfx/ui/shell/LiveJvmPaneController.java"));
 
         assertTrue(source.contains("localizedTablePlaceholder("));
         assertFalse(source.contains("setPlaceholder(new Label(i18n.get("),
@@ -1555,22 +3381,22 @@ void settingsPageContainsThemeSelectorNextToLanguageSelector() {
     @Test
     void tlabPlaceholderDoesNotShowEmptyStateBeforeLazyLoadCompletes() throws Exception {
         String source = java.nio.file.Files.readString(
-                java.nio.file.Path.of("src/main/java/com/youngledo/jmcfx/ui/shell/AppShellController.java"));
-        String configureTlabTable = source.substring(source.indexOf("private void configureTlabTable()"),
-                source.indexOf("private void bindHeap("));
+                java.nio.file.Path.of("src/main/java/com/youngledo/jmcfx/ui/tlab/TlabPageController.java"));
+        String configureTlabTable = source.substring(source.indexOf("private void configureTable()"),
+                source.indexOf("private void updateTablePlaceholder("));
 
-        assertFalse(configureTlabTable.contains("tlabTable.setPlaceholder(localizedTablePlaceholder(\"tlab.empty\"))"),
+        assertFalse(configureTlabTable.contains("view.table().setPlaceholder(localizedTablePlaceholder(\"tlab.empty\"))"),
                 "TLAB is loaded lazily, so its initial placeholder must not say the recording has no TLAB data");
-        assertTrue(source.contains("updateTlabTablePlaceholder("),
+        assertTrue(source.contains("updateTablePlaceholder("),
                 "TLAB placeholder must switch to the empty message only after the lazy load completes");
     }
 
     @Test
     void jvmInternalsTablesUseSharedDisplayFormats() throws Exception {
         String source = java.nio.file.Files.readString(
-                java.nio.file.Path.of("src/main/java/com/youngledo/jmcfx/ui/shell/AppShellController.java"));
+                java.nio.file.Path.of("src/main/java/com/youngledo/jmcfx/ui/jvm/JvmInternalsPagesController.java"));
         String jvmTables = source.substring(source.indexOf("private void configureGcSummaryTable()"),
-                source.indexOf("// --- JVM Internals: bind methods ---"));
+                source.indexOf("private <T> TableColumn<T, String> localizedColumn("));
 
         assertFalse(jvmTables.contains("String.valueOf(data.getValue().durationMicros())"));
         assertFalse(jvmTables.contains("String.valueOf(data.getValue().totalDurationMicros())"));
@@ -1585,9 +3411,9 @@ void settingsPageContainsThemeSelectorNextToLanguageSelector() {
     @Test
     void jvmInternalsTablesBindColumnTitlesToI18n() throws Exception {
         String source = java.nio.file.Files.readString(
-                java.nio.file.Path.of("src/main/java/com/youngledo/jmcfx/ui/shell/AppShellController.java"));
+                java.nio.file.Path.of("src/main/java/com/youngledo/jmcfx/ui/jvm/JvmInternalsPagesController.java"));
         String jvmTables = source.substring(source.indexOf("private void configureJvmFlagsTable()"),
-                source.indexOf("// --- JVM Internals: bind methods ---"));
+                source.indexOf("private <T> TableColumn<T, String> localizedColumn("));
 
         assertFalse(jvmTables.contains("new TableColumn<>(\""),
                 "JVM Internals column titles should be localized through i18n bindings");
@@ -1598,42 +3424,50 @@ void settingsPageContainsThemeSelectorNextToLanguageSelector() {
     void eventDetailFallbackTextComesFromI18n() {
         I18n i18n = new I18n(java.util.Locale.ENGLISH);
 
-        assertEquals("Select an event to inspect timing.", AppShellController.noTimingSelectionText(i18n));
+        assertEquals("Select an event to inspect timing.", i18n.get("events.details.selectTiming"));
 
         i18n.setLanguageMode(LanguageMode.CHINESE_SIMPLIFIED);
 
-        assertEquals("选择一个事件以查看时间信息。", AppShellController.noTimingSelectionText(i18n));
+        assertEquals("选择一个事件以查看时间信息。", i18n.get("events.details.selectTiming"));
     }
 
     @Test
     void fileChooserStringsComeFromI18n() {
         I18n i18n = new I18n(java.util.Locale.ENGLISH);
 
-        assertEquals("Open JFR Recording", AppShellController.openRecordingChooserTitle(i18n));
-        assertEquals("JFR recordings", AppShellController.jfrRecordingsFilterDescription(i18n));
+        assertEquals("Open JFR Recording", WorkspaceOpenCoordinator.openRecordingChooserTitle(i18n));
+        assertEquals("JFR recordings", WorkspaceOpenCoordinator.jfrRecordingsFilterDescription(i18n));
     }
 
     @Test
-    void saveRecordingInitialFileNameUsesRecordingName() {
+    void liveJvmSaveRecordingInitialFileNameUsesRecordingName() throws Exception {
+        java.lang.reflect.Method method = LiveJvmPaneController.class.getDeclaredMethod(
+                "saveRecordingInitialFileName", String.class);
+        method.setAccessible(true);
+
         assertEquals("jmcfx-42-20260526160235.jfr",
-                AppShellController.saveRecordingInitialFileName("jmcfx-42-20260526160235"));
+                method.invoke(null, "jmcfx-42-20260526160235"));
     }
 
     @Test
-    void saveRecordingInitialFileNameSanitizesUnsafeCharacters() {
+    void liveJvmSaveRecordingInitialFileNameSanitizesUnsafeCharacters() throws Exception {
+        java.lang.reflect.Method method = LiveJvmPaneController.class.getDeclaredMethod(
+                "saveRecordingInitialFileName", String.class);
+        method.setAccessible(true);
+
         assertEquals("My_Recording_01.jfr",
-                AppShellController.saveRecordingInitialFileName("My Recording:01"));
+                method.invoke(null, "My Recording:01"));
     }
 
     @Test
-    void languageModeDisplayNamesFollowCurrentLanguage() {
+    void settingsLanguageLabelsFollowCurrentLanguage() {
         I18n i18n = new I18n(java.util.Locale.ENGLISH);
 
-        assertEquals("Follow System", AppShellController.languageModeDisplayName(i18n, LanguageMode.SYSTEM));
+        assertEquals("Follow System", i18n.get("settings.language.followSystem"));
 
         i18n.setLanguageMode(LanguageMode.CHINESE_SIMPLIFIED);
 
-        assertEquals("跟随系统", AppShellController.languageModeDisplayName(i18n, LanguageMode.SYSTEM));
+        assertEquals("跟随系统", i18n.get("settings.language.followSystem"));
     }
 
     @Test
@@ -1641,7 +3475,7 @@ void settingsPageContainsThemeSelectorNextToLanguageSelector() {
         I18n i18n = new I18n(java.util.Locale.ENGLISH);
 
         assertEquals("Opening recording: sample.jfr",
-                AppShellController.openingRecordingStatus(i18n, Path.of("/tmp/sample.jfr")));
+                WorkspaceOpenCoordinator.openingRecordingStatus(i18n, Path.of("/tmp/sample.jfr")));
     }
 
     @Test
@@ -1649,50 +3483,28 @@ void settingsPageContainsThemeSelectorNextToLanguageSelector() {
         I18n i18n = new I18n(java.util.Locale.ENGLISH);
 
         assertEquals("Opening heap dump demo.hprof.",
-                AppShellController.openingHeapDumpStatus(i18n, Path.of("demo.hprof")));
+                WorkspaceOpenCoordinator.openingHeapDumpStatus(i18n, Path.of("demo.hprof")));
     }
 
     @Test
     void openRecordingButtonIsDisabledOnlyWhileOpening() {
-        assertTrue(AppShellController.shouldDisableOpenRecordingButton(true));
-        assertFalse(AppShellController.shouldDisableOpenRecordingButton(false));
+        assertTrue(WorkspaceOpenCoordinator.shouldDisableOpenRecordingButton(true));
+        assertFalse(WorkspaceOpenCoordinator.shouldDisableOpenRecordingButton(false));
     }
 
     @Test
     void preparingRecordingWorkspaceDoesNotPreloadAnalysisPages() {
-        AppShellController controller = new AppShellController(
-                new AppShellViewModel(),
-                new FakeRecordingRepository(),
-                new FakeEventQueryService(),
-                throwingRuleAnalysisService(),
-                null, null, null,
-                null, null, null,
-                null, null, null,
-                null, null, null,
-                new I18n(java.util.Locale.ENGLISH));
-
-        controller.prepareRecordingWorkspace(Path.of("startup.jfr"));
+        prepareRecordingWorkspace(throwingRuleAnalysisService(), null);
     }
 
     @Test
     void sectionLoadingIsQueuedOnRecordingExecutor() {
         QueueingRecordingOpenExecutor executor = new QueueingRecordingOpenExecutor();
         AtomicInteger analysisCalls = new AtomicInteger();
-        AppShellController controller = new AppShellController(
-                new AppShellViewModel(),
-                new FakeRecordingRepository(),
-                new FakeEventQueryService(),
-                recording -> {
-                    analysisCalls.incrementAndGet();
-                    return List.of();
-                },
-                null, null, null,
-                null, null, null,
-                null, null, null,
-                null, null, null,
-                new I18n(java.util.Locale.ENGLISH),
-                executor);
-        AppShellController.PreparedRecordingWorkspace prepared = controller.prepareRecordingWorkspace(Path.of("startup.jfr"));
+        PreparedRecordingWorkspace prepared = prepareRecordingWorkspace(recording -> {
+            analysisCalls.incrementAndGet();
+            return List.of();
+        }, null);
         RecordingWorkspace workspace = new RecordingWorkspace(prepared.recording(), prepared.overview(), prepared.events(),
                 prepared.analysis(), prepared.profiling(), prepared.exceptions(), prepared.threads(), prepared.fileio(),
                 prepared.socketio(), prepared.locks(), prepared.heap(), prepared.leakSuspects(), prepared.tlab(),
@@ -1700,8 +3512,10 @@ void settingsPageContainsThemeSelectorNextToLanguageSelector() {
                 prepared.compilations(), prepared.codeCache(), prepared.classLoading(), prepared.vmOperations(),
                 prepared.environment(), prepared.javaAppOverview(), prepared.security(), prepared.nativeLibraries(),
                 prepared.threadDumps());
+        RecordingSectionLoader loader = new RecordingSectionLoader(executor, new I18n(java.util.Locale.ENGLISH),
+                visible -> { }, summary -> { }, Runnable::run);
 
-        controller.loadWorkspaceSection(workspace, "analysis");
+        loader.load(workspace, "analysis");
 
         assertEquals(1, executor.queuedTaskCount());
         assertEquals(0, analysisCalls.get());
@@ -1716,22 +3530,10 @@ void settingsPageContainsThemeSelectorNextToLanguageSelector() {
         QueueingRecordingOpenExecutor executor = new QueueingRecordingOpenExecutor();
         AtomicInteger analysisCalls = new AtomicInteger();
         AtomicInteger profilingCalls = new AtomicInteger();
-        AppShellController controller = new AppShellController(
-                new AppShellViewModel(),
-                new FakeRecordingRepository(),
-                new FakeEventQueryService(),
-                recording -> {
-                    analysisCalls.incrementAndGet();
-                    return List.of();
-                },
-                profilingService(profilingCalls),
-                null, null,
-                null, null, null,
-                null, null, null,
-                null, null, null,
-                new I18n(java.util.Locale.ENGLISH),
-                executor);
-        AppShellController.PreparedRecordingWorkspace prepared = controller.prepareRecordingWorkspace(Path.of("startup.jfr"));
+        PreparedRecordingWorkspace prepared = prepareRecordingWorkspace(recording -> {
+            analysisCalls.incrementAndGet();
+            return List.of();
+        }, profilingService(profilingCalls));
         RecordingWorkspace workspace = new RecordingWorkspace(prepared.recording(), prepared.overview(), prepared.events(),
                 prepared.analysis(), prepared.profiling(), prepared.exceptions(), prepared.threads(), prepared.fileio(),
                 prepared.socketio(), prepared.locks(), prepared.heap(), prepared.leakSuspects(), prepared.tlab(),
@@ -1739,9 +3541,11 @@ void settingsPageContainsThemeSelectorNextToLanguageSelector() {
                 prepared.compilations(), prepared.codeCache(), prepared.classLoading(), prepared.vmOperations(),
                 prepared.environment(), prepared.javaAppOverview(), prepared.security(), prepared.nativeLibraries(),
                 prepared.threadDumps());
+        RecordingSectionLoader loader = new RecordingSectionLoader(executor, new I18n(java.util.Locale.ENGLISH),
+                visible -> { }, summary -> { }, Runnable::run);
 
-        controller.loadWorkspaceSection(workspace, "analysis");
-        controller.loadWorkspaceSection(workspace, "profiling");
+        loader.load(workspace, "analysis");
+        loader.load(workspace, "profiling");
 
         assertEquals(2, executor.queuedTaskCount());
 
@@ -1756,21 +3560,10 @@ void settingsPageContainsThemeSelectorNextToLanguageSelector() {
     void queuedSectionLoadingIsSkippedWhenUserNavigatesToLightSection() {
         QueueingRecordingOpenExecutor executor = new QueueingRecordingOpenExecutor();
         AtomicInteger analysisCalls = new AtomicInteger();
-        AppShellController controller = new AppShellController(
-                new AppShellViewModel(),
-                new FakeRecordingRepository(),
-                new FakeEventQueryService(),
-                recording -> {
-                    analysisCalls.incrementAndGet();
-                    return List.of();
-                },
-                null, null, null,
-                null, null, null,
-                null, null, null,
-                null, null, null,
-                new I18n(java.util.Locale.ENGLISH),
-                executor);
-        AppShellController.PreparedRecordingWorkspace prepared = controller.prepareRecordingWorkspace(Path.of("startup.jfr"));
+        PreparedRecordingWorkspace prepared = prepareRecordingWorkspace(recording -> {
+            analysisCalls.incrementAndGet();
+            return List.of();
+        }, null);
         RecordingWorkspace workspace = new RecordingWorkspace(prepared.recording(), prepared.overview(), prepared.events(),
                 prepared.analysis(), prepared.profiling(), prepared.exceptions(), prepared.threads(), prepared.fileio(),
                 prepared.socketio(), prepared.locks(), prepared.heap(), prepared.leakSuspects(), prepared.tlab(),
@@ -1778,9 +3571,11 @@ void settingsPageContainsThemeSelectorNextToLanguageSelector() {
                 prepared.compilations(), prepared.codeCache(), prepared.classLoading(), prepared.vmOperations(),
                 prepared.environment(), prepared.javaAppOverview(), prepared.security(), prepared.nativeLibraries(),
                 prepared.threadDumps());
+        RecordingSectionLoader loader = new RecordingSectionLoader(executor, new I18n(java.util.Locale.ENGLISH),
+                visible -> { }, summary -> { }, Runnable::run);
 
-        controller.loadWorkspaceSection(workspace, "analysis");
-        controller.loadWorkspaceSection(workspace, "overview");
+        loader.load(workspace, "analysis");
+        loader.load(workspace, "overview");
 
         assertEquals(1, executor.queuedTaskCount());
 
@@ -1791,30 +3586,7 @@ void settingsPageContainsThemeSelectorNextToLanguageSelector() {
 
     @Test
     void openingRecordingDoesNotPreloadHeavySections() {
-        QueueingRecordingOpenExecutor executor = new QueueingRecordingOpenExecutor();
-        AppShellController controller = new AppShellController(
-                new AppShellViewModel(),
-                new FakeRecordingRepository(),
-                new FakeEventQueryService(),
-                throwingRuleAnalysisService(),
-                null, null, null,
-                null, null, null,
-                null, null, null,
-                null, null, null,
-                new I18n(java.util.Locale.ENGLISH),
-                executor);
-        AppShellController.PreparedRecordingWorkspace prepared = controller.prepareRecordingWorkspace(Path.of("startup.jfr"));
-        RecordingWorkspace workspace = new RecordingWorkspace(prepared.recording(), prepared.overview(), prepared.events(),
-                prepared.analysis(), prepared.profiling(), prepared.exceptions(), prepared.threads(), prepared.fileio(),
-                prepared.socketio(), prepared.locks(), prepared.heap(), prepared.leakSuspects(), prepared.tlab(),
-                prepared.jvmInfo(), prepared.gcConfig(), prepared.gcSummary(), prepared.gcDetails(),
-                prepared.compilations(), prepared.codeCache(), prepared.classLoading(), prepared.vmOperations(),
-                prepared.environment(), prepared.javaAppOverview(), prepared.security(), prepared.nativeLibraries(),
-                prepared.threadDumps());
-
-        controller.preloadRecordingWorkspace(workspace);
-
-        assertEquals(0, executor.queuedTaskCount());
+        assertEquals(List.of(), WorkspaceSelectionController.preloadedWorkspaceSections());
     }
 
 
@@ -1852,6 +3624,14 @@ void settingsPageContainsThemeSelectorNextToLanguageSelector() {
         return recording -> {
             throw new AssertionError("Opening a recording must not run page analysis eagerly.");
         };
+    }
+
+    private static PreparedRecordingWorkspace prepareRecordingWorkspace(RuleAnalysisService ruleAnalysisService,
+            ProfilingService profilingService) {
+        RecordingServices services = new RecordingServices(new FakeRecordingRepository(), new FakeEventQueryService(),
+                ruleAnalysisService, profilingService, null, null, null, null, null, null, null, null, null, null, null,
+                null, null, null, null);
+        return new RecordingWorkspaceFactory(services, new I18n(java.util.Locale.ENGLISH)).prepare(Path.of("startup.jfr"));
     }
 
     private static ProfilingService profilingService(AtomicInteger calls) {
@@ -1905,6 +3685,21 @@ void settingsPageContainsThemeSelectorNextToLanguageSelector() {
         try (InputStream stream = AppShellController.class.getResourceAsStream("/css/app.css")) {
             return new String(stream.readAllBytes(), java.nio.charset.StandardCharsets.UTF_8);
         }
+    }
+
+    private static String workspaceSelectionSource() throws IOException {
+        return java.nio.file.Files.readString(
+                java.nio.file.Path.of("src/main/java/com/youngledo/jmcfx/ui/shell/WorkspaceSelectionController.java"));
+    }
+
+    private static String shellPageControllerRegistrySource() throws IOException {
+        return java.nio.file.Files.readString(
+                java.nio.file.Path.of("src/main/java/com/youngledo/jmcfx/ui/shell/ShellPageControllerRegistry.java"));
+    }
+
+    private static String shellRuntimeSource() throws IOException {
+        return java.nio.file.Files.readString(
+                java.nio.file.Path.of("src/main/java/com/youngledo/jmcfx/ui/shell/ShellRuntimeController.java"));
     }
 
     private static String cssBlock(String css, String selector) {
