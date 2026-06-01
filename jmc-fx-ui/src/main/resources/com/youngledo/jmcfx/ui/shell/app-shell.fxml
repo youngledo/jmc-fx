@@ -304,7 +304,7 @@
                     </items>
                 </SplitPane>
             </VBox>
-            <fx:include fx:id="jvmsPane" source="live-jvm-pane.fxml"/>
+            <VBox fx:id="jvmsPaneHost" spacing="0"/>
             <VBox fx:id="profilingPane" spacing="8">
                 <Label fx:id="profilingTitleLabel" styleClass="view-title"/>
                 <SplitPane VBox.vgrow="ALWAYS" DividerPositions="0.5">

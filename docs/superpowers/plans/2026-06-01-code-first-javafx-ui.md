@@ -158,7 +158,7 @@ git commit -m "test(ui): track code-first javafx migration boundary"
 - Modify: `jmc-fx-ui/src/test/java/com/youngledo/jmcfx/ui/shell/AppShellTest.java`
 - Delete: `jmc-fx-ui/src/main/resources/com/youngledo/jmcfx/ui/shell/live-jvm-pane.fxml`
 
-- [ ] **Step 1: Add failing Live JVM Java view structure test**
+- [x] **Step 1: Add failing Live JVM Java view structure test**
 
 In `LiveJvmPaneControllerTest`, add:
 
@@ -178,7 +178,7 @@ void liveJvmPaneViewBuildsWorkspaceRootAndPrimaryRegions() {
 
 This should fail because `LiveJvmPaneView` does not exist yet.
 
-- [ ] **Step 2: Run the failing Live JVM Java view test**
+- [x] **Step 2: Run the failing Live JVM Java view test**
 
 Run:
 
@@ -192,7 +192,7 @@ Expected:
 Compilation failure mentioning LiveJvmPaneView
 ```
 
-- [ ] **Step 3: Create `LiveJvmPaneView` skeleton**
+- [x] **Step 3: Create `LiveJvmPaneView` skeleton**
 
 Create `LiveJvmPaneView.java`:
 
@@ -224,7 +224,7 @@ final class LiveJvmPaneView {
 This is intentionally incomplete; it makes the first view test compile and
 drives the next tests.
 
-- [ ] **Step 4: Run the Live JVM Java view test and confirm it fails on incomplete tabs**
+- [x] **Step 4: Run the Live JVM Java view test and confirm it fails on incomplete tabs**
 
 Run:
 
@@ -238,7 +238,7 @@ Expected:
 FAILURE on expected tab count or missing child structure
 ```
 
-- [ ] **Step 5: Port the full Live JVM FXML node tree to `LiveJvmPaneView`**
+- [x] **Step 5: Port the full Live JVM FXML node tree to `LiveJvmPaneView`**
 
 Replace the skeleton with a complete Java view that declares package-private
 final fields matching every control currently injected by
@@ -308,7 +308,7 @@ jvmsMonitoringChart.setAnimated(false);
 jvmsMonitoringChart.setLegendVisible(true);
 ```
 
-- [ ] **Step 6: Update `LiveJvmPaneController` to use `LiveJvmPaneView`**
+- [x] **Step 6: Update `LiveJvmPaneController` to use `LiveJvmPaneView`**
 
 Change the controller shape from FXML injection to view ownership:
 
@@ -346,7 +346,7 @@ view.jvmsAgentTab.textProperty().bind(i18n.text("jvms.agent.tab"));
 
 Do not change `JvmBrowserViewModel` behavior in this task.
 
-- [ ] **Step 7: Replace shell include with Java-created Live JVM root**
+- [x] **Step 7: Replace shell include with Java-created Live JVM root**
 
 In `app-shell.fxml`, replace:
 
@@ -384,7 +384,7 @@ VBox.setVgrow(jvmsPaneController.root(), Priority.ALWAYS);
 
 Update shell visibility bindings from `jvmsPane` to `jvmsPaneHost`.
 
-- [ ] **Step 8: Update tests for Live JVM Java view migration**
+- [x] **Step 8: Update tests for Live JVM Java view migration**
 
 Update `AppShellTest.appShellIncludesLiveJvmPaneInsteadOfEmbeddingIt` so it now
 asserts the host boundary:
@@ -412,7 +412,7 @@ assertTrue(source.contains("private LiveJvmPaneController jvmsPaneController;"))
 assertTrue(source.contains("new LiveJvmPaneController()"));
 ```
 
-- [ ] **Step 9: Delete `live-jvm-pane.fxml` and update FXML guardrail**
+- [x] **Step 9: Delete `live-jvm-pane.fxml` and update FXML guardrail**
 
 Delete:
 
@@ -426,7 +426,7 @@ Then update the guardrail test expected list to:
 assertEquals(List.of("com/youngledo/jmcfx/ui/shell/app-shell.fxml"), fxmlFiles);
 ```
 
-- [ ] **Step 10: Run targeted Live JVM migration tests**
+- [x] **Step 10: Run targeted Live JVM migration tests**
 
 Run:
 
@@ -440,7 +440,7 @@ Expected:
 Tests run: ... Failures: 0, Errors: 0
 ```
 
-- [ ] **Step 11: Run app startup smoke check**
+- [x] **Step 11: Run app startup smoke check**
 
 Run:
 
@@ -457,7 +457,7 @@ Application starts without Unable to load app shell or LoadException
 If the process keeps running after the window opens, stop it with `Ctrl-C` or
 kill the Maven/Java child process after confirming startup.
 
-- [ ] **Step 12: Commit Live JVM Java view migration**
+- [x] **Step 12: Commit Live JVM Java view migration**
 
 Run:
 

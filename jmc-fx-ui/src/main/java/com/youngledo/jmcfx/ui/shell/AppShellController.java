@@ -352,7 +352,7 @@ public class AppShellController {
     @FXML private VBox metadataPane;
     @FXML private VBox advancedJfrPane;
     @FXML private VBox heapDumpAnalysisPane;
-    @FXML private VBox jvmsPane;
+    @FXML private VBox jvmsPaneHost;
     @FXML private VBox javaApplicationPane;
     @FXML private VBox jvmInternalsPane;
     @FXML private VBox environmentPane;
@@ -536,7 +536,7 @@ public class AppShellController {
     @FXML private Label heapDumpIssueDetailTitleLabel;
     @FXML private TextArea heapDumpIssueDetailArea;
     @FXML private TextArea heapDumpTextReportArea;
-    @FXML private LiveJvmPaneController jvmsPaneController;
+    private LiveJvmPaneController jvmsPaneController;
     @FXML private Label profilingTitleLabel;
     @FXML private TableView<HotMethod> profilingTable;
     @FXML private TabPane profilingTreeTabs;
@@ -1120,6 +1120,10 @@ public class AppShellController {
         heapDumpAnalysisViewModel = heapDumpAnalysisService == null ? null
                 : new HeapDumpAnalysisViewModel(heapDumpAnalysisService,
                         new VirtualThreadHeapDumpAnalysisExecutor(), i18n);
+        jvmsPaneController = new LiveJvmPaneController();
+        VBox liveJvmRoot = jvmsPaneController.root();
+        VBox.setVgrow(liveJvmRoot, Priority.ALWAYS);
+        jvmsPaneHost.getChildren().setAll(liveJvmRoot);
         homePane.visibleProperty().bind(viewModel.selectedSectionProperty().isEqualTo("home"));
         homePane.managedProperty().bind(homePane.visibleProperty());
         overviewPane.visibleProperty().bind(viewModel.selectedSectionProperty().isEqualTo("overview"));
@@ -1134,8 +1138,8 @@ public class AppShellController {
         advancedJfrPane.managedProperty().bind(advancedJfrPane.visibleProperty());
         heapDumpAnalysisPane.visibleProperty().bind(viewModel.selectedSectionProperty().isEqualTo("heapDumpAnalysis"));
         heapDumpAnalysisPane.managedProperty().bind(heapDumpAnalysisPane.visibleProperty());
-        jvmsPane.visibleProperty().bind(viewModel.selectedSectionProperty().isEqualTo("jvms"));
-        jvmsPane.managedProperty().bind(jvmsPane.visibleProperty());
+        jvmsPaneHost.visibleProperty().bind(viewModel.selectedSectionProperty().isEqualTo("jvms"));
+        jvmsPaneHost.managedProperty().bind(jvmsPaneHost.visibleProperty());
         javaApplicationPane.visibleProperty().bind(viewModel.selectedSectionProperty().isEqualTo("javaApplication"));
         javaApplicationPane.managedProperty().bind(javaApplicationPane.visibleProperty());
         jvmInternalsPane.visibleProperty().bind(viewModel.selectedSectionProperty().isEqualTo("jvmInternals"));

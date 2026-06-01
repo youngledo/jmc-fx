@@ -108,9 +108,7 @@ class AppShellTest {
                 .sorted()
                 .toList();
 
-        assertEquals(List.of(
-                "com/youngledo/jmcfx/ui/shell/app-shell.fxml",
-                "com/youngledo/jmcfx/ui/shell/live-jvm-pane.fxml"), fxmlFiles);
+        assertEquals(List.of("com/youngledo/jmcfx/ui/shell/app-shell.fxml"), fxmlFiles);
     }
 
     @Test
@@ -385,10 +383,9 @@ class AppShellTest {
     @Test
     void appShellIncludesLiveJvmPaneInsteadOfEmbeddingIt() throws Exception {
         Document document = appShellFxml();
-        Element include = elementByFxId(document, "jvmsPane");
+        Element host = elementByFxId(document, "jvmsPaneHost");
 
-        assertEquals("fx:include", include.getTagName());
-        assertEquals("live-jvm-pane.fxml", include.getAttribute("source"));
+        assertEquals("VBox", host.getTagName());
         assertNull(elementByFxIdOrNull(document, "jvmsTable"));
         assertNull(elementByFxIdOrNull(document, "jvmsMonitoringToolbar"));
         assertNull(elementByFxIdOrNull(document, "jvmsAgentTransformsTable"));
@@ -399,8 +396,9 @@ class AppShellTest {
         String source = java.nio.file.Files.readString(
                 java.nio.file.Path.of("src/main/java/com/youngledo/jmcfx/ui/shell/AppShellController.java"));
 
-        assertTrue(source.contains("@FXML private VBox jvmsPane;"));
-        assertTrue(source.contains("@FXML private LiveJvmPaneController jvmsPaneController;"));
+        assertTrue(source.contains("@FXML private VBox jvmsPaneHost;"));
+        assertTrue(source.contains("private LiveJvmPaneController jvmsPaneController;"));
+        assertTrue(source.contains("new LiveJvmPaneController()"));
         assertFalse(source.contains("@FXML private TableView<JvmConnection> jvmsTable;"));
         assertFalse(source.contains("@FXML private Button jvmsAddNotificationSubscriptionButton;"));
         assertFalse(source.contains("private void configureJmxMonitoring()"));
@@ -458,28 +456,28 @@ class AppShellTest {
                 java.nio.file.Path.of("src/main/resources/com/youngledo/jmcfx/ui/i18n/messages_zh_CN.properties"));
         String css = appCss();
 
-        assertTrue(controller.contains("@FXML private Tab profilingCallGraphTab;"));
-        assertTrue(controller.contains("@FXML private HBox profilingCallGraphToolbar;"));
-        assertTrue(controller.contains("@FXML private ComboBox<CallGraphDirection> profilingCallGraphDirectionCombo;"));
-        assertTrue(controller.contains("@FXML private Label profilingCallGraphDepthLabel;"));
-        assertTrue(controller.contains("@FXML private Spinner<Integer> profilingCallGraphDepthSpinner;"));
-        assertTrue(controller.contains("@FXML private Button profilingCallGraphZoomOutButton;"));
-        assertTrue(controller.contains("@FXML private Button profilingCallGraphResetZoomButton;"));
-        assertTrue(controller.contains("@FXML private Button profilingCallGraphZoomInButton;"));
-        assertTrue(controller.contains("@FXML private Button profilingCallGraphFitButton;"));
-        assertTrue(controller.contains("@FXML private VBox profilingCallGraphContainer;"));
+        assertTrue(controller.contains("private Tab profilingCallGraphTab;"));
+        assertTrue(controller.contains("private HBox profilingCallGraphToolbar;"));
+        assertTrue(controller.contains("private ComboBox<CallGraphDirection> profilingCallGraphDirectionCombo;"));
+        assertTrue(controller.contains("private Label profilingCallGraphDepthLabel;"));
+        assertTrue(controller.contains("private Spinner<Integer> profilingCallGraphDepthSpinner;"));
+        assertTrue(controller.contains("private Button profilingCallGraphZoomOutButton;"));
+        assertTrue(controller.contains("private Button profilingCallGraphResetZoomButton;"));
+        assertTrue(controller.contains("private Button profilingCallGraphZoomInButton;"));
+        assertTrue(controller.contains("private Button profilingCallGraphFitButton;"));
+        assertTrue(controller.contains("private VBox profilingCallGraphContainer;"));
         assertTrue(controller.contains("private CallGraphView profilingCallGraphView;"));
-        assertTrue(controller.contains("@FXML private Tab profilingDependencyGraphTab;"));
-        assertTrue(controller.contains("@FXML private Spinner<Integer> profilingDependencyDepthSpinner;"));
-        assertTrue(controller.contains("@FXML private TableView<DependencyGraphEdge> profilingDependencyTable;"));
-        assertTrue(controller.contains("@FXML private VBox profilingDependencyGraphContainer;"));
+        assertTrue(controller.contains("private Tab profilingDependencyGraphTab;"));
+        assertTrue(controller.contains("private Spinner<Integer> profilingDependencyDepthSpinner;"));
+        assertTrue(controller.contains("private TableView<DependencyGraphEdge> profilingDependencyTable;"));
+        assertTrue(controller.contains("private VBox profilingDependencyGraphContainer;"));
         assertTrue(controller.contains("private CallGraphView profilingDependencyGraphView;"));
-        assertTrue(controller.contains("@FXML private Tab profilingCallersFlameTab;"));
-        assertTrue(controller.contains("@FXML private Button profilingCallersFlameOrientationButton;"));
-        assertTrue(controller.contains("@FXML private VBox profilingCallersFlameContainer;"));
-        assertTrue(controller.contains("@FXML private Tab profilingCalleesFlameTab;"));
-        assertTrue(controller.contains("@FXML private Button profilingCalleesFlameOrientationButton;"));
-        assertTrue(controller.contains("@FXML private VBox profilingCalleesFlameContainer;"));
+        assertTrue(controller.contains("private Tab profilingCallersFlameTab;"));
+        assertTrue(controller.contains("private Button profilingCallersFlameOrientationButton;"));
+        assertTrue(controller.contains("private VBox profilingCallersFlameContainer;"));
+        assertTrue(controller.contains("private Tab profilingCalleesFlameTab;"));
+        assertTrue(controller.contains("private Button profilingCalleesFlameOrientationButton;"));
+        assertTrue(controller.contains("private VBox profilingCalleesFlameContainer;"));
         assertTrue(controller.contains("private FlameGraphView profilingCallersFlameGraphView;"));
         assertTrue(controller.contains("private FlameGraphView profilingCalleesFlameGraphView;"));
         assertTrue(controller.contains("profilingCallGraphView.emptyTextProperty().bind(i18n.text(\"profiling.callGraph.empty\"))"));
@@ -625,17 +623,17 @@ class AppShellTest {
                 java.nio.file.Path.of("src/main/resources/com/youngledo/jmcfx/ui/i18n/messages_zh_CN.properties"));
         String css = appCss();
 
-        assertTrue(controller.contains("@FXML private Tab jvmsOverviewTab;"));
-        assertTrue(controller.contains("@FXML private TableView<LiveJvmOverviewMetric> jvmsOverviewPersistenceTable;"));
-        assertTrue(controller.contains("@FXML private LineChart<Number, Number> jvmsOverviewDashboardChart;"));
-        assertTrue(controller.contains("@FXML private FlowPane jvmsOverviewDashboardMetricToggles;"));
-        assertTrue(controller.contains("@FXML private TableView<LiveJvmOverviewMetric> jvmsOverviewDashboardTable;"));
-        assertTrue(controller.contains("@FXML private LineChart<Number, Number> jvmsOverviewProcessorChart;"));
-        assertTrue(controller.contains("@FXML private FlowPane jvmsOverviewProcessorMetricToggles;"));
-        assertTrue(controller.contains("@FXML private TableView<LiveJvmOverviewMetric> jvmsOverviewProcessorTable;"));
-        assertTrue(controller.contains("@FXML private LineChart<Number, Number> jvmsOverviewMemoryChart;"));
-        assertTrue(controller.contains("@FXML private FlowPane jvmsOverviewMemoryMetricToggles;"));
-        assertTrue(controller.contains("@FXML private TableView<LiveJvmOverviewMetric> jvmsOverviewMemoryTable;"));
+        assertTrue(controller.contains("private Tab jvmsOverviewTab;"));
+        assertTrue(controller.contains("private TableView<LiveJvmOverviewMetric> jvmsOverviewPersistenceTable;"));
+        assertTrue(controller.contains("private LineChart<Number, Number> jvmsOverviewDashboardChart;"));
+        assertTrue(controller.contains("private FlowPane jvmsOverviewDashboardMetricToggles;"));
+        assertTrue(controller.contains("private TableView<LiveJvmOverviewMetric> jvmsOverviewDashboardTable;"));
+        assertTrue(controller.contains("private LineChart<Number, Number> jvmsOverviewProcessorChart;"));
+        assertTrue(controller.contains("private FlowPane jvmsOverviewProcessorMetricToggles;"));
+        assertTrue(controller.contains("private TableView<LiveJvmOverviewMetric> jvmsOverviewProcessorTable;"));
+        assertTrue(controller.contains("private LineChart<Number, Number> jvmsOverviewMemoryChart;"));
+        assertTrue(controller.contains("private FlowPane jvmsOverviewMemoryMetricToggles;"));
+        assertTrue(controller.contains("private TableView<LiveJvmOverviewMetric> jvmsOverviewMemoryTable;"));
         assertTrue(controller.contains("DEFAULT_OVERVIEW_CHART_METRICS"));
         assertTrue(controller.contains("overviewChartSeries"));
         assertTrue(controller.contains("new CheckBox()"));
@@ -730,9 +728,9 @@ class AppShellTest {
         String chinese = java.nio.file.Files.readString(
                 java.nio.file.Path.of("src/main/resources/com/youngledo/jmcfx/ui/i18n/messages_zh_CN.properties"));
 
-        assertTrue(controller.contains("@FXML private Button jvmsAddNotificationSubscriptionButton;"));
-        assertTrue(controller.contains("@FXML private Button jvmsStartNotificationsButton;"));
-        assertTrue(controller.contains("@FXML private Button jvmsStopNotificationsButton;"));
+        assertTrue(controller.contains("private Button jvmsAddNotificationSubscriptionButton;"));
+        assertTrue(controller.contains("private Button jvmsStartNotificationsButton;"));
+        assertTrue(controller.contains("private Button jvmsStopNotificationsButton;"));
         assertTrue(controller.contains(
                 "jvmsAddNotificationSubscriptionButton.setOnAction(event -> addSelectedNotificationSubscription())"));
         assertTrue(controller.contains(
@@ -766,13 +764,13 @@ class AppShellTest {
         String css = appCss();
 
         assertTrue(controller.contains("import com.youngledo.jmcfx.domain.model.MemoryIssue;"));
-        assertTrue(controller.contains("@FXML private TabPane advancedJfrTabs;"));
-        assertTrue(controller.contains("@FXML private Tab advancedJfrHeatmapTab;"));
-        assertTrue(controller.contains("@FXML private Tab advancedJfrMemoryTab;"));
-        assertTrue(controller.contains("@FXML private Label advancedJfrMemorySummaryLabel;"));
-        assertTrue(controller.contains("@FXML private TableView<MemoryIssue> advancedJfrMemoryTable;"));
-        assertTrue(controller.contains("@FXML private Label advancedJfrMemoryDetailTitleLabel;"));
-        assertTrue(controller.contains("@FXML private TextArea advancedJfrMemoryDetailArea;"));
+        assertTrue(controller.contains("private TabPane advancedJfrTabs;"));
+        assertTrue(controller.contains("private Tab advancedJfrHeatmapTab;"));
+        assertTrue(controller.contains("private Tab advancedJfrMemoryTab;"));
+        assertTrue(controller.contains("private Label advancedJfrMemorySummaryLabel;"));
+        assertTrue(controller.contains("private TableView<MemoryIssue> advancedJfrMemoryTable;"));
+        assertTrue(controller.contains("private Label advancedJfrMemoryDetailTitleLabel;"));
+        assertTrue(controller.contains("private TextArea advancedJfrMemoryDetailArea;"));
         assertTrue(controller.contains("private boolean rebindingAdvancedJfrMemory;"));
         assertTrue(controller.contains("configureAdvancedJfrMemoryTable();"));
         assertTrue(controller.contains("advancedJfrHeatmapTab.textProperty().bind(i18n.text(\"advancedJfr.heatmap.tab\"))"));
@@ -806,11 +804,11 @@ class AppShellTest {
         assertTrue(css.contains(".detail-panel"));
         assertTrue(css.contains(".analysis-filter-bar"));
 
-        assertTrue(controller.contains("@FXML private TextField analysisSearchField;"));
-        assertTrue(controller.contains("@FXML private Spinner<Integer> analysisMinimumScoreSpinner;"));
-        assertTrue(controller.contains("@FXML private CheckBox analysisShowOkCheckBox;"));
-        assertTrue(controller.contains("@FXML private CheckBox analysisShowIgnoredCheckBox;"));
-        assertTrue(controller.contains("@FXML private CheckBox analysisShowUnavailableCheckBox;"));
+        assertTrue(controller.contains("private TextField analysisSearchField;"));
+        assertTrue(controller.contains("private Spinner<Integer> analysisMinimumScoreSpinner;"));
+        assertTrue(controller.contains("private CheckBox analysisShowOkCheckBox;"));
+        assertTrue(controller.contains("private CheckBox analysisShowIgnoredCheckBox;"));
+        assertTrue(controller.contains("private CheckBox analysisShowUnavailableCheckBox;"));
         assertTrue(controller.contains("analysisSearchField.textProperty().bindBidirectional"));
         assertTrue(controller.contains("analysisMinimumScoreSpinner.getValueFactory().valueProperty().bindBidirectional"));
         assertTrue(controller.contains("analysisShowOkCheckBox.selectedProperty().bindBidirectional"));
@@ -910,12 +908,12 @@ class AppShellTest {
 
         assertTrue(controller.contains("import com.youngledo.jmcfx.domain.model.JfrMetadataEventType;"));
         assertTrue(controller.contains("import com.youngledo.jmcfx.ui.metadata.JfrMetadataViewModel;"));
-        assertTrue(controller.contains("@FXML private VBox metadataPane;"));
-        assertTrue(controller.contains("@FXML private Label metadataTitleLabel;"));
-        assertTrue(controller.contains("@FXML private Label metadataSummaryLabel;"));
-        assertTrue(controller.contains("@FXML private TableView<JfrMetadataEventType> metadataEventTypesTable;"));
-        assertTrue(controller.contains("@FXML private Label metadataDetailTitleLabel;"));
-        assertTrue(controller.contains("@FXML private TextArea metadataDetailArea;"));
+        assertTrue(controller.contains("private VBox metadataPane;"));
+        assertTrue(controller.contains("private Label metadataTitleLabel;"));
+        assertTrue(controller.contains("private Label metadataSummaryLabel;"));
+        assertTrue(controller.contains("private TableView<JfrMetadataEventType> metadataEventTypesTable;"));
+        assertTrue(controller.contains("private Label metadataDetailTitleLabel;"));
+        assertTrue(controller.contains("private TextArea metadataDetailArea;"));
         assertTrue(controller.contains("metadataPane.visibleProperty().bind(viewModel.selectedSectionProperty().isEqualTo(\"metadata\"))"));
         assertTrue(controller.contains("configureMetadataTable();"));
         assertTrue(controller.contains("metadataTitleLabel.textProperty().bind(i18n.text(\"metadata.title\"))"));
@@ -969,10 +967,10 @@ class AppShellTest {
 
         assertTrue(controller.contains("import com.youngledo.jmcfx.domain.model.G1GcRegionState;"));
         assertTrue(controller.contains("import com.youngledo.jmcfx.ui.gc.G1GcViewModel;"));
-        assertTrue(controller.contains("@FXML private VBox g1GcPane;"));
-        assertTrue(controller.contains("@FXML private TableView<G1GcRegionSummary> g1GcRegionSummaryTable;"));
-        assertTrue(controller.contains("@FXML private TableView<G1GcRegionState> g1GcRegionStatesTable;"));
-        assertTrue(controller.contains("@FXML private TableView<GcEvent> g1GcPauseTable;"));
+        assertTrue(controller.contains("private VBox g1GcPane;"));
+        assertTrue(controller.contains("private TableView<G1GcRegionSummary> g1GcRegionSummaryTable;"));
+        assertTrue(controller.contains("private TableView<G1GcRegionState> g1GcRegionStatesTable;"));
+        assertTrue(controller.contains("private TableView<GcEvent> g1GcPauseTable;"));
         assertTrue(controller.contains("g1GcPane.visibleProperty().bind(viewModel.selectedSectionProperty().isEqualTo(\"g1Gc\"))"));
         assertTrue(controller.contains("configureG1GcTables();"));
         assertTrue(controller.contains("g1GcRegionStatesTable.setItems(nextViewModel.recentRegionStatesProperty())"));
@@ -1014,10 +1012,10 @@ class AppShellTest {
 
         assertTrue(controller.contains("import com.youngledo.jmcfx.domain.model.JavaFxPulsePhase;"));
         assertTrue(controller.contains("import com.youngledo.jmcfx.ui.jfx.JavaFxEventsViewModel;"));
-        assertTrue(controller.contains("@FXML private VBox javaFxEventsPane;"));
-        assertTrue(controller.contains("@FXML private TableView<JavaFxPulsePhase> javaFxEventsPhaseTable;"));
-        assertTrue(controller.contains("@FXML private TableView<JavaFxPulseSummary> javaFxEventsPulseTable;"));
-        assertTrue(controller.contains("@FXML private TableView<JavaFxInputEvent> javaFxEventsInputTable;"));
+        assertTrue(controller.contains("private VBox javaFxEventsPane;"));
+        assertTrue(controller.contains("private TableView<JavaFxPulsePhase> javaFxEventsPhaseTable;"));
+        assertTrue(controller.contains("private TableView<JavaFxPulseSummary> javaFxEventsPulseTable;"));
+        assertTrue(controller.contains("private TableView<JavaFxInputEvent> javaFxEventsInputTable;"));
         assertTrue(controller.contains("javaFxEventsPane.visibleProperty().bind(viewModel.selectedSectionProperty().isEqualTo(\"javaFxEvents\"))"));
         assertTrue(controller.contains("configureJavaFxEventsTables();"));
         assertTrue(controller.contains("javaFxEventsPhaseTable.setItems(nextViewModel.pulsePhasesProperty())"));
@@ -1420,12 +1418,12 @@ class AppShellTest {
         String chinese = java.nio.file.Files.readString(
                 java.nio.file.Path.of("src/main/resources/com/youngledo/jmcfx/ui/i18n/messages_zh_CN.properties"));
 
-        assertTrue(controller.contains("@FXML private TextField jvmsManualNameField;"));
-        assertTrue(controller.contains("@FXML private Label jvmsManualUrlHintLabel;"));
-        assertTrue(controller.contains("@FXML private Button jvmsSaveTargetButton;"));
-        assertTrue(controller.contains("@FXML private Button jvmsRemoveSavedTargetButton;"));
-        assertTrue(controller.contains("@FXML private Button jvmsRefreshJdpButton;"));
-        assertTrue(controller.contains("@FXML private Label jvmsSelectedConnectionStatusLabel;"));
+        assertTrue(controller.contains("private TextField jvmsManualNameField;"));
+        assertTrue(controller.contains("private Label jvmsManualUrlHintLabel;"));
+        assertTrue(controller.contains("private Button jvmsSaveTargetButton;"));
+        assertTrue(controller.contains("private Button jvmsRemoveSavedTargetButton;"));
+        assertTrue(controller.contains("private Button jvmsRefreshJdpButton;"));
+        assertTrue(controller.contains("private Label jvmsSelectedConnectionStatusLabel;"));
         assertTrue(controller.contains("jvmsManualNameField.textProperty().bindBidirectional("));
         assertTrue(controller.contains("jvmBrowserViewModel.manualConnectionNameProperty()"));
         assertTrue(controller.contains("jvmsManualUrlHintLabel.textProperty().bind(i18n.text(\"jvms.manualUrlHint\"))"));
@@ -1627,11 +1625,11 @@ class AppShellTest {
         String chinese = java.nio.file.Files.readString(
                 java.nio.file.Path.of("src/main/resources/com/youngledo/jmcfx/ui/i18n/messages_zh_CN.properties"));
 
-        assertTrue(controller.contains("@FXML private Tab jvmsAgentTab;"));
-        assertTrue(controller.contains("@FXML private ComboBox<JmcAgentPreset> jvmsAgentPresetCombo;"));
-        assertTrue(controller.contains("@FXML private TableView<JmcAgentTransform> jvmsAgentTransformsTable;"));
-        assertTrue(controller.contains("@FXML private TextArea jvmsAgentConfigurationArea;"));
-        assertTrue(controller.contains("@FXML private Label jvmsAgentStatusLabel;"));
+        assertTrue(controller.contains("private Tab jvmsAgentTab;"));
+        assertTrue(controller.contains("private ComboBox<JmcAgentPreset> jvmsAgentPresetCombo;"));
+        assertTrue(controller.contains("private TableView<JmcAgentTransform> jvmsAgentTransformsTable;"));
+        assertTrue(controller.contains("private TextArea jvmsAgentConfigurationArea;"));
+        assertTrue(controller.contains("private Label jvmsAgentStatusLabel;"));
         assertTrue(controller.contains("configureJmcAgentManager();"));
         assertTrue(controller.contains("bindJmcAgentManager();"));
         assertTrue(controller.contains("jvmsAgentPresetCombo.setItems(jvmBrowserViewModel.jmcAgentPresetsProperty())"));
