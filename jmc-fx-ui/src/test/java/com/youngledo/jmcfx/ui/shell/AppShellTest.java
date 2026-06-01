@@ -345,158 +345,34 @@ class AppShellTest {
                 "Home action buttons should keep JavaFX's default button style class; add local hooks in controller");
         assertFalse(elementByFxId(document, "homeConnectJvmButton").hasAttribute("disable"),
                 "Connect JVM should be enabled now that the JVM browser page exists");
-        assertEquals("SplitPane", elementByFxId(document, "jvmsWorkspaceSplit").getTagName());
-        assertEquals("0.28", elementByFxId(document, "jvmsWorkspaceSplit").getAttribute("DividerPositions"));
-        assertEquals("VBox", elementByFxId(document, "jvmsBrowserSidebar").getTagName());
-        assertTrue(hasStyleClass(elementByFxId(document, "jvmsBrowserSidebar"), "summary-panel"));
-        assertTrue(hasStyleClass(elementByFxId(document, "jvmsBrowserSidebar"), "jvms-browser-sidebar"));
-        assertEquals("Button", elementByFxId(document, "jvmsRefreshButton").getTagName());
-        assertEquals("TextField", elementByFxId(document, "jvmsManualUrlField").getTagName());
-        assertFalse(elementByFxId(document, "jvmsManualUrlField").hasAttribute("prefWidth"));
-        assertEquals("Label", elementByFxId(document, "jvmsManualUrlHintLabel").getTagName());
-        assertEquals("true", elementByFxId(document, "jvmsManualUrlHintLabel").getAttribute("wrapText"));
-        assertTrue(hasStyleClass(elementByFxId(document, "jvmsManualUrlHintLabel"), "event-window-status"));
-        assertEquals("TextField", elementByFxId(document, "jvmsManualNameField").getTagName());
-        assertFalse(elementByFxId(document, "jvmsManualNameField").hasAttribute("prefWidth"));
-        assertEquals("Button", elementByFxId(document, "jvmsSaveTargetButton").getTagName());
-        assertEquals("Button", elementByFxId(document, "jvmsRemoveSavedTargetButton").getTagName());
-        assertEquals("Button", elementByFxId(document, "jvmsRefreshJdpButton").getTagName());
-        assertEquals("Label", elementByFxId(document, "jvmsSelectedConnectionStatusLabel").getTagName());
-        assertEquals("true", elementByFxId(document, "jvmsSelectedConnectionStatusLabel").getAttribute("wrapText"));
-        assertTrue(hasStyleClass(elementByFxId(document, "jvmsSelectedConnectionStatusLabel"),
-                "event-window-status"));
-        assertEquals("Button", elementByFxId(document, "jvmsConnectButton").getTagName());
-        assertEquals("Button", elementByFxId(document, "jvmsDisconnectButton").getTagName());
-        assertEquals("TableView", elementByFxId(document, "jvmsTable").getTagName());
-        assertEquals("ALWAYS", elementByFxId(document, "jvmsTable").getAttribute("VBox.vgrow"));
-        assertEquals("VBox", elementByFxId(document, "jvmsSessionDetailPane").getTagName());
-        assertTrue(hasStyleClass(elementByFxId(document, "jvmsSessionDetailPane"), "summary-panel"));
-        assertTrue(hasStyleClass(elementByFxId(document, "jvmsSessionDetailPane"), "jvms-session-detail"));
-        assertEquals("Label", elementByFxId(document, "jvmsSessionTitleLabel").getTagName());
-        assertEquals("Label", elementByFxId(document, "jvmsRuntimeSummaryLabel").getTagName());
-        assertEquals("ListView", elementByFxId(document, "jvmsCapabilitiesList").getTagName());
-        assertEquals("Button", elementByFxId(document, "jvmsStartRecordingButton").getTagName());
-        assertEquals("Button", elementByFxId(document, "jvmsStopRecordingButton").getTagName());
-        assertEquals("TableView", elementByFxId(document, "jvmsRecordingsTable").getTagName());
-        assertEquals("Label", elementByFxId(document, "jvmsRecordingStatusLabel").getTagName());
-        assertEquals("Label", elementByFxId(document, "jvmsSessionErrorLabel").getTagName());
-        assertEquals("TabPane", elementByFxId(document, "jvmsLiveTabs").getTagName());
-        assertEquals("Tab", elementByFxId(document, "jvmsOverviewTab").getTagName());
-        assertTrue(hasStyleClass(elementByFxId(document, "jvmsOverviewContent"), "jvms-live-tab-content"));
-        assertFalse(hasFxId(document, "jvmsOverviewUpdatedLabel"));
-        assertEquals("Label", elementByFxId(document, "jvmsOverviewPersistenceTitleLabel").getTagName());
-        assertEquals("Label", elementByFxId(document, "jvmsOverviewPersistenceLabel").getTagName());
-        assertFalse(hasFxId(document, "jvmsRefreshOverviewButton"));
-        assertEquals("TableView", elementByFxId(document, "jvmsOverviewPersistenceTable").getTagName());
-        assertEquals("Label", elementByFxId(document, "jvmsOverviewDashboardTitleLabel").getTagName());
-        assertEquals("TabPane", elementByFxId(document, "jvmsOverviewDashboardTabs").getTagName());
-        assertTrue(hasStyleClass(elementByFxId(document, "jvmsOverviewDashboardTabs"), "page-detail-tabs"));
-        assertEquals("FlowPane", elementByFxId(document, "jvmsOverviewDashboardMetricToggles").getTagName());
-        assertEquals("VERTICAL", elementByFxId(document, "jvmsOverviewDashboardMetricToggles").getAttribute("orientation"));
-        assertEquals("ScrollPane", elementByFxId(document, "jvmsOverviewDashboardMetricToggles").getParentNode().getNodeName());
-        assertTrue(hasStyleClass(elementByFxId(document, "jvmsOverviewDashboardMetricToggles"),
-                "jvms-overview-metric-toggles"));
-        assertEquals("LineChart", elementByFxId(document, "jvmsOverviewDashboardChart").getTagName());
-        assertEquals("false", elementByFxId(document, "jvmsOverviewDashboardChart").getAttribute("legendVisible"));
-        assertEquals("TableView", elementByFxId(document, "jvmsOverviewDashboardTable").getTagName());
-        assertEquals("Label", elementByFxId(document, "jvmsOverviewProcessorTitleLabel").getTagName());
-        assertEquals("TabPane", elementByFxId(document, "jvmsOverviewProcessorTabs").getTagName());
-        assertTrue(hasStyleClass(elementByFxId(document, "jvmsOverviewProcessorTabs"), "page-detail-tabs"));
-        assertEquals("FlowPane", elementByFxId(document, "jvmsOverviewProcessorMetricToggles").getTagName());
-        assertEquals("VERTICAL", elementByFxId(document, "jvmsOverviewProcessorMetricToggles").getAttribute("orientation"));
-        assertEquals("ScrollPane", elementByFxId(document, "jvmsOverviewProcessorMetricToggles").getParentNode().getNodeName());
-        assertTrue(hasStyleClass(elementByFxId(document, "jvmsOverviewProcessorMetricToggles"),
-                "jvms-overview-metric-toggles"));
-        assertEquals("LineChart", elementByFxId(document, "jvmsOverviewProcessorChart").getTagName());
-        assertEquals("false", elementByFxId(document, "jvmsOverviewProcessorChart").getAttribute("legendVisible"));
-        assertEquals("TableView", elementByFxId(document, "jvmsOverviewProcessorTable").getTagName());
-        assertEquals("Label", elementByFxId(document, "jvmsOverviewMemoryTitleLabel").getTagName());
-        assertEquals("TabPane", elementByFxId(document, "jvmsOverviewMemoryTabs").getTagName());
-        assertTrue(hasStyleClass(elementByFxId(document, "jvmsOverviewMemoryTabs"), "page-detail-tabs"));
-        assertEquals("FlowPane", elementByFxId(document, "jvmsOverviewMemoryMetricToggles").getTagName());
-        assertEquals("VERTICAL", elementByFxId(document, "jvmsOverviewMemoryMetricToggles").getAttribute("orientation"));
-        assertEquals("ScrollPane", elementByFxId(document, "jvmsOverviewMemoryMetricToggles").getParentNode().getNodeName());
-        assertTrue(hasStyleClass(elementByFxId(document, "jvmsOverviewMemoryMetricToggles"),
-                "jvms-overview-metric-toggles"));
-        assertEquals("LineChart", elementByFxId(document, "jvmsOverviewMemoryChart").getTagName());
-        assertEquals("false", elementByFxId(document, "jvmsOverviewMemoryChart").getAttribute("legendVisible"));
-        assertEquals("TableView", elementByFxId(document, "jvmsOverviewMemoryTable").getTagName());
-        assertEquals("Label", elementByFxId(document, "jvmsOverviewErrorLabel").getTagName());
-        assertEquals("Tab", elementByFxId(document, "jvmsSessionTab").getTagName());
-        assertTrue(hasStyleClass(elementByFxId(document, "jvmsSessionContent"), "jvms-live-tab-content"));
-        assertEquals("Tab", elementByFxId(document, "jvmsMBeanTab").getTagName());
-        assertTrue(hasStyleClass(elementByFxId(document, "jvmsMBeanContent"), "jvms-live-tab-content"));
-        assertTrue(hasStyleClass(elementByFxId(document, "jvmsMBeanDetailPane"), "jvms-live-workspace"));
-        assertEquals("TreeView", elementByFxId(document, "jvmsMBeanTree").getTagName());
-        assertEquals("TableView", elementByFxId(document, "jvmsMBeanAttributesTable").getTagName());
-        assertEquals("TableView", elementByFxId(document, "jvmsMBeanOperationsTable").getTagName());
-        assertEquals("TextField", elementByFxId(document, "jvmsMBeanOperationArgumentsField").getTagName());
-        assertEquals("Button", elementByFxId(document, "jvmsRefreshMBeanButton").getTagName());
-        assertEquals("Button", elementByFxId(document, "jvmsInvokeMBeanOperationButton").getTagName());
-        assertEquals("Label", elementByFxId(document, "jvmsMBeanResultLabel").getTagName());
-        assertEquals("Label", elementByFxId(document, "jvmsMBeanErrorLabel").getTagName());
-        assertEquals("Tab", elementByFxId(document, "jvmsDiagnosticsTab").getTagName());
-        assertTrue(hasStyleClass(elementByFxId(document, "jvmsDiagnosticContent"), "jvms-live-tab-content"));
-        assertTrue(hasStyleClass(elementByFxId(document, "jvmsDiagnosticDetailPane"), "jvms-live-workspace"));
-        assertEquals("TableView", elementByFxId(document, "jvmsDiagnosticCommandsTable").getTagName());
-        assertEquals("TextField", elementByFxId(document, "jvmsDiagnosticArgumentsField").getTagName());
-        assertEquals("Button", elementByFxId(document, "jvmsExecuteDiagnosticCommandButton").getTagName());
-        assertEquals("Button", elementByFxId(document, "jvmsSaveDiagnosticOutputButton").getTagName());
-        assertEquals("TextArea", elementByFxId(document, "jvmsDiagnosticOutputArea").getTagName());
-        assertEquals("Label", elementByFxId(document, "jvmsDiagnosticErrorLabel").getTagName());
-        assertEquals("Tab", elementByFxId(document, "jvmsTriggersTab").getTagName());
-        assertTrue(hasStyleClass(elementByFxId(document, "jvmsTriggersContent"), "jvms-live-tab-content"));
-        assertEquals("FlowPane", elementByFxId(document, "jvmsTriggerEditorPane").getTagName());
-        assertEquals("TextField", elementByFxId(document, "jvmsTriggerNameField").getTagName());
-        assertEquals("ComboBox", elementByFxId(document, "jvmsTriggerMetricCombo").getTagName());
-        assertEquals("ComboBox", elementByFxId(document, "jvmsTriggerOperatorCombo").getTagName());
-        assertEquals("TextField", elementByFxId(document, "jvmsTriggerThresholdField").getTagName());
-        assertEquals("ComboBox", elementByFxId(document, "jvmsTriggerActionCombo").getTagName());
-        assertEquals("ComboBox", elementByFxId(document, "jvmsTriggerCommandCombo").getTagName());
-        assertEquals("Button", elementByFxId(document, "jvmsAddTriggerButton").getTagName());
-        assertEquals("Button", elementByFxId(document, "jvmsRemoveTriggerButton").getTagName());
-        assertEquals("TableView", elementByFxId(document, "jvmsTriggerRulesTable").getTagName());
-        assertEquals("Button", elementByFxId(document, "jvmsEvaluateTriggersButton").getTagName());
-        assertEquals("TableView", elementByFxId(document, "jvmsTriggerEventsTable").getTagName());
-        assertEquals("Label", elementByFxId(document, "jvmsTriggerErrorLabel").getTagName());
-        assertEquals("Tab", elementByFxId(document, "jvmsMonitoringTab").getTagName());
-        assertTrue(hasStyleClass(elementByFxId(document, "jvmsMonitoringContent"), "jvms-live-tab-content"));
-        assertTrue(hasStyleClass(elementByFxId(document, "jvmsMonitoringToolbar"), "page-toolbar"));
-        assertEquals("Button", elementByFxId(document, "jvmsAddMonitoringSubscriptionButton").getTagName());
-        assertEquals("Button", elementByFxId(document, "jvmsSampleSubscriptionButton").getTagName());
-        assertEquals("Button", elementByFxId(document, "jvmsAddNotificationSubscriptionButton").getTagName());
-        assertEquals("Button", elementByFxId(document, "jvmsStartNotificationsButton").getTagName());
-        assertEquals("Button", elementByFxId(document, "jvmsStopNotificationsButton").getTagName());
-        assertEquals("TableView", elementByFxId(document, "jvmsMonitoringSubscriptionsTable").getTagName());
-        assertTrue(hasStyleClass(elementByFxId(document, "jvmsMonitoringSubscriptionsTable"), "dense-table"));
-        assertEquals("LineChart", elementByFxId(document, "jvmsMonitoringChart").getTagName());
-        assertEquals("TableView", elementByFxId(document, "jvmsMonitoringSamplesTable").getTagName());
-        assertTrue(hasStyleClass(elementByFxId(document, "jvmsMonitoringSamplesTable"), "dense-table"));
-        assertEquals("TableView", elementByFxId(document, "jvmsMonitoringNotificationsTable").getTagName());
-        assertTrue(hasStyleClass(elementByFxId(document, "jvmsMonitoringNotificationsTable"), "dense-table"));
-        assertEquals("Label", elementByFxId(document, "jvmsMonitoringErrorLabel").getTagName());
-        assertEquals("Tab", elementByFxId(document, "jvmsAgentTab").getTagName());
-        assertTrue(hasStyleClass(elementByFxId(document, "jvmsAgentContent"), "jvms-live-tab-content"));
-        assertTrue(hasStyleClass(elementByFxId(document, "jvmsAgentToolbar"), "page-toolbar"));
-        assertEquals("ComboBox", elementByFxId(document, "jvmsAgentPresetCombo").getTagName());
-        assertEquals("Button", elementByFxId(document, "jvmsRefreshAgentButton").getTagName());
-        assertEquals("Button", elementByFxId(document, "jvmsLoadAgentPresetButton").getTagName());
-        assertEquals("Button", elementByFxId(document, "jvmsApplyAgentConfigurationButton").getTagName());
-        assertEquals("TableView", elementByFxId(document, "jvmsAgentTransformsTable").getTagName());
-        assertTrue(hasStyleClass(elementByFxId(document, "jvmsAgentTransformsTable"), "dense-table"));
-        assertEquals("VBox", elementByFxId(document, "jvmsAgentConfigurationPane").getTagName());
-        assertTrue(hasStyleClass(elementByFxId(document, "jvmsAgentConfigurationPane"), "detail-panel"));
-        assertEquals("Label", elementByFxId(document, "jvmsAgentConfigurationTitleLabel").getTagName());
-        assertTrue(hasStyleClass(elementByFxId(document, "jvmsAgentConfigurationTitleLabel"),
-                "detail-panel-title"));
-        assertEquals("TextArea", elementByFxId(document, "jvmsAgentConfigurationArea").getTagName());
-        assertEquals("true", elementByFxId(document, "jvmsAgentConfigurationArea").getAttribute("wrapText"));
-        assertTrue(hasStyleClass(elementByFxId(document, "jvmsAgentConfigurationArea"), "detail-panel-body"));
-        assertEquals("Label", elementByFxId(document, "jvmsAgentStatusLabel").getTagName());
-        assertTrue(hasStyleClass(elementByFxId(document, "jvmsAgentStatusLabel"), "unavailable-state"));
         assertEquals(0, elementCountWithFxId(document, "statusLabel"));
         assertEquals(0, elementCountWithFxId(document, "taskSummaryLabel"));
         assertEquals("tlabTimelineContainer", elementByFxId(document, "tlabTimelineContainer").getAttribute("fx:id"));
+    }
+
+    @Test
+    void appShellIncludesLiveJvmPaneInsteadOfEmbeddingIt() throws Exception {
+        Document document = appShellFxml();
+        Element include = elementByFxId(document, "jvmsPane");
+
+        assertEquals("fx:include", include.getTagName());
+        assertEquals("live-jvm-pane.fxml", include.getAttribute("source"));
+        assertNull(elementByFxIdOrNull(document, "jvmsTable"));
+        assertNull(elementByFxIdOrNull(document, "jvmsMonitoringToolbar"));
+        assertNull(elementByFxIdOrNull(document, "jvmsAgentTransformsTable"));
+    }
+
+    @Test
+    void appShellDoesNotOwnLiveJvmControlFieldsAfterExtraction() throws Exception {
+        String source = java.nio.file.Files.readString(
+                java.nio.file.Path.of("src/main/java/com/youngledo/jmcfx/ui/shell/AppShellController.java"));
+
+        assertTrue(source.contains("@FXML private VBox jvmsPane;"));
+        assertTrue(source.contains("@FXML private LiveJvmPaneController jvmsPaneController;"));
+        assertFalse(source.contains("@FXML private TableView<JvmConnection> jvmsTable;"));
+        assertFalse(source.contains("@FXML private Button jvmsAddNotificationSubscriptionButton;"));
+        assertFalse(source.contains("private void configureJmxMonitoring()"));
+        assertFalse(source.contains("private void bindJmcAgentManager()"));
     }
 
     @Test
@@ -710,7 +586,7 @@ class AppShellTest {
     @Test
     void liveJvmOverviewProvidesDefaultChartAndTableViews() throws Exception {
         String controller = java.nio.file.Files.readString(
-                java.nio.file.Path.of("src/main/java/com/youngledo/jmcfx/ui/shell/AppShellController.java"));
+                java.nio.file.Path.of("src/main/java/com/youngledo/jmcfx/ui/shell/LiveJvmPaneController.java"));
         String english = java.nio.file.Files.readString(
                 java.nio.file.Path.of("src/main/resources/com/youngledo/jmcfx/ui/i18n/messages.properties"));
         String chinese = java.nio.file.Files.readString(
@@ -816,7 +692,7 @@ class AppShellTest {
     @Test
     void liveJvmMonitoringWiresNotificationToolbarActions() throws Exception {
         String controller = java.nio.file.Files.readString(
-                java.nio.file.Path.of("src/main/java/com/youngledo/jmcfx/ui/shell/AppShellController.java"));
+                java.nio.file.Path.of("src/main/java/com/youngledo/jmcfx/ui/shell/LiveJvmPaneController.java"));
         String english = java.nio.file.Files.readString(
                 java.nio.file.Path.of("src/main/resources/com/youngledo/jmcfx/ui/i18n/messages.properties"));
         String chinese = java.nio.file.Files.readString(
@@ -1419,7 +1295,7 @@ class AppShellTest {
     @Test
     void jvmDisconnectButtonRequiresConnectedSelection() throws Exception {
         String source = java.nio.file.Files.readString(
-                java.nio.file.Path.of("src/main/java/com/youngledo/jmcfx/ui/shell/AppShellController.java"));
+                java.nio.file.Path.of("src/main/java/com/youngledo/jmcfx/ui/shell/LiveJvmPaneController.java"));
 
         assertTrue(source.contains("selectedConnection.connected"),
                 "Disconnect must be disabled for discovered but unconnected JVM rows");
@@ -1439,7 +1315,7 @@ class AppShellTest {
     @Test
     void jvmBrowserUsesPidJavaVersionAndNoUrlColumn() throws Exception {
         String source = java.nio.file.Files.readString(
-                java.nio.file.Path.of("src/main/java/com/youngledo/jmcfx/ui/shell/AppShellController.java"));
+                java.nio.file.Path.of("src/main/java/com/youngledo/jmcfx/ui/shell/LiveJvmPaneController.java"));
 
         assertTrue(source.contains("jvms.column.pid"), "JVM table should include a PID column");
         assertTrue(source.contains("cell.getValue().pid()"), "PID column must read JvmConnection.pid()");
@@ -1452,27 +1328,31 @@ class AppShellTest {
 
     @Test
     void jvmBrowserRefreshesWhenOpenedAndManuallyWithoutPeriodicTimer() throws Exception {
-        String source = java.nio.file.Files.readString(
+        String liveController = java.nio.file.Files.readString(
+                java.nio.file.Path.of("src/main/java/com/youngledo/jmcfx/ui/shell/LiveJvmPaneController.java"));
+        String shellController = java.nio.file.Files.readString(
                 java.nio.file.Path.of("src/main/java/com/youngledo/jmcfx/ui/shell/AppShellController.java"));
 
-        assertTrue(source.contains("jvmsRefreshButton.setOnAction(event -> refreshJvmBrowser())"),
+        assertTrue(liveController.contains("jvmsRefreshButton.setOnAction(event -> refresh())"),
                 "Manual refresh button should trigger JVM Browser refresh");
-        assertTrue(source.contains("selectedSectionProperty().addListener"),
+        assertTrue(shellController.contains("selectedSectionProperty().addListener"),
                 "Opening JVM Browser should refresh the local JVM list");
-        assertTrue(source.contains("\"jvms\".equals(newValue)"),
+        assertTrue(shellController.contains("\"jvms\".equals(newValue) && jvmsPaneController != null"),
                 "JVM Browser should refresh when the JVMs section is opened");
-        assertFalse(source.contains("JVM_BROWSER_REFRESH_INTERVAL_SECONDS"),
+        assertTrue(shellController.contains("jvmsPaneController.refresh()"),
+                "Shell should delegate JVM refresh to the included Live JVM controller");
+        assertFalse(liveController.contains("JVM_BROWSER_REFRESH_INTERVAL_SECONDS"),
                 "JVM Browser should not run periodic refresh");
-        assertFalse(source.contains("startJvmBrowserRefresh"),
+        assertFalse(liveController.contains("startJvmBrowserRefresh"),
                 "JVM Browser should not use timer-based refresh");
-        assertFalse(source.contains("jvmBrowserFirstRefreshDone"),
+        assertFalse(liveController.contains("jvmBrowserFirstRefreshDone"),
                 "JVM Browser should refresh every time the section opens");
     }
 
     @Test
     void jvmBrowserEmptyPlaceholderWaitsForCompletedRefresh() throws Exception {
         String source = java.nio.file.Files.readString(
-                java.nio.file.Path.of("src/main/java/com/youngledo/jmcfx/ui/shell/AppShellController.java"));
+                java.nio.file.Path.of("src/main/java/com/youngledo/jmcfx/ui/shell/LiveJvmPaneController.java"));
 
         assertTrue(source.contains("jvmsTable.setPlaceholder(emptyTablePlaceholder())"),
                 "JVM Browser should not show no-data text before discovery finishes");
@@ -1485,7 +1365,7 @@ class AppShellTest {
     @Test
     void jvmBrowserSupportsDoubleClickConnectAndNoBottomStatus() throws Exception {
         String controller = java.nio.file.Files.readString(
-                java.nio.file.Path.of("src/main/java/com/youngledo/jmcfx/ui/shell/AppShellController.java"));
+                java.nio.file.Path.of("src/main/java/com/youngledo/jmcfx/ui/shell/LiveJvmPaneController.java"));
         String fxml = java.nio.file.Files.readString(
                 java.nio.file.Path.of("src/main/resources/com/youngledo/jmcfx/ui/shell/app-shell.fxml"));
 
@@ -1502,7 +1382,7 @@ class AppShellTest {
     @Test
     void jvmBrowserShellExposesSavedTargetsJdpAndSelectedStatus() throws Exception {
         String controller = java.nio.file.Files.readString(
-                java.nio.file.Path.of("src/main/java/com/youngledo/jmcfx/ui/shell/AppShellController.java"));
+                java.nio.file.Path.of("src/main/java/com/youngledo/jmcfx/ui/shell/LiveJvmPaneController.java"));
         String english = java.nio.file.Files.readString(
                 java.nio.file.Path.of("src/main/resources/com/youngledo/jmcfx/ui/i18n/messages.properties"));
         String chinese = java.nio.file.Files.readString(
@@ -1577,7 +1457,7 @@ class AppShellTest {
     @Test
     void jvmBrowserFormatsStateAndSourceThroughI18n() throws Exception {
         String controller = java.nio.file.Files.readString(
-                java.nio.file.Path.of("src/main/java/com/youngledo/jmcfx/ui/shell/AppShellController.java"));
+                java.nio.file.Path.of("src/main/java/com/youngledo/jmcfx/ui/shell/LiveJvmPaneController.java"));
 
         assertTrue(controller.contains("formatJvmState"), "State column should use localized display labels");
         assertTrue(controller.contains("formatJvmSource"), "Source column should use localized display labels");
@@ -1589,16 +1469,7 @@ class AppShellTest {
     void jvmBrowserStatusTextIsLocalizedWithoutParsingEnglishDisplayText() {
         I18n i18n = new I18n(Locale.SIMPLIFIED_CHINESE);
         i18n.setLanguageMode(LanguageMode.CHINESE_SIMPLIFIED);
-        AppShellController controller = new AppShellController(
-                new AppShellViewModel(),
-                new FakeRecordingRepository(),
-                new FakeEventQueryService(),
-                new FakeRuleAnalysisService(),
-                null, null, null,
-                null, null, null,
-                null, null, null,
-                null, null, null,
-                i18n);
+        LiveJvmPaneController controller = new LiveJvmPaneController(i18n);
 
         assertEquals("已保存 JVM 目标。", controller.selectedConnectionStatusText(
                 JvmConnection.saved(new SavedJvmTarget("saved-1", "prod",
@@ -1623,7 +1494,7 @@ class AppShellTest {
     @Test
     void jvmBrowserBindsLiveSessionDetail() throws Exception {
         String controller = java.nio.file.Files.readString(
-                java.nio.file.Path.of("src/main/java/com/youngledo/jmcfx/ui/shell/AppShellController.java"));
+                java.nio.file.Path.of("src/main/java/com/youngledo/jmcfx/ui/shell/LiveJvmPaneController.java"));
 
         assertTrue(controller.contains("jvmsSessionDetailPane.visibleProperty()"),
                 "JVM session detail pane should be visible only for selected connected sessions");
@@ -1638,7 +1509,7 @@ class AppShellTest {
     @Test
     void jvmBrowserBindsFlightRecordingControl() throws Exception {
         String controller = java.nio.file.Files.readString(
-                java.nio.file.Path.of("src/main/java/com/youngledo/jmcfx/ui/shell/AppShellController.java"));
+                java.nio.file.Path.of("src/main/java/com/youngledo/jmcfx/ui/shell/LiveJvmPaneController.java"));
 
         assertTrue(controller.contains("jvmsRecordingsTable.setItems(jvmBrowserViewModel.flightRecordingsProperty())"),
                 "JVM recordings table should bind to live recording rows");
@@ -1646,14 +1517,16 @@ class AppShellTest {
                 "Start recording button should invoke the JVM browser ViewModel");
         assertTrue(controller.contains("jvmsStopRecordingButton.setOnAction"),
                 "Stop recording button should save and open a JFR file");
-        assertTrue(controller.contains("openRecordingInBackground"),
-                "Saved recordings should reuse the existing recording open flow");
+        String shellController = java.nio.file.Files.readString(
+                java.nio.file.Path.of("src/main/java/com/youngledo/jmcfx/ui/shell/AppShellController.java"));
+        assertTrue(shellController.contains("this::openRecordingInBackground"),
+                "Saved recordings should reuse the existing shell recording open flow through the ViewModel callback");
     }
 
     @Test
     void jvmBrowserBindsMBeanBrowserControls() throws Exception {
         String controller = java.nio.file.Files.readString(
-                java.nio.file.Path.of("src/main/java/com/youngledo/jmcfx/ui/shell/AppShellController.java"));
+                java.nio.file.Path.of("src/main/java/com/youngledo/jmcfx/ui/shell/LiveJvmPaneController.java"));
 
         assertTrue(controller.contains("jvmsMBeanTree.setRoot"),
                 "MBean tree should be rebuilt from the ViewModel tree root");
@@ -1716,7 +1589,7 @@ class AppShellTest {
     @Test
     void jvmBrowserBindsJmcAgentManagerControls() throws Exception {
         String controller = java.nio.file.Files.readString(
-                java.nio.file.Path.of("src/main/java/com/youngledo/jmcfx/ui/shell/AppShellController.java"));
+                java.nio.file.Path.of("src/main/java/com/youngledo/jmcfx/ui/shell/LiveJvmPaneController.java"));
         String english = java.nio.file.Files.readString(
                 java.nio.file.Path.of("src/main/resources/com/youngledo/jmcfx/ui/i18n/messages.properties"));
         String chinese = java.nio.file.Files.readString(
@@ -1773,7 +1646,7 @@ class AppShellTest {
     @Test
     void jvmRuntimeSummaryFormatsUptimeWithSharedDurationFormatter() throws Exception {
         String controller = java.nio.file.Files.readString(
-                java.nio.file.Path.of("src/main/java/com/youngledo/jmcfx/ui/shell/AppShellController.java"));
+                java.nio.file.Path.of("src/main/java/com/youngledo/jmcfx/ui/shell/LiveJvmPaneController.java"));
 
         assertTrue(controller.contains("DisplayFormats.formatDuration(snapshot.runtime().uptimeMillis())"),
                 "JVM runtime summary should use the shared duration formatter for uptime");
@@ -2266,6 +2139,9 @@ class AppShellTest {
         loader.setControllerFactory(type -> {
             if (type == AppShellController.class) {
                 return factory.controllerFor(type, viewModel);
+            }
+            if (type == LiveJvmPaneController.class) {
+                return new LiveJvmPaneController();
             }
             throw new IllegalArgumentException("Unsupported controller: " + type.getName());
         });

@@ -1,0 +1,288 @@
+<?xml version="1.0" encoding="UTF-8"?>
+
+<?import java.lang.String?>
+<?import javafx.scene.chart.LineChart?>
+<?import javafx.scene.chart.NumberAxis?>
+<?import javafx.scene.control.Button?>
+<?import javafx.scene.control.ComboBox?>
+<?import javafx.scene.control.Label?>
+<?import javafx.scene.control.ListView?>
+<?import javafx.scene.control.ScrollPane?>
+<?import javafx.scene.control.SplitPane?>
+<?import javafx.scene.control.Tab?>
+<?import javafx.scene.control.TabPane?>
+<?import javafx.scene.control.TableView?>
+<?import javafx.scene.control.TextArea?>
+<?import javafx.scene.control.TextField?>
+<?import javafx.scene.control.TreeView?>
+<?import javafx.scene.layout.FlowPane?>
+<?import javafx.scene.layout.HBox?>
+<?import javafx.scene.layout.VBox?>
+
+<VBox xmlns="http://javafx.com/javafx"
+      xmlns:fx="http://javafx.com/fxml"
+      fx:controller="com.youngledo.jmcfx.ui.shell.LiveJvmPaneController"
+      fx:id="jvmsPane"
+      spacing="8">
+    <Label fx:id="jvmsTitleLabel" styleClass="view-title"/>
+    <SplitPane fx:id="jvmsWorkspaceSplit" DividerPositions="0.28" VBox.vgrow="ALWAYS">
+        <items>
+            <VBox fx:id="jvmsBrowserSidebar" spacing="8" minWidth="280" prefWidth="340">
+                <styleClass>
+                    <String fx:value="summary-panel"/>
+                    <String fx:value="jvms-browser-sidebar"/>
+                </styleClass>
+                <FlowPane styleClass="page-toolbar" hgap="8" vgap="8">
+                    <Button fx:id="jvmsRefreshButton"/>
+                    <Button fx:id="jvmsRefreshJdpButton"/>
+                </FlowPane>
+                <TextField fx:id="jvmsManualUrlField"/>
+                <Label fx:id="jvmsManualUrlHintLabel" styleClass="event-window-status" wrapText="true"/>
+                <TextField fx:id="jvmsManualNameField"/>
+                <FlowPane styleClass="page-toolbar" hgap="8" vgap="8">
+                    <Button fx:id="jvmsSaveTargetButton"/>
+                    <Button fx:id="jvmsRemoveSavedTargetButton"/>
+                </FlowPane>
+                <FlowPane styleClass="page-toolbar" hgap="8" vgap="8">
+                    <Button fx:id="jvmsConnectButton"/>
+                    <Button fx:id="jvmsDisconnectButton"/>
+                </FlowPane>
+                <Label fx:id="jvmsSelectedConnectionStatusLabel" styleClass="event-window-status" wrapText="true"/>
+                <TableView fx:id="jvmsTable" styleClass="dense-table" VBox.vgrow="ALWAYS"/>
+            </VBox>
+            <VBox fx:id="jvmsSessionDetailPane" spacing="6" VBox.vgrow="ALWAYS">
+                <styleClass>
+                    <String fx:value="summary-panel"/>
+                    <String fx:value="jvms-session-detail"/>
+                </styleClass>
+                <TabPane fx:id="jvmsLiveTabs" VBox.vgrow="ALWAYS">
+                    <tabs>
+                        <Tab fx:id="jvmsOverviewTab" closable="false">
+                            <VBox fx:id="jvmsOverviewContent" styleClass="jvms-live-tab-content" spacing="10">
+                                <SplitPane orientation="VERTICAL" VBox.vgrow="ALWAYS" DividerPositions="0.24,0.49,0.74">
+                                    <items>
+                                        <VBox styleClass="jvms-overview-group" spacing="6">
+                                            <Label fx:id="jvmsOverviewPersistenceTitleLabel" styleClass="detail-title"/>
+                                            <Label fx:id="jvmsOverviewPersistenceLabel" wrapText="true"/>
+                                            <TableView fx:id="jvmsOverviewPersistenceTable" styleClass="dense-table"/>
+                                        </VBox>
+                                        <VBox styleClass="jvms-overview-group" spacing="6">
+                                            <Label fx:id="jvmsOverviewDashboardTitleLabel" styleClass="detail-title"/>
+                                            <TabPane fx:id="jvmsOverviewDashboardTabs" styleClass="page-detail-tabs" VBox.vgrow="ALWAYS">
+                                                <tabs>
+                                                    <Tab fx:id="jvmsOverviewDashboardChartTab" closable="false">
+                                                        <HBox styleClass="jvms-overview-chart-panel" spacing="8">
+                                                            <LineChart fx:id="jvmsOverviewDashboardChart" animated="false" legendVisible="false" HBox.hgrow="ALWAYS">
+                                                                <xAxis>
+                                                                    <NumberAxis autoRanging="true"/>
+                                                                </xAxis>
+                                                                <yAxis>
+                                                                    <NumberAxis autoRanging="true"/>
+                                                                </yAxis>
+                                                            </LineChart>
+                                                            <ScrollPane fitToWidth="true" hbarPolicy="NEVER" vbarPolicy="AS_NEEDED">
+                                                                <FlowPane fx:id="jvmsOverviewDashboardMetricToggles" orientation="VERTICAL" styleClass="jvms-overview-metric-toggles" hgap="0" vgap="4"/>
+                                                            </ScrollPane>
+                                                        </HBox>
+                                                    </Tab>
+                                                    <Tab fx:id="jvmsOverviewDashboardTableTab" closable="false">
+                                                        <TableView fx:id="jvmsOverviewDashboardTable" styleClass="dense-table"/>
+                                                    </Tab>
+                                                </tabs>
+                                            </TabPane>
+                                        </VBox>
+                                        <VBox styleClass="jvms-overview-group" spacing="6">
+                                            <Label fx:id="jvmsOverviewProcessorTitleLabel" styleClass="detail-title"/>
+                                            <TabPane fx:id="jvmsOverviewProcessorTabs" styleClass="page-detail-tabs" VBox.vgrow="ALWAYS">
+                                                <tabs>
+                                                    <Tab fx:id="jvmsOverviewProcessorChartTab" closable="false">
+                                                        <HBox styleClass="jvms-overview-chart-panel" spacing="8">
+                                                            <LineChart fx:id="jvmsOverviewProcessorChart" animated="false" legendVisible="false" HBox.hgrow="ALWAYS">
+                                                                <xAxis>
+                                                                    <NumberAxis autoRanging="true"/>
+                                                                </xAxis>
+                                                                <yAxis>
+                                                                    <NumberAxis autoRanging="true"/>
+                                                                </yAxis>
+                                                            </LineChart>
+                                                            <ScrollPane fitToWidth="true" hbarPolicy="NEVER" vbarPolicy="AS_NEEDED">
+                                                                <FlowPane fx:id="jvmsOverviewProcessorMetricToggles" orientation="VERTICAL" styleClass="jvms-overview-metric-toggles" hgap="0" vgap="4"/>
+                                                            </ScrollPane>
+                                                        </HBox>
+                                                    </Tab>
+                                                    <Tab fx:id="jvmsOverviewProcessorTableTab" closable="false">
+                                                        <TableView fx:id="jvmsOverviewProcessorTable" styleClass="dense-table"/>
+                                                    </Tab>
+                                                </tabs>
+                                            </TabPane>
+                                        </VBox>
+                                        <VBox styleClass="jvms-overview-group" spacing="6">
+                                            <Label fx:id="jvmsOverviewMemoryTitleLabel" styleClass="detail-title"/>
+                                            <TabPane fx:id="jvmsOverviewMemoryTabs" styleClass="page-detail-tabs" VBox.vgrow="ALWAYS">
+                                                <tabs>
+                                                    <Tab fx:id="jvmsOverviewMemoryChartTab" closable="false">
+                                                        <HBox styleClass="jvms-overview-chart-panel" spacing="8">
+                                                            <LineChart fx:id="jvmsOverviewMemoryChart" animated="false" legendVisible="false" HBox.hgrow="ALWAYS">
+                                                                <xAxis>
+                                                                    <NumberAxis autoRanging="true"/>
+                                                                </xAxis>
+                                                                <yAxis>
+                                                                    <NumberAxis autoRanging="true"/>
+                                                                </yAxis>
+                                                            </LineChart>
+                                                            <ScrollPane fitToWidth="true" hbarPolicy="NEVER" vbarPolicy="AS_NEEDED">
+                                                                <FlowPane fx:id="jvmsOverviewMemoryMetricToggles" orientation="VERTICAL" styleClass="jvms-overview-metric-toggles" hgap="0" vgap="4"/>
+                                                            </ScrollPane>
+                                                        </HBox>
+                                                    </Tab>
+                                                    <Tab fx:id="jvmsOverviewMemoryTableTab" closable="false">
+                                                        <TableView fx:id="jvmsOverviewMemoryTable" styleClass="dense-table"/>
+                                                    </Tab>
+                                                </tabs>
+                                            </TabPane>
+                                        </VBox>
+                                    </items>
+                                </SplitPane>
+                                <Label fx:id="jvmsOverviewErrorLabel" styleClass="unavailable-state" wrapText="true"/>
+                            </VBox>
+                        </Tab>
+                        <Tab fx:id="jvmsSessionTab" closable="false">
+                            <VBox fx:id="jvmsSessionContent" styleClass="jvms-live-tab-content" spacing="10">
+                                <Label fx:id="jvmsSessionTitleLabel" styleClass="detail-title"/>
+                                <Label fx:id="jvmsRuntimeSummaryLabel" wrapText="true"/>
+                                <ListView fx:id="jvmsCapabilitiesList"/>
+                                <HBox styleClass="page-toolbar" spacing="8">
+                                    <Button fx:id="jvmsStartRecordingButton"/>
+                                    <Button fx:id="jvmsStopRecordingButton"/>
+                                    <Label fx:id="jvmsRecordingStatusLabel" wrapText="true"/>
+                                </HBox>
+                                <TableView fx:id="jvmsRecordingsTable" styleClass="dense-table" VBox.vgrow="ALWAYS"/>
+                                <Label fx:id="jvmsSessionErrorLabel" styleClass="unavailable-state" wrapText="true"/>
+                            </VBox>
+                        </Tab>
+                        <Tab fx:id="jvmsMBeanTab" closable="false">
+                            <SplitPane fx:id="jvmsMBeanContent" styleClass="jvms-live-tab-content" DividerPositions="0.32">
+                                <items>
+                                    <TreeView fx:id="jvmsMBeanTree" minWidth="160" prefWidth="260"/>
+                                    <VBox fx:id="jvmsMBeanDetailPane" styleClass="jvms-live-workspace" spacing="10">
+                                        <HBox styleClass="page-toolbar" spacing="8">
+                                            <Button fx:id="jvmsRefreshMBeanButton"/>
+                                            <TextField fx:id="jvmsMBeanOperationArgumentsField" HBox.hgrow="ALWAYS"/>
+                                            <Button fx:id="jvmsInvokeMBeanOperationButton"/>
+                                        </HBox>
+                                        <TableView fx:id="jvmsMBeanAttributesTable" styleClass="dense-table" VBox.vgrow="ALWAYS"/>
+                                        <TableView fx:id="jvmsMBeanOperationsTable" styleClass="dense-table" VBox.vgrow="ALWAYS"/>
+                                        <Label fx:id="jvmsMBeanResultLabel" wrapText="true"/>
+                                        <Label fx:id="jvmsMBeanErrorLabel" styleClass="unavailable-state" wrapText="true"/>
+                                    </VBox>
+                                </items>
+                            </SplitPane>
+                        </Tab>
+                        <Tab fx:id="jvmsDiagnosticsTab" closable="false">
+                            <SplitPane fx:id="jvmsDiagnosticContent" styleClass="jvms-live-tab-content" DividerPositions="0.42" VBox.vgrow="ALWAYS">
+                                <items>
+                                    <TableView fx:id="jvmsDiagnosticCommandsTable" styleClass="dense-table"/>
+                                    <VBox fx:id="jvmsDiagnosticDetailPane" styleClass="jvms-live-workspace" spacing="10">
+                                        <HBox styleClass="page-toolbar" spacing="8">
+                                            <TextField fx:id="jvmsDiagnosticArgumentsField" HBox.hgrow="ALWAYS"/>
+                                            <Button fx:id="jvmsExecuteDiagnosticCommandButton"/>
+                                            <Button fx:id="jvmsSaveDiagnosticOutputButton"/>
+                                        </HBox>
+                                        <TextArea fx:id="jvmsDiagnosticOutputArea" editable="false" wrapText="false" VBox.vgrow="ALWAYS"/>
+                                        <Label fx:id="jvmsDiagnosticErrorLabel" styleClass="unavailable-state" wrapText="true"/>
+                                    </VBox>
+                                </items>
+                            </SplitPane>
+                        </Tab>
+                        <Tab fx:id="jvmsTriggersTab" closable="false">
+                            <VBox fx:id="jvmsTriggersContent" styleClass="jvms-live-tab-content" spacing="10">
+                                <FlowPane fx:id="jvmsTriggerEditorPane" styleClass="page-toolbar" hgap="8" vgap="8">
+                                    <TextField fx:id="jvmsTriggerNameField" prefWidth="180"/>
+                                    <ComboBox fx:id="jvmsTriggerMetricCombo" prefWidth="180"/>
+                                    <ComboBox fx:id="jvmsTriggerOperatorCombo" prefWidth="90"/>
+                                    <TextField fx:id="jvmsTriggerThresholdField" prefWidth="110"/>
+                                    <ComboBox fx:id="jvmsTriggerActionCombo" prefWidth="160"/>
+                                    <ComboBox fx:id="jvmsTriggerCommandCombo" prefWidth="180"/>
+                                    <Button fx:id="jvmsAddTriggerButton"/>
+                                    <Button fx:id="jvmsRemoveTriggerButton"/>
+                                    <Button fx:id="jvmsEvaluateTriggersButton"/>
+                                </FlowPane>
+                                <SplitPane orientation="VERTICAL" DividerPositions="0.5" VBox.vgrow="ALWAYS">
+                                    <items>
+                                        <TableView fx:id="jvmsTriggerRulesTable" styleClass="dense-table"/>
+                                        <TableView fx:id="jvmsTriggerEventsTable" styleClass="dense-table"/>
+                                    </items>
+                                </SplitPane>
+                                <Label fx:id="jvmsTriggerErrorLabel" styleClass="unavailable-state" wrapText="true"/>
+                            </VBox>
+                        </Tab>
+                        <Tab fx:id="jvmsMonitoringTab" closable="false">
+                            <VBox fx:id="jvmsMonitoringContent" styleClass="jvms-live-tab-content" spacing="10">
+                                <FlowPane fx:id="jvmsMonitoringToolbar" styleClass="page-toolbar" hgap="8" vgap="8">
+                                    <Button fx:id="jvmsAddMonitoringSubscriptionButton"/>
+                                    <Button fx:id="jvmsSampleSubscriptionButton"/>
+                                    <Button fx:id="jvmsAddNotificationSubscriptionButton"/>
+                                    <Button fx:id="jvmsStartNotificationsButton"/>
+                                    <Button fx:id="jvmsStopNotificationsButton"/>
+                                </FlowPane>
+                                <SplitPane orientation="VERTICAL" DividerPositions="0.42" VBox.vgrow="ALWAYS">
+                                    <items>
+                                        <TableView fx:id="jvmsMonitoringSubscriptionsTable" styleClass="dense-table"/>
+                                        <VBox styleClass="jvms-monitoring-detail" spacing="8">
+                                            <LineChart fx:id="jvmsMonitoringChart" animated="false" legendVisible="true">
+                                                <xAxis>
+                                                    <NumberAxis autoRanging="true"/>
+                                                </xAxis>
+                                                <yAxis>
+                                                    <NumberAxis autoRanging="true"/>
+                                                </yAxis>
+                                            </LineChart>
+                                            <SplitPane orientation="VERTICAL" DividerPositions="0.5" VBox.vgrow="ALWAYS">
+                                                <items>
+                                                    <TableView fx:id="jvmsMonitoringSamplesTable" styleClass="dense-table"/>
+                                                    <TableView fx:id="jvmsMonitoringNotificationsTable" styleClass="dense-table"/>
+                                                </items>
+                                            </SplitPane>
+                                        </VBox>
+                                    </items>
+                                </SplitPane>
+                                <Label fx:id="jvmsMonitoringErrorLabel" styleClass="unavailable-state" wrapText="true"/>
+                            </VBox>
+                        </Tab>
+                        <Tab fx:id="jvmsAgentTab" closable="false">
+                            <VBox fx:id="jvmsAgentContent" styleClass="jvms-live-tab-content" spacing="10">
+                                <FlowPane fx:id="jvmsAgentToolbar" styleClass="page-toolbar" hgap="8" vgap="8">
+                                    <ComboBox fx:id="jvmsAgentPresetCombo" prefWidth="220"/>
+                                    <Button fx:id="jvmsRefreshAgentButton"/>
+                                    <Button fx:id="jvmsLoadAgentPresetButton"/>
+                                    <Button fx:id="jvmsApplyAgentConfigurationButton"/>
+                                </FlowPane>
+                                <SplitPane orientation="VERTICAL" DividerPositions="0.45" VBox.vgrow="ALWAYS">
+                                    <items>
+                                        <TableView fx:id="jvmsAgentTransformsTable" styleClass="dense-table"/>
+                                        <VBox fx:id="jvmsAgentConfigurationPane">
+                                            <styleClass>
+                                                <String fx:value="detail-panel"/>
+                                            </styleClass>
+                                            <Label fx:id="jvmsAgentConfigurationTitleLabel">
+                                                <styleClass>
+                                                    <String fx:value="detail-panel-title"/>
+                                                </styleClass>
+                                            </Label>
+                                            <TextArea fx:id="jvmsAgentConfigurationArea" editable="true" wrapText="true" VBox.vgrow="ALWAYS">
+                                                <styleClass>
+                                                    <String fx:value="detail-panel-body"/>
+                                                </styleClass>
+                                            </TextArea>
+                                        </VBox>
+                                    </items>
+                                </SplitPane>
+                                <Label fx:id="jvmsAgentStatusLabel" styleClass="unavailable-state" wrapText="true"/>
+                            </VBox>
+                        </Tab>
+                    </tabs>
+                </TabPane>
+            </VBox>
+        </items>
+    </SplitPane>
+</VBox>

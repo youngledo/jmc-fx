@@ -79,6 +79,9 @@ Baseline date: 2026-05-31.
 - Uses AtlantaFX as the base theme and application CSS afterward.
 - Supports Follow System, Light, and Dark theme preferences.
 - Supports English and Simplified Chinese resource bundles.
+- Loads the Live JVM workspace through a dedicated pane/controller boundary so
+  Live JVM controls, tables, charts, and bindings are no longer owned by the
+  central shell controller.
 - Includes UI/UX contract tests for FXML, CSS, navigation, localized strings,
   and important shell invariants.
 
@@ -121,12 +124,15 @@ Baseline date: 2026-05-31.
   - Surface active/listening state per subscription when multi-subscription
     management is introduced.
 
-- Split `AppShellController` and `app-shell.fxml` responsibilities.
-  - Move feature-specific binding and table setup out of the central shell
-    controller where practical.
+- Continue splitting `AppShellController` and `app-shell.fxml` responsibilities.
+  - Completed first phase: Live JVM workspace FXML and controller ownership are
+    separated from the central shell while preserving shell navigation and
+    workspace selection.
+  - Move remaining feature-specific binding and table setup out of the central
+    shell controller where practical.
   - Keep the shell responsible for navigation, workspace selection, and global
     status.
-  - Preserve existing UI/UX contracts and tests during the split.
+  - Preserve existing UI/UX contracts and tests during each split.
 
 - Reduce constructor and dependency-chain growth in `AppShellFactory` and
   workspace creation.
