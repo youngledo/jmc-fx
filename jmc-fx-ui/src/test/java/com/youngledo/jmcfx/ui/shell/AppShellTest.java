@@ -1724,6 +1724,7 @@ class AppShellTest {
         assertTrue(controller.contains("localizedColumn(\"jvms.overview.metric.observed\")"));
 
         assertTrue(css.contains(".jvms-live-tab-content .chart"));
+        assertTrue(css.contains(".jvms-live-tab-content .diagnostic-chart"));
         assertFalse(css.contains(".jvms-live-tab-content .chart:refreshing"));
         assertFalse(css.contains(".jvms-live-tab-content .table-view:refreshing"));
         assertTrue(css.contains(".jvms-overview-group"));
@@ -1733,6 +1734,13 @@ class AppShellTest {
         assertTrue(css.contains("-fx-spacing: 6px"));
         assertTrue(css.contains(".jvms-overview-metric-swatch.default-color0"));
         assertTrue(css.contains("-fx-background-color: #f3622d"));
+
+        String view = java.nio.file.Files.readString(
+                java.nio.file.Path.of("src/main/java/com/youngledo/jmcfx/ui/shell/LiveJvmPaneView.java"));
+        assertTrue(view.contains("addStyle(chart, \"diagnostic-chart\");"));
+        assertTrue(view.contains("chart.setCreateSymbols(false);"));
+        assertTrue(view.contains("chart.setHorizontalGridLinesVisible(true);"));
+        assertTrue(view.contains("chart.setVerticalGridLinesVisible(false);"));
 
         assertTrue(english.contains("jvms.overview.tab=Overview"));
         assertTrue(english.contains("jvms.overview.chart=Chart"));

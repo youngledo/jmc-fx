@@ -392,8 +392,14 @@ final class LiveJvmPaneView {
 
     private static LineChart<Number, Number> lineChart(boolean legendVisible) {
         LineChart<Number, Number> chart = new LineChart<>(new NumberAxis(), new NumberAxis());
+        addStyle(chart, "diagnostic-chart");
         chart.setAnimated(false);
         chart.setLegendVisible(legendVisible);
+        chart.setCreateSymbols(false);
+        chart.setHorizontalGridLinesVisible(true);
+        chart.setVerticalGridLinesVisible(false);
+        chart.setAlternativeRowFillVisible(false);
+        chart.setAlternativeColumnFillVisible(false);
         return chart;
     }
 

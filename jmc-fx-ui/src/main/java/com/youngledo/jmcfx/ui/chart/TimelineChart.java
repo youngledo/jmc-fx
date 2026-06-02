@@ -41,7 +41,7 @@ public class TimelineChart extends VBox {
     private double dragStartUpperBound;
 
     public TimelineChart() {
-        getStyleClass().add("timeline-chart");
+        getStyleClass().addAll("timeline-chart", "diagnostic-chart");
     }
 
     public void setData(ChartDefinition definition) {
@@ -63,6 +63,7 @@ public class TimelineChart extends VBox {
             return;
         }
         XYChart<Number, Number> chart = createChart(primaryType);
+        configureDiagnosticChart(chart);
         VBox.setVgrow(chart, Priority.ALWAYS);
         chart.setMaxSize(Double.MAX_VALUE, Double.MAX_VALUE);
         for (ChartSeries seriesDef : renderableDefinition.series()) {
@@ -118,10 +119,26 @@ public class TimelineChart extends VBox {
 
     private XYChart<Number, Number> createChart(ChartSeriesType type) {
         return switch (type) {
-            case LINE -> new LineChart<>(xAxis, yAxis);
+            case LINE -> {
+                LineChart<Number, Number> lineChart = new LineChart<>(xAxis, yAxis);
+                lineChart.setCreateSymbols(false);
+                yield lineChart;
+            }
             case BAR -> throw new IllegalArgumentException("Bar charts require a CategoryAxis");
-            case AREA -> new AreaChart<>(xAxis, yAxis);
+            case AREA -> {
+                AreaChart<Number, Number> areaChart = new AreaChart<>(xAxis, yAxis);
+                areaChart.setCreateSymbols(false);
+                yield areaChart;
+            }
         };
+    }
+
+    private static void configureDiagnosticChart(XYChart<?, ?> chart) {
+        chart.setAnimated(false);
+        chart.setHorizontalGridLinesVisible(true);
+        chart.setVerticalGridLinesVisible(false);
+        chart.setAlternativeRowFillVisible(false);
+        chart.setAlternativeColumnFillVisible(false);
     }
 
     private XYChart<String, Number> createBarChart(ChartDefinition definition) {

@@ -22,6 +22,22 @@ class TimelineChartTest {
     }
 
     @Test
+    void appCssContainsSharedDiagnosticChartStyle() throws IOException {
+        String css = appCss();
+
+        assertTrue(css.contains(".diagnostic-chart"),
+                "app.css must define a shared diagnostic chart style");
+        assertTrue(css.contains(".diagnostic-chart .chart-plot-background"),
+                "diagnostic charts should own the plot background instead of inheriting JavaFX defaults");
+        assertTrue(css.contains(".diagnostic-chart .chart-horizontal-grid-lines"),
+                "diagnostic charts should use subtle grid lines for inspection");
+        assertTrue(css.contains(".diagnostic-chart .chart-line-symbol"),
+                "diagnostic charts should suppress per-point symbols for dense timelines");
+        assertTrue(css.contains(".diagnostic-chart .chart-series-line"),
+                "diagnostic charts should style series lines consistently");
+    }
+
+    @Test
     void chartDomainRecordsSupportAllSeriesTypes() {
         ChartSeries lineSeries = new ChartSeries("cpu", "CPU", ChartSeriesType.LINE,
                 List.of(new ChartDataPoint(0, 10), new ChartDataPoint(1, 20)));
@@ -121,6 +137,16 @@ class TimelineChartTest {
 
         assertTrue(source.contains("VBox.setVgrow(chart, Priority.ALWAYS"));
         assertTrue(source.contains("chart.setMaxSize(Double.MAX_VALUE, Double.MAX_VALUE"));
+    }
+
+    @Test
+    void timelineChartUsesDiagnosticChartTreatment() throws IOException {
+        String source = timelineChartSource();
+
+        assertTrue(source.contains("getStyleClass().addAll(\"timeline-chart\", \"diagnostic-chart\")"));
+        assertTrue(source.contains("configureDiagnosticChart(chart);"));
+        assertTrue(source.contains("lineChart.setCreateSymbols(false);"));
+        assertTrue(source.contains("areaChart.setCreateSymbols(false);"));
     }
 
     @Test

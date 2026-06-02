@@ -485,6 +485,10 @@
     -fx-min-height: 120px;
 }
 
+.jvms-live-tab-content .diagnostic-chart {
+    -fx-padding: 0;
+}
+
 .jvms-overview-group {
     -fx-padding: 4px 0 8px 0;
     -fx-min-height: 120px;
@@ -621,8 +625,30 @@
     -fx-padding: 0;
     -fx-min-height: 160px;
 }
-.timeline-chart .chart-plot-background {
+
+/* Diagnostic chart */
+.diagnostic-chart {
+    -fx-padding: 0;
+}
+.diagnostic-chart .chart-plot-background {
     -fx-background-color: -color-bg-default;
+}
+.diagnostic-chart .chart-horizontal-grid-lines {
+    -fx-stroke: -color-border-muted;
+    -fx-stroke-width: 1px;
+}
+.diagnostic-chart .chart-vertical-grid-lines,
+.diagnostic-chart .chart-alternative-row-fill,
+.diagnostic-chart .chart-alternative-column-fill {
+    -fx-stroke: transparent;
+    -fx-fill: transparent;
+}
+.diagnostic-chart .chart-line-symbol {
+    -fx-background-color: transparent;
+    -fx-padding: 0;
+}
+.diagnostic-chart .chart-series-line {
+    -fx-stroke-width: 1.5px;
 }
 
 /* Event heatmap */
