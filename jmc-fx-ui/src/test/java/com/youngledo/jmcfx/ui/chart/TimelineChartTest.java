@@ -160,6 +160,17 @@ class TimelineChartTest {
     }
 
     @Test
+    void barChartsUseDiagnosticChartTreatment() throws IOException {
+        String source = timelineChartSource();
+        String css = appCss();
+
+        assertTrue(source.contains("configureDiagnosticChart(chart);"));
+        assertTrue(source.contains("chart.setCategoryGap(6);"));
+        assertTrue(source.contains("chart.setBarGap(2);"));
+        assertTrue(css.contains(".diagnostic-chart .chart-bar"));
+    }
+
+    @Test
     void dataRangeUsesAllSeriesPoints() {
         ChartDefinition definition = new ChartDefinition("Time", "Value", List.of(
                 new ChartSeries("cpu", "CPU", ChartSeriesType.LINE,

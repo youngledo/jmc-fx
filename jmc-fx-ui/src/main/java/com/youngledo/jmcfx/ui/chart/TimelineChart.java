@@ -148,6 +148,9 @@ public class TimelineChart extends VBox {
         categoryAxis.setLabel(definition.xLabel());
         valueAxis.setLabel(definition.yLabel());
         BarChart<String, Number> chart = new BarChart<>(categoryAxis, valueAxis);
+        configureDiagnosticChart(chart);
+        chart.setCategoryGap(6);
+        chart.setBarGap(2);
         chart.setLegendVisible(definition.series().size() > 1);
         for (ChartSeries seriesDef : definition.series()) {
             XYChart.Series<String, Number> fxSeries = new XYChart.Series<>();

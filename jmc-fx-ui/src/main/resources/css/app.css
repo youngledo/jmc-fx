@@ -650,6 +650,10 @@
 .diagnostic-chart .chart-series-line {
     -fx-stroke-width: 1.5px;
 }
+.diagnostic-chart .chart-bar {
+    -fx-background-insets: 0;
+    -fx-background-radius: 1px 1px 0 0;
+}
 
 /* Event heatmap */
 .advanced-jfr-heatmap-scroll {
