@@ -9,6 +9,7 @@ import com.youngledo.jmcfx.domain.model.ChartDataPoint;
 import com.youngledo.jmcfx.domain.model.ChartDefinition;
 import com.youngledo.jmcfx.domain.model.ChartSeries;
 import com.youngledo.jmcfx.domain.model.ChartSeriesType;
+import com.youngledo.jmcfx.domain.model.ChartXAxisType;
 import com.youngledo.jmcfx.ui.util.DisplayFormats;
 
 import javafx.util.StringConverter;
@@ -51,7 +52,7 @@ public class TimelineChart extends VBox {
         }
         ChartDefinition renderableDefinition = renderableDefinition(definition);
         xAxis.setLabel(renderableDefinition.xLabel());
-        xAxis.setTickLabelFormatter(new XAxisTickFormatter(renderableDefinition.xLabel(), ZoneId.systemDefault()));
+        xAxis.setTickLabelFormatter(new XAxisTickFormatter(renderableDefinition.xAxisType(), ZoneId.systemDefault()));
         yAxis.setLabel(renderableDefinition.yLabel());
         AxisRange initialRange = dataRange(renderableDefinition);
         ChartSeriesType primaryType = renderableDefinition.series().getFirst().type();
@@ -85,7 +86,7 @@ public class TimelineChart extends VBox {
         List<ChartSeries> series = definition.series().stream()
                 .map(TimelineChart::renderableSeries)
                 .toList();
-        return new ChartDefinition(definition.xLabel(), definition.yLabel(), series);
+        return new ChartDefinition(definition.xLabel(), definition.yLabel(), definition.xAxisType(), series);
     }
 
     private static ChartSeries renderableSeries(ChartSeries series) {
@@ -310,10 +311,15 @@ public class TimelineChart extends VBox {
         return new AxisRange(min, max);
     }
 
-    static String formatXAxisTick(String axisLabel, double value, ZoneId zoneId) {
-        if (axisLabel != null && axisLabel.equalsIgnoreCase("Time")) {
-            return DisplayFormats.formatTimestamp(Instant.ofEpochMilli(Math.round(value)), zoneId);
-        }
+    static String formatXAxisTick(ChartXAxisType axisType, double value, ZoneId zoneId) {
+        return switch (axisType == null ? ChartXAxisType.NUMBER : axisType) {
+            case EPOCH_MILLIS -> DisplayFormats.formatTimestamp(Instant.ofEpochMilli(Math.round(value)), zoneId);
+            case EPOCH_SECONDS -> DisplayFormats.formatTimestamp(Instant.ofEpochMilli(Math.round(value * 1000)), zoneId);
+            case NUMBER -> formatNumericTick(value);
+        };
+    }
+
+    private static String formatNumericTick(double value) {
         if (Math.rint(value) == value) {
             return Long.toString(Math.round(value));
         }
@@ -322,11 +328,11 @@ public class TimelineChart extends VBox {
 
     private static final class XAxisTickFormatter extends StringConverter<Number> {
 
-        private final String axisLabel;
+        private final ChartXAxisType axisType;
         private final ZoneId zoneId;
 
-        private XAxisTickFormatter(String axisLabel, ZoneId zoneId) {
-            this.axisLabel = axisLabel;
+        private XAxisTickFormatter(ChartXAxisType axisType, ZoneId zoneId) {
+            this.axisType = axisType;
             this.zoneId = zoneId;
         }
 
@@ -335,7 +341,7 @@ public class TimelineChart extends VBox {
             if (value == null) {
                 return "";
             }
-            return formatXAxisTick(axisLabel, value.doubleValue(), zoneId);
+            return formatXAxisTick(axisType, value.doubleValue(), zoneId);
         }
 
         @Override

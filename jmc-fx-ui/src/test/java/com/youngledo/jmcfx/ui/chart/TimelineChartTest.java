@@ -202,14 +202,27 @@ class TimelineChartTest {
     }
 
     @Test
-    void timeAxisTicksFormatEpochMillisAsTimestamps() {
+    void epochMillisAxisTicksFormatAsTimestamps() {
         assertEquals("1970-01-01 08:00:00.000",
-                TimelineChart.formatXAxisTick("Time", 0, java.time.ZoneId.of("Asia/Shanghai")));
+                TimelineChart.formatXAxisTick(ChartXAxisType.EPOCH_MILLIS, 0, java.time.ZoneId.of("Asia/Shanghai")));
+    }
+
+    @Test
+    void epochSecondsAxisTicksFormatAsTimestamps() {
+        assertEquals("1970-01-01 08:00:01.000",
+                TimelineChart.formatXAxisTick(ChartXAxisType.EPOCH_SECONDS, 1, java.time.ZoneId.of("Asia/Shanghai")));
+    }
+
+    @Test
+    void numberAxisTicksKeepNumericLabelsEvenWhenLabelSaysTime() {
+        assertEquals("1",
+                TimelineChart.formatXAxisTick(ChartXAxisType.NUMBER, 1, java.time.ZoneId.of("Asia/Shanghai")));
     }
 
     @Test
     void nonTimeAxisTicksKeepNumericLabels() {
-        assertEquals("42.5", TimelineChart.formatXAxisTick("Count", 42.5, java.time.ZoneId.of("Asia/Shanghai")));
+        assertEquals("42.5",
+                TimelineChart.formatXAxisTick(ChartXAxisType.NUMBER, 42.5, java.time.ZoneId.of("Asia/Shanghai")));
     }
 
     private static String appCss() throws IOException {
