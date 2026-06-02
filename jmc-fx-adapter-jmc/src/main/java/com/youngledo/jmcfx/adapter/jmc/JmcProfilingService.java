@@ -8,6 +8,10 @@ import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 
+import org.openjdk.jmc.common.IMCFrame;
+import org.openjdk.jmc.common.IMCMethod;
+import org.openjdk.jmc.common.IMCPackage;
+import org.openjdk.jmc.common.IMCType;
 import org.openjdk.jmc.common.item.IItemCollection;
 import org.openjdk.jmc.flightrecorder.CouldNotLoadRecordingException;
 import org.openjdk.jmc.flightrecorder.JfrLoaderToolkit;
@@ -24,6 +28,7 @@ import com.youngledo.jmcfx.domain.model.DependencyGraphEdge;
 import com.youngledo.jmcfx.domain.model.DependencyGraphReport;
 import com.youngledo.jmcfx.domain.model.HotMethod;
 import com.youngledo.jmcfx.domain.model.RecordingSummary;
+import com.youngledo.jmcfx.domain.model.StackFrameInfo;
 import com.youngledo.jmcfx.domain.model.StackTreeNode;
 import com.youngledo.jmcfx.domain.service.JmcFxException;
 import com.youngledo.jmcfx.domain.service.ProfilingService;
@@ -157,16 +162,86 @@ public class JmcProfilingService implements ProfilingService {
 			int branchCount = branch.getFirstFrame().getItemCount();
 			double pct = parentCount > 0 ? (branchCount * 100.0) / parentCount : 0;
 			StackTreeNode subTree = buildTree(branch.getEndFork(), branchCount);
-			children.add(new StackTreeNode(branchMethod, branchCount, pct,
+			children.add(new StackTreeNode(branchMethod, branchCount, pct, frameInfo(branch.getFirstFrame()),
 					subTree.children()));
 		}
 		children.sort(Comparator.comparingInt(StackTreeNode::count).reversed());
-		return new StackTreeNode("<root>", count, 100.0, List.copyOf(children));
+		return new StackTreeNode("<root>", count, 100.0, StackFrameInfo.EMPTY, List.copyOf(children));
 	}
 
 	private static String formatFrame(StacktraceFrame frame) {
 		return StacktraceFormatToolkit.formatFrame(frame.getFrame(), FRAME_SEPARATOR,
 				false, false, true, true, true, false);
+	}
+
+	private static StackFrameInfo frameInfo(StacktraceFrame stacktraceFrame) {
+		if (stacktraceFrame == null || stacktraceFrame.getFrame() == null) {
+			return StackFrameInfo.EMPTY;
+		}
+		return frameInfo(stacktraceFrame.getFrame(), formatFrame(stacktraceFrame));
+	}
+
+	static StackFrameInfo frameInfo(IMCFrame frame, String formattedFrame) {
+		if (frame == null) {
+			return StackFrameInfo.EMPTY;
+		}
+		IMCMethod method = frame.getMethod();
+		IMCType type = method == null ? null : method.getType();
+		IMCPackage pkg = type == null ? null : type.getPackage();
+		String methodName = firstPresent(method == null ? null : method.getMethodName(), formattedFrame);
+		String typeName = firstPresent(type == null ? null : type.getFullName(), type == null ? null : type.getTypeName());
+		String packageName = pkg == null ? packageFromTypeName(typeName) : firstPresent(pkg.getName(), packageFromTypeName(typeName));
+		String label = readableFrameLabel(methodName, typeName, formattedFrame);
+		String frameType = frame.getType() == null ? "" : frame.getType().getName();
+		return new StackFrameInfo(label, methodName, packageName, typeName, frameType, frame.getBCI(), frame.getFrameLineNumber());
+	}
+
+	private static String readableFrameLabel(String methodName, String typeName, String fallback) {
+		if (methodName != null && !methodName.isBlank()) {
+			String typeLabel = simpleTypeName(typeName);
+			return typeLabel.isBlank() ? methodName : typeLabel + "." + methodName;
+		}
+		return shortMethodLabel(fallback);
+	}
+
+	private static String shortMethodLabel(String formattedFrame) {
+		if (formattedFrame == null || formattedFrame.isBlank()) {
+			return "";
+		}
+		int parenIndex = formattedFrame.indexOf('(');
+		String prefix = parenIndex >= 0 ? formattedFrame.substring(0, parenIndex) : formattedFrame;
+		String suffix = parenIndex >= 0 ? formattedFrame.substring(parenIndex) : "";
+		int methodSeparator = prefix.lastIndexOf('.');
+		if (methodSeparator <= 0) {
+			return formattedFrame;
+		}
+		int classSeparator = prefix.lastIndexOf('.', methodSeparator - 1);
+		return classSeparator < 0 ? formattedFrame.substring(methodSeparator + 1) : prefix.substring(classSeparator + 1) + suffix;
+	}
+
+	private static String simpleTypeName(String typeName) {
+		if (typeName == null || typeName.isBlank()) {
+			return "";
+		}
+		int separator = typeName.lastIndexOf('.');
+		return separator < 0 ? typeName : typeName.substring(separator + 1);
+	}
+
+	private static String packageFromTypeName(String typeName) {
+		if (typeName == null || typeName.isBlank()) {
+			return "";
+		}
+		int separator = typeName.lastIndexOf('.');
+		return separator <= 0 ? "" : typeName.substring(0, separator);
+	}
+
+	private static String firstPresent(String... values) {
+		for (String value : values) {
+			if (value != null && !value.isBlank()) {
+				return value;
+			}
+		}
+		return "";
 	}
 
 	static String packageLabel(String formattedFrame, int packageDepth) {

@@ -7,9 +7,14 @@ import java.util.List;
 import com.youngledo.jmcfx.domain.model.DependencyGraphReport;
 import com.youngledo.jmcfx.domain.model.HotMethod;
 import com.youngledo.jmcfx.domain.model.RecordingSummary;
+import com.youngledo.jmcfx.domain.model.StackFrameInfo;
 import com.youngledo.jmcfx.domain.model.StackTreeNode;
 
 import jdk.jfr.Recording;
+import org.openjdk.jmc.common.IMCFrame;
+import org.openjdk.jmc.common.IMCMethod;
+import org.openjdk.jmc.common.IMCPackage;
+import org.openjdk.jmc.common.IMCType;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.io.TempDir;
 
@@ -70,6 +75,25 @@ class JmcProfilingServiceTest {
 		assertEquals("<unknown>", JmcProfilingService.packageLabel("", 2));
 	}
 
+	@Test
+	void frameInfoExtractsJmcTooltipFields() {
+		StackFrameInfo info = JmcProfilingService.frameInfo(
+				new TestFrame(
+						new TestMethod(new TestType("com.example.Worker", "Worker", new TestPackage("com.example")), "run"),
+						IMCFrame.Type.JIT_COMPILED,
+						42,
+						128),
+				"com.example.Worker.run()");
+
+		assertEquals("Worker.run", info.label());
+		assertEquals("run", info.methodName());
+		assertEquals("com.example", info.packageName());
+		assertEquals("com.example.Worker", info.typeName());
+		assertEquals(IMCFrame.Type.JIT_COMPILED.getName(), info.frameType());
+		assertEquals(42, info.bci());
+		assertEquals(128, info.lineNumber());
+	}
+
 	private Path createMinimalRecording(Path tempDir) throws Exception {
 		try (Recording recording = new Recording()) {
 			recording.start();
@@ -78,6 +102,98 @@ class JmcProfilingServiceTest {
 			Path file = tempDir.resolve("profiling-test.jfr");
 			recording.dump(file);
 			return file;
+		}
+	}
+
+	private record TestFrame(IMCMethod method, IMCFrame.Type type, Integer bci, Integer lineNumber) implements IMCFrame {
+
+		@Override
+		public Integer getFrameLineNumber() {
+			return lineNumber;
+		}
+
+		@Override
+		public Integer getBCI() {
+			return bci;
+		}
+
+		@Override
+		public IMCMethod getMethod() {
+			return method;
+		}
+
+		@Override
+		public Type getType() {
+			return type;
+		}
+	}
+
+	private record TestMethod(IMCType type, String methodName) implements IMCMethod {
+
+		@Override
+		public IMCType getType() {
+			return type;
+		}
+
+		@Override
+		public String getMethodName() {
+			return methodName;
+		}
+
+		@Override
+		public String getFormalDescriptor() {
+			return null;
+		}
+
+		@Override
+		public Integer getModifier() {
+			return null;
+		}
+
+		@Override
+		public Boolean isNative() {
+			return null;
+		}
+
+		@Override
+		public Boolean isHidden() {
+			return null;
+		}
+	}
+
+	private record TestType(String fullName, String typeName, IMCPackage packageName) implements IMCType {
+
+		@Override
+		public String getTypeName() {
+			return typeName;
+		}
+
+		@Override
+		public IMCPackage getPackage() {
+			return packageName;
+		}
+
+		@Override
+		public String getFullName() {
+			return fullName;
+		}
+	}
+
+	private record TestPackage(String name) implements IMCPackage {
+
+		@Override
+		public String getName() {
+			return name;
+		}
+
+		@Override
+		public org.openjdk.jmc.common.IMCModule getModule() {
+			return null;
+		}
+
+		@Override
+		public Boolean isExported() {
+			return null;
 		}
 	}
 }

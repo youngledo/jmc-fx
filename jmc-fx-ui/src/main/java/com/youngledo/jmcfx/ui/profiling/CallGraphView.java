@@ -127,6 +127,9 @@ public class CallGraphView extends Pane {
         for (CallGraphEdge edge : layout.edges()) {
             Line line = new Line();
             line.getStyleClass().add("call-graph-edge");
+            if (edge.percentage() >= 70) {
+                line.getStyleClass().add("call-graph-edge-strong");
+            }
             line.setManaged(false);
             line.setMouseTransparent(true);
             line.setUserData(edge);

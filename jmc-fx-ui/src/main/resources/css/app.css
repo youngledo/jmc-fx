@@ -609,12 +609,22 @@
 
 /* Histogram percentage bar */
 .percentage-bar .bar {
+    -fx-background-color: -color-accent-emphasis;
     -fx-background-insets: 0;
+    -fx-background-radius: 2px;
     -fx-padding: 0;
+}
+.percentage-bar .track {
+    -fx-background-color: -color-bg-subtle;
+    -fx-background-insets: 0;
+    -fx-background-radius: 2px;
 }
 .percentage-bar {
     -fx-indeterminate-bar-animation-time: 0;
     -fx-background-insets: 0;
+    -fx-min-height: 6px;
+    -fx-pref-height: 6px;
+    -fx-max-height: 6px;
 }
 .histogram-table {
     -fx-table-cell-horizontal-padding: 6px;
@@ -730,15 +740,116 @@
 }
 .flame-graph-frame {
     -fx-alignment: center-left;
-    -fx-background-color: -color-accent-emphasis;
-    -fx-background-radius: 3px;
+    -fx-background-radius: 2px;
     -fx-border-color: -color-border-muted;
-    -fx-border-radius: 3px;
+    -fx-border-radius: 2px;
+    -fx-border-width: 1px;
+}
+.flame-graph-orientation-flame .flame-graph-depth-0 {
+    -fx-background-color: #b42318;
+    -fx-border-color: #7a271a;
+}
+.flame-graph-orientation-flame .flame-graph-depth-1 {
+    -fx-background-color: #c2410c;
+    -fx-border-color: #9a3412;
+}
+.flame-graph-orientation-flame .flame-graph-depth-2 {
+    -fx-background-color: #e8590c;
+    -fx-border-color: #c2410c;
+}
+.flame-graph-orientation-flame .flame-graph-depth-3 {
+    -fx-background-color: #f76707;
+    -fx-border-color: #d9480f;
+}
+.flame-graph-orientation-flame .flame-graph-depth-4 {
+    -fx-background-color: #f59f00;
+    -fx-border-color: #e67700;
+}
+.flame-graph-orientation-flame .flame-graph-depth-5 {
+    -fx-background-color: #fab005;
+    -fx-border-color: #f59f00;
+}
+.flame-graph-orientation-flame .flame-graph-depth-6 {
+    -fx-background-color: #fcc419;
+    -fx-border-color: #fab005;
+}
+.flame-graph-orientation-flame .flame-graph-depth-7 {
+    -fx-background-color: #ffd166;
+    -fx-border-color: #fcc419;
+}
+.flame-graph-orientation-icicle .flame-graph-depth-0 {
+    -fx-background-color: #1f4e79;
+    -fx-border-color: #17324d;
+}
+.flame-graph-orientation-icicle .flame-graph-depth-1 {
+    -fx-background-color: #22577a;
+    -fx-border-color: #1b3a57;
+}
+.flame-graph-orientation-icicle .flame-graph-depth-2 {
+    -fx-background-color: #2563eb;
+    -fx-border-color: #1d4ed8;
+}
+.flame-graph-orientation-icicle .flame-graph-depth-3 {
+    -fx-background-color: #4f46e5;
+    -fx-border-color: #4338ca;
+}
+.flame-graph-orientation-icicle .flame-graph-depth-4 {
+    -fx-background-color: #6d28d9;
+    -fx-border-color: #5b21b6;
+}
+.flame-graph-orientation-icicle .flame-graph-depth-5 {
+    -fx-background-color: #7c3aed;
+    -fx-border-color: #6d28d9;
+}
+.flame-graph-orientation-icicle .flame-graph-depth-6 {
+    -fx-background-color: #8b5cf6;
+    -fx-border-color: #7c3aed;
+}
+.flame-graph-orientation-icicle .flame-graph-depth-7 {
+    -fx-background-color: #b197fc;
+    -fx-border-color: #8b5cf6;
+}
+.flame-graph-frame:hover {
+    -fx-border-color: -color-accent-fg;
+}
+.flame-graph-frame-selected {
+    -fx-border-color: -color-accent-fg;
+    -fx-border-width: 2px;
+    -fx-opacity: 1;
+}
+.flame-graph-frame-path {
+    -fx-opacity: 1;
+}
+.flame-graph-frame-muted {
+    -fx-opacity: 0.32;
 }
 .flame-graph-frame-label {
     -fx-padding: 0 8px;
     -fx-font-size: 11px;
-    -fx-text-fill: -color-fg-on-emphasis;
+    -fx-text-fill: -color-fg-default;
+}
+.flame-graph-tooltip {
+    -fx-font-size: 11px;
+}
+.flame-graph-orientation-flame .flame-graph-depth-0 .flame-graph-frame-label,
+.flame-graph-orientation-flame .flame-graph-depth-1 .flame-graph-frame-label,
+.flame-graph-orientation-icicle .flame-graph-depth-0 .flame-graph-frame-label,
+.flame-graph-orientation-icicle .flame-graph-depth-1 .flame-graph-frame-label,
+.flame-graph-orientation-icicle .flame-graph-depth-2 .flame-graph-frame-label,
+.flame-graph-orientation-icicle .flame-graph-depth-3 .flame-graph-frame-label,
+.flame-graph-orientation-icicle .flame-graph-depth-4 .flame-graph-frame-label,
+.flame-graph-orientation-icicle .flame-graph-depth-5 .flame-graph-frame-label {
+    -fx-text-fill: #ffffff;
+}
+.flame-graph-orientation-flame .flame-graph-depth-2 .flame-graph-frame-label,
+.flame-graph-orientation-flame .flame-graph-depth-3 .flame-graph-frame-label,
+.flame-graph-orientation-flame .flame-graph-depth-4 .flame-graph-frame-label,
+.flame-graph-orientation-flame .flame-graph-depth-5 .flame-graph-frame-label,
+.flame-graph-orientation-flame .flame-graph-depth-6 .flame-graph-frame-label,
+.flame-graph-orientation-flame .flame-graph-depth-7 .flame-graph-frame-label,
+.flame-graph-orientation-icicle .flame-graph-depth-6 .flame-graph-frame-label,
+.flame-graph-orientation-icicle .flame-graph-depth-7 .flame-graph-frame-label {
+    -fx-text-fill: #1f2328;
 }
 .flame-graph-empty {
     -fx-alignment: center;
@@ -749,22 +860,33 @@
     -fx-min-height: 220px;
 }
 .call-graph-edge {
-    -fx-stroke: -color-border-default;
-    -fx-stroke-width: 1.25px;
+    -fx-stroke: -color-border-muted;
+    -fx-stroke-width: 1px;
+    -fx-opacity: 0.72;
+}
+.call-graph-edge-strong {
+    -fx-stroke: -color-accent-emphasis;
+    -fx-stroke-width: 1.75px;
+    -fx-opacity: 0.82;
 }
 .call-graph-node {
-    -fx-background-color: -color-bg-subtle;
-    -fx-background-radius: 5px;
+    -fx-background-color: -color-bg-default;
+    -fx-background-radius: 2px;
     -fx-border-color: -color-border-muted;
-    -fx-border-radius: 5px;
+    -fx-border-radius: 2px;
+    -fx-border-width: 1px;
     -fx-padding: 4px 8px;
+}
+.call-graph-node:hover {
+    -fx-border-color: -color-accent-fg;
 }
 .call-graph-node-primary {
     -fx-background-color: -color-accent-subtle;
-    -fx-border-color: -color-accent-emphasis;
+    -fx-border-color: -color-accent-fg;
 }
 .call-graph-node-label {
     -fx-font-size: 11px;
+    -fx-text-fill: -color-fg-default;
 }
 .call-graph-empty {
     -fx-text-fill: -color-fg-muted;

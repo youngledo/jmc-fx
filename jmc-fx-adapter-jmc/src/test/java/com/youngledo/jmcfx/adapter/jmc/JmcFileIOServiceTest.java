@@ -5,6 +5,7 @@ import java.time.Instant;
 import java.util.List;
 
 import com.youngledo.jmcfx.domain.model.ChartDefinition;
+import com.youngledo.jmcfx.domain.model.ChartXAxisType;
 import com.youngledo.jmcfx.domain.model.FileIOEvent;
 import com.youngledo.jmcfx.domain.model.FileIOHistogram;
 import com.youngledo.jmcfx.domain.model.RecordingSummary;
@@ -44,6 +45,7 @@ class JmcFileIOServiceTest {
 				Instant.now(), Instant.now(), 1000, 1024);
 		ChartDefinition timeline = service.loadTimeline(recording);
 		assertNotNull(timeline);
+		assertEquals(ChartXAxisType.EPOCH_MILLIS, timeline.xAxisType());
 	}
 
 	@Test

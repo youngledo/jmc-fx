@@ -24,6 +24,7 @@ import com.youngledo.jmcfx.domain.model.ChartDataPoint;
 import com.youngledo.jmcfx.domain.model.ChartDefinition;
 import com.youngledo.jmcfx.domain.model.ChartSeries;
 import com.youngledo.jmcfx.domain.model.ChartSeriesType;
+import com.youngledo.jmcfx.domain.model.ChartXAxisType;
 import com.youngledo.jmcfx.domain.model.FileIOEvent;
 import com.youngledo.jmcfx.domain.model.FileIOHistogram;
 import com.youngledo.jmcfx.domain.model.RecordingSummary;
@@ -76,7 +77,7 @@ public class JmcFileIOService implements FileIOService {
 		IItemCollection events = loadEvents(recording);
 		IItemCollection ioEvents = events.apply(JdkFilters.FILE_OR_SOCKET_IO);
 		if (!ioEvents.hasItems()) {
-			return new ChartDefinition("Time", "Duration (ms)", List.of());
+			return new ChartDefinition("Time", "Duration (ms)", ChartXAxisType.EPOCH_MILLIS, List.of());
 		}
 
 		List<ChartDataPoint> readPoints = new ArrayList<>();
@@ -120,7 +121,8 @@ public class JmcFileIOService implements FileIOService {
 			seriesList.add(new ChartSeries("file-write", "File Write",
 					ChartSeriesType.LINE, List.copyOf(writePoints)));
 		}
-		return JmcResultLimiter.limitChart(new ChartDefinition("Time", "Duration (ms)", List.copyOf(seriesList)));
+		return JmcResultLimiter.limitChart(new ChartDefinition("Time", "Duration (ms)",
+				ChartXAxisType.EPOCH_MILLIS, List.copyOf(seriesList)));
 	}
 
 	private void collectHistogramEntries(IItemCollection collection,

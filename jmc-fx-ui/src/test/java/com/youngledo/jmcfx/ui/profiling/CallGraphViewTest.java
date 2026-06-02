@@ -102,6 +102,15 @@ class CallGraphViewTest {
     }
 
     @Test
+    void highWeightEdgesUseStrongStyleClass() {
+        CallGraphView view = new CallGraphView();
+
+        view.setLayout(wideLayout());
+
+        assertEquals(2, countByStyleClass(view, "call-graph-edge-strong"));
+    }
+
+    @Test
     void layoutChildrenConnectsEdgeBetweenNodeCenters() {
         CallGraphView view = new CallGraphView();
         view.setLayout(sampleLayout());
@@ -204,9 +213,21 @@ class CallGraphViewTest {
         assertTrue(css.contains(".call-graph-node-primary"));
         assertTrue(css.contains(".call-graph-node-label"));
         assertTrue(css.contains(".call-graph-edge"));
+        assertTrue(css.contains(".call-graph-edge-strong"));
+        assertTrue(css.contains(".call-graph-node:hover"));
         assertTrue(css.contains(".call-graph-empty"));
         assertTrue(css.contains(".profiling-graph-tab-content"));
         assertTrue(css.contains(".profiling-graph-toolbar"));
+
+        String nodeBlock = cssBlock(css, ".call-graph-node");
+        assertTrue(nodeBlock.contains("-fx-background-radius: 2px"));
+        assertTrue(nodeBlock.contains("-fx-border-width: 1px"));
+
+        String edgeBlock = cssBlock(css, ".call-graph-edge");
+        assertTrue(edgeBlock.contains("-fx-opacity: 0.72"));
+
+        String strongEdgeBlock = cssBlock(css, ".call-graph-edge-strong");
+        assertTrue(strongEdgeBlock.contains("-fx-stroke-width: 1.75px"));
     }
 
     private CallGraphLayout sampleLayout() {
@@ -285,5 +306,14 @@ class CallGraphViewTest {
         try (InputStream stream = CallGraphViewTest.class.getResourceAsStream("/css/app.css")) {
             return new String(stream.readAllBytes(), StandardCharsets.UTF_8);
         }
+    }
+
+    private String cssBlock(String css, String selector) {
+        int start = css.indexOf(selector + " {");
+        if (start < 0) {
+            return "";
+        }
+        int end = css.indexOf('}', start);
+        return end < 0 ? css.substring(start) : css.substring(start, end);
     }
 }

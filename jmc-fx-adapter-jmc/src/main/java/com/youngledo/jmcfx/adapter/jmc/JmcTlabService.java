@@ -25,6 +25,7 @@ import com.youngledo.jmcfx.domain.model.ChartDataPoint;
 import com.youngledo.jmcfx.domain.model.ChartDefinition;
 import com.youngledo.jmcfx.domain.model.ChartSeries;
 import com.youngledo.jmcfx.domain.model.ChartSeriesType;
+import com.youngledo.jmcfx.domain.model.ChartXAxisType;
 import com.youngledo.jmcfx.domain.model.RecordingSummary;
 import com.youngledo.jmcfx.domain.model.TlabAllocation;
 import com.youngledo.jmcfx.domain.service.JmcFxException;
@@ -108,7 +109,7 @@ public class JmcTlabService implements TlabService {
         collectTimelineBytes(outsideTlab, bytesBySecond);
 
         if (bytesBySecond.isEmpty()) {
-            return new ChartDefinition("Time", "Bytes", List.of());
+            return new ChartDefinition("Time", "Bytes", timelineXAxisType(), List.of());
         }
 
         List<ChartDataPoint> points = new ArrayList<>(bytesBySecond.entrySet().stream()
@@ -117,11 +118,15 @@ public class JmcTlabService implements TlabService {
         points.sort(Comparator.comparingDouble(ChartDataPoint::x));
         ChartSeries series = new ChartSeries("allocations", "Allocations",
                 timelineSeriesType(), List.copyOf(points));
-        return JmcResultLimiter.limitChart(new ChartDefinition("Time", "Bytes", List.of(series)));
+        return JmcResultLimiter.limitChart(new ChartDefinition("Time", "Bytes", timelineXAxisType(), List.of(series)));
     }
 
     static ChartSeriesType timelineSeriesType() {
         return ChartSeriesType.LINE;
+    }
+
+    static ChartXAxisType timelineXAxisType() {
+        return ChartXAxisType.EPOCH_MILLIS;
     }
 
     private void collectTimelineBytes(IItemCollection collection, Map<Long, Long> bytesBySecond) {

@@ -27,6 +27,7 @@ import com.youngledo.jmcfx.domain.model.ChartDataPoint;
 import com.youngledo.jmcfx.domain.model.ChartDefinition;
 import com.youngledo.jmcfx.domain.model.ChartSeries;
 import com.youngledo.jmcfx.domain.model.ChartSeriesType;
+import com.youngledo.jmcfx.domain.model.ChartXAxisType;
 import com.youngledo.jmcfx.domain.model.NativeLibraryEntry;
 import com.youngledo.jmcfx.domain.model.RecordingSummary;
 import com.youngledo.jmcfx.domain.model.ThreadDumpEntry;
@@ -170,7 +171,8 @@ public class JmcJavaAppService implements JavaAppService {
                     ChartSeriesType.LINE, List.copyOf(exceptionPoints)));
         }
 
-        return JmcResultLimiter.limitChart(new ChartDefinition("Time", "Value", List.copyOf(series)));
+        return JmcResultLimiter.limitChart(new ChartDefinition("Time", "Value",
+                ChartXAxisType.EPOCH_MILLIS, List.copyOf(series)));
     }
 
     @Override

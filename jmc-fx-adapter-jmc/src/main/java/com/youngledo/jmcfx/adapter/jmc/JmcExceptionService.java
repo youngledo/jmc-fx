@@ -25,6 +25,7 @@ import com.youngledo.jmcfx.domain.model.ChartDataPoint;
 import com.youngledo.jmcfx.domain.model.ChartDefinition;
 import com.youngledo.jmcfx.domain.model.ChartSeries;
 import com.youngledo.jmcfx.domain.model.ChartSeriesType;
+import com.youngledo.jmcfx.domain.model.ChartXAxisType;
 import com.youngledo.jmcfx.domain.model.ExceptionGrouping;
 import com.youngledo.jmcfx.domain.model.ExceptionSummary;
 import com.youngledo.jmcfx.domain.model.RecordingSummary;
@@ -81,7 +82,7 @@ public class JmcExceptionService implements ExceptionService {
 		IItemCollection events = loadEvents(recording);
 		IItemCollection stats = events.apply(JdkFilters.THROWABLES_STATISTICS);
 		if (!stats.hasItems()) {
-			return new ChartDefinition("Time", "Count", List.of());
+			return new ChartDefinition("Time", "Count", ChartXAxisType.EPOCH_MILLIS, List.of());
 		}
 
 		List<ChartDataPoint> points = new ArrayList<>();
@@ -104,7 +105,8 @@ public class JmcExceptionService implements ExceptionService {
 
 		ChartSeries series = new ChartSeries("exceptions", "Exceptions",
 				ChartSeriesType.LINE, List.copyOf(points));
-		return JmcResultLimiter.limitChart(new ChartDefinition("Time", "Count", List.of(series)));
+		return JmcResultLimiter.limitChart(new ChartDefinition("Time", "Count",
+				ChartXAxisType.EPOCH_MILLIS, List.of(series)));
 	}
 
 	@SuppressWarnings("unchecked")

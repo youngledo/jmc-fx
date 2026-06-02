@@ -62,6 +62,7 @@ public final class FlameGraphLayoutBuilder {
                     child.method(),
                     child.count(),
                     child.percentage(),
+                    child.frameInfo(),
                     depth,
                     nextX,
                     childWidth);

@@ -8,6 +8,7 @@ import java.util.List;
 
 import org.junit.jupiter.api.Test;
 
+import com.youngledo.jmcfx.domain.model.StackFrameInfo;
 import com.youngledo.jmcfx.domain.model.StackTreeNode;
 
 class FlameGraphLayoutBuilderTest {
@@ -90,6 +91,24 @@ class FlameGraphLayoutBuilderTest {
 
         assertEquals(1, layout.frames().size());
         assertEquals("child", layout.frames().getFirst().method());
+    }
+
+    @Test
+    void preservesStructuredFrameInfoOnFrames() {
+        StackFrameInfo info = new StackFrameInfo(
+                "Worker.run",
+                "run",
+                "com.example",
+                "com.example.Worker",
+                "Interpreted",
+                12,
+                34);
+        StackTreeNode root = new StackTreeNode("root", 100, 0, List.of(
+                new StackTreeNode("com.example.Worker.run()", 100, 100, info, List.of())));
+
+        FlameGraphLayout layout = FlameGraphLayoutBuilder.defaultBuilder().build(root);
+
+        assertEquals(info, layout.frames().getFirst().frameInfo());
     }
 
     @Test

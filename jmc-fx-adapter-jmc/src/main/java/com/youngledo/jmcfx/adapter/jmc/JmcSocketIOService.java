@@ -21,6 +21,7 @@ import com.youngledo.jmcfx.domain.model.ChartDataPoint;
 import com.youngledo.jmcfx.domain.model.ChartDefinition;
 import com.youngledo.jmcfx.domain.model.ChartSeries;
 import com.youngledo.jmcfx.domain.model.ChartSeriesType;
+import com.youngledo.jmcfx.domain.model.ChartXAxisType;
 import com.youngledo.jmcfx.domain.model.RecordingSummary;
 import com.youngledo.jmcfx.domain.model.SocketIOEvent;
 import com.youngledo.jmcfx.domain.model.SocketIOGrouping;
@@ -78,7 +79,7 @@ public class JmcSocketIOService implements SocketIOService {
 		IItemCollection socketReads = events.apply(JdkFilters.SOCKET_READ);
 		IItemCollection socketWrites = events.apply(JdkFilters.SOCKET_WRITE);
 		if (!socketReads.hasItems() && !socketWrites.hasItems()) {
-			return new ChartDefinition("Time", "Duration (ms)", List.of());
+			return new ChartDefinition("Time", "Duration (ms)", ChartXAxisType.EPOCH_MILLIS, List.of());
 		}
 
 		List<ChartDataPoint> readPoints = new ArrayList<>();
@@ -99,7 +100,8 @@ public class JmcSocketIOService implements SocketIOService {
 			seriesList.add(new ChartSeries("socket-write", "Socket Write",
 					ChartSeriesType.LINE, List.copyOf(writePoints)));
 		}
-		return JmcResultLimiter.limitChart(new ChartDefinition("Time", "Duration (ms)", List.copyOf(seriesList)));
+		return JmcResultLimiter.limitChart(new ChartDefinition("Time", "Duration (ms)",
+				ChartXAxisType.EPOCH_MILLIS, List.copyOf(seriesList)));
 	}
 
 	private void collectHistogramEntries(IItemCollection collection,

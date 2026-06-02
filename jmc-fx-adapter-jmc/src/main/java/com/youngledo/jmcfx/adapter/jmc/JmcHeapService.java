@@ -25,6 +25,7 @@ import com.youngledo.jmcfx.domain.model.ChartDataPoint;
 import com.youngledo.jmcfx.domain.model.ChartDefinition;
 import com.youngledo.jmcfx.domain.model.ChartSeries;
 import com.youngledo.jmcfx.domain.model.ChartSeriesType;
+import com.youngledo.jmcfx.domain.model.ChartXAxisType;
 import com.youngledo.jmcfx.domain.model.HeapClassHistogram;
 import com.youngledo.jmcfx.domain.model.RecordingSummary;
 import com.youngledo.jmcfx.domain.service.HeapService;
@@ -116,7 +117,7 @@ public class JmcHeapService implements HeapService {
         IItemCollection events = loadEvents(recording);
         IItemCollection heapSummaries = events.apply(JdkFilters.HEAP_SUMMARY);
         if (!heapSummaries.hasItems()) {
-            return new ChartDefinition("Time", "Bytes", List.of());
+            return new ChartDefinition("Time", "Bytes", ChartXAxisType.EPOCH_MILLIS, List.of());
         }
 
         List<ChartDataPoint> usedPoints = new ArrayList<>();
@@ -162,7 +163,8 @@ public class JmcHeapService implements HeapService {
                 ChartSeriesType.AREA, List.copyOf(usedPoints));
         ChartSeries totalSeries = new ChartSeries("heapTotal", "Total Heap",
                 ChartSeriesType.LINE, List.copyOf(totalPoints));
-        return JmcResultLimiter.limitChart(new ChartDefinition("Time", "Bytes", List.of(usedSeries, totalSeries)));
+        return JmcResultLimiter.limitChart(new ChartDefinition("Time", "Bytes", ChartXAxisType.EPOCH_MILLIS,
+                List.of(usedSeries, totalSeries)));
     }
 
     @SuppressWarnings("unchecked")

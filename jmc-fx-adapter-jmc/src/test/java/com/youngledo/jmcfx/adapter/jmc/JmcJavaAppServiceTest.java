@@ -4,6 +4,7 @@ import java.nio.file.Path;
 import java.time.Instant;
 import java.util.List;
 
+import com.youngledo.jmcfx.domain.model.ChartXAxisType;
 import com.youngledo.jmcfx.domain.model.NativeLibraryEntry;
 import com.youngledo.jmcfx.domain.model.RecordingSummary;
 import com.youngledo.jmcfx.domain.model.ThreadDumpEntry;
@@ -36,6 +37,7 @@ class JmcJavaAppServiceTest {
                 Instant.now(), Instant.now(), 1000, 1024);
         var chart = service.loadOverviewChart(recording);
         assertNotNull(chart);
+        assertEquals(ChartXAxisType.EPOCH_MILLIS, chart.xAxisType());
     }
 
     @Test

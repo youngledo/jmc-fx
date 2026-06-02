@@ -9,6 +9,7 @@ import java.time.Instant;
 import java.util.List;
 
 import com.youngledo.jmcfx.domain.model.ChartDefinition;
+import com.youngledo.jmcfx.domain.model.ChartXAxisType;
 import com.youngledo.jmcfx.domain.model.RecordingSummary;
 import com.youngledo.jmcfx.domain.model.SocketIOEvent;
 import com.youngledo.jmcfx.domain.model.SocketIOGrouping;
@@ -130,6 +131,7 @@ class JmcSocketIOServiceTest {
 				Instant.now(), Instant.now(), 1000, 1024);
 		ChartDefinition timeline = service.loadTimeline(recording);
 		assertNotNull(timeline);
+		assertEquals(ChartXAxisType.EPOCH_MILLIS, timeline.xAxisType());
 	}
 
 	@Test
