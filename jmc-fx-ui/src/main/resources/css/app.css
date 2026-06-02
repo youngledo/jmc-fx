@@ -686,16 +686,21 @@
 }
 .event-heatmap-row-label {
     -fx-font-size: 12px;
-    -fx-padding: 0 10px 0 0;
+    -fx-text-fill: -color-fg-muted;
+    -fx-padding: 0 8px 0 0;
 }
 .event-heatmap-cell {
     -fx-background-color: -color-accent-emphasis;
     -fx-background-radius: 2px;
     -fx-border-radius: 2px;
 }
-.event-heatmap-cell-selected {
-    -fx-border-color: -color-fg-default;
+.event-heatmap-cell:hover {
+    -fx-border-color: -color-accent-fg;
     -fx-border-width: 1px;
+}
+.event-heatmap-cell-selected {
+    -fx-border-color: -color-accent-fg;
+    -fx-border-width: 2px;
 }
 .profiling-graph-tab-content {
     -fx-padding: 12px 14px 14px 14px;

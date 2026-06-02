@@ -65,7 +65,11 @@ class EventHeatmapViewTest {
         assertTrue(css.contains(".advanced-jfr-heatmap-scroll"));
         assertTrue(css.contains(".advanced-jfr-heatmap-content"));
         assertTrue(css.contains(".event-heatmap-cell"));
+        assertTrue(css.contains(".event-heatmap-cell:hover"));
         assertTrue(css.contains(".event-heatmap-cell-selected"));
+        assertTrue(css.contains("-fx-background-radius: 2px"));
+        assertTrue(css.contains(".event-heatmap-row-label"));
+        assertTrue(css.contains("-fx-text-fill: -color-fg-muted"));
     }
 
     private EventHeatmap sampleHeatmap() {
