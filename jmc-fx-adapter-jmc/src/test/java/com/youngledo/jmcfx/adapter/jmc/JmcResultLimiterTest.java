@@ -12,6 +12,7 @@ import com.youngledo.jmcfx.domain.model.ChartDataPoint;
 import com.youngledo.jmcfx.domain.model.ChartDefinition;
 import com.youngledo.jmcfx.domain.model.ChartSeries;
 import com.youngledo.jmcfx.domain.model.ChartSeriesType;
+import com.youngledo.jmcfx.domain.model.ChartXAxisType;
 
 class JmcResultLimiterTest {
 
@@ -43,5 +44,16 @@ class JmcResultLimiterTest {
         assertEquals(points.getFirst(), limitedPoints.getFirst());
         assertEquals(points.getLast(), limitedPoints.getLast());
         assertTrue(limitedPoints.stream().mapToDouble(ChartDataPoint::x).distinct().count() == limitedPoints.size());
+    }
+
+    @Test
+    void preservesChartXAxisTypeWhileLimitingSeries() {
+        ChartDefinition chart = new ChartDefinition("Time", "Count", ChartXAxisType.EPOCH_SECONDS, List.of(
+                new ChartSeries("series", "Series", ChartSeriesType.LINE,
+                        List.of(new ChartDataPoint(0, 1), new ChartDataPoint(1, 2)))));
+
+        ChartDefinition limited = JmcResultLimiter.limitChart(chart);
+
+        assertEquals(ChartXAxisType.EPOCH_SECONDS, limited.xAxisType());
     }
 }

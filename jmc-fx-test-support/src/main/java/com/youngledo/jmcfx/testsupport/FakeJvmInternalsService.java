@@ -7,6 +7,7 @@ import com.youngledo.jmcfx.domain.model.ChartDataPoint;
 import com.youngledo.jmcfx.domain.model.ChartDefinition;
 import com.youngledo.jmcfx.domain.model.ChartSeries;
 import com.youngledo.jmcfx.domain.model.ChartSeriesType;
+import com.youngledo.jmcfx.domain.model.ChartXAxisType;
 import com.youngledo.jmcfx.domain.model.ClassloaderStatistics;
 import com.youngledo.jmcfx.domain.model.ClassloaderSummary;
 import com.youngledo.jmcfx.domain.model.ClassloadEvent;
@@ -78,7 +79,7 @@ public class FakeJvmInternalsService implements JvmInternalsService {
 
     @Override
     public ChartDefinition loadGcHeapChart(RecordingSummary recording) {
-        return new ChartDefinition("Time", "Bytes", List.of(
+        return new ChartDefinition("Time", "Bytes", ChartXAxisType.EPOCH_SECONDS, List.of(
                 new ChartSeries("used", "Used Heap", ChartSeriesType.LINE,
                         List.of(new ChartDataPoint(0, 100_000_000), new ChartDataPoint(1, 80_000_000))),
                 new ChartSeries("total", "Total Heap", ChartSeriesType.LINE,
@@ -87,14 +88,14 @@ public class FakeJvmInternalsService implements JvmInternalsService {
 
     @Override
     public ChartDefinition loadGcMetaspaceChart(RecordingSummary recording) {
-        return new ChartDefinition("Time", "Bytes", List.of(
+        return new ChartDefinition("Time", "Bytes", ChartXAxisType.EPOCH_SECONDS, List.of(
                 new ChartSeries("used", "Used Metaspace", ChartSeriesType.LINE,
                         List.of(new ChartDataPoint(0, 50_000_000)))));
     }
 
     @Override
     public ChartDefinition loadGcPauseChart(RecordingSummary recording) {
-        return new ChartDefinition("Time", "Pause (ms)", List.of(
+        return new ChartDefinition("Time", "Pause (ms)", ChartXAxisType.EPOCH_SECONDS, List.of(
                 new ChartSeries("gc-pause", "GC Pause", ChartSeriesType.LINE,
                         List.of(new ChartDataPoint(0, 8), new ChartDataPoint(1, 200)))));
     }
@@ -128,7 +129,7 @@ public class FakeJvmInternalsService implements JvmInternalsService {
 
     @Override
     public ChartDefinition loadCompilationDurationChart(RecordingSummary recording) {
-        return new ChartDefinition("Time", "Duration (ms)", List.of(
+        return new ChartDefinition("Time", "Duration (ms)", ChartXAxisType.EPOCH_SECONDS, List.of(
                 new ChartSeries("compilation-duration", "Compilation Duration", ChartSeriesType.LINE,
                         List.of(new ChartDataPoint(0, 0.5), new ChartDataPoint(1, 0.3)))));
     }
@@ -147,7 +148,7 @@ public class FakeJvmInternalsService implements JvmInternalsService {
 
     @Override
     public ChartDefinition loadCodeCacheEntriesChart(RecordingSummary recording) {
-        return new ChartDefinition("Time", "Count", List.of(
+        return new ChartDefinition("Time", "Count", ChartXAxisType.EPOCH_SECONDS, List.of(
                 new ChartSeries("entries", "Entries", ChartSeriesType.LINE,
                         List.of(new ChartDataPoint(0, 1000))),
                 new ChartSeries("methods", "Methods", ChartSeriesType.LINE,
@@ -156,7 +157,7 @@ public class FakeJvmInternalsService implements JvmInternalsService {
 
     @Override
     public ChartDefinition loadCodeCacheSweepChart(RecordingSummary recording) {
-        return new ChartDefinition("Time", "Count", List.of(
+        return new ChartDefinition("Time", "Count", ChartXAxisType.EPOCH_SECONDS, List.of(
                 new ChartSeries("swept", "Swept", ChartSeriesType.LINE,
                         List.of(new ChartDataPoint(0, 50))),
                 new ChartSeries("flushed", "Flushed", ChartSeriesType.LINE,
@@ -188,7 +189,7 @@ public class FakeJvmInternalsService implements JvmInternalsService {
 
     @Override
     public ChartDefinition loadClassLoadingChart(RecordingSummary recording) {
-        return new ChartDefinition("Time", "Count", List.of(
+        return new ChartDefinition("Time", "Count", ChartXAxisType.EPOCH_SECONDS, List.of(
                 new ChartSeries("loaded", "Loaded", ChartSeriesType.LINE,
                         List.of(new ChartDataPoint(0, 2000), new ChartDataPoint(1, 2100))),
                 new ChartSeries("unloaded", "Unloaded", ChartSeriesType.LINE,

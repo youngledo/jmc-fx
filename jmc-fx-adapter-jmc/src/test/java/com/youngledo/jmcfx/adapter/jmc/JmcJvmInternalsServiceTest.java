@@ -7,6 +7,7 @@ import java.time.Instant;
 import java.util.List;
 
 import com.youngledo.jmcfx.domain.model.ChartDefinition;
+import com.youngledo.jmcfx.domain.model.ChartXAxisType;
 import com.youngledo.jmcfx.domain.model.ClassloaderSummary;
 import com.youngledo.jmcfx.domain.model.CodeCacheSweep;
 import com.youngledo.jmcfx.domain.model.CompilationEvent;
@@ -147,6 +148,24 @@ class JmcJvmInternalsServiceTest {
         RecordingSummary recording = createMinimalRecording(tempDir);
         ChartDefinition chart = service.loadClassLoadingChart(recording);
         assertNotNull(chart);
+    }
+
+    @Test
+    void loadCodeCacheEntriesChart_marksXAxisAsEpochSeconds(@TempDir Path tempDir) throws Exception {
+        RecordingSummary recording = createMinimalRecording(tempDir);
+
+        ChartDefinition chart = service.loadCodeCacheEntriesChart(recording);
+
+        assertEquals(ChartXAxisType.EPOCH_SECONDS, chart.xAxisType());
+    }
+
+    @Test
+    void loadCodeCacheSweepChart_marksXAxisAsEpochSeconds(@TempDir Path tempDir) throws Exception {
+        RecordingSummary recording = createMinimalRecording(tempDir);
+
+        ChartDefinition chart = service.loadCodeCacheSweepChart(recording);
+
+        assertEquals(ChartXAxisType.EPOCH_SECONDS, chart.xAxisType());
     }
 
     private RecordingSummary createMinimalRecording(Path tempDir) throws Exception {

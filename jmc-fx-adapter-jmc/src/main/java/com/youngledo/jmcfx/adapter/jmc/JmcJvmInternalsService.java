@@ -27,6 +27,7 @@ import com.youngledo.jmcfx.domain.model.ChartDataPoint;
 import com.youngledo.jmcfx.domain.model.ChartDefinition;
 import com.youngledo.jmcfx.domain.model.ChartSeries;
 import com.youngledo.jmcfx.domain.model.ChartSeriesType;
+import com.youngledo.jmcfx.domain.model.ChartXAxisType;
 import com.youngledo.jmcfx.domain.model.ClassloaderStatistics;
 import com.youngledo.jmcfx.domain.model.ClassloaderSummary;
 import com.youngledo.jmcfx.domain.model.ClassloadEvent;
@@ -206,7 +207,8 @@ public class JmcJvmInternalsService implements JvmInternalsService {
     public ChartDefinition loadGcHeapChart(RecordingSummary recording) {
         IItemCollection events = loadEvents(recording);
         return buildHeapMetaspaceChart(events, JdkFilters.HEAP_SUMMARY_AFTER_GC,
-                JdkAttributes.HEAP_USED, JdkAttributes.HEAP_TOTAL, "Time", "Bytes", "Used Heap", "Total Heap");
+                JdkAttributes.HEAP_USED, JdkAttributes.HEAP_TOTAL, "Time", "Bytes",
+                ChartXAxisType.EPOCH_SECONDS, "Used Heap", "Total Heap");
     }
 
     @Override
@@ -221,7 +223,7 @@ public class JmcJvmInternalsService implements JvmInternalsService {
                     usedPoints.add(new ChartDataPoint(time, readDoubleBytes(JdkAttributes.GC_METASPACE_USED, item)));
                     committedPoints.add(new ChartDataPoint(time, readDoubleBytes(JdkAttributes.GC_METASPACE_COMMITTED, item)));
                 });
-        return JmcResultLimiter.limitChart(new ChartDefinition("Time", "Bytes", List.of(
+        return JmcResultLimiter.limitChart(new ChartDefinition("Time", "Bytes", ChartXAxisType.EPOCH_SECONDS, List.of(
                 new ChartSeries("metaspace-used", "Used Metaspace", ChartSeriesType.LINE, List.copyOf(usedPoints)),
                 new ChartSeries("metaspace-committed", "Committed Metaspace", ChartSeriesType.LINE, List.copyOf(committedPoints)))));
     }
@@ -236,7 +238,7 @@ public class JmcJvmInternalsService implements JvmInternalsService {
                     double time = readEpochSeconds(JfrAttributes.START_TIME, item);
                     pausePoints.add(new ChartDataPoint(time, readDurationMicros(item) / 1000.0));
                 });
-        return JmcResultLimiter.limitChart(new ChartDefinition("Time", "Pause (ms)", List.of(
+        return JmcResultLimiter.limitChart(new ChartDefinition("Time", "Pause (ms)", ChartXAxisType.EPOCH_SECONDS, List.of(
                 new ChartSeries("gc-pause", "GC Pause", ChartSeriesType.LINE, List.copyOf(pausePoints)))));
     }
 
@@ -323,7 +325,7 @@ public class JmcJvmInternalsService implements JvmInternalsService {
                     double time = readEpochSeconds(JfrAttributes.START_TIME, item);
                     points.add(new ChartDataPoint(time, readDurationMicros(item) / 1000.0));
                 });
-        return JmcResultLimiter.limitChart(new ChartDefinition("Time", "Duration (ms)", List.of(
+        return JmcResultLimiter.limitChart(new ChartDefinition("Time", "Duration (ms)", ChartXAxisType.EPOCH_SECONDS, List.of(
                 new ChartSeries("compilation-duration", "Compilation Duration", ChartSeriesType.LINE, List.copyOf(points)))));
     }
 
@@ -377,7 +379,7 @@ public class JmcJvmInternalsService implements JvmInternalsService {
                     entriesPoints.add(new ChartDataPoint(time, readLong(JdkAttributes.ENTRIES, item)));
                     methodsPoints.add(new ChartDataPoint(time, readLong(JdkAttributes.METHODS, item)));
                 });
-        return JmcResultLimiter.limitChart(new ChartDefinition("Time", "Count", List.of(
+        return JmcResultLimiter.limitChart(new ChartDefinition("Time", "Count", ChartXAxisType.EPOCH_SECONDS, List.of(
                 new ChartSeries("entries", "Entries", ChartSeriesType.LINE, List.copyOf(entriesPoints)),
                 new ChartSeries("methods", "Methods", ChartSeriesType.LINE, List.copyOf(methodsPoints)))));
     }
@@ -394,7 +396,7 @@ public class JmcJvmInternalsService implements JvmInternalsService {
                     sweptPoints.add(new ChartDataPoint(time, readLong(JdkAttributes.SWEEP_METHOD_SWEPT, item)));
                     flushedPoints.add(new ChartDataPoint(time, readLong(JdkAttributes.SWEEP_METHOD_FLUSHED, item)));
                 });
-        return JmcResultLimiter.limitChart(new ChartDefinition("Time", "Count", List.of(
+        return JmcResultLimiter.limitChart(new ChartDefinition("Time", "Count", ChartXAxisType.EPOCH_SECONDS, List.of(
                 new ChartSeries("swept", "Swept", ChartSeriesType.LINE, List.copyOf(sweptPoints)),
                 new ChartSeries("flushed", "Flushed", ChartSeriesType.LINE, List.copyOf(flushedPoints)))));
     }
@@ -488,7 +490,7 @@ public class JmcJvmInternalsService implements JvmInternalsService {
                     loadedPoints.add(new ChartDataPoint(time, readLong(JdkAttributes.CLASSLOADER_LOADED_COUNT, item)));
                     unloadedPoints.add(new ChartDataPoint(time, readLong(JdkAttributes.CLASSLOADER_UNLOADED_COUNT, item)));
                 });
-        return JmcResultLimiter.limitChart(new ChartDefinition("Time", "Count", List.of(
+        return JmcResultLimiter.limitChart(new ChartDefinition("Time", "Count", ChartXAxisType.EPOCH_SECONDS, List.of(
                 new ChartSeries("loaded", "Loaded", ChartSeriesType.LINE, List.copyOf(loadedPoints)),
                 new ChartSeries("unloaded", "Unloaded", ChartSeriesType.LINE, List.copyOf(unloadedPoints)))));
     }
@@ -679,7 +681,7 @@ public class JmcJvmInternalsService implements JvmInternalsService {
     private ChartDefinition buildHeapMetaspaceChart(IItemCollection events,
             org.openjdk.jmc.common.item.IItemFilter filter,
             IAttribute<IQuantity> usedAttr, IAttribute<IQuantity> totalAttr,
-            String xLabel, String yLabel, String usedLabel, String totalLabel) {
+            String xLabel, String yLabel, ChartXAxisType xAxisType, String usedLabel, String totalLabel) {
         List<ChartDataPoint> usedPoints = new ArrayList<>();
         List<ChartDataPoint> totalPoints = new ArrayList<>();
         events.apply(filter).stream()
@@ -689,7 +691,7 @@ public class JmcJvmInternalsService implements JvmInternalsService {
                     usedPoints.add(new ChartDataPoint(time, readDoubleBytes(usedAttr, item)));
                     totalPoints.add(new ChartDataPoint(time, readDoubleBytes(totalAttr, item)));
                 });
-        return JmcResultLimiter.limitChart(new ChartDefinition(xLabel, yLabel, List.of(
+        return JmcResultLimiter.limitChart(new ChartDefinition(xLabel, yLabel, xAxisType, List.of(
                 new ChartSeries(usedLabel.toLowerCase().replace(' ', '-'), usedLabel, ChartSeriesType.LINE, List.copyOf(usedPoints)),
                 new ChartSeries(totalLabel.toLowerCase().replace(' ', '-'), totalLabel, ChartSeriesType.LINE, List.copyOf(totalPoints)))));
     }

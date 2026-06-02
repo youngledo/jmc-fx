@@ -29,7 +29,7 @@ final class JmcResultLimiter {
         List<ChartSeries> series = definition.series().stream()
                 .map(JmcResultLimiter::limitSeries)
                 .toList();
-        return new ChartDefinition(definition.xLabel(), definition.yLabel(), series);
+        return new ChartDefinition(definition.xLabel(), definition.yLabel(), definition.xAxisType(), series);
     }
 
     private static ChartSeries limitSeries(ChartSeries series) {
