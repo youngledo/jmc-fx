@@ -19,6 +19,7 @@ import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.io.TempDir;
 
 import static org.junit.jupiter.api.Assertions.*;
+import static org.junit.jupiter.api.Assumptions.assumeTrue;
 
 class JmcProfilingServiceTest {
 
@@ -40,6 +41,50 @@ class JmcProfilingServiceTest {
 				Instant.now(), Instant.now(), 1000, 1024);
 		StackTreeNode tree = service.loadStackTraceTree(recording, "java.lang.Thread.run", true);
 		assertNotNull(tree);
+	}
+
+	@Test
+	void loadFlameGraphTreeReturnsRecordingLevelStackTree(@TempDir Path tempDir) throws Exception {
+		Path jfrFile = createMinimalRecording(tempDir);
+		RecordingSummary recording = new RecordingSummary("test", jfrFile, "test",
+				Instant.now(), Instant.now(), 1000, 1024);
+
+		assertNotNull(service.loadFlameGraphTree(recording, false));
+		assertNotNull(service.loadFlameGraphTree(recording, true));
+	}
+
+	@Test
+	void loadFlameGraphTreeUsesJmcStacktraceTreeModelDirections() throws Exception {
+		RecordingSummary recording = localStartupRecording();
+
+		StackTreeNode regular = service.loadFlameGraphTree(recording, false);
+		StackTreeNode inverted = service.loadFlameGraphTree(recording, true);
+
+		assertFalse(regular.children().isEmpty());
+		assertFalse(inverted.children().isEmpty());
+		assertTrue(regular.count() > 0);
+		assertTrue(inverted.count() > 0);
+		assertNotEquals(regular.children().getFirst().method(), inverted.children().getFirst().method());
+	}
+
+	@Test
+	void loadMethodFlameGraphTreeUsesJmcMethodFilteredFullStacks() throws Exception {
+		RecordingSummary recording = localStartupRecording();
+		List<HotMethod> methods = service.loadHotMethods(recording);
+		assumeTrue(!methods.isEmpty(), "startup.jfr must contain execution samples for method flame graph coverage");
+		HotMethod selectedMethod = methods.getFirst();
+		String method = selectedMethod.method();
+
+		StackTreeNode regular = service.loadFlameGraphTree(recording, method, false);
+		StackTreeNode inverted = service.loadFlameGraphTree(recording, method, true);
+
+		assertFalse(regular.children().isEmpty());
+		assertFalse(inverted.children().isEmpty());
+		assertTrue(regular.count() > 0);
+		assertTrue(inverted.count() > 0);
+		assertEquals(selectedMethod.count(), regular.count());
+		assertEquals(selectedMethod.count(), inverted.count());
+		assertNotEquals(method, regular.children().getFirst().method());
 	}
 
 	@Test
@@ -103,6 +148,22 @@ class JmcProfilingServiceTest {
 			recording.dump(file);
 			return file;
 		}
+	}
+
+	private RecordingSummary localStartupRecording() throws Exception {
+		Path path = startupRecordingPath();
+		assumeTrue(java.nio.file.Files.isRegularFile(path),
+				"startup.jfr is only used for local profiling flame graph regression coverage");
+		return new RecordingSummary("startup", path, "startup.jfr",
+				Instant.EPOCH, Instant.EPOCH, 0, java.nio.file.Files.size(path));
+	}
+
+	private Path startupRecordingPath() {
+		Path modulePath = Path.of("startup.jfr");
+		if (java.nio.file.Files.isRegularFile(modulePath)) {
+			return modulePath;
+		}
+		return Path.of("..", "startup.jfr");
 	}
 
 	private record TestFrame(IMCMethod method, IMCFrame.Type type, Integer bci, Integer lineNumber) implements IMCFrame {

@@ -11,6 +11,7 @@ import javafx.scene.control.ScrollPane;
 import javafx.scene.control.Spinner;
 import javafx.scene.control.Tab;
 import javafx.scene.control.TableView;
+import javafx.scene.control.TextField;
 import javafx.scene.control.TreeView;
 import javafx.scene.layout.HBox;
 import javafx.scene.layout.VBox;
@@ -44,19 +45,31 @@ public record ProfilingPageView(
         Tab callersFlameTab,
         HBox callersFlameToolbar,
         Button callersFlameOrientationButton,
+        TextField callersFlameSearchField,
+        Label callersFlameSearchStatusLabel,
+        Button callersFlamePreviousMatchButton,
+        Button callersFlameNextMatchButton,
+        Button callersFlameClearSearchButton,
         Button callersFlameZoomOutButton,
         Button callersFlameResetZoomButton,
         Button callersFlameZoomInButton,
         Button callersFlameFitButton,
         VBox callersFlameContainer,
+        Label callersFlameSummaryLabel,
         Tab calleesFlameTab,
         HBox calleesFlameToolbar,
         Button calleesFlameOrientationButton,
+        TextField calleesFlameSearchField,
+        Label calleesFlameSearchStatusLabel,
+        Button calleesFlamePreviousMatchButton,
+        Button calleesFlameNextMatchButton,
+        Button calleesFlameClearSearchButton,
         Button calleesFlameZoomOutButton,
         Button calleesFlameResetZoomButton,
         Button calleesFlameZoomInButton,
         Button calleesFlameFitButton,
         VBox calleesFlameContainer,
+        Label calleesFlameSummaryLabel,
         Tab callersTab,
         TreeView<StackTreeNode> callersTree,
         Tab calleesTab,

@@ -4,10 +4,14 @@ import java.util.List;
 
 import com.youngledo.jmcfx.domain.model.DependencyGraphEdge;
 import com.youngledo.jmcfx.domain.model.HotMethod;
+import com.youngledo.jmcfx.domain.model.StackFrameInfo;
 import com.youngledo.jmcfx.domain.model.StackTreeNode;
+import com.youngledo.jmcfx.flamegraph.FlameGraphMode;
+import com.youngledo.jmcfx.flamegraph.FlameGraphModel;
 import com.youngledo.jmcfx.ui.i18n.I18n;
 import com.youngledo.jmcfx.ui.util.DisplayFormats;
 
+import javafx.beans.binding.Bindings;
 import javafx.beans.property.ReadOnlyStringWrapper;
 import javafx.beans.value.ChangeListener;
 import javafx.collections.FXCollections;
@@ -20,8 +24,11 @@ import javafx.scene.control.ScrollPane;
 import javafx.scene.control.SpinnerValueFactory;
 import javafx.scene.control.TableCell;
 import javafx.scene.control.TableColumn;
+import javafx.scene.control.TextField;
 import javafx.scene.control.TreeItem;
 import javafx.scene.control.TreeView;
+import javafx.scene.input.KeyCode;
+import javafx.scene.input.KeyEvent;
 import javafx.scene.input.MouseButton;
 import javafx.scene.input.MouseEvent;
 import javafx.scene.input.ScrollEvent;
@@ -31,6 +38,7 @@ import javafx.scene.layout.Region;
 import javafx.util.StringConverter;
 import org.kordamp.ikonli.Ikon;
 import org.kordamp.ikonli.javafx.FontIcon;
+import org.kordamp.ikonli.material2.Material2AL;
 import org.kordamp.ikonli.material2.Material2MZ;
 
 /// Controller for the JFR Profiling split table/graph page.
@@ -41,15 +49,15 @@ public final class ProfilingPageController {
     private ProfilingViewModel profilingViewModel;
     private CallGraphView profilingCallGraphView;
     private CallGraphView profilingDependencyGraphView;
-    private FlameGraphView profilingCallersFlameGraphView;
-    private FlameGraphView profilingCalleesFlameGraphView;
+    private com.youngledo.jmcfx.flamegraph.FlameGraphView<StackFrameInfo> profilingCallersFlameGraphView;
+    private com.youngledo.jmcfx.flamegraph.FlameGraphView<StackFrameInfo> profilingCalleesFlameGraphView;
     private boolean callGraphZoomGestureActive;
     private final ChangeListener<StackTreeNode> callersTreeListener;
     private final ChangeListener<StackTreeNode> calleesTreeListener;
     private final ChangeListener<CallGraphLayout> callGraphListener;
     private final ChangeListener<CallGraphLayout> dependencyGraphListener;
-    private final ChangeListener<FlameGraphLayout> callersFlameGraphListener;
-    private final ChangeListener<FlameGraphLayout> calleesFlameGraphListener;
+    private final ChangeListener<FlameGraphModel<StackFrameInfo>> callersFlameGraphListener;
+    private final ChangeListener<FlameGraphModel<StackFrameInfo>> calleesFlameGraphListener;
 
     public ProfilingPageController(ProfilingPageView view, I18n i18n) {
         this.view = view;
@@ -59,9 +67,9 @@ public final class ProfilingPageController {
         callGraphListener = (observable, oldValue, newValue) -> profilingCallGraphView.setLayout(newValue);
         dependencyGraphListener = (observable, oldValue, newValue) -> profilingDependencyGraphView.setLayout(newValue);
         callersFlameGraphListener =
-                (observable, oldValue, newValue) -> profilingCallersFlameGraphView.setLayout(newValue);
+                (observable, oldValue, newValue) -> profilingCallersFlameGraphView.setModel(newValue);
         calleesFlameGraphListener =
-                (observable, oldValue, newValue) -> profilingCalleesFlameGraphView.setLayout(newValue);
+                (observable, oldValue, newValue) -> profilingCalleesFlameGraphView.setModel(newValue);
     }
 
     public void configure() {
@@ -84,14 +92,18 @@ public final class ProfilingPageController {
             currentProfilingViewModel.callersFlameGraphProperty().removeListener(callersFlameGraphListener);
             currentProfilingViewModel.calleesFlameGraphProperty().removeListener(calleesFlameGraphListener);
         }
+        view.callersFlameSummaryLabel().textProperty().unbind();
+        view.calleesFlameSummaryLabel().textProperty().unbind();
+        view.callersFlameSummaryLabel().setText("");
+        view.calleesFlameSummaryLabel().setText("");
         view.hotMethodsTable().setItems(FXCollections.emptyObservableList());
         view.dependencyTable().setItems(FXCollections.emptyObservableList());
         view.callersTree().setRoot(new TreeItem<>());
         view.calleesTree().setRoot(new TreeItem<>());
         profilingCallGraphView.setLayout(null);
         profilingDependencyGraphView.setLayout(null);
-        profilingCallersFlameGraphView.setLayout(null);
-        profilingCalleesFlameGraphView.setLayout(null);
+        profilingCallersFlameGraphView.setModel(null);
+        profilingCalleesFlameGraphView.setModel(null);
         profilingViewModel = nextViewModel;
         if (nextViewModel == null) {
             return;
@@ -108,8 +120,9 @@ public final class ProfilingPageController {
         rebuildStackTree(view.calleesTree(), nextViewModel.calleesTreeProperty().get());
         profilingCallGraphView.setLayout(nextViewModel.callGraphProperty().get());
         profilingDependencyGraphView.setLayout(nextViewModel.dependencyGraphProperty().get());
-        profilingCallersFlameGraphView.setLayout(nextViewModel.callersFlameGraphProperty().get());
-        profilingCalleesFlameGraphView.setLayout(nextViewModel.calleesFlameGraphProperty().get());
+        profilingCallersFlameGraphView.setModel(nextViewModel.callersFlameGraphProperty().get());
+        profilingCalleesFlameGraphView.setModel(nextViewModel.calleesFlameGraphProperty().get());
+        bindFlameGraphSummaryLabels(nextViewModel);
         view.callGraphDirectionCombo().getSelectionModel().select(nextViewModel.callGraphDirectionProperty().get());
         view.callGraphDepthSpinner().getValueFactory().setValue(nextViewModel.callGraphMaxDepthProperty().get());
         view.dependencyDepthSpinner().getValueFactory().setValue(nextViewModel.dependencyPackageDepthProperty().get());
@@ -124,6 +137,8 @@ public final class ProfilingPageController {
         view.dependencyDepthLabel().textProperty().bind(i18n.text("profiling.dependency.depth"));
         view.callersFlameTab().textProperty().bind(i18n.text("profiling.tab.callersFlame"));
         view.calleesFlameTab().textProperty().bind(i18n.text("profiling.tab.calleesFlame"));
+        view.callersFlameSearchField().promptTextProperty().bind(i18n.text("profiling.flame.search.prompt"));
+        view.calleesFlameSearchField().promptTextProperty().bind(i18n.text("profiling.flame.search.prompt"));
         view.callersTab().textProperty().bind(i18n.text("profiling.tab.callers"));
         view.calleesTab().textProperty().bind(i18n.text("profiling.tab.callees"));
     }
@@ -132,8 +147,10 @@ public final class ProfilingPageController {
         view.hotMethodsTable().setPlaceholder(localizedTablePlaceholder("profiling.empty"));
         profilingCallGraphView = new CallGraphView();
         profilingDependencyGraphView = new CallGraphView();
-        profilingCallersFlameGraphView = new FlameGraphView();
-        profilingCalleesFlameGraphView = new FlameGraphView();
+        profilingCallersFlameGraphView = new com.youngledo.jmcfx.flamegraph.FlameGraphView<>();
+        profilingCalleesFlameGraphView = new com.youngledo.jmcfx.flamegraph.FlameGraphView<>();
+        configureProfilingFlameGraphView(profilingCallersFlameGraphView);
+        configureProfilingFlameGraphView(profilingCalleesFlameGraphView);
         profilingCallGraphView.emptyTextProperty().bind(i18n.text("profiling.callGraph.empty"));
         profilingDependencyGraphView.emptyTextProperty().bind(i18n.text("profiling.dependency.empty"));
         profilingCallersFlameGraphView.emptyTextProperty().bind(i18n.text("profiling.flame.empty"));
@@ -142,6 +159,8 @@ public final class ProfilingPageController {
         view.dependencyGraphContainer().getChildren().setAll(profilingDependencyGraphView);
         view.callersFlameContainer().getChildren().setAll(profilingCallersFlameGraphView);
         view.calleesFlameContainer().getChildren().setAll(profilingCalleesFlameGraphView);
+        bindFlameGraphSummaryLabelVisibility(view.callersFlameSummaryLabel());
+        bindFlameGraphSummaryLabelVisibility(view.calleesFlameSummaryLabel());
         view.callGraphDirectionCombo().setItems(FXCollections.observableArrayList(CallGraphDirection.values()));
         view.callGraphDirectionCombo().setButtonCell(callGraphDirectionCell());
         view.callGraphDirectionCombo().setCellFactory(combo -> callGraphDirectionCell());
@@ -199,6 +218,13 @@ public final class ProfilingPageController {
                 view.callersFlameResetZoomButton(),
                 view.callersFlameZoomInButton(),
                 view.callersFlameFitButton());
+        configureFlameGraphSearch(profilingCallersFlameGraphView,
+                view.callersFlameSearchField(),
+                view.callersFlameSearchStatusLabel(),
+                view.callersFlamePreviousMatchButton(),
+                view.callersFlameNextMatchButton(),
+                view.callersFlameClearSearchButton());
+        configureFlameGraphGestures(profilingCallersFlameGraphView);
         bindFlameGraphToolbarVisibility(view.callersFlameToolbar(), profilingCallersFlameGraphView);
         configureFlameGraphButtons(profilingCalleesFlameGraphView,
                 view.calleesFlameOrientationButton(),
@@ -206,6 +232,13 @@ public final class ProfilingPageController {
                 view.calleesFlameResetZoomButton(),
                 view.calleesFlameZoomInButton(),
                 view.calleesFlameFitButton());
+        configureFlameGraphSearch(profilingCalleesFlameGraphView,
+                view.calleesFlameSearchField(),
+                view.calleesFlameSearchStatusLabel(),
+                view.calleesFlamePreviousMatchButton(),
+                view.calleesFlameNextMatchButton(),
+                view.calleesFlameClearSearchButton());
+        configureFlameGraphGestures(profilingCalleesFlameGraphView);
         bindFlameGraphToolbarVisibility(view.calleesFlameToolbar(), profilingCalleesFlameGraphView);
 
         TableColumn<HotMethod, String> methodCol = new TableColumn<>();
@@ -288,7 +321,7 @@ public final class ProfilingPageController {
         if (profilingViewModel == null) {
             return;
         }
-        profilingViewModel.selectMethod(method == null ? null : method.method());
+        profilingViewModel.selectMethod(method);
     }
 
     private void rebuildStackTree(TreeView<StackTreeNode> tree, StackTreeNode root) {
@@ -440,7 +473,9 @@ public final class ProfilingPageController {
         }
     }
 
-    private void configureFlameGraphButtons(FlameGraphView graphView, Button orientationButton,
+    private void configureFlameGraphButtons(
+            com.youngledo.jmcfx.flamegraph.FlameGraphView<StackFrameInfo> graphView,
+            Button orientationButton,
             Button zoomOutButton, Button resetZoomButton, Button zoomInButton, Button fitButton) {
         configureIconButton(orientationButton, Material2MZ.SWAP_VERT, "profiling.flame.orientation");
         configureIconButton(zoomOutButton, Material2MZ.ZOOM_OUT, "profiling.graph.zoomOut");
@@ -454,15 +489,127 @@ public final class ProfilingPageController {
         fitButton.setOnAction(event -> graphView.fitToWidth(graphViewportWidth(graphView)));
     }
 
-    private void bindFlameGraphToolbarVisibility(HBox toolbar, FlameGraphView graphView) {
+    private void bindFlameGraphToolbarVisibility(
+            HBox toolbar,
+            com.youngledo.jmcfx.flamegraph.FlameGraphView<StackFrameInfo> graphView) {
         toolbar.visibleProperty().bind(graphView.hasFramesProperty());
         toolbar.managedProperty().bind(toolbar.visibleProperty());
     }
 
-    private void toggleFlameGraphOrientation(FlameGraphView graphView) {
-        graphView.setOrientation(graphView.getOrientation() == FlameGraphView.Orientation.ICICLE
-                ? FlameGraphView.Orientation.FLAME
-                : FlameGraphView.Orientation.ICICLE);
+    private void bindFlameGraphSummaryLabels(ProfilingViewModel viewModel) {
+        var summaryBinding = Bindings.createStringBinding(
+                () -> flameGraphSummaryText(viewModel.flameGraphEventCountProperty().get()),
+                viewModel.flameGraphEventCountProperty(),
+                i18n.localeProperty());
+        view.callersFlameSummaryLabel().textProperty().bind(summaryBinding);
+        view.calleesFlameSummaryLabel().textProperty().bind(summaryBinding);
+    }
+
+    private void bindFlameGraphSummaryLabelVisibility(Label label) {
+        label.visibleProperty().bind(label.textProperty().isNotEmpty());
+        label.managedProperty().bind(label.visibleProperty());
+    }
+
+    private String flameGraphSummaryText(Integer eventCount) {
+        if (eventCount == null || eventCount <= 0) {
+            return "";
+        }
+        String count = Integer.toString(eventCount);
+        return i18n.format("profiling.flame.summary.methodProfilingSample", count);
+    }
+
+    private void configureFlameGraphSearch(
+            com.youngledo.jmcfx.flamegraph.FlameGraphView<StackFrameInfo> graphView,
+            TextField searchField,
+            Label statusLabel,
+            Button previousButton,
+            Button nextButton,
+            Button clearButton) {
+        configureIconButton(previousButton, Material2MZ.NAVIGATE_BEFORE, "profiling.flame.search.previous");
+        configureIconButton(nextButton, Material2MZ.NAVIGATE_NEXT, "profiling.flame.search.next");
+        configureIconButton(clearButton, Material2AL.CLEAR, "profiling.flame.search.clear");
+        graphView.setFocusTraversable(true);
+        graphView.addEventFilter(KeyEvent.KEY_PRESSED, event -> {
+            if (event.isShortcutDown() && event.getCode() == KeyCode.F) {
+                searchField.requestFocus();
+                searchField.selectAll();
+                event.consume();
+            }
+        });
+        searchField.textProperty().addListener((obs, old, query) -> {
+            if (query == null || query.isBlank()) {
+                graphView.clearSearch();
+                return;
+            }
+            graphView.search(query);
+        });
+        previousButton.setOnAction(event -> graphView.previousMatch());
+        nextButton.setOnAction(event -> graphView.nextMatch());
+        clearButton.setOnAction(event -> searchField.clear());
+        previousButton.disableProperty().bind(graphView.matchCountProperty().isEqualTo(0));
+        nextButton.disableProperty().bind(graphView.matchCountProperty().isEqualTo(0));
+        clearButton.disableProperty().bind(searchField.textProperty().isEmpty());
+        statusLabel.textProperty().bind(Bindings.createStringBinding(
+                () -> flameGraphSearchStatus(searchField, graphView),
+                searchField.textProperty(),
+                graphView.matchCountProperty(),
+                graphView.currentMatchIndexProperty(),
+                i18n.localeProperty()));
+    }
+
+    private String flameGraphSearchStatus(
+            TextField searchField,
+            com.youngledo.jmcfx.flamegraph.FlameGraphView<StackFrameInfo> graphView) {
+        if (searchField.getText() == null || searchField.getText().isBlank()) {
+            return "";
+        }
+        int count = graphView.matchCountProperty().get();
+        if (count == 0) {
+            return i18n.get("profiling.flame.search.noMatches");
+        }
+        return i18n.format("profiling.flame.search.matchStatus",
+                graphView.currentMatchIndexProperty().get() + 1, count);
+    }
+
+    private void configureFlameGraphGestures(
+            com.youngledo.jmcfx.flamegraph.FlameGraphView<StackFrameInfo> graphView) {
+        graphView.addEventFilter(ScrollEvent.SCROLL, event -> {
+            if (event.isShortcutDown()) {
+                graphView.zoomBy(event.getDeltaY() > 0 ? 1.1 : 1 / 1.1,
+                        event.getX() / Math.max(1, graphView.getWidth()));
+                event.consume();
+                return;
+            }
+            if (shouldPanFlameGraphHorizontally(event)) {
+                double delta = event.isShiftDown() && Math.abs(event.getDeltaX()) < Math.abs(event.getDeltaY())
+                        ? event.getDeltaY()
+                        : event.getDeltaX();
+                graphView.setViewportOffsetX(graphView.viewportOffsetXProperty().get()
+                        - delta / Math.max(1, graphView.getWidth()));
+                event.consume();
+            }
+        });
+    }
+
+    private boolean shouldPanFlameGraphHorizontally(ScrollEvent event) {
+        if (event.isShiftDown()) {
+            return Math.abs(event.getDeltaY()) > 0 || Math.abs(event.getDeltaX()) > 0;
+        }
+        return Math.abs(event.getDeltaX()) > Math.abs(event.getDeltaY());
+    }
+
+    private void toggleFlameGraphOrientation(
+            com.youngledo.jmcfx.flamegraph.FlameGraphView<StackFrameInfo> graphView) {
+        graphView.setMode(graphView.getMode() == FlameGraphMode.ICICLE
+                ? FlameGraphMode.FLAME
+                : FlameGraphMode.ICICLE);
+    }
+
+    private void configureProfilingFlameGraphView(
+            com.youngledo.jmcfx.flamegraph.FlameGraphView<StackFrameInfo> graphView) {
+        graphView.setTextProvider(ProfilingFlameGraphAdapter.textProvider());
+        graphView.setTooltipProvider(ProfilingFlameGraphAdapter.tooltipProvider());
+        graphView.setColorProvider(ProfilingFlameGraphAdapter.colorProvider());
     }
 
     private double graphViewportWidth(Region graphView) {

@@ -1,4 +1,4 @@
-package com.youngledo.jmcfx.ui.profiling;
+package com.youngledo.jmcfx.flamegraph;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertNotNull;
@@ -60,13 +60,9 @@ class FlameGraphViewRobotTest {
         assumeTrue(!java.awt.GraphicsEnvironment.isHeadless(), "JavaFX Robot needs a display");
         assumeTrue(Boolean.getBoolean(ENABLE_NATIVE_ROBOT_PROPERTY),
                 "Native JavaFX Robot mouse tests require -D" + ENABLE_NATIVE_ROBOT_PROPERTY + "=true");
-        FlameGraphView view = runOnFxThread(() -> {
-            FlameGraphView graph = new FlameGraphView();
-            graph.setLayout(new FlameGraphLayout(List.of(
-                    new FlameGraphFrame("parent", 80, 80, 0, 0, 0.8),
-                    new FlameGraphFrame("sibling", 20, 20, 0, 0.8, 0.2),
-                    new FlameGraphFrame("child", 60, 60, 1, 0.2, 0.6),
-                    new FlameGraphFrame("grandchild", 30, 30, 2, 0.3, 0.3)), 3));
+        FlameGraphView<String> view = runOnFxThread(() -> {
+            FlameGraphView<String> graph = new FlameGraphView<>();
+            graph.setModel(sampleModel());
             graph.resize(640, graph.prefHeight(-1));
             stage = new Stage();
             stage.setScene(new Scene(new StackPane(graph), 720, 220));
@@ -77,23 +73,50 @@ class FlameGraphViewRobotTest {
             graph.layout();
             return graph;
         });
+        waitForFxEvents();
 
-        Bounds childBounds = runOnFxThread(() -> view.getChildren().get(2).localToScreen(
-                view.getChildren().get(2).getBoundsInLocal()));
+        Bounds bounds = runOnFxThread(() -> view.localToScreen(view.getBoundsInLocal()));
         Robot robot = runOnFxThread(Robot::new);
         runOnFxThread(() -> {
-            robot.mouseMove(childBounds.getCenterX(), childBounds.getCenterY());
+            robot.mouseMove(bounds.getMinX() + 120, bounds.getMinY() + 36);
             robot.mouseClick(MouseButton.PRIMARY);
         });
 
-        waitForNativeMouseEvents();
-        assumeTrue(runOnFxThread(() -> view.getChildren().get(2).getStyleClass()
-                .contains("flame-graph-frame-selected")), "JavaFX Robot native mouse events did not reach the test stage");
-        assertEquals(4, runOnFxThread(view::frameCount));
+        waitForSelection(view);
+        assumeTrue(runOnFxThread(() -> view.selectedFrameProperty().get() != null),
+                "JavaFX Robot native mouse events did not reach the test stage");
+        assertEquals("child", runOnFxThread(() -> view.selectedFrameProperty().get().node().label()));
     }
 
-    private void waitForNativeMouseEvents() throws InterruptedException {
-        Thread.sleep(250);
+    private FlameGraphModel<String> sampleModel() {
+        FlameGraphNode<String> root = node("root", 100,
+                node("parent", 80,
+                        node("child", 60, node("grandchild", 30)),
+                        node("child-sibling", 20)),
+                node("sibling", 20));
+        return FlameGraphModel.of(root);
+    }
+
+    @SafeVarargs
+    private static FlameGraphNode<String> node(String label, double weight, FlameGraphNode<String>... children) {
+        return new FlameGraphNode<>(label, weight, weight, label, List.of(children));
+    }
+
+    private void waitForSelection(FlameGraphView<String> view) throws Exception {
+        long deadline = System.nanoTime() + TimeUnit.SECONDS.toNanos(2);
+        while (System.nanoTime() < deadline) {
+            waitForFxEvents();
+            if (runOnFxThread(() -> view.selectedFrameProperty().get() != null)) {
+                return;
+            }
+            Thread.sleep(50);
+        }
+    }
+
+    private void waitForFxEvents() throws InterruptedException {
+        CountDownLatch latch = new CountDownLatch(1);
+        Platform.runLater(latch::countDown);
+        assumeTrue(latch.await(5, TimeUnit.SECONDS), "FX event wait timed out");
     }
 
     private <T> T runOnFxThread(java.util.concurrent.Callable<T> action) throws Exception {

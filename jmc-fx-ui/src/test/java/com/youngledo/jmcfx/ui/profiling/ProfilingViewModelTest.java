@@ -14,6 +14,7 @@ import com.youngledo.jmcfx.domain.model.DependencyGraphReport;
 import com.youngledo.jmcfx.domain.model.RecordingSummary;
 import com.youngledo.jmcfx.domain.model.StackTreeNode;
 import com.youngledo.jmcfx.domain.service.ProfilingService;
+import com.youngledo.jmcfx.flamegraph.FlameGraphModel;
 import com.youngledo.jmcfx.testsupport.FakeProfilingService;
 
 import org.junit.jupiter.api.Test;
@@ -111,18 +112,52 @@ class ProfilingViewModelTest {
     }
 
     @Test
-    void selectMethodBuildsCallerAndCalleeFlameGraphs() {
+    void loadClearsFlameGraphsUntilMethodSelection() {
         FakeProfilingService service = new FakeProfilingService();
         service.addHotMethod(new HotMethod("com.Foo.bar()", "JIT_COMPILED", 50, 50.0));
-        service.setCallersTree(node("root", 100, node("caller", 60)));
-        service.setCalleesTree(node("root", 100, node("callee", 70)));
+        service.setFlameGraphTree(node("root", 100, node("thread-root", 60)));
+        service.setInvertedFlameGraphTree(node("root", 100, node("top-frame", 70)));
+
+        ProfilingViewModel vm = new ProfilingViewModel(service);
+        vm.load(testRecording());
+
+        assertEquals(FlameGraphModel.empty(), vm.callersFlameGraphProperty().get());
+        assertEquals(FlameGraphModel.empty(), vm.calleesFlameGraphProperty().get());
+        assertNull(vm.flameGraphEventCountProperty().get());
+    }
+
+    @Test
+    void selectMethodBuildsMethodFlameGraphs() {
+        FakeProfilingService service = new FakeProfilingService();
+        service.addHotMethod(new HotMethod("com.Foo.bar()", "JIT_COMPILED", 50, 50.0));
+        service.setMethodFlameGraphTree("com.Foo.bar()", node("root", 100, node("method-root", 60)));
+        service.setMethodInvertedFlameGraphTree("com.Foo.bar()", node("root", 100, node("method-top", 70)));
+        service.setCallersTree(node("root", 100, node("caller", 30)));
+        service.setCalleesTree(node("root", 100, node("callee", 40)));
 
         ProfilingViewModel vm = new ProfilingViewModel(service);
         vm.load(testRecording());
         vm.selectMethod("com.Foo.bar()");
 
-        assertEquals("caller", vm.callersFlameGraphProperty().get().frames().getFirst().method());
-        assertEquals("callee", vm.calleesFlameGraphProperty().get().frames().getFirst().method());
+        assertEquals("caller", vm.callersTreeProperty().get().children().getFirst().method());
+        assertEquals("callee", vm.calleesTreeProperty().get().children().getFirst().method());
+        assertEquals("method-root", vm.callersFlameGraphProperty().get().root().children().getFirst().label());
+        assertEquals("method-top", vm.calleesFlameGraphProperty().get().root().children().getFirst().label());
+        assertEquals(100, vm.flameGraphEventCountProperty().get());
+    }
+
+    @Test
+    void selectMethodExposesFlameGraphEventCountFromSelectedMethodTree() {
+        FakeProfilingService service = new FakeProfilingService();
+        service.addHotMethod(new HotMethod("com.Foo.bar()", "JIT_COMPILED", 50, 50.0));
+        service.setMethodFlameGraphTree("com.Foo.bar()", node("root", 1071, node("method-root", 1071)));
+        service.setMethodInvertedFlameGraphTree("com.Foo.bar()", node("root", 1071, node("method-top", 1071)));
+
+        ProfilingViewModel vm = new ProfilingViewModel(service);
+        vm.load(testRecording());
+        vm.selectMethod("com.Foo.bar()");
+
+        assertEquals(1071, vm.flameGraphEventCountProperty().get());
     }
 
     @Test
@@ -192,7 +227,7 @@ class ProfilingViewModelTest {
 
         assertFalse(vm.callGraphProperty().get().nodes().isEmpty());
 
-        vm.selectMethod(null);
+        vm.selectMethod((String) null);
 
         assertSame(CallGraphLayout.EMPTY, vm.callGraphProperty().get());
     }
@@ -252,6 +287,16 @@ class ProfilingViewModelTest {
             }
 
             @Override
+            public StackTreeNode loadFlameGraphTree(RecordingSummary recording, boolean invertedStacks) {
+                return StackTreeNode.EMPTY;
+            }
+
+            @Override
+            public StackTreeNode loadFlameGraphTree(RecordingSummary recording, String method, boolean invertedStacks) {
+                return StackTreeNode.EMPTY;
+            }
+
+            @Override
             public StackTreeNode loadStackTraceTree(RecordingSummary recording, String method, boolean callers) {
                 StackTreeNode tree = callers
                         ? node("root", 100, node("caller", 80, node("deep caller", 40)))
@@ -299,22 +344,65 @@ class ProfilingViewModelTest {
     }
 
     @Test
-    void loadClearsFlameGraphs() {
+    void selectingDifferentMethodReplacesFlameGraphs() {
         FakeProfilingService service = new FakeProfilingService();
         service.addHotMethod(new HotMethod("com.Foo.bar()", "JIT_COMPILED", 50, 50.0));
-        service.setCallersTree(node("root", 100, node("caller", 60)));
-        service.setCalleesTree(node("root", 100, node("callee", 70)));
+        service.addHotMethod(new HotMethod("com.Foo.baz()", "JIT_COMPILED", 30, 30.0));
+        service.setMethodFlameGraphTree("com.Foo.bar()", node("root", 100, node("bar-root", 60)));
+        service.setMethodInvertedFlameGraphTree("com.Foo.bar()", node("root", 100, node("bar-top", 70)));
+        service.setMethodFlameGraphTree("com.Foo.baz()", node("root", 100, node("baz-root", 40)));
+        service.setMethodInvertedFlameGraphTree("com.Foo.baz()", node("root", 100, node("baz-top", 50)));
 
         ProfilingViewModel vm = new ProfilingViewModel(service);
         vm.load(testRecording());
         vm.selectMethod("com.Foo.bar()");
 
-        assertNotEquals(FlameGraphLayout.EMPTY, vm.callersFlameGraphProperty().get());
+        assertEquals("bar-root", vm.callersFlameGraphProperty().get().root().children().getFirst().label());
+        assertEquals("bar-top", vm.calleesFlameGraphProperty().get().root().children().getFirst().label());
 
+        vm.selectMethod("com.Foo.baz()");
+
+        assertEquals("baz-root", vm.callersFlameGraphProperty().get().root().children().getFirst().label());
+        assertEquals("baz-top", vm.calleesFlameGraphProperty().get().root().children().getFirst().label());
+    }
+
+    @Test
+    void selectingHotMethodUsesFrameTypeSpecificFlameGraphEvents() {
+        FakeProfilingService service = new FakeProfilingService();
+        HotMethod jit = new HotMethod("com.Foo.bar()", "JIT_COMPILED", 489, 48.9);
+        HotMethod interpreted = new HotMethod("com.Foo.bar()", "INTERPRETED", 20, 2.0);
+        service.addHotMethod(jit);
+        service.addHotMethod(interpreted);
+        service.setMethodFrameTypeFlameGraphTree(
+                "com.Foo.bar()",
+                "JIT_COMPILED",
+                node("root", 489, node("jit-root", 489)));
+        service.setMethodFrameTypeInvertedFlameGraphTree(
+                "com.Foo.bar()",
+                "JIT_COMPILED",
+                node("root", 489, node("jit-top", 489)));
+        service.setMethodFrameTypeFlameGraphTree(
+                "com.Foo.bar()",
+                "INTERPRETED",
+                node("root", 20, node("interpreted-root", 20)));
+        service.setMethodFrameTypeInvertedFlameGraphTree(
+                "com.Foo.bar()",
+                "INTERPRETED",
+                node("root", 20, node("interpreted-top", 20)));
+
+        ProfilingViewModel vm = new ProfilingViewModel(service);
         vm.load(testRecording());
+        vm.selectMethod(jit);
 
-        assertEquals(FlameGraphLayout.EMPTY, vm.callersFlameGraphProperty().get());
-        assertEquals(FlameGraphLayout.EMPTY, vm.calleesFlameGraphProperty().get());
+        assertEquals(489, vm.flameGraphEventCountProperty().get());
+        assertEquals("jit-root", vm.callersFlameGraphProperty().get().root().children().getFirst().label());
+        assertEquals("jit-top", vm.calleesFlameGraphProperty().get().root().children().getFirst().label());
+
+        vm.selectMethod(interpreted);
+
+        assertEquals(20, vm.flameGraphEventCountProperty().get());
+        assertEquals("interpreted-root", vm.callersFlameGraphProperty().get().root().children().getFirst().label());
+        assertEquals("interpreted-top", vm.calleesFlameGraphProperty().get().root().children().getFirst().label());
     }
 
     @Test
@@ -323,6 +411,8 @@ class ProfilingViewModelTest {
         service.addHotMethod(new HotMethod("com.Foo.bar()", "JIT_COMPILED", 50, 50.0));
         service.setCallersTree(node("root", 100, node("caller", 60)));
         service.setCalleesTree(node("root", 100, node("callee", 70)));
+        service.setMethodFlameGraphTree("com.Foo.bar()", node("root", 100, node("method-root", 60)));
+        service.setMethodInvertedFlameGraphTree("com.Foo.bar()", node("root", 100, node("method-top", 70)));
 
         ProfilingViewModel vm = new ProfilingViewModel(service);
         vm.load(testRecording());
@@ -330,15 +420,16 @@ class ProfilingViewModelTest {
 
         assertNotEquals(StackTreeNode.EMPTY, vm.callersTreeProperty().get());
         assertNotEquals(StackTreeNode.EMPTY, vm.calleesTreeProperty().get());
-        assertNotEquals(FlameGraphLayout.EMPTY, vm.callersFlameGraphProperty().get());
-        assertNotEquals(FlameGraphLayout.EMPTY, vm.calleesFlameGraphProperty().get());
+        assertNotEquals(FlameGraphModel.empty(), vm.callersFlameGraphProperty().get());
+        assertNotEquals(FlameGraphModel.empty(), vm.calleesFlameGraphProperty().get());
 
-        vm.selectMethod(null);
+        vm.selectMethod((String) null);
 
         assertEquals(StackTreeNode.EMPTY, vm.callersTreeProperty().get());
         assertEquals(StackTreeNode.EMPTY, vm.calleesTreeProperty().get());
-        assertEquals(FlameGraphLayout.EMPTY, vm.callersFlameGraphProperty().get());
-        assertEquals(FlameGraphLayout.EMPTY, vm.calleesFlameGraphProperty().get());
+        assertEquals(FlameGraphModel.empty(), vm.callersFlameGraphProperty().get());
+        assertEquals(FlameGraphModel.empty(), vm.calleesFlameGraphProperty().get());
+        assertNull(vm.flameGraphEventCountProperty().get());
     }
 
     @Test
@@ -347,6 +438,16 @@ class ProfilingViewModelTest {
             @Override
             public List<HotMethod> loadHotMethods(RecordingSummary recording) {
                 return List.of(new HotMethod("com.Foo.bar()", "JIT_COMPILED", 50, 50.0));
+            }
+
+            @Override
+            public StackTreeNode loadFlameGraphTree(RecordingSummary recording, boolean invertedStacks) {
+                return StackTreeNode.EMPTY;
+            }
+
+            @Override
+            public StackTreeNode loadFlameGraphTree(RecordingSummary recording, String method, boolean invertedStacks) {
+                return StackTreeNode.EMPTY;
             }
 
             @Override
@@ -366,8 +467,6 @@ class ProfilingViewModelTest {
 
         assertEquals(StackTreeNode.EMPTY, vm.callersTreeProperty().get());
         assertEquals(StackTreeNode.EMPTY, vm.calleesTreeProperty().get());
-        assertEquals(FlameGraphLayout.EMPTY, vm.callersFlameGraphProperty().get());
-        assertEquals(FlameGraphLayout.EMPTY, vm.calleesFlameGraphProperty().get());
     }
 
     @Test
@@ -391,8 +490,6 @@ class ProfilingViewModelTest {
         assertNull(vm.selectedMethodProperty().get());
         assertEquals(StackTreeNode.EMPTY, vm.callersTreeProperty().get());
         assertEquals(StackTreeNode.EMPTY, vm.calleesTreeProperty().get());
-        assertEquals(FlameGraphLayout.EMPTY, vm.callersFlameGraphProperty().get());
-        assertEquals(FlameGraphLayout.EMPTY, vm.calleesFlameGraphProperty().get());
     }
 
     @Test
@@ -404,8 +501,9 @@ class ProfilingViewModelTest {
 
         assertEquals(StackTreeNode.EMPTY, vm.callersTreeProperty().get());
         assertEquals(StackTreeNode.EMPTY, vm.calleesTreeProperty().get());
-        assertEquals(FlameGraphLayout.EMPTY, vm.callersFlameGraphProperty().get());
-        assertEquals(FlameGraphLayout.EMPTY, vm.calleesFlameGraphProperty().get());
+        assertEquals(FlameGraphModel.empty(), vm.callersFlameGraphProperty().get());
+        assertEquals(FlameGraphModel.empty(), vm.calleesFlameGraphProperty().get());
+        assertNull(vm.flameGraphEventCountProperty().get());
     }
 
     private RecordingSummary testRecording() {

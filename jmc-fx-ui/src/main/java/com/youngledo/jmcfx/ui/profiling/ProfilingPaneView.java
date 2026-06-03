@@ -14,6 +14,7 @@ import javafx.scene.control.SplitPane;
 import javafx.scene.control.Tab;
 import javafx.scene.control.TabPane;
 import javafx.scene.control.TableView;
+import javafx.scene.control.TextField;
 import javafx.scene.control.TreeView;
 import javafx.scene.layout.HBox;
 import javafx.scene.layout.Priority;
@@ -24,7 +25,7 @@ public final class ProfilingPaneView {
 
     private final Label titleLabel = new Label();
     private final TableView<HotMethod> hotMethodsTable = denseTable();
-    private final TabPane treeTabs = new TabPane();
+    private final TabPane detailTabs = new TabPane();
     private final Tab callGraphTab = tab();
     private final HBox callGraphToolbar = new HBox();
     private final ComboBox<CallGraphDirection> callGraphDirectionCombo = new ComboBox<>();
@@ -50,19 +51,31 @@ public final class ProfilingPaneView {
     private final Tab callersFlameTab = tab();
     private final HBox callersFlameToolbar = new HBox();
     private final Button callersFlameOrientationButton = new Button();
+    private final TextField callersFlameSearchField = searchField();
+    private final Label callersFlameSearchStatusLabel = searchStatusLabel();
+    private final Button callersFlamePreviousMatchButton = new Button();
+    private final Button callersFlameNextMatchButton = new Button();
+    private final Button callersFlameClearSearchButton = new Button();
     private final Button callersFlameZoomOutButton = new Button();
     private final Button callersFlameResetZoomButton = new Button();
     private final Button callersFlameZoomInButton = new Button();
     private final Button callersFlameFitButton = new Button();
     private final VBox callersFlameContainer = new VBox();
+    private final Label callersFlameSummaryLabel = new Label();
     private final Tab calleesFlameTab = tab();
     private final HBox calleesFlameToolbar = new HBox();
     private final Button calleesFlameOrientationButton = new Button();
+    private final TextField calleesFlameSearchField = searchField();
+    private final Label calleesFlameSearchStatusLabel = searchStatusLabel();
+    private final Button calleesFlamePreviousMatchButton = new Button();
+    private final Button calleesFlameNextMatchButton = new Button();
+    private final Button calleesFlameClearSearchButton = new Button();
     private final Button calleesFlameZoomOutButton = new Button();
     private final Button calleesFlameResetZoomButton = new Button();
     private final Button calleesFlameZoomInButton = new Button();
     private final Button calleesFlameFitButton = new Button();
     private final VBox calleesFlameContainer = new VBox();
+    private final Label calleesFlameSummaryLabel = new Label();
     private final Tab callersTab = tab();
     private final TreeView<StackTreeNode> callersTree = new TreeView<>();
     private final Tab calleesTab = tab();
@@ -82,11 +95,17 @@ public final class ProfilingPaneView {
                 dependencyResetZoomButton, dependencyZoomInButton, dependencyFitButton,
                 dependencyTable, dependencyGraphScrollPane, dependencyGraphContainer,
                 callersFlameTab, callersFlameToolbar, callersFlameOrientationButton,
+                callersFlameSearchField, callersFlameSearchStatusLabel, callersFlamePreviousMatchButton,
+                callersFlameNextMatchButton, callersFlameClearSearchButton,
                 callersFlameZoomOutButton, callersFlameResetZoomButton,
                 callersFlameZoomInButton, callersFlameFitButton, callersFlameContainer,
+                callersFlameSummaryLabel,
                 calleesFlameTab, calleesFlameToolbar, calleesFlameOrientationButton,
+                calleesFlameSearchField, calleesFlameSearchStatusLabel, calleesFlamePreviousMatchButton,
+                calleesFlameNextMatchButton, calleesFlameClearSearchButton,
                 calleesFlameZoomOutButton, calleesFlameResetZoomButton,
                 calleesFlameZoomInButton, calleesFlameFitButton, calleesFlameContainer,
+                calleesFlameSummaryLabel,
                 callersTab, callersTree, calleesTab, calleesTree);
     }
 
@@ -103,20 +122,25 @@ public final class ProfilingPaneView {
                         dependencyZoomOutButton, dependencyResetZoomButton,
                         dependencyZoomInButton, dependencyFitButton },
                 dependencyGraphScrollPane, dependencyGraphContainer, true);
-        configureFlameTab(callersFlameTab, callersFlameToolbar, callersFlameContainer,
-                callersFlameOrientationButton, callersFlameZoomOutButton,
+        configureFlameTab(callersFlameTab, callersFlameToolbar, callersFlameContainer, callersFlameSummaryLabel,
+                callersFlameOrientationButton, callersFlameSearchField,
+                callersFlameSearchStatusLabel, callersFlamePreviousMatchButton, callersFlameNextMatchButton,
+                callersFlameClearSearchButton, callersFlameZoomOutButton,
                 callersFlameResetZoomButton, callersFlameZoomInButton, callersFlameFitButton);
-        configureFlameTab(calleesFlameTab, calleesFlameToolbar, calleesFlameContainer,
-                calleesFlameOrientationButton, calleesFlameZoomOutButton,
+        configureFlameTab(calleesFlameTab, calleesFlameToolbar, calleesFlameContainer, calleesFlameSummaryLabel,
+                calleesFlameOrientationButton, calleesFlameSearchField,
+                calleesFlameSearchStatusLabel, calleesFlamePreviousMatchButton, calleesFlameNextMatchButton,
+                calleesFlameClearSearchButton, calleesFlameZoomOutButton,
                 calleesFlameResetZoomButton, calleesFlameZoomInButton, calleesFlameFitButton);
         tab(callersTab, callersTree);
         tab(calleesTab, calleesTree);
-        treeTabs.getTabs().setAll(callGraphTab, callersFlameTab,
-                calleesFlameTab, dependencyGraphTab, callersTab, calleesTab);
-        SplitPane split = new SplitPane(hotMethodsTable, treeTabs);
-        split.setDividerPositions(0.5);
-        VBox.setVgrow(split, Priority.ALWAYS);
-        pane.getChildren().setAll(titleLabel, split);
+        detailTabs.getTabs().setAll(callersFlameTab, calleesFlameTab,
+                callGraphTab, dependencyGraphTab, callersTab, calleesTab);
+        SplitPane profilingSplit = new SplitPane(hotMethodsTable, detailTabs);
+        profilingSplit.setOrientation(javafx.geometry.Orientation.VERTICAL);
+        profilingSplit.setDividerPositions(0.45);
+        VBox.setVgrow(profilingSplit, Priority.ALWAYS);
+        pane.getChildren().setAll(titleLabel, profilingSplit);
     }
 
     private void configureProfilingTab(Tab tab, HBox toolbar, Node[] controls, ScrollPane scrollPane,
@@ -136,12 +160,21 @@ public final class ProfilingPaneView {
         }
     }
 
-    private void configureFlameTab(Tab tab, HBox toolbar, VBox container, Button... buttons) {
+    private void configureFlameTab(Tab tab, HBox toolbar, VBox container, Label summaryLabel, Node... buttons) {
         toolbar.setSpacing(8);
         styles(toolbar, "page-toolbar", "profiling-graph-toolbar");
         toolbar.getChildren().setAll(buttons);
         styles(container, "profiling-flame-container");
-        tab(tab, vbox(8, toolbar, container));
+        container.setFillWidth(true);
+        ScrollPane scrollPane = new ScrollPane(container);
+        scrollPane.setFitToWidth(true);
+        scrollPane.setPannable(true);
+        scrollPane.setHbarPolicy(ScrollPane.ScrollBarPolicy.NEVER);
+        scrollPane.setVbarPolicy(ScrollPane.ScrollBarPolicy.AS_NEEDED);
+        container.prefWidthProperty().bind(scrollPane.viewportBoundsProperty().map(bounds -> bounds.getWidth()));
+        VBox.setVgrow(scrollPane, Priority.ALWAYS);
+        styles(summaryLabel, "profiling-flame-summary");
+        tab(tab, vbox(8, toolbar, scrollPane, summaryLabel));
     }
 
     private static VBox vbox(double spacing, Node... children) {
@@ -152,6 +185,21 @@ public final class ProfilingPaneView {
         Tab tab = new Tab();
         tab.setClosable(false);
         return tab;
+    }
+
+    private static TextField searchField() {
+        TextField field = new TextField();
+        field.setPrefColumnCount(18);
+        field.setMinWidth(140);
+        field.setPrefWidth(180);
+        field.setMaxWidth(220);
+        return field;
+    }
+
+    private static Label searchStatusLabel() {
+        Label label = new Label();
+        label.setMinWidth(56);
+        return label;
     }
 
     private static void tab(Tab tab, Node content) {

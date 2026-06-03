@@ -180,8 +180,6 @@ import com.youngledo.jmcfx.ui.profiling.CallGraphDirection;
 import com.youngledo.jmcfx.ui.profiling.CallGraphLayout;
 import com.youngledo.jmcfx.ui.profiling.CallGraphLayoutBuilder;
 import com.youngledo.jmcfx.ui.profiling.CallGraphView;
-import com.youngledo.jmcfx.ui.profiling.FlameGraphLayout;
-import com.youngledo.jmcfx.ui.profiling.FlameGraphView;
 import com.youngledo.jmcfx.ui.profiling.ProfilingViewModel;
 import com.youngledo.jmcfx.ui.rules.RuleResultDetail;
 import com.youngledo.jmcfx.ui.rules.RuleResultsViewModel;

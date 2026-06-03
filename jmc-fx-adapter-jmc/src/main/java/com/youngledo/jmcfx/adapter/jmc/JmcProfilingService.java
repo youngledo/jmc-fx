@@ -7,13 +7,19 @@ import java.util.Comparator;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
+import java.util.Optional;
 
 import org.openjdk.jmc.common.IMCFrame;
 import org.openjdk.jmc.common.IMCMethod;
 import org.openjdk.jmc.common.IMCPackage;
 import org.openjdk.jmc.common.IMCType;
+import org.openjdk.jmc.common.item.IItem;
 import org.openjdk.jmc.common.item.IItemCollection;
+import org.openjdk.jmc.common.item.IItemFilter;
+import org.openjdk.jmc.common.item.IType;
+import org.openjdk.jmc.common.item.IMemberAccessor;
 import org.openjdk.jmc.flightrecorder.CouldNotLoadRecordingException;
+import org.openjdk.jmc.flightrecorder.jdk.JdkAttributes;
 import org.openjdk.jmc.flightrecorder.JfrLoaderToolkit;
 import org.openjdk.jmc.flightrecorder.jdk.JdkFilters;
 import org.openjdk.jmc.flightrecorder.stacktrace.FrameSeparator;
@@ -23,6 +29,8 @@ import org.openjdk.jmc.flightrecorder.stacktrace.StacktraceModel;
 import org.openjdk.jmc.flightrecorder.stacktrace.StacktraceModel.Branch;
 import org.openjdk.jmc.flightrecorder.stacktrace.StacktraceModel.Fork;
 import org.openjdk.jmc.flightrecorder.stacktrace.StacktraceFrame;
+import org.openjdk.jmc.flightrecorder.stacktrace.tree.Node;
+import org.openjdk.jmc.flightrecorder.stacktrace.tree.StacktraceTreeModel;
 
 import com.youngledo.jmcfx.domain.model.DependencyGraphEdge;
 import com.youngledo.jmcfx.domain.model.DependencyGraphReport;
@@ -32,6 +40,7 @@ import com.youngledo.jmcfx.domain.model.StackFrameInfo;
 import com.youngledo.jmcfx.domain.model.StackTreeNode;
 import com.youngledo.jmcfx.domain.service.JmcFxException;
 import com.youngledo.jmcfx.domain.service.ProfilingService;
+import org.openjdk.jmc.common.util.PredicateToolkit;
 
 /// JMC-backed profiling adapter.
 ///
@@ -69,6 +78,63 @@ public class JmcProfilingService implements ProfilingService {
 		}
 		methods.sort(Comparator.comparingInt(HotMethod::count).reversed());
 		return JmcResultLimiter.limitRows(methods);
+	}
+
+	@Override
+	public StackTreeNode loadFlameGraphTree(RecordingSummary recording, boolean invertedStacks) {
+		IItemCollection events = loadEvents(recording);
+		IItemCollection samples = events.apply(JdkFilters.EXECUTION_SAMPLE);
+		return stacktraceTree(samples, invertedStacks);
+	}
+
+	@Override
+	public StackTreeNode loadFlameGraphTree(RecordingSummary recording, String method, boolean invertedStacks) {
+		if (method == null || method.isBlank()) {
+			return StackTreeNode.EMPTY;
+		}
+		IItemCollection events = loadEvents(recording);
+		IItemCollection samples = events.apply(JdkFilters.EXECUTION_SAMPLE);
+		if (!samples.hasItems()) {
+			return StackTreeNode.EMPTY;
+		}
+		StacktraceTreeModel model = new StacktraceTreeModel(samples, FRAME_SEPARATOR, false);
+		Optional<SelectedMethod> selectedMethod = findSelectedMethod(model.getRoot(), method);
+		if (selectedMethod.isEmpty()) {
+			return StackTreeNode.EMPTY;
+		}
+		SelectedMethod selected = selectedMethod.get();
+		IItemCollection methodSamples = samples.apply(new JdkFilters.MethodFilter(selected.typeName(), selected.methodName()));
+		return stacktraceTree(methodSamples, invertedStacks);
+	}
+
+	@Override
+	public StackTreeNode loadFlameGraphTree(
+			RecordingSummary recording,
+			String method,
+			String frameType,
+			boolean invertedStacks) {
+		if (method == null || method.isBlank()) {
+			return StackTreeNode.EMPTY;
+		}
+		if (frameType == null || frameType.isBlank()) {
+			return loadFlameGraphTree(recording, method, invertedStacks);
+		}
+		IItemCollection events = loadEvents(recording);
+		IItemCollection samples = events.apply(JdkFilters.EXECUTION_SAMPLE);
+		if (!samples.hasItems()) {
+			return StackTreeNode.EMPTY;
+		}
+		StacktraceTreeModel model = new StacktraceTreeModel(samples, FRAME_SEPARATOR, false);
+		Optional<SelectedMethod> selectedMethod = findSelectedMethod(model.getRoot(), method);
+		if (selectedMethod.isEmpty()) {
+			return StackTreeNode.EMPTY;
+		}
+		SelectedMethod selected = selectedMethod.get();
+		IItemCollection rowSamples = samples.apply(new TopFrameMethodWithTypeFilter(
+				selected.typeName(),
+				selected.methodName(),
+				frameType));
+		return stacktraceTree(rowSamples, invertedStacks);
 	}
 
 	@Override
@@ -151,6 +217,15 @@ public class JmcProfilingService implements ProfilingService {
 		return null;
 	}
 
+	private StackTreeNode stacktraceTree(IItemCollection samples, boolean invertedStacks) {
+		if (samples == null || !samples.hasItems()) {
+			return StackTreeNode.EMPTY;
+		}
+
+		StacktraceTreeModel model = new StacktraceTreeModel(samples, FRAME_SEPARATOR, invertedStacks);
+		return treeModelToStackTree(model.getRoot());
+	}
+
 	private StackTreeNode buildTree(Fork fork, int parentCount) {
 		int count = fork.getItemsInFork();
 		if (count == 0) {
@@ -169,8 +244,90 @@ public class JmcProfilingService implements ProfilingService {
 		return new StackTreeNode("<root>", count, 100.0, StackFrameInfo.EMPTY, List.copyOf(children));
 	}
 
+	private StackTreeNode treeModelToStackTree(Node root) {
+		if (root == null) {
+			return StackTreeNode.EMPTY;
+		}
+		double totalWeight = root.getCumulativeWeight() > 0
+				? root.getCumulativeWeight()
+				: root.getChildren().stream()
+						.mapToDouble(Node::getCumulativeWeight)
+						.sum();
+		if (totalWeight <= 0) {
+			return StackTreeNode.EMPTY;
+		}
+		List<StackTreeNode> children = root.getChildren().stream()
+				.map(child -> treeModelNodeToStackTree(child, totalWeight))
+				.sorted(Comparator.comparingInt(StackTreeNode::count).reversed())
+				.toList();
+		String label = root.isRoot() ? "<root>" : treeFrameLabel(root);
+		StackFrameInfo frameInfo = root.isRoot() ? StackFrameInfo.EMPTY : frameInfo(root.getFrame(), label);
+		return new StackTreeNode(label, roundedCount(totalWeight), 100.0, frameInfo, children);
+	}
+
+	private StackTreeNode treeModelNodeToStackTree(Node node, double parentWeight) {
+		double weight = node.getCumulativeWeight();
+		List<StackTreeNode> children = node.getChildren().stream()
+				.map(child -> treeModelNodeToStackTree(child, weight))
+				.sorted(Comparator.comparingInt(StackTreeNode::count).reversed())
+				.toList();
+		String label = treeFrameLabel(node);
+		return new StackTreeNode(
+				label,
+				roundedCount(weight),
+				parentWeight > 0 ? (weight * 100.0) / parentWeight : 0,
+				frameInfo(node.getFrame(), label),
+				children);
+	}
+
+	private Optional<SelectedMethod> findSelectedMethod(Node node, String formattedMethod) {
+		if (node == null) {
+			return Optional.empty();
+		}
+		if (!node.isRoot() && matchesFormattedMethod(node, formattedMethod) && node.getFrame().getMethod() != null) {
+			IMCMethod method = node.getFrame().getMethod();
+			IMCType type = method.getType();
+			if (type != null && !method.getMethodName().isBlank() && !type.getFullName().isBlank()) {
+				return Optional.of(new SelectedMethod(type.getFullName(), method.getMethodName()));
+			}
+		}
+		for (Node child : node.getChildren()) {
+			Optional<SelectedMethod> selectedMethod = findSelectedMethod(child, formattedMethod);
+			if (selectedMethod.isPresent()) {
+				return selectedMethod;
+			}
+		}
+		return Optional.empty();
+	}
+
+	private boolean matchesFormattedMethod(Node node, String formattedMethod) {
+		return formattedMethod.equals(treeFrameLabel(node)) || formattedMethod.equals(formatFrame(node.getFrame()));
+	}
+
+	private static String treeFrameLabel(Node node) {
+		if (node == null || node.getFrame() == null) {
+			return "<unknown>";
+		}
+		if (node.getFrame().getMethod() == null) {
+			return StacktraceFormatToolkit.formatFrame(node.getFrame(), FRAME_SEPARATOR,
+					false, false, true, true, true, false);
+		}
+		return node.getFrame().getHumanReadableSeparatorSensitiveString();
+	}
+
+	private static int roundedCount(double weight) {
+		if (!Double.isFinite(weight) || weight <= 0) {
+			return 0;
+		}
+		return (int) Math.min(Integer.MAX_VALUE, Math.round(weight));
+	}
+
 	private static String formatFrame(StacktraceFrame frame) {
-		return StacktraceFormatToolkit.formatFrame(frame.getFrame(), FRAME_SEPARATOR,
+		return formatFrame(frame.getFrame());
+	}
+
+	private static String formatFrame(IMCFrame frame) {
+		return StacktraceFormatToolkit.formatFrame(frame, FRAME_SEPARATOR,
 				false, false, true, true, true, false);
 	}
 
@@ -273,5 +430,33 @@ public class JmcProfilingService implements ProfilingService {
 	}
 
 	private record EdgeKey(String source, String target) {
+	}
+
+	private record SelectedMethod(String typeName, String methodName) {
+	}
+
+	private record TopFrameMethodWithTypeFilter(
+			String typeName,
+			String methodName,
+			String frameType) implements IItemFilter {
+
+		@Override
+		public java.util.function.Predicate<IItem> getPredicate(IType<IItem> type) {
+			IMemberAccessor<IMCFrame, IItem> accessor = JdkAttributes.STACK_TRACE_TOP_FRAME.getAccessor(type);
+			if (accessor == null) {
+				return PredicateToolkit.falsePredicate();
+			}
+			return item -> matches(accessor.getMember(item));
+		}
+
+		private boolean matches(IMCFrame frame) {
+			if (frame == null || frame.getMethod() == null || frame.getMethod().getType() == null) {
+				return false;
+			}
+			String actualFrameType = frame.getType() == null ? "" : frame.getType().getName();
+			return typeName.equals(frame.getMethod().getType().getFullName())
+					&& methodName.equals(frame.getMethod().getMethodName())
+					&& frameType.equals(actualFrameType);
+		}
 	}
 }

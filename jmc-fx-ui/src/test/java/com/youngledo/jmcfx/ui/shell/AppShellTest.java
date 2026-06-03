@@ -1124,14 +1124,17 @@ class AppShellTest {
         assertTrue(profilingPaneView.contains("package com.youngledo.jmcfx.ui.profiling;"));
         assertTrue(profilingPaneView.contains("public final class ProfilingPaneView"));
         assertTrue(profilingPaneView.contains("private final TableView<HotMethod> hotMethodsTable = denseTable();"));
-        assertTrue(profilingPaneView.contains("private final TabPane treeTabs = new TabPane();"));
+        assertTrue(profilingPaneView.contains("private final TabPane detailTabs = new TabPane();"));
         assertTrue(profilingPaneView.contains("private final HBox callGraphToolbar = new HBox();"));
         assertTrue(profilingPaneView.contains("private final TableView<DependencyGraphEdge> dependencyTable = denseTable();"));
         assertTrue(profilingPaneView.contains("private final TreeView<StackTreeNode> callersTree = new TreeView<>();"));
         assertTrue(profilingPaneView.contains("public ProfilingPaneView(VBox pane)"));
         assertTrue(profilingPaneView.contains("public ProfilingPageView view()"));
-        assertTrue(profilingPaneView.contains("treeTabs.getTabs().setAll(callGraphTab, callersFlameTab,"));
-        assertTrue(profilingPaneView.contains("pane.getChildren().setAll(titleLabel, split);"));
+        assertTrue(profilingPaneView.contains("detailTabs.getTabs().setAll(callersFlameTab, calleesFlameTab,"));
+        assertTrue(profilingPaneView.contains("profilingSplit.setOrientation(javafx.geometry.Orientation.VERTICAL);"));
+        assertTrue(profilingPaneView.contains("pane.getChildren().setAll(titleLabel, profilingSplit);"));
+        assertTrue(profilingPaneView.contains("scrollPane.setVbarPolicy(ScrollPane.ScrollBarPolicy.AS_NEEDED);"),
+                "Deep profiling stacks should be vertically scrollable instead of clipped by the visible tab height");
     }
 
     @Test
@@ -1522,8 +1525,8 @@ class AppShellTest {
         assertFalse(shell.contains("private double graphViewportWidth("));
         assertTrue(pageController.contains("private CallGraphView profilingCallGraphView;"));
         assertTrue(pageController.contains("private CallGraphView profilingDependencyGraphView;"));
-        assertTrue(pageController.contains("private FlameGraphView profilingCallersFlameGraphView;"));
-        assertTrue(pageController.contains("private FlameGraphView profilingCalleesFlameGraphView;"));
+        assertTrue(pageController.contains("private com.youngledo.jmcfx.flamegraph.FlameGraphView<StackFrameInfo> profilingCallersFlameGraphView;"));
+        assertTrue(pageController.contains("private com.youngledo.jmcfx.flamegraph.FlameGraphView<StackFrameInfo> profilingCalleesFlameGraphView;"));
         assertTrue(pageController.contains("profilingCallGraphView.emptyTextProperty().bind(i18n.text(\"profiling.callGraph.empty\"))"));
         assertTrue(pageController.contains("profilingDependencyGraphView.emptyTextProperty().bind(i18n.text(\"profiling.dependency.empty\"))"));
         assertTrue(pageController.contains("view.callGraphContainer().getChildren().setAll(profilingCallGraphView)"));
@@ -1532,8 +1535,15 @@ class AppShellTest {
         assertTrue(pageController.contains("profilingDependencyGraphView.setLayout(null)"));
         assertTrue(pageController.contains("view.callersFlameContainer().getChildren().setAll(profilingCallersFlameGraphView)"));
         assertTrue(pageController.contains("view.calleesFlameContainer().getChildren().setAll(profilingCalleesFlameGraphView)"));
-        assertTrue(pageController.contains("profilingCallersFlameGraphView.setLayout(null)"));
-        assertTrue(pageController.contains("profilingCalleesFlameGraphView.setLayout(null)"));
+        assertTrue(pageController.contains("bindFlameGraphSummaryLabels(nextViewModel)"));
+        assertTrue(pageController.contains("view.callersFlameSummaryLabel().textProperty().bind(summaryBinding)"));
+        assertTrue(pageController.contains("view.calleesFlameSummaryLabel().textProperty().bind(summaryBinding)"));
+        assertTrue(pageController.contains("view.callersFlameSummaryLabel().textProperty().unbind()"));
+        assertTrue(pageController.contains("view.calleesFlameSummaryLabel().textProperty().unbind()"));
+        assertTrue(pageController.contains("label.visibleProperty().bind(label.textProperty().isNotEmpty())"));
+        assertTrue(pageController.contains("profiling.flame.summary.methodProfilingSample"));
+        assertTrue(pageController.contains("profilingCallersFlameGraphView.setModel(null)"));
+        assertTrue(pageController.contains("profilingCalleesFlameGraphView.setModel(null)"));
         assertTrue(pageController.contains("currentProfilingViewModel.callGraphProperty().removeListener(callGraphListener)"));
         assertTrue(pageController.contains("currentProfilingViewModel.dependencyGraphProperty().removeListener(dependencyGraphListener)"));
         assertTrue(pageController.contains("currentProfilingViewModel.callersTreeProperty().removeListener(callersTreeListener)"));
@@ -1565,8 +1575,13 @@ class AppShellTest {
         assertTrue(pageController.contains("view.dependencyDepthLabel().textProperty().bind(i18n.text(\"profiling.dependency.depth\"))"));
         assertTrue(pageController.contains("view.callersFlameTab().textProperty().bind(i18n.text(\"profiling.tab.callersFlame\"))"));
         assertTrue(pageController.contains("view.calleesFlameTab().textProperty().bind(i18n.text(\"profiling.tab.calleesFlame\"))"));
+        assertTrue(pageController.contains("view.callersFlameSearchField().promptTextProperty().bind(i18n.text(\"profiling.flame.search.prompt\"))"));
+        assertTrue(pageController.contains("view.calleesFlameSearchField().promptTextProperty().bind(i18n.text(\"profiling.flame.search.prompt\"))"));
         assertTrue(pageController.contains("profilingCallersFlameGraphView.emptyTextProperty().bind(i18n.text(\"profiling.flame.empty\"))"));
         assertTrue(pageController.contains("profilingCalleesFlameGraphView.emptyTextProperty().bind(i18n.text(\"profiling.flame.empty\"))"));
+        assertTrue(pageController.contains("graphView.setTextProvider(ProfilingFlameGraphAdapter.textProvider())"));
+        assertTrue(pageController.contains("graphView.setTooltipProvider(ProfilingFlameGraphAdapter.tooltipProvider())"));
+        assertTrue(pageController.contains("graphView.setColorProvider(ProfilingFlameGraphAdapter.colorProvider())"));
         assertTrue(pageController.contains("configureGraphZoomButtons(profilingCallGraphView"));
         assertTrue(pageController.contains("configureGraphZoomButtons(profilingDependencyGraphView"));
         assertTrue(pageController.contains("configureFlameGraphButtons(profilingCallersFlameGraphView"));
@@ -1576,6 +1591,31 @@ class AppShellTest {
         assertTrue(pageController.contains("toolbar.visibleProperty().bind(graphView.hasFramesProperty())"));
         assertTrue(pageController.contains("toolbar.managedProperty().bind(toolbar.visibleProperty())"));
         assertTrue(pageController.contains("graphView.fitToWidth(graphViewportWidth(graphView))"));
+        assertTrue(pageController.contains("graphView.setMode(graphView.getMode() == FlameGraphMode.ICICLE"));
+        assertTrue(pageController.contains("configureFlameGraphGestures(profilingCallersFlameGraphView"));
+        assertTrue(pageController.contains("configureFlameGraphGestures(profilingCalleesFlameGraphView"));
+        assertTrue(pageController.contains("configureFlameGraphSearch(profilingCallersFlameGraphView"));
+        assertTrue(pageController.contains("configureFlameGraphSearch(profilingCalleesFlameGraphView"));
+        assertTrue(pageController.contains("searchField.textProperty().addListener"));
+        assertTrue(pageController.contains("graphView.search(query)"));
+        assertTrue(pageController.contains("flameGraphSearchStatus(searchField, graphView)"));
+        assertTrue(pageController.contains("profiling.flame.search.noMatches"));
+        assertTrue(pageController.contains("profiling.flame.search.matchStatus"));
+        assertTrue(pageController.contains("previousButton.setOnAction(event -> graphView.previousMatch())"));
+        assertTrue(pageController.contains("nextButton.setOnAction(event -> graphView.nextMatch())"));
+        assertTrue(pageController.contains("clearButton.setOnAction(event -> searchField.clear())"));
+        assertTrue(pageController.contains("graphView.addEventFilter(KeyEvent.KEY_PRESSED"));
+        assertTrue(pageController.contains("event.isShortcutDown() && event.getCode() == KeyCode.F"));
+        assertTrue(pageController.contains("searchField.requestFocus()"));
+        assertTrue(pageController.contains("searchField.selectAll()"));
+        assertTrue(pageController.contains("private void configureFlameGraphGestures("));
+        assertTrue(pageController.contains("graphView.zoomBy(event.getDeltaY() > 0 ? 1.1 : 1 / 1.1"));
+        assertTrue(pageController.contains("shouldPanFlameGraphHorizontally(event)"));
+        assertTrue(pageController.contains("return Math.abs(event.getDeltaX()) > Math.abs(event.getDeltaY())"),
+                "Vertical trackpad scroll should bubble to the surrounding ScrollPane");
+        assertTrue(pageController.contains("event.isShiftDown()"),
+                "Shift-scroll should remain available for horizontal flame graph panning");
+        assertTrue(pageController.contains("graphView.setViewportOffsetX(graphView.viewportOffsetXProperty().get()"));
         assertTrue(pageController.contains("configureCallGraphGestures"));
         assertTrue(pageController.contains("addEventFilter(ScrollEvent.SCROLL"));
         assertTrue(pageController.contains("addEventFilter(ZoomEvent.ZOOM_STARTED"));
@@ -1597,8 +1637,8 @@ class AppShellTest {
         assertTrue(css.contains(".profiling-graph-tool-button"));
         assertTrue(english.contains("profiling.tab.callGraph=Call Graph"));
         assertTrue(english.contains("profiling.tab.dependencyGraph=Dependency Graph"));
-        assertTrue(english.contains("profiling.tab.callersFlame=Caller Flame Graph"));
-        assertTrue(english.contains("profiling.tab.calleesFlame=Callee Flame Graph"));
+        assertTrue(english.contains("profiling.tab.callersFlame=Flame Graph"));
+        assertTrue(english.contains("profiling.tab.calleesFlame=Inverted Flame Graph"));
         assertTrue(english.contains("profiling.callGraph.empty=Select a method to view the call graph."));
         assertTrue(english.contains("profiling.callGraph.direction=Direction"));
         assertTrue(english.contains("profiling.callGraph.direction.callers=Callers"));
@@ -1614,14 +1654,21 @@ class AppShellTest {
         assertTrue(english.contains("profiling.graph.zoomOut=Zoom out"));
         assertTrue(english.contains("profiling.graph.resetZoom=Reset zoom"));
         assertTrue(english.contains("profiling.graph.fit=Fit to width"));
-        assertTrue(english.contains("profiling.flame.empty=Select a method to view the graph."));
+        assertTrue(english.contains("profiling.flame.empty=Select a method to view the flame graph."));
         assertTrue(english.contains("profiling.flame.orientation=Switch flame/icicle orientation"));
         assertTrue(english.contains("profiling.flame.orientation.icicle=Icicle"));
         assertTrue(english.contains("profiling.flame.orientation.flame=Flame"));
+        assertTrue(english.contains("profiling.flame.search.prompt=Find method"));
+        assertTrue(english.contains("profiling.flame.search.previous=Previous match"));
+        assertTrue(english.contains("profiling.flame.search.next=Next match"));
+        assertTrue(english.contains("profiling.flame.search.clear=Clear search"));
+        assertTrue(english.contains("profiling.flame.search.noMatches=No matches"));
+        assertTrue(english.contains("profiling.flame.search.matchStatus={0}/{1}"));
+        assertTrue(english.contains("profiling.flame.summary.methodProfilingSample={0} event(s) of 1 type(s): Method Profiling Sample[{0}]"));
         assertTrue(chinese.contains("profiling.tab.callGraph=调用图"));
         assertTrue(chinese.contains("profiling.tab.dependencyGraph=依赖图"));
-        assertTrue(chinese.contains("profiling.tab.callersFlame=调用者火焰图"));
-        assertTrue(chinese.contains("profiling.tab.calleesFlame=被调用者火焰图"));
+        assertTrue(chinese.contains("profiling.tab.callersFlame=火焰图"));
+        assertTrue(chinese.contains("profiling.tab.calleesFlame=反向火焰图"));
         assertTrue(chinese.contains("profiling.callGraph.empty=选择一个方法查看调用图。"));
         assertTrue(chinese.contains("profiling.callGraph.direction=方向"));
         assertTrue(chinese.contains("profiling.callGraph.direction.callers=调用者"));
@@ -1637,10 +1684,17 @@ class AppShellTest {
         assertTrue(chinese.contains("profiling.graph.zoomOut=缩小"));
         assertTrue(chinese.contains("profiling.graph.resetZoom=重置缩放"));
         assertTrue(chinese.contains("profiling.graph.fit=适应宽度"));
-        assertTrue(chinese.contains("profiling.flame.empty=选择一个方法查看图表。"));
+        assertTrue(chinese.contains("profiling.flame.empty=选择一个方法查看火焰图。"));
         assertTrue(chinese.contains("profiling.flame.orientation=切换火焰图/冰柱图方向"));
         assertTrue(chinese.contains("profiling.flame.orientation.icicle=冰柱图"));
         assertTrue(chinese.contains("profiling.flame.orientation.flame=火焰图"));
+        assertTrue(chinese.contains("profiling.flame.search.prompt=查找方法"));
+        assertTrue(chinese.contains("profiling.flame.search.previous=上一个匹配"));
+        assertTrue(chinese.contains("profiling.flame.search.next=下一个匹配"));
+        assertTrue(chinese.contains("profiling.flame.search.clear=清除搜索"));
+        assertTrue(chinese.contains("profiling.flame.search.noMatches=无匹配"));
+        assertTrue(chinese.contains("profiling.flame.search.matchStatus={0}/{1}"));
+        assertTrue(chinese.contains("profiling.flame.summary.methodProfilingSample={0}个事件，1种类型：方法分析采样[{0}]"));
     }
 
     @Test
@@ -2271,6 +2325,7 @@ class AppShellTest {
         assertTrue(toolbar.contains("-fx-spacing: 8px"));
         assertTrue(flameContainer.contains("-fx-padding: 8px 0 0 0"));
         assertTrue(callGraphContainer.contains("-fx-padding: 8px 0 0 0"));
+        assertTrue(css.contains(".profiling-flame-summary"));
     }
 
     @Test
@@ -2289,7 +2344,7 @@ class AppShellTest {
 
         assertFalse(source.contains("profilingViewModel == null || method == null"),
                 "Clearing table selection must still clear profiling stack details");
-        assertTrue(source.contains("profilingViewModel.selectMethod(method == null ? null : method.method())"),
+        assertTrue(source.contains("profilingViewModel.selectMethod(method)"),
                 "Profiling page controller must pass null selection through to ProfilingViewModel");
     }
 
@@ -3648,6 +3703,16 @@ void settingsPageContainsThemeSelectorNextToLanguageSelector() {
             public List<com.youngledo.jmcfx.domain.model.HotMethod> loadHotMethods(RecordingSummary recording) {
                 calls.incrementAndGet();
                 return List.of();
+            }
+
+            @Override
+            public StackTreeNode loadFlameGraphTree(RecordingSummary recording, boolean invertedStacks) {
+                return StackTreeNode.EMPTY;
+            }
+
+            @Override
+            public StackTreeNode loadFlameGraphTree(RecordingSummary recording, String method, boolean invertedStacks) {
+                return StackTreeNode.EMPTY;
             }
 
             @Override

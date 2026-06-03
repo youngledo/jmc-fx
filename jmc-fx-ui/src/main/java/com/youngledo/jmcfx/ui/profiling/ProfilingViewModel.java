@@ -8,8 +8,10 @@ import com.youngledo.jmcfx.domain.model.DependencyGraphEdge;
 import com.youngledo.jmcfx.domain.model.DependencyGraphReport;
 import com.youngledo.jmcfx.domain.model.HotMethod;
 import com.youngledo.jmcfx.domain.model.RecordingSummary;
+import com.youngledo.jmcfx.domain.model.StackFrameInfo;
 import com.youngledo.jmcfx.domain.model.StackTreeNode;
 import com.youngledo.jmcfx.domain.service.ProfilingService;
+import com.youngledo.jmcfx.flamegraph.FlameGraphModel;
 import com.youngledo.jmcfx.ui.util.FxDispatch;
 
 import javafx.beans.property.ObjectProperty;
@@ -29,10 +31,11 @@ public class ProfilingViewModel {
     private final ObjectProperty<DependencyGraphEdge> selectedDependencyEdge = new SimpleObjectProperty<>();
     private final ObjectProperty<StackTreeNode> callersTree = new SimpleObjectProperty<>(StackTreeNode.EMPTY);
     private final ObjectProperty<StackTreeNode> calleesTree = new SimpleObjectProperty<>(StackTreeNode.EMPTY);
-    private final ObjectProperty<FlameGraphLayout> callersFlameGraph =
-            new SimpleObjectProperty<>(FlameGraphLayout.EMPTY);
-    private final ObjectProperty<FlameGraphLayout> calleesFlameGraph =
-            new SimpleObjectProperty<>(FlameGraphLayout.EMPTY);
+    private final ObjectProperty<FlameGraphModel<StackFrameInfo>> callersFlameGraph =
+            new SimpleObjectProperty<>(FlameGraphModel.empty());
+    private final ObjectProperty<FlameGraphModel<StackFrameInfo>> calleesFlameGraph =
+            new SimpleObjectProperty<>(FlameGraphModel.empty());
+    private final ObjectProperty<Integer> flameGraphEventCount = new SimpleObjectProperty<>();
     private final ObjectProperty<CallGraphDirection> callGraphDirection =
             new SimpleObjectProperty<>(CallGraphDirection.CALLEES);
     private final ObjectProperty<CallGraphLayout> callGraph =
@@ -74,12 +77,16 @@ public class ProfilingViewModel {
         return calleesTree;
     }
 
-    public ObjectProperty<FlameGraphLayout> callersFlameGraphProperty() {
+    public ObjectProperty<FlameGraphModel<StackFrameInfo>> callersFlameGraphProperty() {
         return callersFlameGraph;
     }
 
-    public ObjectProperty<FlameGraphLayout> calleesFlameGraphProperty() {
+    public ObjectProperty<FlameGraphModel<StackFrameInfo>> calleesFlameGraphProperty() {
         return calleesFlameGraph;
+    }
+
+    public ObjectProperty<Integer> flameGraphEventCountProperty() {
+        return flameGraphEventCount;
     }
 
     public ObjectProperty<CallGraphDirection> callGraphDirectionProperty() {
@@ -150,6 +157,18 @@ public class ProfilingViewModel {
     }
 
     public void selectMethod(String method) {
+        selectMethod(method, null);
+    }
+
+    public void selectMethod(HotMethod method) {
+        if (method == null) {
+            selectMethod((String) null);
+            return;
+        }
+        selectMethod(method.method(), method.frameType());
+    }
+
+    private void selectMethod(String method, String frameType) {
         if (currentRecording == null) {
             return;
         }
@@ -162,24 +181,33 @@ public class ProfilingViewModel {
         }
         StackTreeNode callers = stackTreeOrEmpty(profilingService.loadStackTraceTree(currentRecording, method, true));
         StackTreeNode callees = stackTreeOrEmpty(profilingService.loadStackTraceTree(currentRecording, method, false));
-        FlameGraphLayoutBuilder builder = FlameGraphLayoutBuilder.defaultBuilder();
-        FlameGraphLayout callerFlameGraph = builder.build(callers);
-        FlameGraphLayout calleeFlameGraph = builder.build(callees);
+        StackTreeNode flameGraphTree =
+                stackTreeOrEmpty(profilingService.loadFlameGraphTree(currentRecording, method, frameType, false));
+        StackTreeNode invertedFlameGraphTree =
+                stackTreeOrEmpty(profilingService.loadFlameGraphTree(currentRecording, method, frameType, true));
+        FlameGraphModel<StackFrameInfo> flameGraph = ProfilingFlameGraphAdapter.toModel(flameGraphTree);
+        FlameGraphModel<StackFrameInfo> invertedFlameGraph = ProfilingFlameGraphAdapter.toModel(invertedFlameGraphTree);
         FxDispatch.run(() -> {
             selectedMethodName = method;
             callersTree.set(callers);
             calleesTree.set(callees);
-            callersFlameGraph.set(callerFlameGraph);
-            calleesFlameGraph.set(calleeFlameGraph);
             callGraph.set(buildCallGraph(method, callers, callees));
+            callersFlameGraph.set(flameGraph);
+            calleesFlameGraph.set(invertedFlameGraph);
+            flameGraphEventCount.set(flameGraphEventCount(flameGraphTree));
         });
     }
 
     private void clearStackDetails() {
+        clearCallDetails();
+        callersFlameGraph.set(FlameGraphModel.empty());
+        calleesFlameGraph.set(FlameGraphModel.empty());
+        flameGraphEventCount.set(null);
+    }
+
+    private void clearCallDetails() {
         callersTree.set(StackTreeNode.EMPTY);
         calleesTree.set(StackTreeNode.EMPTY);
-        callersFlameGraph.set(FlameGraphLayout.EMPTY);
-        calleesFlameGraph.set(FlameGraphLayout.EMPTY);
         callGraph.set(CallGraphLayout.EMPTY);
     }
 
@@ -217,6 +245,13 @@ public class ProfilingViewModel {
 
     private StackTreeNode stackTreeOrEmpty(StackTreeNode stackTree) {
         return stackTree == null ? StackTreeNode.EMPTY : stackTree;
+    }
+
+    private Integer flameGraphEventCount(StackTreeNode root) {
+        if (root == null || root == StackTreeNode.EMPTY || root.count() <= 0) {
+            return null;
+        }
+        return root.count();
     }
 
     private CallGraphLayout buildDependencyGraph(DependencyGraphReport report) {
