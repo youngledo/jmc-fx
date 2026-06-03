@@ -168,6 +168,10 @@ public class FlameGraphView<T> extends Region {
         this.colorProvider.set(colorProvider == null ? FrameColorProvider.defaultProvider() : colorProvider);
     }
 
+    public FrameColorProvider<T> getColorProvider() {
+        return colorProvider.get();
+    }
+
     public ReadOnlyBooleanProperty hasFramesProperty() {
         return hasFrames.getReadOnlyProperty();
     }

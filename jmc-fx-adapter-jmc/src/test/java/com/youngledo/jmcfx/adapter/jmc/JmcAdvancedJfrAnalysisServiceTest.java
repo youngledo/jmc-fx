@@ -28,6 +28,8 @@ import com.youngledo.jmcfx.domain.service.JmcFxException;
 class JmcAdvancedJfrAnalysisServiceTest {
 
     private static volatile Object allocationSink;
+    private static final int ALLOCATION_ROUNDS = 24;
+    private static final int ALLOCATIONS_PER_ROUND = 512;
 
     @TempDir
     Path tempDir;
@@ -128,14 +130,13 @@ class JmcAdvancedJfrAnalysisServiceTest {
             recording.enable("jdk.ObjectAllocationOutsideTLAB").withThreshold(java.time.Duration.ZERO);
             recording.enable(TestHeatmapEvent.class);
             recording.start();
-            allocateForJfr();
-            new TestHeatmapEvent().commit();
-            Thread.sleep(2);
-            allocateForJfr();
-            new TestHeatmapEvent().commit();
-            Thread.sleep(2);
-            allocateForJfr();
-            new TestHeatmapEvent().commit();
+            for (int i = 0; i < ALLOCATION_ROUNDS; i++) {
+                allocateForJfr();
+                if (i < 3) {
+                    new TestHeatmapEvent().commit();
+                }
+                Thread.sleep(2);
+            }
             recording.stop();
             recording.dump(recordingPath);
         }
@@ -143,9 +144,9 @@ class JmcAdvancedJfrAnalysisServiceTest {
     }
 
     private void allocateForJfr() {
-        Object[] allocations = new Object[256];
+        Object[] allocations = new Object[ALLOCATIONS_PER_ROUND];
         for (int i = 0; i < allocations.length; i++) {
-            allocations[i] = new byte[1024 + i];
+            allocations[i] = new byte[2048 + i];
         }
         allocationSink = allocations;
     }

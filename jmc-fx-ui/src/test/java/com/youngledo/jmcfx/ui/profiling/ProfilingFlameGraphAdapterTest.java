@@ -4,7 +4,9 @@ import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertSame;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 
+import java.util.HashSet;
 import java.util.List;
+import java.util.Set;
 
 import com.youngledo.jmcfx.domain.model.StackFrameInfo;
 import com.youngledo.jmcfx.domain.model.StackTreeNode;
@@ -135,13 +137,31 @@ class ProfilingFlameGraphAdapterTest {
 
     @Test
     void colorProviderUsesManyBrightIcicleColors() {
-        java.util.Set<Color> colors = new java.util.HashSet<>();
+        Set<Color> colors = new HashSet<>();
         for (int index = 0; index < 12; index++) {
             StackFrameInfo info = frameInfo("Method" + index + ".run", "run", "com.example.Method" + index);
             com.youngledo.jmcfx.flamegraph.FlameGraphFrame<StackFrameInfo> frame =
                     frame("com.example.Method" + index + ".run()", 42, 12.5, info, index % 6, List.of(index));
             Color fill = (Color) ProfilingFlameGraphAdapter.colorProvider()
                     .colors(frame, FlameGraphFrameState.DEFAULT, new FlameGraphRenderContext(FlameGraphMode.ICICLE, 1))
+                    .fill();
+            colors.add(fill);
+            assertTrue(saturation(fill) >= 0.45);
+            assertTrue(relativeLuminance(fill) >= 0.30);
+        }
+
+        assertTrue(colors.size() >= 8);
+    }
+
+    @Test
+    void colorProviderUsesManyBrightFlameColors() {
+        Set<Color> colors = new HashSet<>();
+        for (int index = 0; index < 12; index++) {
+            StackFrameInfo info = frameInfo("Method" + index + ".run", "run", "com.example.Method" + index);
+            com.youngledo.jmcfx.flamegraph.FlameGraphFrame<StackFrameInfo> frame =
+                    frame("com.example.Method" + index + ".run()", 42, 12.5, info, index % 6, List.of(index));
+            Color fill = (Color) ProfilingFlameGraphAdapter.colorProvider()
+                    .colors(frame, FlameGraphFrameState.DEFAULT, new FlameGraphRenderContext(FlameGraphMode.FLAME, 1))
                     .fill();
             colors.add(fill);
             assertTrue(saturation(fill) >= 0.45);
@@ -212,6 +232,55 @@ class ProfilingFlameGraphAdapterTest {
         assertEquals(defaultColors.fill(), hoveredColors.fill());
         assertTrue(!hoveredColors.stroke().equals(defaultColors.stroke()));
         assertTrue(contrastRatio((Color) hoveredColors.fill(), (Color) hoveredColors.text()) >= 4.5);
+    }
+
+    @Test
+    void colorProviderKeepsAllStateTextReadableInBothModes() {
+        com.youngledo.jmcfx.flamegraph.FlameGraphFrame<StackFrameInfo> frame =
+                frame("com.example.Worker.run()", 42, 12.5, frameInfo());
+
+        for (FlameGraphMode mode : FlameGraphMode.values()) {
+            for (FlameGraphFrameState state : FlameGraphFrameState.values()) {
+                FlameGraphFrameColors colors = ProfilingFlameGraphAdapter.colorProvider()
+                        .colors(frame, state, new FlameGraphRenderContext(mode, 1));
+
+                assertTrue(
+                        contrastRatio((Color) colors.fill(), (Color) colors.text()) >= 4.5,
+                        mode + " " + state + " text contrast");
+            }
+        }
+    }
+
+    @Test
+    void colorProviderUsesOrientationSpecificMatchColors() {
+        com.youngledo.jmcfx.flamegraph.FlameGraphFrame<StackFrameInfo> frame =
+                frame("com.example.Worker.run()", 42, 12.5, frameInfo());
+
+        Color flameMatch = (Color) ProfilingFlameGraphAdapter.colorProvider()
+                .colors(frame, FlameGraphFrameState.MATCH, new FlameGraphRenderContext(FlameGraphMode.FLAME, 1))
+                .fill();
+        Color icicleMatch = (Color) ProfilingFlameGraphAdapter.colorProvider()
+                .colors(frame, FlameGraphFrameState.MATCH, new FlameGraphRenderContext(FlameGraphMode.ICICLE, 1))
+                .fill();
+
+        assertTrue(colorDistance(flameMatch, icicleMatch) >= 0.20);
+        assertTrue(flameMatch.getRed() >= flameMatch.getBlue());
+        assertTrue(icicleMatch.getBlue() >= icicleMatch.getRed());
+    }
+
+    @Test
+    void colorProviderUsesNeutralMutedColorsInBothModes() {
+        com.youngledo.jmcfx.flamegraph.FlameGraphFrame<StackFrameInfo> frame =
+                frame("com.example.Worker.run()", 42, 12.5, frameInfo());
+
+        FlameGraphFrameColors flameMuted = ProfilingFlameGraphAdapter.colorProvider()
+                .colors(frame, FlameGraphFrameState.MUTED, new FlameGraphRenderContext(FlameGraphMode.FLAME, 1));
+        FlameGraphFrameColors icicleMuted = ProfilingFlameGraphAdapter.colorProvider()
+                .colors(frame, FlameGraphFrameState.MUTED, new FlameGraphRenderContext(FlameGraphMode.ICICLE, 1));
+
+        assertEquals(flameMuted, icicleMuted);
+        assertTrue(saturation((Color) flameMuted.fill()) <= 0.25);
+        assertTrue(contrastRatio((Color) flameMuted.fill(), (Color) flameMuted.text()) >= 4.5);
     }
 
     private StackFrameInfo frameInfo() {

@@ -17,6 +17,7 @@ import javafx.scene.control.Tooltip;
 import javafx.scene.input.MouseButton;
 import javafx.scene.input.MouseEvent;
 import javafx.scene.layout.Pane;
+import javafx.scene.paint.Color;
 import javafx.scene.text.Font;
 import javafx.scene.transform.Scale;
 
@@ -385,6 +386,36 @@ class FlameGraphViewTest {
         view.layout();
 
         assertEquals(FlameGraphMode.FLAME, observedMode.get());
+    }
+
+    @Test
+    void nullColorProviderFallsBackToDefaultProvider() {
+        FlameGraphView<String> view = preparedView();
+        FrameColorProvider<String> customProvider =
+                (frame, state, context) -> new FlameGraphFrameColors(Color.RED, Color.BLACK, Color.WHITE);
+        view.setColorProvider(customProvider);
+
+        assertEquals(customProvider, view.getColorProvider());
+        view.setColorProvider(null);
+
+        FlameGraphFrame<String> frame = frame(view, "child");
+        FlameGraphFrameColors colors = view.getColorProvider()
+                .colors(frame, FlameGraphFrameState.DEFAULT, new FlameGraphRenderContext(FlameGraphMode.ICICLE, 3));
+        assertEquals(FlameGraphFrameColors.DEFAULT, colors);
+    }
+
+    @Test
+    void defaultColorProviderDefinesAllFrameStates() {
+        FlameGraphFrame<String> frame = frame(preparedView(), "child");
+        FlameGraphRenderContext context = new FlameGraphRenderContext(FlameGraphMode.ICICLE, 3);
+
+        for (FlameGraphFrameState state : FlameGraphFrameState.values()) {
+            FlameGraphFrameColors colors = FrameColorProvider.<String>defaultProvider().colors(frame, state, context);
+
+            assertNotNull(colors.fill(), state.name());
+            assertNotNull(colors.stroke(), state.name());
+            assertNotNull(colors.text(), state.name());
+        }
     }
 
     @Test
