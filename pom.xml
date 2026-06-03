@@ -18,6 +18,7 @@
         <subproject>jmc-fx-test-support</subproject>
         <subproject>jmc-fx-adapter-jmc</subproject>
         <subproject>jmc-fx-flamegraph</subproject>
+        <subproject>jmc-fx-flamegraph-demo</subproject>
         <subproject>jmc-fx-ui</subproject>
         <subproject>jmc-fx-app</subproject>
     </subprojects>
