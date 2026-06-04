@@ -67,9 +67,15 @@ the application layer.
 - Owns JavaFX views, controllers, view models, navigation, theme, CSS, i18n,
   preferences, presentation state, JavaFX properties, `ObservableList`, and
   user-facing task state.
-- May call application use cases and use domain records or ports.
+- May call application use cases and use domain records.
+- Must not import `com.youngledo.jmcfx.domain.service` ports in production
+  sources.
 - Must not import concrete adapter classes or OpenJDK JMC APIs.
 - Keep controllers thin; put testable presentation behavior in view models.
+- `JavaAppPreferences` remains a UI-local Java Preferences-backed presentation
+  preference store. Live JVM persistence adapters belong in
+  `jmc-fx-adapter-preferences`; do not add new domain-port persistence
+  implementations to UI.
 
 `jmc-fx-launcher`
 
@@ -107,6 +113,7 @@ configuration.
 ## Common Boundary Smells
 
 - `jmc-fx-ui` imports `com.youngledo.jmcfx.adapter...` or `org.openjdk.jmc...`.
+- `jmc-fx-ui` imports `com.youngledo.jmcfx.domain.service...`.
 - `jmc-fx-application` imports JavaFX, adapter, UI, launcher, or external JMC
   packages.
 - `jmc-fx-adapter-jmc` imports UI, application, launcher, JavaFX, AtlantaFX, or
@@ -140,6 +147,7 @@ sdk env
 ./mvnw verify
 rg -n "<modules>|<module>" pom.xml **/pom.xml
 rg -n "org.openjdk.jmc|JfrLoaderToolkit" jmc-fx-ui jmc-fx-launcher jmc-fx-application jmc-fx-domain
+rg -n "import com\\.youngledo\\.jmcfx\\.domain\\.service" jmc-fx-ui/src/main/java
 ```
 
 Expected results:
@@ -148,6 +156,7 @@ Expected results:
 - Full verification passes.
 - No Maven 3 `<modules>` syntax appears.
 - No OpenJDK JMC API usage appears outside `jmc-fx-adapter-jmc`.
+- No production UI source imports domain service ports.
 
 ## Startup Module Name
 

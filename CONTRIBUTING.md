@@ -58,9 +58,13 @@ In short:
 - `jmc-fx-adapter-jmc` owns OpenJDK JMC, JFR, JMX, Jolokia, and JOverflow
   integration.
 - `jmc-fx-ui` owns JavaFX views, controllers, view models, themes,
-  preferences, i18n, and presentation state.
+  preferences, i18n, and presentation state. Production UI code may use domain
+  models, but must not import domain service ports.
 - `jmc-fx-launcher` owns startup, dependency assembly, stage lifecycle, and
   packaging.
+
+UI-driven workflows enter through `jmc-fx-application` use cases. Secondary
+persistence adapters belong outside `jmc-fx-ui`.
 
 ## UI Design Workflow
 

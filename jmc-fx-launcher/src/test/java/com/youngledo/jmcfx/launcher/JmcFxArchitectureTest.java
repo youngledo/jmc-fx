@@ -92,6 +92,37 @@ class JmcFxArchitectureTest {
     }
 
     @Test
+    void uiPreferencesDoNotImplementDomainPorts() {
+        noClasses()
+                .that().resideInAPackage("..ui.preferences..")
+                .should().dependOnClassesThat().resideInAPackage("..domain.service..")
+                .check(PRODUCTION_CLASSES);
+    }
+
+    @Test
+    void secondaryAdaptersDoNotDependOnEachOtherOrUi() {
+        noClasses()
+                .that().resideInAnyPackage("..adapter.jmc..", "..adapter.preferences..")
+                .should().dependOnClassesThat().resideInAnyPackage(
+                        "..ui..",
+                        "..launcher..",
+                        "javafx..",
+                        "atlantafx..",
+                        "org.kordamp.ikonli..")
+                .check(PRODUCTION_CLASSES);
+
+        noClasses()
+                .that().resideInAPackage("..adapter.jmc..")
+                .should().dependOnClassesThat().resideInAPackage("..adapter.preferences..")
+                .check(PRODUCTION_CLASSES);
+
+        noClasses()
+                .that().resideInAPackage("..adapter.preferences..")
+                .should().dependOnClassesThat().resideInAPackage("..adapter.jmc..")
+                .check(PRODUCTION_CLASSES);
+    }
+
+    @Test
     void jmcAdapterDoesNotDependOnUiLauncherOrJavaFx() {
         noClasses()
                 .that().resideInAPackage("..adapter.jmc..")

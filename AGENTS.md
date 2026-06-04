@@ -39,7 +39,7 @@ JMC FX follows the **Hexagonal (Ports & Adapters)** architecture:
 - **Domain core** (`jmc-fx-domain`) defines ports (interfaces) and data records, depending on nothing.
 - **Application** (`jmc-fx-application`) coordinates use cases and workflow service groups using domain ports.
 - **Adapters** (`jmc-fx-adapter-jmc`) implement those ports by calling external frameworks (JMC core APIs).
-- **UI** (`jmc-fx-ui`) drives application use cases and domain ports, never adapter internals.
+- **UI** (`jmc-fx-ui`) drives application use cases and uses domain models, never domain service ports or adapter internals.
 - **Launcher** (`jmc-fx-launcher`) assembles concrete adapters and injects them at startup.
 
 The intended subprojects are:
@@ -55,6 +55,9 @@ Rules:
 
 - UI code must not directly call OpenJDK JMC APIs.
 - UI code must not directly instantiate or call concrete adapter implementations.
+- Production UI code must not import `com.youngledo.jmcfx.domain.service`.
+- UI-driven workflows enter through `jmc-fx-application` use cases.
+- Secondary persistence adapters belong outside `jmc-fx-ui`.
 - Workflow orchestration that spans ports or decides feature capabilities belongs in `jmc-fx-application`.
 - JMC API usage belongs in `jmc-fx-adapter-jmc`.
 - `jmc-fx-domain` must stay free of JavaFX types.
