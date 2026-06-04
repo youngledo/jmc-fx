@@ -13,10 +13,6 @@
         </dependency>
         <dependency>
             <groupId>com.youngledo.jmcfx</groupId>
-            <artifactId>jmc-fx-application</artifactId>
-        </dependency>
-        <dependency>
-            <groupId>com.youngledo.jmcfx</groupId>
             <artifactId>jmc-fx-adapter</artifactId>
         </dependency>
         <dependency>
