@@ -4,8 +4,8 @@
          xsi:schemaLocation="http://maven.apache.org/POM/4.1.0 https://maven.apache.org/xsd/maven-4.1.0.xsd">
     <modelVersion>4.1.0</modelVersion>
     <parent/>
-    <artifactId>jmc-fx-app</artifactId>
-    <name>JMC FX Application</name>
+    <artifactId>jmc-fx-launcher</artifactId>
+    <name>JMC FX Launcher</name>
     <dependencies>
         <dependency>
             <groupId>com.youngledo.jmcfx</groupId>
@@ -38,7 +38,7 @@
                 <configuration>
                     <testCompilerArgs>
                         <arg>--add-reads</arg>
-                        <arg>com.youngledo.jmcfx.app=java.xml</arg>
+                        <arg>com.youngledo.jmcfx.launcher=java.xml</arg>
                     </testCompilerArgs>
                 </configuration>
             </plugin>
@@ -47,7 +47,7 @@
                 <artifactId>javafx-maven-plugin</artifactId>
                 <configuration>
                     <skip>false</skip>
-                    <mainClass>com.youngledo.jmcfx.app/com.youngledo.jmcfx.app.JmcFxApplication</mainClass>
+                    <mainClass>com.youngledo.jmcfx.launcher/com.youngledo.jmcfx.launcher.JmcFxApplication</mainClass>
                 </configuration>
             </plugin>
         </plugins>
@@ -96,7 +96,7 @@
                             <outputDirectory>${jmcfx.package.input.dir}</outputDirectory>
                             <archive>
                                 <manifest>
-                                    <mainClass>com.youngledo.jmcfx.app.JmcFxApplication</mainClass>
+                                    <mainClass>com.youngledo.jmcfx.launcher.JmcFxApplication</mainClass>
                                     <addClasspath>true</addClasspath>
                                 </manifest>
                             </archive>
@@ -173,7 +173,7 @@
                             <description>${project.description}</description>
                             <input>${jmcfx.package.input.dir}</input>
                             <mainJar>${project.build.finalName}.jar</mainJar>
-                            <mainClass>com.youngledo.jmcfx.app.JmcFxApplication</mainClass>
+                            <mainClass>com.youngledo.jmcfx.launcher.JmcFxApplication</mainClass>
                             <runtimeImage>${jmcfx.package.runtime.dir}</runtimeImage>
                             <destination>${project.build.directory}/jpackage</destination>
                             <removeDestination>true</removeDestination>

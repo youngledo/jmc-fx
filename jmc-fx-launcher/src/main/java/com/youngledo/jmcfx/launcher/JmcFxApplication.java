@@ -1,4 +1,4 @@
-package com.youngledo.jmcfx.app;
+package com.youngledo.jmcfx.launcher;
 
 import java.util.Locale;
 

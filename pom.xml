@@ -20,7 +20,7 @@
         <subproject>jmc-fx-flamegraph</subproject>
         <subproject>jmc-fx-flamegraph-demo</subproject>
         <subproject>jmc-fx-ui</subproject>
-        <subproject>jmc-fx-app</subproject>
+        <subproject>jmc-fx-launcher</subproject>
     </subprojects>
 
     <properties>
@@ -131,7 +131,7 @@
                     <version>0.0.8</version>
                     <configuration>
                         <skip>true</skip>
-                        <mainClass>com.youngledo.jmcfx.app/com.youngledo.jmcfx.app.JmcFxApplication</mainClass>
+                        <mainClass>com.youngledo.jmcfx.launcher/com.youngledo.jmcfx.launcher.JmcFxApplication</mainClass>
                         <options>
                             <option>--enable-native-access=javafx.graphics</option>
                         </options>

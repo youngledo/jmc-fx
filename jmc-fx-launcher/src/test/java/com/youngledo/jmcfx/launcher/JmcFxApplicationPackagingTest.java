@@ -1,4 +1,4 @@
-package com.youngledo.jmcfx.app;
+package com.youngledo.jmcfx.launcher;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertFalse;
@@ -73,7 +73,7 @@ class JmcFxApplicationPackagingTest {
         assertEquals("${project.description}", childText(jpackagePlugin, "configuration", "description"));
         assertEquals("${jmcfx.package.input.dir}", childText(jpackagePlugin, "configuration", "input"));
         assertEquals("${project.build.finalName}.jar", childText(jpackagePlugin, "configuration", "mainJar"));
-        assertEquals("com.youngledo.jmcfx.app.JmcFxApplication",
+        assertEquals("com.youngledo.jmcfx.launcher.JmcFxApplication",
                 childText(jpackagePlugin, "configuration", "mainClass"));
         assertEquals("", childText(jpackagePlugin, "configuration", "modulePaths", "path"),
                 "classpath+jlink profile must not use the JPMS application entry point");
@@ -142,7 +142,7 @@ class JmcFxApplicationPackagingTest {
     private static Element jpackageProfile(Document pom) {
         var profile = findElementByChildText(
                 pom.getElementsByTagNameNS(MAVEN_NAMESPACE, "profile"), "id", "jpackage-classpath-jlink");
-        assertNotNull(profile, "jmc-fx-app should expose jpackage-classpath-jlink");
+        assertNotNull(profile, "jmc-fx-launcher should expose jpackage-classpath-jlink");
         return profile;
     }
 

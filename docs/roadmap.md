@@ -17,7 +17,7 @@ Baseline date: 2026-05-31.
 - `./mvnw verify`: passed for the full Maven reactor.
 - `rg -n "<modules>|<module>" pom.xml **/pom.xml`: no Maven 3 module syntax
   found.
-- `rg -n "org.openjdk.jmc|JfrLoaderToolkit" jmc-fx-ui jmc-fx-app jmc-fx-domain`:
+- `rg -n "org.openjdk.jmc|JfrLoaderToolkit" jmc-fx-ui jmc-fx-launcher jmc-fx-domain`:
   no JMC API usage found outside the adapter boundary.
 
 ## Current Capabilities

@@ -1,4 +1,4 @@
-package com.youngledo.jmcfx.app;
+package com.youngledo.jmcfx.launcher;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertFalse;
@@ -45,16 +45,16 @@ class JmcFxModuleBoundaryTest {
     }
 
     @Test
-    void appModuleAssemblesAdaptersWithoutOpeningItsPackageGlobally() throws Exception {
+    void launcherModuleAssemblesAdaptersWithoutOpeningItsPackageGlobally() throws Exception {
         var descriptor = moduleInfo(".");
 
         assertTrue(descriptor.contains("requires com.youngledo.jmcfx.adapter.jmc;"));
         assertTrue(descriptor.contains("requires com.youngledo.jmcfx.ui;"));
-        assertTrue(descriptor.contains("exports com.youngledo.jmcfx.app to javafx.graphics;"));
-        assertFalse(descriptor.contains("exports com.youngledo.jmcfx.app;"),
-                "app entry package should only be exported to the JavaFX launcher");
-        assertFalse(descriptor.contains("opens com.youngledo.jmcfx.app"),
-                "app entry package does not need reflective opens");
+        assertTrue(descriptor.contains("exports com.youngledo.jmcfx.launcher to javafx.graphics;"));
+        assertFalse(descriptor.contains("exports com.youngledo.jmcfx.launcher;"),
+                "launcher entry package should only be exported to the JavaFX launcher");
+        assertFalse(descriptor.contains("opens com.youngledo.jmcfx.launcher"),
+                "launcher entry package does not need reflective opens");
     }
 
     @Test
@@ -72,13 +72,13 @@ class JmcFxModuleBoundaryTest {
         var rootPom = Files.readString(Path.of("../pom.xml"));
         var appPom = Files.readString(Path.of("pom.xml"));
 
-        assertTrue(rootPom.contains("<mainClass>com.youngledo.jmcfx.app/com.youngledo.jmcfx.app.JmcFxApplication</mainClass>"));
-        assertTrue(appPom.contains("<mainClass>com.youngledo.jmcfx.app/com.youngledo.jmcfx.app.JmcFxApplication</mainClass>"));
+        assertTrue(rootPom.contains("<mainClass>com.youngledo.jmcfx.launcher/com.youngledo.jmcfx.launcher.JmcFxApplication</mainClass>"));
+        assertTrue(appPom.contains("<mainClass>com.youngledo.jmcfx.launcher/com.youngledo.jmcfx.launcher.JmcFxApplication</mainClass>"));
         assertTrue(appPom.contains("<id>jpackage-classpath-jlink</id>"));
         assertTrue(appPom.contains("<mainJar>${project.build.finalName}.jar</mainJar>"));
-        assertTrue(appPom.contains("<mainClass>com.youngledo.jmcfx.app.JmcFxApplication</mainClass>"));
+        assertTrue(appPom.contains("<mainClass>com.youngledo.jmcfx.launcher.JmcFxApplication</mainClass>"));
         assertFalse(appPom.contains("<option>--module</option>"));
-        assertFalse(appPom.contains("<option>com.youngledo.jmcfx.app/com.youngledo.jmcfx.app.JmcFxApplication</option>"));
+        assertFalse(appPom.contains("<option>com.youngledo.jmcfx.launcher/com.youngledo.jmcfx.launcher.JmcFxApplication</option>"));
         assertFalse(rootPom.contains("<modules>"));
         assertFalse(rootPom.contains("<module>"));
         assertFalse(appPom.contains("<modules>"));
