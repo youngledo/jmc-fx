@@ -61,6 +61,16 @@ class JmcFxArchitectureTest {
     }
 
     @Test
+    void uiShellDoesNotOwnWorkflowServiceBundles() {
+        noClasses()
+                .that().resideInAPackage("..ui.shell..")
+                .should().haveSimpleName("RecordingApplicationServices")
+                .orShould().haveSimpleName("LiveJvmApplicationServices")
+                .orShould().haveSimpleName("HeapDumpApplicationServices")
+                .check(PRODUCTION_CLASSES);
+    }
+
+    @Test
     void jmcAdapterDoesNotDependOnUiLauncherOrJavaFx() {
         noClasses()
                 .that().resideInAPackage("..adapter.jmc..")

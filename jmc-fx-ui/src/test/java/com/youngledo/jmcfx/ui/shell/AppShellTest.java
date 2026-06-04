@@ -29,6 +29,8 @@ import org.w3c.dom.Document;
 import org.w3c.dom.Element;
 import org.xml.sax.SAXException;
 
+import com.youngledo.jmcfx.application.LiveJvmApplicationServices;
+import com.youngledo.jmcfx.application.RecordingApplicationServices;
 import com.youngledo.jmcfx.ui.util.DisplayFormats;
 import com.youngledo.jmcfx.domain.model.EventTypeSelection;
 import com.youngledo.jmcfx.domain.model.JdpJvmAdvertisement;
@@ -269,8 +271,8 @@ class AppShellTest {
                 "Feature-specific nullable load helpers belong in RecordingSectionLoader");
 
         assertTrue(factory.contains("final class RecordingWorkspaceFactory"));
-        assertTrue(factory.contains("private final RecordingServices services;"));
-        assertTrue(factory.contains("RecordingWorkspaceFactory(RecordingServices services, I18n i18n)"));
+        assertTrue(factory.contains("private final RecordingApplicationServices services;"));
+        assertTrue(factory.contains("RecordingWorkspaceFactory(RecordingApplicationServices services, I18n i18n)"));
         assertTrue(factory.contains("PreparedRecordingWorkspace prepare(Path path)"));
         assertTrue(factory.contains("services.recordingRepository().open(path)"));
 
@@ -288,33 +290,33 @@ class AppShellTest {
         String factory = java.nio.file.Files.readString(
                 java.nio.file.Path.of("src/main/java/com/youngledo/jmcfx/ui/shell/AppShellFactory.java"));
         String recordingServices = java.nio.file.Files.readString(
-                java.nio.file.Path.of("src/main/java/com/youngledo/jmcfx/ui/shell/RecordingServices.java"));
+                java.nio.file.Path.of("../jmc-fx-application/src/main/java/com/youngledo/jmcfx/application/RecordingApplicationServices.java"));
         String liveJvmServices = java.nio.file.Files.readString(
-                java.nio.file.Path.of("src/main/java/com/youngledo/jmcfx/ui/shell/LiveJvmServices.java"));
+                java.nio.file.Path.of("../jmc-fx-application/src/main/java/com/youngledo/jmcfx/application/LiveJvmApplicationServices.java"));
         String heapDumpServices = java.nio.file.Files.readString(
-                java.nio.file.Path.of("src/main/java/com/youngledo/jmcfx/ui/shell/HeapDumpServices.java"));
+                java.nio.file.Path.of("../jmc-fx-application/src/main/java/com/youngledo/jmcfx/application/HeapDumpApplicationServices.java"));
 
-        assertTrue(shell.contains("AppShellController(AppShellView view, AppShellViewModel viewModel, RecordingServices recordingServices,"));
-        assertTrue(shell.contains("LiveJvmServices liveJvmServices, HeapDumpServices heapDumpServices, I18n i18n,"));
-        assertFalse(shell.contains("private final RecordingServices recordingServices;"));
-        assertFalse(shell.contains("private final LiveJvmServices liveJvmServices;"));
-        assertFalse(shell.contains("private final HeapDumpServices heapDumpServices;"));
+        assertTrue(shell.contains("AppShellController(AppShellView view, AppShellViewModel viewModel, RecordingApplicationServices recordingServices,"));
+        assertTrue(shell.contains("LiveJvmApplicationServices liveJvmServices, HeapDumpApplicationServices heapDumpServices, I18n i18n,"));
+        assertFalse(shell.contains("private final RecordingApplicationServices recordingServices;"));
+        assertFalse(shell.contains("private final LiveJvmApplicationServices liveJvmServices;"));
+        assertFalse(shell.contains("private final HeapDumpApplicationServices heapDumpServices;"));
         assertFalse(shell.contains("private final RecordingRepository recordingRepository;"));
         assertFalse(shell.contains("private final JvmDiscoveryService jvmDiscoveryService;"));
         assertFalse(shell.contains("private final HeapDumpAnalysisService heapDumpAnalysisService;"));
 
         assertTrue(factory.contains("private final AppShellFactoryDependencies dependencies;"));
-        assertFalse(factory.contains("private final RecordingServices recordingServices;"));
-        assertFalse(factory.contains("private final LiveJvmServices liveJvmServices;"));
-        assertFalse(factory.contains("private final HeapDumpServices heapDumpServices;"));
+        assertFalse(factory.contains("private final RecordingApplicationServices recordingServices;"));
+        assertFalse(factory.contains("private final LiveJvmApplicationServices liveJvmServices;"));
+        assertFalse(factory.contains("private final HeapDumpApplicationServices heapDumpServices;"));
 
-        assertTrue(recordingServices.contains("record RecordingServices("));
+        assertTrue(recordingServices.contains("record RecordingApplicationServices("));
         assertTrue(recordingServices.contains("RecordingRepository recordingRepository"));
         assertTrue(recordingServices.contains("AdvancedJfrAnalysisService advancedJfrAnalysisService"));
-        assertTrue(liveJvmServices.contains("record LiveJvmServices("));
+        assertTrue(liveJvmServices.contains("record LiveJvmApplicationServices("));
         assertTrue(liveJvmServices.contains("JvmDiscoveryService jvmDiscoveryService"));
         assertTrue(liveJvmServices.contains("JmxMonitoringRepository jmxMonitoringRepository"));
-        assertTrue(heapDumpServices.contains("record HeapDumpServices("));
+        assertTrue(heapDumpServices.contains("record HeapDumpApplicationServices("));
         assertTrue(heapDumpServices.contains("HeapDumpAnalysisService heapDumpAnalysisService"));
     }
 
@@ -329,16 +331,16 @@ class AppShellTest {
 
         assertTrue(factory.contains("private final AppShellFactoryDependencies dependencies;"));
         assertTrue(factory.contains("public AppShellFactory(AppShellFactoryDependencies dependencies)"));
-        assertFalse(factory.contains("private final RecordingServices recordingServices;"));
-        assertFalse(factory.contains("private final LiveJvmServices liveJvmServices;"));
-        assertFalse(factory.contains("private final HeapDumpServices heapDumpServices;"));
+        assertFalse(factory.contains("private final RecordingApplicationServices recordingServices;"));
+        assertFalse(factory.contains("private final LiveJvmApplicationServices liveJvmServices;"));
+        assertFalse(factory.contains("private final HeapDumpApplicationServices heapDumpServices;"));
         assertFalse(factory.contains("private final I18n i18n;"));
         assertFalse(factory.contains("private final AppPreferences preferences;"));
 
         assertTrue(dependencies.contains("public record AppShellFactoryDependencies("));
-        assertTrue(dependencies.contains("RecordingServices recordingServices"));
-        assertTrue(dependencies.contains("LiveJvmServices liveJvmServices"));
-        assertTrue(dependencies.contains("HeapDumpServices heapDumpServices"));
+        assertTrue(dependencies.contains("RecordingApplicationServices recordingServices"));
+        assertTrue(dependencies.contains("LiveJvmApplicationServices liveJvmServices"));
+        assertTrue(dependencies.contains("HeapDumpApplicationServices heapDumpServices"));
         assertTrue(dependencies.contains("I18n i18n"));
         assertTrue(dependencies.contains("AppPreferences preferences"));
 
@@ -359,9 +361,9 @@ class AppShellTest {
         assertFalse(factory.contains("AppShellFactory(RecordingRepository"));
         assertFalse(factory.contains("private AppShellFactory(RecordingRepository"));
         assertFalse(factory.contains("import com.youngledo.jmcfx.domain.service."));
-        assertFalse(factory.contains("new RecordingServices("));
-        assertFalse(factory.contains("new LiveJvmServices("));
-        assertFalse(factory.contains("new HeapDumpServices("));
+        assertFalse(factory.contains("new RecordingApplicationServices("));
+        assertFalse(factory.contains("new LiveJvmApplicationServices("));
+        assertFalse(factory.contains("new HeapDumpApplicationServices("));
         assertFalse(factory.contains("new JavaAppPreferences()"));
     }
 
@@ -484,9 +486,9 @@ class AppShellTest {
                 java.nio.file.Path.of("src/main/java/com/youngledo/jmcfx/ui/shell/AppShellFactory.java"));
 
         assertTrue(shell.contains("AppShellController(AppShellView view, AppShellViewModel viewModel,"));
-        assertTrue(shell.contains("RecordingServices recordingServices"));
-        assertTrue(shell.contains("LiveJvmServices liveJvmServices"));
-        assertTrue(shell.contains("HeapDumpServices heapDumpServices"));
+        assertTrue(shell.contains("RecordingApplicationServices recordingServices"));
+        assertTrue(shell.contains("LiveJvmApplicationServices liveJvmServices"));
+        assertTrue(shell.contains("HeapDumpApplicationServices heapDumpServices"));
         assertFalse(shell.contains(
                 "AppShellController(AppShellView view, AppShellViewModel viewModel, RecordingRepository recordingRepository"));
         assertFalse(shell.contains("public AppShellController(AppShellViewModel viewModel"));
@@ -735,7 +737,7 @@ class AppShellTest {
     void liveJvmServicesCarrySavedTargetsAndJdpDiscoveryDependencies() {
         FakeSavedJvmTargetRepository savedTargets = new FakeSavedJvmTargetRepository();
         FakeJdpDiscoveryService jdpDiscovery = new FakeJdpDiscoveryService();
-        LiveJvmServices services = new LiveJvmServices(null, null, null, null, null, null, null, null, null,
+        LiveJvmApplicationServices services = new LiveJvmApplicationServices(null, null, null, null, null, null, null, null, null,
                 savedTargets, jdpDiscovery);
 
         assertEquals(savedTargets, services.savedTargetRepository());
@@ -746,7 +748,7 @@ class AppShellTest {
     void liveJvmServicesCarryMonitoringDependencies() {
         FakeJmxMonitoringService monitoringService = new FakeJmxMonitoringService();
         FakeJmxMonitoringRepository monitoringRepository = new FakeJmxMonitoringRepository();
-        LiveJvmServices services = new LiveJvmServices(null, null, null, null, null, null, null,
+        LiveJvmApplicationServices services = new LiveJvmApplicationServices(null, null, null, null, null, null, null,
                 monitoringService, monitoringRepository, null, null);
 
         assertEquals(monitoringService, services.jmxMonitoringService());
@@ -3127,7 +3129,7 @@ void jvmBrowserSupportsDoubleClickConnectAndNoBottomStatus() throws Exception {
         String factory = java.nio.file.Files.readString(
                 java.nio.file.Path.of("src/main/java/com/youngledo/jmcfx/ui/shell/AppShellFactory.java"));
         String liveJvmServices = java.nio.file.Files.readString(
-                java.nio.file.Path.of("src/main/java/com/youngledo/jmcfx/ui/shell/LiveJvmServices.java"));
+                java.nio.file.Path.of("../jmc-fx-application/src/main/java/com/youngledo/jmcfx/application/LiveJvmApplicationServices.java"));
         String liveJvmController = java.nio.file.Files.readString(java.nio.file.Path.of(
                 "src/main/java/com/youngledo/jmcfx/ui/shell/ShellLiveJvmWorkspaceController.java"));
         String app = java.nio.file.Files.readString(
@@ -3146,7 +3148,7 @@ void jvmBrowserSupportsDoubleClickConnectAndNoBottomStatus() throws Exception {
         String factory = java.nio.file.Files.readString(
                 java.nio.file.Path.of("src/main/java/com/youngledo/jmcfx/ui/shell/AppShellFactory.java"));
         String liveJvmServices = java.nio.file.Files.readString(
-                java.nio.file.Path.of("src/main/java/com/youngledo/jmcfx/ui/shell/LiveJvmServices.java"));
+                java.nio.file.Path.of("../jmc-fx-application/src/main/java/com/youngledo/jmcfx/application/LiveJvmApplicationServices.java"));
         String liveJvmController = java.nio.file.Files.readString(java.nio.file.Path.of(
                 "src/main/java/com/youngledo/jmcfx/ui/shell/ShellLiveJvmWorkspaceController.java"));
         String app = java.nio.file.Files.readString(
@@ -3208,7 +3210,7 @@ void jvmBrowserSupportsDoubleClickConnectAndNoBottomStatus() throws Exception {
         String factory = java.nio.file.Files.readString(
                 java.nio.file.Path.of("src/main/java/com/youngledo/jmcfx/ui/shell/AppShellFactory.java"));
         String recordingServices = java.nio.file.Files.readString(
-                java.nio.file.Path.of("src/main/java/com/youngledo/jmcfx/ui/shell/RecordingServices.java"));
+                java.nio.file.Path.of("../jmc-fx-application/src/main/java/com/youngledo/jmcfx/application/RecordingApplicationServices.java"));
         String workspaceFactory = java.nio.file.Files.readString(
                 java.nio.file.Path.of("src/main/java/com/youngledo/jmcfx/ui/shell/RecordingWorkspaceFactory.java"));
         String app = java.nio.file.Files.readString(
@@ -3691,7 +3693,7 @@ void settingsPageContainsThemeSelectorNextToLanguageSelector() {
 
     private static PreparedRecordingWorkspace prepareRecordingWorkspace(RuleAnalysisService ruleAnalysisService,
             ProfilingService profilingService) {
-        RecordingServices services = new RecordingServices(new FakeRecordingRepository(), new FakeEventQueryService(),
+        RecordingApplicationServices services = new RecordingApplicationServices(new FakeRecordingRepository(), new FakeEventQueryService(),
                 ruleAnalysisService, profilingService, null, null, null, null, null, null, null, null, null, null, null,
                 null, null, null, null);
         return new RecordingWorkspaceFactory(services, new I18n(java.util.Locale.ENGLISH)).prepare(Path.of("startup.jfr"));

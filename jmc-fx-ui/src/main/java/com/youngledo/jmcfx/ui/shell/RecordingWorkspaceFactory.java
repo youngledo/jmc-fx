@@ -2,6 +2,7 @@ package com.youngledo.jmcfx.ui.shell;
 
 import java.nio.file.Path;
 
+import com.youngledo.jmcfx.application.RecordingApplicationServices;
 import com.youngledo.jmcfx.domain.model.RecordingSummary;
 import com.youngledo.jmcfx.ui.advanced.AdvancedJfrViewModel;
 import com.youngledo.jmcfx.ui.environment.EnvironmentViewModel;
@@ -37,10 +38,10 @@ import com.youngledo.jmcfx.ui.tlab.TlabViewModel;
 
 final class RecordingWorkspaceFactory {
 
-    private final RecordingServices services;
+    private final RecordingApplicationServices services;
     private final I18n i18n;
 
-    RecordingWorkspaceFactory(RecordingServices services, I18n i18n) {
+    RecordingWorkspaceFactory(RecordingApplicationServices services, I18n i18n) {
         this.services = services;
         this.i18n = i18n;
     }

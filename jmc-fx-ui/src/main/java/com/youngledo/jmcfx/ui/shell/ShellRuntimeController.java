@@ -2,6 +2,9 @@ package com.youngledo.jmcfx.ui.shell;
 
 import java.nio.file.Path;
 
+import com.youngledo.jmcfx.application.HeapDumpApplicationServices;
+import com.youngledo.jmcfx.application.LiveJvmApplicationServices;
+import com.youngledo.jmcfx.application.RecordingApplicationServices;
 import com.youngledo.jmcfx.ui.i18n.I18n;
 
 final class ShellRuntimeController {
@@ -23,8 +26,8 @@ final class ShellRuntimeController {
     private ShellLifecycleController shellLifecycleController;
     private SettingsPaneController settingsPaneController;
 
-    ShellRuntimeController(AppShellView view, AppShellViewModel viewModel, RecordingServices recordingServices,
-            LiveJvmServices liveJvmServices, HeapDumpServices heapDumpServices, I18n i18n,
+    ShellRuntimeController(AppShellView view, AppShellViewModel viewModel, RecordingApplicationServices recordingServices,
+            LiveJvmApplicationServices liveJvmServices, HeapDumpApplicationServices heapDumpServices, I18n i18n,
             RecordingOpenExecutor recordingOpenExecutor) {
         this.view = view;
         this.viewModel = viewModel;

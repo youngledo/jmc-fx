@@ -31,6 +31,9 @@ import com.youngledo.jmcfx.adapter.jmc.JmcRuleAnalysisService;
 import com.youngledo.jmcfx.adapter.jmc.JmcSocketIOService;
 import com.youngledo.jmcfx.adapter.jmc.JmcThreadService;
 import com.youngledo.jmcfx.adapter.jmc.JmcTlabService;
+import com.youngledo.jmcfx.application.HeapDumpApplicationServices;
+import com.youngledo.jmcfx.application.LiveJvmApplicationServices;
+import com.youngledo.jmcfx.application.RecordingApplicationServices;
 import com.youngledo.jmcfx.ui.i18n.I18n;
 import com.youngledo.jmcfx.ui.preferences.JavaAppPreferences;
 import com.youngledo.jmcfx.ui.preferences.JavaJmxMonitoringRepository;
@@ -38,9 +41,6 @@ import com.youngledo.jmcfx.ui.preferences.JavaSavedJvmTargetRepository;
 import com.youngledo.jmcfx.ui.shell.AppShell;
 import com.youngledo.jmcfx.ui.shell.AppShellFactory;
 import com.youngledo.jmcfx.ui.shell.AppShellFactoryDependencies;
-import com.youngledo.jmcfx.ui.shell.HeapDumpServices;
-import com.youngledo.jmcfx.ui.shell.LiveJvmServices;
-import com.youngledo.jmcfx.ui.shell.RecordingServices;
 import javafx.application.Application;
 import javafx.scene.Scene;
 import javafx.stage.Stage;
@@ -67,19 +67,19 @@ public class JmcFxApplication extends Application {
         Locale systemLocale = Locale.getDefault();
         Locale.setDefault(Locale.ENGLISH);
         JmcJmxConnectionService jmxConnectionService = new JmcJmxConnectionService();
-        RecordingServices recordingServices = new RecordingServices(new JmcRecordingRepository(),
+        RecordingApplicationServices recordingServices = new RecordingApplicationServices(new JmcRecordingRepository(),
                 new JmcEventQueryService(), new JmcRuleAnalysisService(), new JmcProfilingService(),
                 new JmcExceptionService(), new JmcThreadService(), new JmcFileIOService(), new JmcSocketIOService(),
                 new JmcLockService(), new JmcHeapService(), new JmcLeakSuspectsService(), new JmcTlabService(),
                 new JmcJvmInternalsService(), new JmcEnvironmentService(), new JmcJavaAppService(),
                 new JmcJfrMetadataService(), new JmcG1GcService(), new JmcJavaFxEventService(),
                 new JmcAdvancedJfrAnalysisService());
-        LiveJvmServices liveJvmServices = new LiveJvmServices(new JmcJvmDiscoveryService(), jmxConnectionService,
+        LiveJvmApplicationServices liveJvmServices = new LiveJvmApplicationServices(new JmcJvmDiscoveryService(), jmxConnectionService,
                 new JmcFlightRecordingService(jmxConnectionService), new JmcMBeanBrowserService(jmxConnectionService),
                 new JmcDiagnosticCommandService(jmxConnectionService), new JmcLiveMetricService(jmxConnectionService),
                 new JmcAgentManagerService(jmxConnectionService), new JmcJmxMonitoringService(jmxConnectionService),
                 new JavaJmxMonitoringRepository(), new JavaSavedJvmTargetRepository(), new JmcJdpDiscoveryService());
-        HeapDumpServices heapDumpServices = new HeapDumpServices(new JmcHeapDumpAnalysisService());
+        HeapDumpApplicationServices heapDumpServices = new HeapDumpApplicationServices(new JmcHeapDumpAnalysisService());
         AppShellFactoryDependencies dependencies = new AppShellFactoryDependencies(recordingServices, liveJvmServices,
                 heapDumpServices, new I18n(systemLocale), new JavaAppPreferences());
         shell = new AppShellFactory(dependencies).create();

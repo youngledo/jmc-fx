@@ -3,6 +3,7 @@ package com.youngledo.jmcfx.ui.shell;
 import java.nio.file.Path;
 import java.util.function.Consumer;
 
+import com.youngledo.jmcfx.application.LiveJvmApplicationServices;
 import com.youngledo.jmcfx.domain.service.JdpDiscoveryService;
 import com.youngledo.jmcfx.domain.service.JmxMonitoringRepository;
 import com.youngledo.jmcfx.domain.service.JmxMonitoringService;
@@ -18,14 +19,14 @@ final class ShellLiveJvmWorkspaceController {
 
     private final AppShellView view;
     private final AppShellViewModel viewModel;
-    private final LiveJvmServices services;
+    private final LiveJvmApplicationServices services;
     private final I18n i18n;
     private final ShellLifecycleController lifecycleController;
     private final Consumer<Path> recordingOpenHandler;
     private JvmBrowserViewModel jvmBrowserViewModel;
     private LiveJvmPaneController jvmsPaneController;
 
-    ShellLiveJvmWorkspaceController(AppShellView view, AppShellViewModel viewModel, LiveJvmServices services, I18n i18n,
+    ShellLiveJvmWorkspaceController(AppShellView view, AppShellViewModel viewModel, LiveJvmApplicationServices services, I18n i18n,
             ShellLifecycleController lifecycleController, Consumer<Path> recordingOpenHandler) {
         this.view = view;
         this.viewModel = viewModel;

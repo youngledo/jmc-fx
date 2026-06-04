@@ -3,6 +3,7 @@ package com.youngledo.jmcfx.ui.shell;
 import java.nio.file.Path;
 import java.util.function.Consumer;
 
+import com.youngledo.jmcfx.application.HeapDumpApplicationServices;
 import com.youngledo.jmcfx.domain.model.HeapDumpAnalysisState;
 import com.youngledo.jmcfx.ui.heapdump.HeapDumpAnalysisViewModel;
 import com.youngledo.jmcfx.ui.heapdump.VirtualThreadHeapDumpAnalysisExecutor;
@@ -22,7 +23,7 @@ final class WorkspaceOpenCoordinator {
     private final BorderPane root;
     private final AppShellViewModel viewModel;
     private final RecordingWorkspaceFactory recordingWorkspaceFactory;
-    private final HeapDumpServices heapDumpServices;
+    private final HeapDumpApplicationServices heapDumpServices;
     private final I18n i18n;
     private final RecordingOpenExecutor recordingOpenExecutor;
     private final Consumer<PreparedRecordingWorkspace> recordingWorkspaceConsumer;
@@ -31,7 +32,7 @@ final class WorkspaceOpenCoordinator {
     private boolean recordingOpening;
 
     WorkspaceOpenCoordinator(BorderPane root, AppShellViewModel viewModel,
-            RecordingWorkspaceFactory recordingWorkspaceFactory, HeapDumpServices heapDumpServices, I18n i18n,
+            RecordingWorkspaceFactory recordingWorkspaceFactory, HeapDumpApplicationServices heapDumpServices, I18n i18n,
             RecordingOpenExecutor recordingOpenExecutor,
             Consumer<PreparedRecordingWorkspace> recordingWorkspaceConsumer,
             Consumer<Boolean> recordingOpeningConsumer,

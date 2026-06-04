@@ -1,5 +1,6 @@
 module com.youngledo.jmcfx.ui {
     requires transitive com.youngledo.jmcfx.domain;
+    requires com.youngledo.jmcfx.application;
     requires com.youngledo.jmcfx.flamegraph;
     requires atlantafx.base;
     requires java.prefs;

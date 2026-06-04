@@ -1,4 +1,4 @@
-package com.youngledo.jmcfx.ui.shell;
+package com.youngledo.jmcfx.application;
 
 import com.youngledo.jmcfx.domain.service.AdvancedJfrAnalysisService;
 import com.youngledo.jmcfx.domain.service.EnvironmentService;
@@ -20,7 +20,7 @@ import com.youngledo.jmcfx.domain.service.SocketIOService;
 import com.youngledo.jmcfx.domain.service.ThreadService;
 import com.youngledo.jmcfx.domain.service.TlabService;
 
-public record RecordingServices(
+public record RecordingApplicationServices(
         RecordingRepository recordingRepository,
         EventQueryService eventQueryService,
         RuleAnalysisService ruleAnalysisService,
