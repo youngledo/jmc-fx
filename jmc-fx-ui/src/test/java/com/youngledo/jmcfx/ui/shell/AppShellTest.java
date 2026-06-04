@@ -272,9 +272,12 @@ class AppShellTest {
 
         assertTrue(factory.contains("final class RecordingWorkspaceFactory"));
         assertTrue(factory.contains("private final RecordingApplicationServices services;"));
+        assertTrue(factory.contains("private final OpenRecordingWorkspaceUseCase openRecordingWorkspace;"));
         assertTrue(factory.contains("RecordingWorkspaceFactory(RecordingApplicationServices services, I18n i18n)"));
         assertTrue(factory.contains("PreparedRecordingWorkspace prepare(Path path)"));
-        assertTrue(factory.contains("services.recordingRepository().open(path)"));
+        assertTrue(factory.contains("RecordingWorkspacePlan plan = openRecordingWorkspace.open(path)"));
+        assertFalse(factory.contains("services.recordingRepository().open(path)"),
+                "Opening the recording repository belongs in the application use case");
 
         assertTrue(loader.contains("final class RecordingSectionLoader"));
         assertTrue(loader.contains("void load(RecordingWorkspace workspace, String sectionId)"));
