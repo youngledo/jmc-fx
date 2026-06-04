@@ -14,6 +14,8 @@ import java.util.List;
 
 import org.junit.jupiter.api.Test;
 
+import com.youngledo.jmcfx.application.AnalyzeRulesUseCase;
+import com.youngledo.jmcfx.application.BrowseEventsUseCase;
 import com.youngledo.jmcfx.domain.model.RecordingSummary;
 import com.youngledo.jmcfx.domain.service.EventQueryService;
 import com.youngledo.jmcfx.domain.service.EventQuerySession;
@@ -606,11 +608,11 @@ class AppShellViewModelTest {
     }
 
     private static EventBrowserViewModel eventBrowserViewModel(EventBrowserBackgroundExecutor executor) {
-        return new EventBrowserViewModel(new EmptyEventQueryService(), executor);
+        return new EventBrowserViewModel(new BrowseEventsUseCase(new EmptyEventQueryService()), executor);
     }
 
     private static RuleResultsViewModel ruleResultsViewModel() {
-        return new RuleResultsViewModel(rec -> java.util.List.of());
+        return new RuleResultsViewModel(AnalyzeRulesUseCase.empty());
     }
 
     private static final class EmptyEventQueryService implements EventQueryService {

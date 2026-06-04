@@ -18,6 +18,7 @@ import java.util.concurrent.atomic.AtomicReference;
 
 import org.junit.jupiter.api.Test;
 
+import com.youngledo.jmcfx.application.BrowseEventsUseCase;
 import com.youngledo.jmcfx.domain.model.EventColumnKind;
 import com.youngledo.jmcfx.domain.model.EventDetails;
 import com.youngledo.jmcfx.domain.model.EventFieldCondition;
@@ -48,7 +49,7 @@ class EventBrowserViewModelTest {
     @Test
     void loadingRecordingLoadsTreeWithoutSelectingTypeOrRows() {
         FakeEventQueryService service = new FakeEventQueryService();
-        EventBrowserViewModel viewModel = new EventBrowserViewModel(service, new DirectEventBrowserExecutor());
+        EventBrowserViewModel viewModel = new EventBrowserViewModel(new BrowseEventsUseCase(service), new DirectEventBrowserExecutor());
 
         viewModel.loadRecording(recording());
 
@@ -64,7 +65,7 @@ class EventBrowserViewModelTest {
     @Test
     void selectingAllEventsUsesNoPrefetchBeforeAndRecommendedFieldColumns() {
         RecordingEventQueryService service = new RecordingEventQueryService();
-        EventBrowserViewModel viewModel = new EventBrowserViewModel(service, new DirectEventBrowserExecutor());
+        EventBrowserViewModel viewModel = new EventBrowserViewModel(new BrowseEventsUseCase(service), new DirectEventBrowserExecutor());
 
         viewModel.loadRecording(recording());
         viewModel.selectAllEventTypes();
@@ -78,7 +79,7 @@ class EventBrowserViewModelTest {
 
     @Test
     void defaultColumnsComeDirectlyFromSelectedTypeDescriptors() {
-        EventBrowserViewModel viewModel = new EventBrowserViewModel(new FakeEventQueryService(),
+        EventBrowserViewModel viewModel = new EventBrowserViewModel(new BrowseEventsUseCase(new FakeEventQueryService()),
                 new DirectEventBrowserExecutor());
 
         viewModel.loadRecording(recording());
@@ -94,7 +95,7 @@ class EventBrowserViewModelTest {
     @Test
     void explicitAllSelectionRepresentsAllEventTypesInRecording() {
         RecordingEventQueryService service = new RecordingEventQueryService();
-        EventBrowserViewModel viewModel = new EventBrowserViewModel(service, new DirectEventBrowserExecutor());
+        EventBrowserViewModel viewModel = new EventBrowserViewModel(new BrowseEventsUseCase(service), new DirectEventBrowserExecutor());
 
         viewModel.loadRecording(recording());
         viewModel.selectAllEventTypes();
@@ -108,7 +109,7 @@ class EventBrowserViewModelTest {
     @Test
     void eventThreadIsAFieldColumnWhenJmcDescriptorExposesIt() {
         RecordingEventQueryService service = new RecordingEventQueryService();
-        EventBrowserViewModel viewModel = new EventBrowserViewModel(service, new DirectEventBrowserExecutor());
+        EventBrowserViewModel viewModel = new EventBrowserViewModel(new BrowseEventsUseCase(service), new DirectEventBrowserExecutor());
 
         viewModel.loadRecording(recording());
         viewModel.selectEventType("rec.ThreadStart");
@@ -122,7 +123,7 @@ class EventBrowserViewModelTest {
     @Test
     void visibleRangeRequestsWindowWithoutPaginationState() {
         FakeEventQueryService service = new FakeEventQueryService();
-        EventBrowserViewModel viewModel = new EventBrowserViewModel(service, new DirectEventBrowserExecutor());
+        EventBrowserViewModel viewModel = new EventBrowserViewModel(new BrowseEventsUseCase(service), new DirectEventBrowserExecutor());
 
         viewModel.loadRecording(recording());
         viewModel.selectAllEventTypes();
@@ -137,7 +138,7 @@ class EventBrowserViewModelTest {
     @Test
     void activeFilterIsIncludedInWindowRequests() {
         RecordingEventQueryService service = new RecordingEventQueryService();
-        EventBrowserViewModel viewModel = new EventBrowserViewModel(service, new DirectEventBrowserExecutor());
+        EventBrowserViewModel viewModel = new EventBrowserViewModel(new BrowseEventsUseCase(service), new DirectEventBrowserExecutor());
 
         viewModel.loadRecording(recording());
         viewModel.selectAllEventTypes();
@@ -154,7 +155,7 @@ class EventBrowserViewModelTest {
     @Test
     void activeFieldColumnsDriveLaterWindowRequests() {
         RecordingEventQueryService service = new RecordingEventQueryService();
-        EventBrowserViewModel viewModel = new EventBrowserViewModel(service, new DirectEventBrowserExecutor());
+        EventBrowserViewModel viewModel = new EventBrowserViewModel(new BrowseEventsUseCase(service), new DirectEventBrowserExecutor());
 
         viewModel.loadRecording(recording());
         viewModel.selectAllEventTypes();
@@ -172,7 +173,7 @@ class EventBrowserViewModelTest {
     @Test
     void selectingEventTypeReloadsFieldsColumnsInitialWindowAndDetails() {
         RecordingEventQueryService service = new RecordingEventQueryService();
-        EventBrowserViewModel viewModel = new EventBrowserViewModel(service, new DirectEventBrowserExecutor());
+        EventBrowserViewModel viewModel = new EventBrowserViewModel(new BrowseEventsUseCase(service), new DirectEventBrowserExecutor());
 
         viewModel.loadRecording(recording());
         viewModel.selectEventType("rec.ThreadStart");
@@ -191,7 +192,7 @@ class EventBrowserViewModelTest {
     @Test
     void selectingGroupLoadsWindowForDescendantEventTypes() {
         FakeEventQueryService service = new FakeEventQueryService();
-        EventBrowserViewModel viewModel = new EventBrowserViewModel(service, new DirectEventBrowserExecutor());
+        EventBrowserViewModel viewModel = new EventBrowserViewModel(new BrowseEventsUseCase(service), new DirectEventBrowserExecutor());
         viewModel.loadRecording(recording());
 
         EventTypeNode group = viewModel.eventTypeTreeProperty().stream()
@@ -211,7 +212,7 @@ class EventBrowserViewModelTest {
     @Test
     void selectionPropertiesUpdateWhenSelectingEventTypesNode() {
         FakeEventQueryService service = new FakeEventQueryService();
-        EventBrowserViewModel viewModel = new EventBrowserViewModel(service, new DirectEventBrowserExecutor());
+        EventBrowserViewModel viewModel = new EventBrowserViewModel(new BrowseEventsUseCase(service), new DirectEventBrowserExecutor());
         viewModel.loadRecording(recording());
 
         EventTypeNode group = viewModel.eventTypeTreeProperty().stream()
@@ -227,7 +228,7 @@ class EventBrowserViewModelTest {
     @Test
     void selectingEmptyGroupDoesNotCrashOrReload() {
         RecordingEventQueryService service = new RecordingEventQueryService();
-        EventBrowserViewModel viewModel = new EventBrowserViewModel(service, new DirectEventBrowserExecutor());
+        EventBrowserViewModel viewModel = new EventBrowserViewModel(new BrowseEventsUseCase(service), new DirectEventBrowserExecutor());
         viewModel.loadRecording(recording());
         EventWindowRequest initialRequest = service.lastWindowRequest();
         EventTypeNode emptyGroup = EventTypeNode.group("empty", "Empty", List.of("Empty"), List.of());
@@ -242,7 +243,7 @@ class EventBrowserViewModelTest {
     @Test
     void failedSelectionClearsStaleRowsDetailsAndProperties() {
         RecordingEventQueryService service = new RecordingEventQueryService();
-        EventBrowserViewModel viewModel = new EventBrowserViewModel(service, new DirectEventBrowserExecutor());
+        EventBrowserViewModel viewModel = new EventBrowserViewModel(new BrowseEventsUseCase(service), new DirectEventBrowserExecutor());
         viewModel.loadRecording(recording());
         viewModel.selectEventType("rec.ThreadStart");
         assertFalse(viewModel.rowsProperty().isEmpty());
@@ -260,7 +261,7 @@ class EventBrowserViewModelTest {
     @Test
     void selectingSameNodeDoesNotReloadWindow() {
         RecordingEventQueryService service = new RecordingEventQueryService();
-        EventBrowserViewModel viewModel = new EventBrowserViewModel(service, new DirectEventBrowserExecutor());
+        EventBrowserViewModel viewModel = new EventBrowserViewModel(new BrowseEventsUseCase(service), new DirectEventBrowserExecutor());
         viewModel.loadRecording(recording());
 
         EventTypeNode group = viewModel.eventTypeTreeProperty().getFirst();
@@ -275,7 +276,7 @@ class EventBrowserViewModelTest {
     @Test
     void clearingEventTypeSelectionDoesNotSelectAllEvents() {
         RecordingEventQueryService service = new RecordingEventQueryService();
-        EventBrowserViewModel viewModel = new EventBrowserViewModel(service, new DirectEventBrowserExecutor());
+        EventBrowserViewModel viewModel = new EventBrowserViewModel(new BrowseEventsUseCase(service), new DirectEventBrowserExecutor());
         viewModel.loadRecording(recording());
 
         viewModel.selectEventTypeNode(null);
@@ -289,7 +290,7 @@ class EventBrowserViewModelTest {
     @Test
     void selectingRowLoadsDetailsForThatEvent() {
         RecordingEventQueryService service = new RecordingEventQueryService();
-        EventBrowserViewModel viewModel = new EventBrowserViewModel(service, new DirectEventBrowserExecutor());
+        EventBrowserViewModel viewModel = new EventBrowserViewModel(new BrowseEventsUseCase(service), new DirectEventBrowserExecutor());
 
         viewModel.loadRecording(recording());
         EventRow row = new EventRow("rec.CPULoad#42", "rec.CPULoad", Instant.EPOCH,
@@ -303,7 +304,7 @@ class EventBrowserViewModelTest {
 
     @Test
     void addsAndRemovesFieldColumnsForCurrentSession() {
-        EventBrowserViewModel viewModel = new EventBrowserViewModel(new FakeEventQueryService(),
+        EventBrowserViewModel viewModel = new EventBrowserViewModel(new BrowseEventsUseCase(new FakeEventQueryService()),
                 new DirectEventBrowserExecutor());
 
         viewModel.loadRecording(recording());
@@ -320,7 +321,7 @@ class EventBrowserViewModelTest {
     @Test
     void serviceFailureClearsLoadingSetsErrorAndStaleSelectionData() {
         RecordingEventQueryService service = new RecordingEventQueryService();
-        EventBrowserViewModel viewModel = new EventBrowserViewModel(service, new DirectEventBrowserExecutor());
+        EventBrowserViewModel viewModel = new EventBrowserViewModel(new BrowseEventsUseCase(service), new DirectEventBrowserExecutor());
         viewModel.loadRecording(recording());
         viewModel.selectAllEventTypes();
         service.failWindows = true;
@@ -340,7 +341,7 @@ class EventBrowserViewModelTest {
     void loadingNewRecordingClearsOldEventStateBeforeBackgroundWork() {
         RecordingEventQueryService service = new RecordingEventQueryService();
         ControllableEventBrowserExecutor executor = new ControllableEventBrowserExecutor();
-        EventBrowserViewModel viewModel = new EventBrowserViewModel(service, executor);
+        EventBrowserViewModel viewModel = new EventBrowserViewModel(new BrowseEventsUseCase(service), executor);
 
         viewModel.loadRecording(recording());
         runAndDrainFxEvents(executor::runLast);
@@ -375,7 +376,7 @@ class EventBrowserViewModelTest {
         ensureFxToolkit();
         RecordingEventQueryService service = new RecordingEventQueryService();
         ControllableEventBrowserExecutor executor = new ControllableEventBrowserExecutor();
-        EventBrowserViewModel viewModel = new EventBrowserViewModel(service, executor);
+        EventBrowserViewModel viewModel = new EventBrowserViewModel(new BrowseEventsUseCase(service), executor);
         CountDownLatch statusChanged = new CountDownLatch(1);
         AtomicReference<Thread> fxThread = new AtomicReference<>();
         AtomicReference<Thread> listenerThread = new AtomicReference<>();
@@ -404,7 +405,7 @@ class EventBrowserViewModelTest {
     void staleRequestsDoNotReplaceNewerResults() {
         RecordingEventQueryService service = new RecordingEventQueryService();
         ControllableEventBrowserExecutor executor = new ControllableEventBrowserExecutor();
-        EventBrowserViewModel viewModel = new EventBrowserViewModel(service, executor);
+        EventBrowserViewModel viewModel = new EventBrowserViewModel(new BrowseEventsUseCase(service), executor);
 
         viewModel.loadRecording(recording());
         viewModel.loadRecording(new RecordingSummary("new", Path.of("new.jfr"), "new.jfr",
@@ -428,7 +429,7 @@ class EventBrowserViewModelTest {
     @Test
     void loadingReplacementRecordingClosesPreviousSession() {
         FakeEventQueryService service = new FakeEventQueryService();
-        EventBrowserViewModel viewModel = new EventBrowserViewModel(service, new DirectEventBrowserExecutor());
+        EventBrowserViewModel viewModel = new EventBrowserViewModel(new BrowseEventsUseCase(service), new DirectEventBrowserExecutor());
 
         viewModel.loadRecording(recording());
         viewModel.loadRecording(new RecordingSummary("new", Path.of("new.jfr"), "new.jfr",
@@ -441,7 +442,7 @@ class EventBrowserViewModelTest {
     @Test
     void closingViewModelClosesActiveSession() {
         FakeEventQueryService service = new FakeEventQueryService();
-        EventBrowserViewModel viewModel = new EventBrowserViewModel(service, new DirectEventBrowserExecutor());
+        EventBrowserViewModel viewModel = new EventBrowserViewModel(new BrowseEventsUseCase(service), new DirectEventBrowserExecutor());
 
         viewModel.loadRecording(recording());
         viewModel.close();

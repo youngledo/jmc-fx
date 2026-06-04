@@ -3,6 +3,8 @@ package com.youngledo.jmcfx.ui.shell;
 import java.nio.file.Path;
 import java.time.Instant;
 
+import com.youngledo.jmcfx.application.AnalyzeRulesUseCase;
+import com.youngledo.jmcfx.application.BrowseEventsUseCase;
 import com.youngledo.jmcfx.domain.model.RecordingSummary;
 import com.youngledo.jmcfx.domain.service.EventQueryService;
 import com.youngledo.jmcfx.domain.service.EventQuerySession;
@@ -28,11 +30,11 @@ final class AppShellViewModelTestSupport {
     }
 
     static EventBrowserViewModel eventBrowserViewModel() {
-        return new EventBrowserViewModel(new EmptyEventQueryService(), new DirectExecutor());
+        return new EventBrowserViewModel(new BrowseEventsUseCase(new EmptyEventQueryService()), new DirectExecutor());
     }
 
     static RuleResultsViewModel ruleResultsViewModel() {
-        return new RuleResultsViewModel(rec -> java.util.List.of());
+        return new RuleResultsViewModel(AnalyzeRulesUseCase.empty());
     }
 
     private static final class EmptyEventQueryService implements EventQueryService {

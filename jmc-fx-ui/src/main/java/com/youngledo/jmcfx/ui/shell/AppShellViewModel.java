@@ -5,6 +5,8 @@ import java.util.List;
 import java.util.Objects;
 import java.util.Optional;
 
+import com.youngledo.jmcfx.application.AnalyzeRulesUseCase;
+import com.youngledo.jmcfx.application.BrowseEventsUseCase;
 import com.youngledo.jmcfx.domain.model.RecordingSummary;
 import com.youngledo.jmcfx.ui.advanced.AdvancedJfrViewModel;
 import com.youngledo.jmcfx.ui.events.EventBrowserViewModel;
@@ -31,7 +33,6 @@ import com.youngledo.jmcfx.ui.leaks.LeakSuspectsViewModel;
 import com.youngledo.jmcfx.ui.locks.LockViewModel;
 import com.youngledo.jmcfx.ui.metadata.JfrMetadataViewModel;
 import com.youngledo.jmcfx.ui.overview.OverviewViewModel;
-import com.youngledo.jmcfx.domain.service.EventQueryService;
 import com.youngledo.jmcfx.ui.preferences.AppTheme;
 import com.youngledo.jmcfx.ui.profiling.ProfilingViewModel;
 import com.youngledo.jmcfx.ui.rules.RuleResultsViewModel;
@@ -190,8 +191,8 @@ public class AppShellViewModel {
 
     public RecordingWorkspace openRecording(RecordingSummary recording) {
         return openRecording(recording, new OverviewViewModel(),
-                new EventBrowserViewModel(new UnavailableEventQueryService()),
-                new RuleResultsViewModel(rec -> List.of()),
+                new EventBrowserViewModel(BrowseEventsUseCase.unavailable()),
+                new RuleResultsViewModel(AnalyzeRulesUseCase.empty()),
                 null, null, null, null, null, null, null, null, null, null,
                 null, null, null, null, null, null, null, null, null,
                 null, null, null, null);
@@ -537,10 +538,4 @@ public class AppShellViewModel {
         };
     }
 
-    private static final class UnavailableEventQueryService implements EventQueryService {
-        @Override
-        public com.youngledo.jmcfx.domain.service.EventQuerySession openSession(RecordingSummary recording) {
-            throw new UnsupportedOperationException("Event browser service is not connected for this workspace.");
-        }
-    }
 }

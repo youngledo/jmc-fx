@@ -52,9 +52,9 @@ final class RecordingWorkspaceFactory {
         RecordingWorkspacePlan plan = useCases.openRecordingWorkspace().open(path);
         RecordingApplicationServices services = useCases.pageQueries();
         OverviewViewModel overview = new OverviewViewModel();
-        EventBrowserViewModel events = new EventBrowserViewModel(services.eventQueryService(),
+        EventBrowserViewModel events = new EventBrowserViewModel(useCases.browseEvents(),
                 new VirtualThreadEventBrowserExecutor(), i18n);
-        RuleResultsViewModel analysis = new RuleResultsViewModel(services.ruleAnalysisService());
+        RuleResultsViewModel analysis = new RuleResultsViewModel(useCases.analyzeRules());
         ProfilingViewModel profiling = plan.hasProfiling()
                 ? new ProfilingViewModel(services.profilingService()) : null;
         ExceptionViewModel exceptions = plan.hasExceptions()

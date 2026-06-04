@@ -3,10 +3,10 @@ package com.youngledo.jmcfx.ui.rules;
 import java.util.List;
 import java.util.Set;
 
+import com.youngledo.jmcfx.application.AnalyzeRulesUseCase;
 import com.youngledo.jmcfx.domain.model.RecordingSummary;
 import com.youngledo.jmcfx.domain.model.RuleResult;
 import com.youngledo.jmcfx.domain.model.Severity;
-import com.youngledo.jmcfx.domain.service.RuleAnalysisService;
 import com.youngledo.jmcfx.ui.detail.DetailSelection;
 import com.youngledo.jmcfx.ui.util.FxDispatch;
 
@@ -25,7 +25,7 @@ import javafx.collections.transformation.FilteredList;
 /// View model for JFR rule analysis results with severity filtering.
 public class RuleResultsViewModel {
 
-    private final RuleAnalysisService ruleAnalysisService;
+    private final AnalyzeRulesUseCase analyzeRules;
     private final ObservableList<RuleResult> allResults = FXCollections.observableArrayList();
     private final FilteredList<RuleResult> results = new FilteredList<>(allResults);
     private final ObjectProperty<RuleResult> selectedResult = new SimpleObjectProperty<>();
@@ -43,8 +43,8 @@ public class RuleResultsViewModel {
     private final BooleanProperty error = new SimpleBooleanProperty(false);
     private final StringProperty errorMessage = new SimpleStringProperty("");
 
-    public RuleResultsViewModel(RuleAnalysisService ruleAnalysisService) {
-        this.ruleAnalysisService = ruleAnalysisService;
+    public RuleResultsViewModel(AnalyzeRulesUseCase analyzeRules) {
+        this.analyzeRules = java.util.Objects.requireNonNull(analyzeRules, "analyzeRules");
         visibleSeverities.addListener((obs, old, val) -> updateFilter());
         minimumScore.addListener((obs, old, val) -> updateFilter());
         searchText.addListener((obs, old, val) -> updateFilter());
@@ -123,7 +123,7 @@ public class RuleResultsViewModel {
         });
         List<RuleResult> analyzed;
         try {
-            analyzed = ruleAnalysisService.analyze(recording);
+            analyzed = analyzeRules.analyze(recording);
         } catch (RuntimeException exception) {
             FxDispatch.run(() -> {
                 loading.set(false);

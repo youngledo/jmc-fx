@@ -8,6 +8,8 @@ import java.util.concurrent.atomic.AtomicLong;
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
 
+import com.youngledo.jmcfx.application.BrowseEventsUseCase;
+import com.youngledo.jmcfx.application.EventBrowserSession;
 import com.youngledo.jmcfx.domain.model.EventColumn;
 import com.youngledo.jmcfx.domain.model.EventDetails;
 import com.youngledo.jmcfx.domain.model.EventFieldCondition;
@@ -22,8 +24,6 @@ import com.youngledo.jmcfx.domain.model.EventTypeSelection;
 import com.youngledo.jmcfx.domain.model.EventWindow;
 import com.youngledo.jmcfx.domain.model.EventWindowRequest;
 import com.youngledo.jmcfx.domain.model.RecordingSummary;
-import com.youngledo.jmcfx.domain.service.EventQueryService;
-import com.youngledo.jmcfx.domain.service.EventQuerySession;
 import com.youngledo.jmcfx.ui.i18n.I18n;
 import com.youngledo.jmcfx.ui.util.FxDispatch;
 
@@ -48,11 +48,11 @@ public class EventBrowserViewModel implements AutoCloseable {
     private static final int DEFAULT_FIELD_COLUMN_WIDTH = 140;
     private static final int EVENT_TYPE_COLUMN_WIDTH = 180;
 
-    private final EventQueryService eventQueryService;
+    private final BrowseEventsUseCase browseEvents;
     private final EventBrowserBackgroundExecutor backgroundExecutor;
     private I18n i18n;
     private final AtomicLong requestSequence = new AtomicLong();
-    private EventQuerySession activeSession;
+    private EventBrowserSession activeSession;
 
     private final ObjectProperty<RecordingSummary> currentRecording = new SimpleObjectProperty<>();
     private final ObservableList<EventTypeNode> eventTypeTree = FXCollections.observableArrayList();
@@ -70,18 +70,18 @@ public class EventBrowserViewModel implements AutoCloseable {
     private final StringProperty errorMessage = new SimpleStringProperty("");
     private final StringProperty statusMessage = new SimpleStringProperty("");
 
-    public EventBrowserViewModel(EventQueryService eventQueryService) {
-        this(eventQueryService, new VirtualThreadEventBrowserExecutor());
+    public EventBrowserViewModel(BrowseEventsUseCase browseEvents) {
+        this(browseEvents, new VirtualThreadEventBrowserExecutor());
     }
 
-    public EventBrowserViewModel(EventQueryService eventQueryService,
+    public EventBrowserViewModel(BrowseEventsUseCase browseEvents,
             EventBrowserBackgroundExecutor backgroundExecutor) {
-        this(eventQueryService, backgroundExecutor, new I18n(java.util.Locale.getDefault()));
+        this(browseEvents, backgroundExecutor, new I18n(java.util.Locale.getDefault()));
     }
 
-    public EventBrowserViewModel(EventQueryService eventQueryService,
+    public EventBrowserViewModel(BrowseEventsUseCase browseEvents,
             EventBrowserBackgroundExecutor backgroundExecutor, I18n i18n) {
-        this.eventQueryService = eventQueryService;
+        this.browseEvents = browseEvents;
         this.backgroundExecutor = backgroundExecutor;
         this.i18n = i18n;
         statusMessage.set(i18n.get("events.status.openPrompt"));
@@ -157,7 +157,7 @@ public class EventBrowserViewModel implements AutoCloseable {
             statusMessage.set(i18n.format("events.status.loading", recording.name()));
         });
         executeRequest(sequence, () -> {
-            EventQuerySession session = eventQueryService.openSession(recording);
+            EventBrowserSession session = browseEvents.openSession(recording);
             List<EventTypeNode> loadedTree = session.loadEventTypeTree();
 
             onFxThread(() -> {
@@ -182,7 +182,7 @@ public class EventBrowserViewModel implements AutoCloseable {
     }
 
     public void showVisibleRange(int startRow, int rowCount) {
-        EventQuerySession session = activeSession;
+        EventBrowserSession session = activeSession;
         EventTypeSelection selection = selectedEventTypeSelection.get();
         if (session == null || selection == null) {
             return;
@@ -265,7 +265,7 @@ public class EventBrowserViewModel implements AutoCloseable {
     }
 
     public void selectRow(EventRow row) {
-        EventQuerySession session = activeSession;
+        EventBrowserSession session = activeSession;
         if (session == null || row == null) {
             selectedDetails.set(null);
             return;
@@ -308,7 +308,7 @@ public class EventBrowserViewModel implements AutoCloseable {
     }
 
     private void loadSelectedEventType(int rowCount) {
-        EventQuerySession session = activeSession;
+        EventBrowserSession session = activeSession;
         EventTypeSelection selection = selectedEventTypeSelection.get();
         if (session == null || selection == null) {
             return;
@@ -366,7 +366,7 @@ public class EventBrowserViewModel implements AutoCloseable {
                 .toList();
     }
 
-    private EventDetails firstDetails(EventQuerySession session, EventWindow window) {
+    private EventDetails firstDetails(EventBrowserSession session, EventWindow window) {
         if (window == null || window.rows().isEmpty()) {
             return null;
         }
@@ -466,7 +466,7 @@ public class EventBrowserViewModel implements AutoCloseable {
     }
 
     private void closeActiveSession() {
-        EventQuerySession session = activeSession;
+        EventBrowserSession session = activeSession;
         activeSession = null;
         if (session != null) {
             session.close();

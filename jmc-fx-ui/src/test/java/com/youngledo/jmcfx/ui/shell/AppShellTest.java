@@ -29,6 +29,8 @@ import org.w3c.dom.Document;
 import org.w3c.dom.Element;
 import org.xml.sax.SAXException;
 
+import com.youngledo.jmcfx.application.AnalyzeRulesUseCase;
+import com.youngledo.jmcfx.application.BrowseEventsUseCase;
 import com.youngledo.jmcfx.application.LiveJvmApplicationServices;
 import com.youngledo.jmcfx.application.RecordingApplicationServices;
 import com.youngledo.jmcfx.application.RecordingPageUseCases;
@@ -3408,8 +3410,8 @@ void settingsPageContainsThemeSelectorNextToLanguageSelector() {
         RecordingWorkspace workspace = new RecordingWorkspace(
                 recording("rec-1", "first-recording.jfr"),
                 new OverviewViewModel(),
-                new EventBrowserViewModel(new FakeEventQueryService()),
-                new RuleResultsViewModel(rec -> List.of()),
+                new EventBrowserViewModel(new BrowseEventsUseCase(new FakeEventQueryService())),
+                new RuleResultsViewModel(AnalyzeRulesUseCase.empty()),
                 null, null, null,
                 null, null, null,
                 null, null, null,

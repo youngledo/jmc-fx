@@ -71,6 +71,19 @@ class JmcFxArchitectureTest {
     }
 
     @Test
+    void uiDoesNotDependOnEventAndRuleDomainServicePorts() {
+        noClasses()
+                .that().resideInAPackage("..ui..")
+                .should().dependOnClassesThat()
+                .haveFullyQualifiedName("com.youngledo.jmcfx.domain.service.EventQueryService")
+                .orShould().dependOnClassesThat()
+                .haveFullyQualifiedName("com.youngledo.jmcfx.domain.service.EventQuerySession")
+                .orShould().dependOnClassesThat()
+                .haveFullyQualifiedName("com.youngledo.jmcfx.domain.service.RuleAnalysisService")
+                .check(PRODUCTION_CLASSES);
+    }
+
+    @Test
     void jmcAdapterDoesNotDependOnUiLauncherOrJavaFx() {
         noClasses()
                 .that().resideInAPackage("..adapter.jmc..")

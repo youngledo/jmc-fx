@@ -10,6 +10,7 @@ import java.util.List;
 
 import org.junit.jupiter.api.Test;
 
+import com.youngledo.jmcfx.application.AnalyzeRulesUseCase;
 import com.youngledo.jmcfx.domain.model.RecordingSummary;
 import com.youngledo.jmcfx.domain.model.RuleResult;
 import com.youngledo.jmcfx.domain.model.Severity;
@@ -21,7 +22,7 @@ class RuleResultsViewModelTest {
     void analyzesRecordingAndSelectsFirstResult() {
         FakeRuleAnalysisService service = new FakeRuleAnalysisService();
         service.addResult(new RuleResult("r1", "Rule 1", Severity.WARNING, 50, "Memory", "Summary", "Explanation"));
-        RuleResultsViewModel viewModel = new RuleResultsViewModel(service);
+        RuleResultsViewModel viewModel = new RuleResultsViewModel(new AnalyzeRulesUseCase(service));
         RecordingSummary recording = new RecordingSummary("rec", Path.of("rec.jfr"), "rec.jfr",
                 Instant.EPOCH, Instant.EPOCH.plusSeconds(1), 1000, 128);
 
@@ -40,7 +41,7 @@ class RuleResultsViewModelTest {
         service.addResult(new RuleResult("r1", "Rule 1", Severity.WARNING, 50, "Memory", "Summary", "Explanation"));
         service.addResult(new RuleResult("r2", "Rule 2", Severity.CRITICAL, 90, "Threads", "Blocked",
                 "Thread contention", "Blocked for 2 s", "Inspect contended locks", "locks"));
-        RuleResultsViewModel viewModel = new RuleResultsViewModel(service);
+        RuleResultsViewModel viewModel = new RuleResultsViewModel(new AnalyzeRulesUseCase(service));
         RecordingSummary recording = new RecordingSummary("rec", Path.of("rec.jfr"), "rec.jfr",
                 Instant.EPOCH, Instant.EPOCH.plusSeconds(1), 1000, 128);
 
@@ -64,7 +65,7 @@ class RuleResultsViewModelTest {
         FakeRuleAnalysisService service = new FakeRuleAnalysisService();
         service.addResult(new RuleResult("r1", "Rule 1", Severity.CRITICAL, 90, "Threads", "Blocked summary",
                 "<p>Thread contention</p>", "<p>Blocked for 2 s</p>", "<p>Inspect contended locks</p>", "locks"));
-        RuleResultsViewModel viewModel = new RuleResultsViewModel(service);
+        RuleResultsViewModel viewModel = new RuleResultsViewModel(new AnalyzeRulesUseCase(service));
         RecordingSummary recording = new RecordingSummary("rec", Path.of("rec.jfr"), "rec.jfr",
                 Instant.EPOCH, Instant.EPOCH.plusSeconds(1), 1000, 128);
 
@@ -98,7 +99,7 @@ class RuleResultsViewModelTest {
                 "Disabled by preferences", "Enable rule to evaluate"));
         service.addResult(new RuleResult("unavailable", "Unavailable Rule", Severity.UNAVAILABLE, -1, "Events",
                 "Required events missing", "Record required events"));
-        RuleResultsViewModel viewModel = new RuleResultsViewModel(service);
+        RuleResultsViewModel viewModel = new RuleResultsViewModel(new AnalyzeRulesUseCase(service));
         RecordingSummary recording = new RecordingSummary("rec", Path.of("rec.jfr"), "rec.jfr",
                 Instant.EPOCH, Instant.EPOCH.plusSeconds(1), 1000, 128);
 
@@ -122,7 +123,7 @@ class RuleResultsViewModelTest {
     @Test
     void loadingStateIsVisibleWhileAnalysisRuns() {
         LoadingProbeRuleAnalysisService service = new LoadingProbeRuleAnalysisService();
-        RuleResultsViewModel viewModel = new RuleResultsViewModel(service);
+        RuleResultsViewModel viewModel = new RuleResultsViewModel(new AnalyzeRulesUseCase(service));
         service.viewModel = viewModel;
         RecordingSummary recording = new RecordingSummary("rec", Path.of("rec.jfr"), "rec.jfr",
                 Instant.EPOCH, Instant.EPOCH.plusSeconds(1), 1000, 128);
@@ -142,7 +143,7 @@ class RuleResultsViewModelTest {
                 throw new IllegalStateException("Rules failed");
             }
         };
-        RuleResultsViewModel viewModel = new RuleResultsViewModel(service);
+        RuleResultsViewModel viewModel = new RuleResultsViewModel(new AnalyzeRulesUseCase(service));
         RecordingSummary recording = new RecordingSummary("rec", Path.of("rec.jfr"), "rec.jfr",
                 Instant.EPOCH, Instant.EPOCH.plusSeconds(1), 1000, 128);
 
