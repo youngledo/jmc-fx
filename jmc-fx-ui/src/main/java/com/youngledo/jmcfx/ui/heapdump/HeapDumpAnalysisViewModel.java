@@ -3,10 +3,10 @@ package com.youngledo.jmcfx.ui.heapdump;
 import java.nio.file.Path;
 import java.util.Objects;
 
+import com.youngledo.jmcfx.application.AnalyzeHeapDumpUseCase;
 import com.youngledo.jmcfx.domain.model.HeapDumpAnalysisReport;
 import com.youngledo.jmcfx.domain.model.HeapDumpAnalysisState;
 import com.youngledo.jmcfx.domain.model.HeapDumpIssue;
-import com.youngledo.jmcfx.domain.service.HeapDumpAnalysisService;
 import com.youngledo.jmcfx.ui.i18n.I18n;
 import com.youngledo.jmcfx.ui.util.DisplayFormats;
 import com.youngledo.jmcfx.ui.util.FxDispatch;
@@ -20,7 +20,7 @@ import javafx.collections.ObservableList;
 
 public class HeapDumpAnalysisViewModel {
 
-    private final HeapDumpAnalysisService service;
+    private final AnalyzeHeapDumpUseCase analyzeHeapDump;
     private final HeapDumpAnalysisExecutor executor;
     private final I18n i18n;
     private final ObjectProperty<HeapDumpAnalysisState> state =
@@ -34,8 +34,8 @@ public class HeapDumpAnalysisViewModel {
     private final StringProperty selectedIssueDetails = new SimpleStringProperty("");
     private final StringProperty textReport = new SimpleStringProperty("");
 
-    public HeapDumpAnalysisViewModel(HeapDumpAnalysisService service, HeapDumpAnalysisExecutor executor, I18n i18n) {
-        this.service = Objects.requireNonNull(service, "service");
+    public HeapDumpAnalysisViewModel(AnalyzeHeapDumpUseCase analyzeHeapDump, HeapDumpAnalysisExecutor executor, I18n i18n) {
+        this.analyzeHeapDump = Objects.requireNonNull(analyzeHeapDump, "analyzeHeapDump");
         this.executor = Objects.requireNonNull(executor, "executor");
         this.i18n = Objects.requireNonNull(i18n, "i18n");
         statusMessage.set(i18n.get("heapDump.status.idle"));
@@ -87,7 +87,7 @@ public class HeapDumpAnalysisViewModel {
             statusMessage.set(i18n.format("heapDump.status.analyzing", fileName));
             summary.set("");
         });
-        executor.execute(() -> service.analyze(path), this::applyReport, this::applyFailure);
+        executor.execute(() -> analyzeHeapDump.analyze(path), this::applyReport, this::applyFailure);
     }
 
     public void selectIssue(HeapDumpIssue issue) {

@@ -10,6 +10,8 @@ import java.util.Locale;
 
 import org.junit.jupiter.api.Test;
 
+import com.youngledo.jmcfx.application.AnalyzeHeapDumpUseCase;
+import com.youngledo.jmcfx.application.HeapDumpApplicationServices;
 import com.youngledo.jmcfx.domain.model.HeapDumpAnalysisReport;
 import com.youngledo.jmcfx.domain.model.HeapDumpAnalysisState;
 import com.youngledo.jmcfx.domain.model.HeapDumpIssue;
@@ -26,7 +28,8 @@ class HeapDumpAnalysisViewModelTest {
     void analyzeUpdatesReportAndStatus() {
         FakeHeapDumpAnalysisService service = new FakeHeapDumpAnalysisService();
         service.setReport(sampleReport(Path.of("demo.hprof")));
-        HeapDumpAnalysisViewModel vm = new HeapDumpAnalysisViewModel(service, new DirectHeapDumpAnalysisExecutor(), i18n);
+        HeapDumpAnalysisViewModel vm = new HeapDumpAnalysisViewModel(useCase(service),
+                new DirectHeapDumpAnalysisExecutor(), i18n);
 
         vm.analyze(Path.of("demo.hprof"));
 
@@ -41,7 +44,8 @@ class HeapDumpAnalysisViewModelTest {
     void analyzeFailureSetsFailedStateAndMessage() {
         FakeHeapDumpAnalysisService service = new FakeHeapDumpAnalysisService();
         service.setException(new JmcFxException("boom"));
-        HeapDumpAnalysisViewModel vm = new HeapDumpAnalysisViewModel(service, new DirectHeapDumpAnalysisExecutor(), i18n);
+        HeapDumpAnalysisViewModel vm = new HeapDumpAnalysisViewModel(useCase(service),
+                new DirectHeapDumpAnalysisExecutor(), i18n);
 
         vm.analyze(Path.of("bad.hprof"));
 
@@ -53,7 +57,7 @@ class HeapDumpAnalysisViewModelTest {
     @Test
     void selectingIssueUpdatesDetailProperties() {
         HeapDumpIssue issue = sampleIssue();
-        HeapDumpAnalysisViewModel vm = new HeapDumpAnalysisViewModel(new FakeHeapDumpAnalysisService(),
+        HeapDumpAnalysisViewModel vm = new HeapDumpAnalysisViewModel(useCase(new FakeHeapDumpAnalysisService()),
                 new DirectHeapDumpAnalysisExecutor(), i18n);
 
         vm.selectIssue(issue);
@@ -66,6 +70,10 @@ class HeapDumpAnalysisViewModelTest {
     private HeapDumpAnalysisReport sampleReport(Path path) {
         return new HeapDumpAnalysisReport(path, 4096, 2048, 10, 8, 1, 1,
                 List.of(sampleIssue()), "raw report");
+    }
+
+    private AnalyzeHeapDumpUseCase useCase(FakeHeapDumpAnalysisService service) {
+        return new AnalyzeHeapDumpUseCase(new HeapDumpApplicationServices(service));
     }
 
     private HeapDumpIssue sampleIssue() {

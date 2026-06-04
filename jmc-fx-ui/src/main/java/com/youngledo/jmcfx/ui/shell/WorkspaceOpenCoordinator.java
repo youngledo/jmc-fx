@@ -3,6 +3,7 @@ package com.youngledo.jmcfx.ui.shell;
 import java.nio.file.Path;
 import java.util.function.Consumer;
 
+import com.youngledo.jmcfx.application.AnalyzeHeapDumpUseCase;
 import com.youngledo.jmcfx.application.HeapDumpApplicationServices;
 import com.youngledo.jmcfx.domain.model.HeapDumpAnalysisState;
 import com.youngledo.jmcfx.ui.heapdump.HeapDumpAnalysisViewModel;
@@ -116,7 +117,7 @@ final class WorkspaceOpenCoordinator {
         backgroundWorkVisibleConsumer.accept(true);
         viewModel.showStatus(openingHeapDumpStatus(i18n, path));
         viewModel.showTaskSummary(i18n.get("taskSummary.openingHeapDump"));
-        HeapDumpAnalysisViewModel nextViewModel = new HeapDumpAnalysisViewModel(heapDumpServices.heapDumpAnalysisService(),
+        HeapDumpAnalysisViewModel nextViewModel = new HeapDumpAnalysisViewModel(new AnalyzeHeapDumpUseCase(heapDumpServices),
                 new VirtualThreadHeapDumpAnalysisExecutor(), i18n);
         HeapDumpWorkspace workspace = new HeapDumpWorkspace(path, nextViewModel);
         viewModel.openHeapDump(workspace);

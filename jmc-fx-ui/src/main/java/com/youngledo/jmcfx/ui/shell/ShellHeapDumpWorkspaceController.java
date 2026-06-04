@@ -1,5 +1,6 @@
 package com.youngledo.jmcfx.ui.shell;
 
+import com.youngledo.jmcfx.application.AnalyzeHeapDumpUseCase;
 import com.youngledo.jmcfx.application.HeapDumpApplicationServices;
 import com.youngledo.jmcfx.ui.heapdump.HeapDumpAnalysisViewModel;
 import com.youngledo.jmcfx.ui.heapdump.VirtualThreadHeapDumpAnalysisExecutor;
@@ -21,7 +22,7 @@ final class ShellHeapDumpWorkspaceController {
 
     void configure() {
         heapDumpAnalysisViewModel = services.heapDumpAnalysisService() == null ? null
-                : new HeapDumpAnalysisViewModel(services.heapDumpAnalysisService(),
+                : new HeapDumpAnalysisViewModel(new AnalyzeHeapDumpUseCase(services),
                         new VirtualThreadHeapDumpAnalysisExecutor(), i18n);
         lifecycleController.setHeapDumpAnalysisViewModel(heapDumpAnalysisViewModel);
     }

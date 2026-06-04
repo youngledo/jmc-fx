@@ -905,6 +905,8 @@ class AppShellTest {
         assertTrue(java.nio.file.Files.exists(controllerPath),
                 "ShellHeapDumpWorkspaceController should own heap dump analysis lifecycle setup");
         String heapDumpWorkspace = java.nio.file.Files.readString(controllerPath);
+        String heapDumpViewModel = java.nio.file.Files.readString(
+                java.nio.file.Path.of("src/main/java/com/youngledo/jmcfx/ui/heapdump/HeapDumpAnalysisViewModel.java"));
 
         assertTrue(runtime.contains("private ShellHeapDumpWorkspaceController heapDumpWorkspaceController;"));
         assertTrue(runtime.contains("heapDumpWorkspaceController = new ShellHeapDumpWorkspaceController("));
@@ -916,9 +918,12 @@ class AppShellTest {
 
         assertTrue(heapDumpWorkspace.contains("final class ShellHeapDumpWorkspaceController"));
         assertTrue(heapDumpWorkspace.contains("private HeapDumpAnalysisViewModel heapDumpAnalysisViewModel;"));
-        assertTrue(heapDumpWorkspace.contains("new HeapDumpAnalysisViewModel("));
+        assertTrue(heapDumpWorkspace.contains("new HeapDumpAnalysisViewModel(new AnalyzeHeapDumpUseCase(services),"));
         assertTrue(heapDumpWorkspace.contains("new VirtualThreadHeapDumpAnalysisExecutor()"));
         assertTrue(heapDumpWorkspace.contains("lifecycleController.setHeapDumpAnalysisViewModel(heapDumpAnalysisViewModel)"));
+        assertTrue(heapDumpViewModel.contains("private final AnalyzeHeapDumpUseCase analyzeHeapDump;"));
+        assertFalse(heapDumpViewModel.contains("HeapDumpAnalysisService"),
+                "Heap dump analysis service calls belong in the application use case");
     }
 
     @Test
