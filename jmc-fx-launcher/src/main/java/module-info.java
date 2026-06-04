@@ -1,6 +1,5 @@
 module com.youngledo.jmcfx.launcher {
-    requires com.youngledo.jmcfx.adapter.jmc;
-    requires com.youngledo.jmcfx.adapter.preferences;
+    requires com.youngledo.jmcfx.adapter;
     requires com.youngledo.jmcfx.application;
     requires com.youngledo.jmcfx.ui;
     requires javafx.controls;

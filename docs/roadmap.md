@@ -25,7 +25,8 @@ Baseline date: 2026-05-31.
 ### JFR Recording Workspaces
 
 - Opens JFR recordings as typed recording workspaces.
-- Reuses OpenJDK JMC core/headless APIs through `jmc-fx-adapter-jmc`.
+- Reuses OpenJDK JMC core/headless APIs through `jmc-fx-adapter`, under the
+  `com.youngledo.jmcfx.adapter.jmc` package.
 - Starts users in Automated Analysis Results, with Overview and Events as
   recording-scoped follow-up pages.
 - Provides recording pages for analysis, overview, events, metadata, advanced

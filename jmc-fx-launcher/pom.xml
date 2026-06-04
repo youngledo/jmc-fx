@@ -17,11 +17,7 @@
         </dependency>
         <dependency>
             <groupId>com.youngledo.jmcfx</groupId>
-            <artifactId>jmc-fx-adapter-jmc</artifactId>
-        </dependency>
-        <dependency>
-            <groupId>com.youngledo.jmcfx</groupId>
-            <artifactId>jmc-fx-adapter-preferences</artifactId>
+            <artifactId>jmc-fx-adapter</artifactId>
         </dependency>
         <dependency>
             <groupId>org.apache.logging.log4j</groupId>

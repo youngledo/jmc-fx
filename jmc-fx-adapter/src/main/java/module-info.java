@@ -1,6 +1,7 @@
-module com.youngledo.jmcfx.adapter.jmc {
+module com.youngledo.jmcfx.adapter {
     requires com.youngledo.jmcfx.domain;
     requires java.management;
+    requires java.prefs;
     requires jdk.attach;
     requires jdk.jfr;
     requires org.apache.logging.log4j;
@@ -13,4 +14,5 @@ module com.youngledo.jmcfx.adapter.jmc {
     requires org.openjdk.jmc.rjmx.common;
 
     exports com.youngledo.jmcfx.adapter.jmc;
+    exports com.youngledo.jmcfx.adapter.preferences;
 }

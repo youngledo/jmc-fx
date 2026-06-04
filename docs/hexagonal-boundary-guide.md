@@ -26,7 +26,7 @@ wiring, or architecture tests.
                          |
                  +-------+--------+
                  | jmc-fx-adapter |
-                 | -jmc           |
+                 | jmc/preferences|
                  +----------------+
 
       jmc-fx-launcher wires UI, application, and adapters at startup.
@@ -54,13 +54,16 @@ the application layer.
 - Use this module when UI actions need orchestration across multiple ports,
   workspace opening, capability decisions, or workflow result shaping.
 
-`jmc-fx-adapter-jmc`
+`jmc-fx-adapter`
 
-- Implements domain ports using OpenJDK JMC, JFR, JMX, Jolokia, and JOverflow
-  APIs.
+- Implements domain ports using secondary adapter technologies.
+- Keeps implementation families separated by package:
+  `com.youngledo.jmcfx.adapter.jmc` owns OpenJDK JMC, JFR, JMX, Jolokia, and
+  JOverflow APIs; `com.youngledo.jmcfx.adapter.preferences` owns Java
+  Preferences-backed persistence adapters.
 - Does not depend on UI, application, launcher, JavaFX, AtlantaFX, or Ikonli.
 - Use this module for all integration details that would change if the backing
-  JMC implementation changed.
+  JMC implementation or persistence backend changed.
 
 `jmc-fx-ui`
 
@@ -73,9 +76,9 @@ the application layer.
 - Must not import concrete adapter classes or OpenJDK JMC APIs.
 - Keep controllers thin; put testable presentation behavior in view models.
 - `JavaAppPreferences` remains a UI-local Java Preferences-backed presentation
-  preference store. Live JVM persistence adapters belong in
-  `jmc-fx-adapter-preferences`; do not add new domain-port persistence
-  implementations to UI.
+  preference store. Domain-port persistence adapters belong in
+  `jmc-fx-adapter` under `com.youngledo.jmcfx.adapter.preferences`; do not add
+  new domain-port persistence implementations to UI.
 
 `jmc-fx-launcher`
 
@@ -99,8 +102,12 @@ Put it in `jmc-fx-application` when it coordinates a user workflow, combines
 multiple domain ports, opens a recording or heap dump repository, decides which
 sections or capabilities are available, or returns a workflow result to the UI.
 
-Put it in `jmc-fx-adapter-jmc` when it imports `org.openjdk.jmc`, `org.jolokia`,
-or implements a domain port with JMC-specific details.
+Put it in `jmc-fx-adapter` under `com.youngledo.jmcfx.adapter.jmc` when it
+imports `org.openjdk.jmc`, `org.jolokia`, or implements a domain port with
+JMC-specific details.
+
+Put it in `jmc-fx-adapter` under `com.youngledo.jmcfx.adapter.preferences`
+when it implements a domain persistence port with Java Preferences.
 
 Put it in `jmc-fx-ui` when it is JavaFX-specific, presentation-specific, or
 depends on control state, bindings, selections, formatting, localization, or
@@ -116,7 +123,7 @@ configuration.
 - `jmc-fx-ui` imports `com.youngledo.jmcfx.domain.service...`.
 - `jmc-fx-application` imports JavaFX, adapter, UI, launcher, or external JMC
   packages.
-- `jmc-fx-adapter-jmc` imports UI, application, launcher, JavaFX, AtlantaFX, or
+- `jmc-fx-adapter` imports UI, application, launcher, JavaFX, AtlantaFX, or
   Ikonli packages.
 - A controller directly performs workflow orchestration across several ports.
 - The JavaFX `Application` subclass contains a long list of concrete
@@ -155,7 +162,7 @@ Expected results:
 - Maven is 4.x and Java is 26.
 - Full verification passes.
 - No Maven 3 `<modules>` syntax appears.
-- No OpenJDK JMC API usage appears outside `jmc-fx-adapter-jmc`.
+- No OpenJDK JMC API usage appears outside `jmc-fx-adapter`.
 - No production UI source imports domain service ports.
 
 ## Startup Module Name

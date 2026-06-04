@@ -4,8 +4,8 @@
          xsi:schemaLocation="http://maven.apache.org/POM/4.1.0 https://maven.apache.org/xsd/maven-4.1.0.xsd">
     <modelVersion>4.1.0</modelVersion>
     <parent/>
-    <artifactId>jmc-fx-adapter-jmc</artifactId>
-    <name>JMC FX JMC Adapter</name>
+    <artifactId>jmc-fx-adapter</artifactId>
+    <name>JMC FX Adapter</name>
     <dependencies>
         <dependency>
             <groupId>com.youngledo.jmcfx</groupId>

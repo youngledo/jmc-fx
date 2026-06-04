@@ -38,7 +38,7 @@ JMC FX follows the **Hexagonal (Ports & Adapters)** architecture:
 
 - **Domain core** (`jmc-fx-domain`) defines ports (interfaces) and data records, depending on nothing.
 - **Application** (`jmc-fx-application`) coordinates use cases and workflow service groups using domain ports.
-- **Adapters** (`jmc-fx-adapter-jmc`) implement those ports by calling external frameworks (JMC core APIs).
+- **Adapter** (`jmc-fx-adapter`) implements those ports by calling external frameworks and persistence APIs.
 - **UI** (`jmc-fx-ui`) drives application use cases and uses domain models, never domain service ports or adapter internals.
 - **Launcher** (`jmc-fx-launcher`) assembles concrete adapters and injects them at startup.
 
@@ -46,7 +46,10 @@ The intended subprojects are:
 
 - `jmc-fx-domain`: UI-neutral records, enums, ports, and exceptions.
 - `jmc-fx-application`: use-case orchestration and workflow-level service groups.
-- `jmc-fx-adapter-jmc`: all OpenJDK JMC core/headless integration.
+- `jmc-fx-adapter`: secondary adapters, separated by package:
+  `com.youngledo.jmcfx.adapter.jmc` for OpenJDK JMC core/headless integration,
+  and `com.youngledo.jmcfx.adapter.preferences` for Java Preferences-backed
+  persistence adapters.
 - `jmc-fx-ui`: JavaFX/FXML/CSS, controllers, view models, navigation, task state.
 - `jmc-fx-launcher`: application startup, dependency assembly, stage lifecycle, packaging.
 - `jmc-fx-test-support`: fakes, fixtures, and deterministic test helpers.
@@ -59,7 +62,8 @@ Rules:
 - UI-driven workflows enter through `jmc-fx-application` use cases.
 - Secondary persistence adapters belong outside `jmc-fx-ui`.
 - Workflow orchestration that spans ports or decides feature capabilities belongs in `jmc-fx-application`.
-- JMC API usage belongs in `jmc-fx-adapter-jmc`.
+- JMC API usage belongs in `jmc-fx-adapter` under
+  `com.youngledo.jmcfx.adapter.jmc`.
 - `jmc-fx-domain` must stay free of JavaFX types.
 - `jmc-fx-application` must stay free of JavaFX, adapter, and launcher types.
 - Controllers stay thin. Put testable state and behavior in view models.
@@ -117,6 +121,6 @@ Expected:
 - `./mvnw -v` reports Maven 4.x and Java 26.
 - `./mvnw verify` passes.
 - No Maven 3 `<modules>` syntax exists.
-- No JMC API usage appears outside `jmc-fx-adapter-jmc`.
+- No JMC API usage appears outside `jmc-fx-adapter`.
 
 If verification cannot run because the project has not been scaffolded yet, state that clearly in the final response.
