@@ -21,6 +21,23 @@ class JmcFxArchitectureTest {
                 .that().resideInAPackage("..domain..")
                 .should().dependOnClassesThat().resideInAnyPackage(
                         "..adapter..",
+                        "..application..",
+                        "..ui..",
+                        "..launcher..",
+                        "javafx..",
+                        "atlantafx..",
+                        "org.kordamp.ikonli..",
+                        OPENJDK_JMC_PACKAGE,
+                        "org.jolokia..")
+                .check(PRODUCTION_CLASSES);
+    }
+
+    @Test
+    void applicationStaysIndependentOfAdaptersUiLauncherAndFrameworks() {
+        noClasses()
+                .that().resideInAPackage("..application..")
+                .should().dependOnClassesThat().resideInAnyPackage(
+                        "..adapter..",
                         "..ui..",
                         "..launcher..",
                         "javafx..",
@@ -62,6 +79,7 @@ class JmcFxArchitectureTest {
                 .that().resideInAPackage("..flamegraph..")
                 .should().dependOnClassesThat().resideInAnyPackage(
                         "..domain..",
+                        "..application..",
                         "..ui..",
                         "..adapter..",
                         "..launcher..",

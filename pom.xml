@@ -15,6 +15,7 @@
 
     <subprojects>
         <subproject>jmc-fx-domain</subproject>
+        <subproject>jmc-fx-application</subproject>
         <subproject>jmc-fx-test-support</subproject>
         <subproject>jmc-fx-adapter-jmc</subproject>
         <subproject>jmc-fx-flamegraph</subproject>
