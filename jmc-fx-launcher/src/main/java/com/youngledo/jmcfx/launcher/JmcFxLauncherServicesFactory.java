@@ -35,11 +35,11 @@ import com.youngledo.jmcfx.application.RecordingApplicationServices;
 import com.youngledo.jmcfx.ui.preferences.JavaJmxMonitoringRepository;
 import com.youngledo.jmcfx.ui.preferences.JavaSavedJvmTargetRepository;
 
-final class JmcApplicationServicesFactory {
+final class JmcFxLauncherServicesFactory {
 
-    JmcApplicationServices create() {
+    JmcFxLauncherServices create() {
         JmcJmxConnectionService jmxConnectionService = new JmcJmxConnectionService();
-        return new JmcApplicationServices(recordingServices(), liveJvmServices(jmxConnectionService), heapDumpServices());
+        return new JmcFxLauncherServices(recordingServices(), liveJvmServices(jmxConnectionService), heapDumpServices());
     }
 
     private RecordingApplicationServices recordingServices() {

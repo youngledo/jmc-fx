@@ -13,7 +13,7 @@ import org.w3c.dom.Element;
 import org.w3c.dom.Node;
 import org.w3c.dom.NodeList;
 
-class JmcFxApplicationPackagingTest {
+class JmcFxLauncherPackagingTest {
 
     private static final String MAVEN_NAMESPACE = "http://maven.apache.org/POM/4.1.0";
 
@@ -73,7 +73,7 @@ class JmcFxApplicationPackagingTest {
         assertEquals("${project.description}", childText(jpackagePlugin, "configuration", "description"));
         assertEquals("${jmcfx.package.input.dir}", childText(jpackagePlugin, "configuration", "input"));
         assertEquals("${project.build.finalName}.jar", childText(jpackagePlugin, "configuration", "mainJar"));
-        assertEquals("com.youngledo.jmcfx.launcher.JmcFxApplication",
+        assertEquals("com.youngledo.jmcfx.launcher.JmcFxLauncher",
                 childText(jpackagePlugin, "configuration", "mainClass"));
         assertEquals("", childText(jpackagePlugin, "configuration", "modulePaths", "path"),
                 "classpath+jlink profile must not use the JPMS application entry point");

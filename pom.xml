@@ -133,7 +133,7 @@
                     <version>0.0.8</version>
                     <configuration>
                         <skip>true</skip>
-                        <mainClass>com.youngledo.jmcfx.launcher/com.youngledo.jmcfx.launcher.JmcFxApplication</mainClass>
+                        <mainClass>com.youngledo.jmcfx.launcher/com.youngledo.jmcfx.launcher.JmcFxLauncher</mainClass>
                         <options>
                             <option>--enable-native-access=javafx.graphics</option>
                         </options>

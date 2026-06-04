@@ -4,7 +4,7 @@ import com.youngledo.jmcfx.application.HeapDumpApplicationServices;
 import com.youngledo.jmcfx.application.LiveJvmApplicationServices;
 import com.youngledo.jmcfx.application.RecordingApplicationServices;
 
-record JmcApplicationServices(
+record JmcFxLauncherServices(
         RecordingApplicationServices recording,
         LiveJvmApplicationServices liveJvm,
         HeapDumpApplicationServices heapDump) {

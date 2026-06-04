@@ -57,7 +57,7 @@
                 <artifactId>javafx-maven-plugin</artifactId>
                 <configuration>
                     <skip>false</skip>
-                    <mainClass>com.youngledo.jmcfx.launcher/com.youngledo.jmcfx.launcher.JmcFxApplication</mainClass>
+                    <mainClass>com.youngledo.jmcfx.launcher/com.youngledo.jmcfx.launcher.JmcFxLauncher</mainClass>
                 </configuration>
             </plugin>
         </plugins>
@@ -106,7 +106,7 @@
                             <outputDirectory>${jmcfx.package.input.dir}</outputDirectory>
                             <archive>
                                 <manifest>
-                                    <mainClass>com.youngledo.jmcfx.launcher.JmcFxApplication</mainClass>
+                                    <mainClass>com.youngledo.jmcfx.launcher.JmcFxLauncher</mainClass>
                                     <addClasspath>true</addClasspath>
                                 </manifest>
                             </archive>
@@ -183,7 +183,7 @@
                             <description>${project.description}</description>
                             <input>${jmcfx.package.input.dir}</input>
                             <mainJar>${project.build.finalName}.jar</mainJar>
-                            <mainClass>com.youngledo.jmcfx.launcher.JmcFxApplication</mainClass>
+                            <mainClass>com.youngledo.jmcfx.launcher.JmcFxLauncher</mainClass>
                             <runtimeImage>${jmcfx.package.runtime.dir}</runtimeImage>
                             <destination>${project.build.directory}/jpackage</destination>
                             <removeDestination>true</removeDestination>

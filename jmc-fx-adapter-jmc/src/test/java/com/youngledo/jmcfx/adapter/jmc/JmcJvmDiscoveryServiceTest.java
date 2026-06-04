@@ -51,7 +51,7 @@ class JmcJvmDiscoveryServiceTest {
         long currentPid = ProcessHandle.current().pid();
         JmcJvmDiscoveryService service = new JmcJvmDiscoveryService(
                 () -> List.of(new JmcJvmDiscoveryService.RawAttachJvmDescriptor(
-                        Long.toString(currentPid), "com.youngledo.jmcfx.launcher.JmcFxApplication")),
+                        Long.toString(currentPid), "com.youngledo.jmcfx.launcher.JmcFxLauncher")),
                 descriptor -> new JmcJvmDiscoveryService.AttachJvmDescriptor(
                         descriptor.id(), descriptor.displayName(), false, ""));
 

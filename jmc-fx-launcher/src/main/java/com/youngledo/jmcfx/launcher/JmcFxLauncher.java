@@ -18,9 +18,9 @@ import org.apache.logging.log4j.Logger;
 ///
 /// Startup is limited to theme selection, service assembly, shell creation,
 /// stylesheet ordering, and primary stage lifecycle.
-public class JmcFxApplication extends Application {
+public class JmcFxLauncher extends Application {
 
-    private static final Logger LOGGER = LogManager.getLogger(JmcFxApplication.class);
+    private static final Logger LOGGER = LogManager.getLogger(JmcFxLauncher.class);
 
     private AppShell shell;
 
@@ -32,7 +32,7 @@ public class JmcFxApplication extends Application {
                         .log("Uncaught exception on thread {}", thread.getName()));
         Locale systemLocale = Locale.getDefault();
         Locale.setDefault(Locale.ENGLISH);
-        JmcApplicationServices services = new JmcApplicationServicesFactory().create();
+        JmcFxLauncherServices services = new JmcFxLauncherServicesFactory().create();
         AppShellFactoryDependencies dependencies = new AppShellFactoryDependencies(services.recording(), services.liveJvm(),
                 services.heapDump(), new I18n(systemLocale), new JavaAppPreferences());
         shell = new AppShellFactory(dependencies).create();

@@ -86,13 +86,13 @@ class JmcFxModuleBoundaryTest {
     }
 
     @Test
-    void javafxApplicationDelegatesConcreteJmcAdapterAssembly() throws Exception {
+    void javafxLauncherDelegatesConcreteJmcAdapterAssembly() throws Exception {
         var applicationSource = Files.readString(
-                Path.of("src/main/java/com/youngledo/jmcfx/launcher/JmcFxApplication.java"));
+                Path.of("src/main/java/com/youngledo/jmcfx/launcher/JmcFxLauncher.java"));
 
         assertFalse(applicationSource.contains("import com.youngledo.jmcfx.adapter.jmc.Jmc"),
                 "JavaFX entry point should delegate concrete JMC adapter construction");
-        assertTrue(applicationSource.contains("new JmcApplicationServicesFactory()"));
+        assertTrue(applicationSource.contains("new JmcFxLauncherServicesFactory()"));
     }
 
     @Test
@@ -110,13 +110,13 @@ class JmcFxModuleBoundaryTest {
         var rootPom = Files.readString(Path.of("../pom.xml"));
         var appPom = Files.readString(Path.of("pom.xml"));
 
-        assertTrue(rootPom.contains("<mainClass>com.youngledo.jmcfx.launcher/com.youngledo.jmcfx.launcher.JmcFxApplication</mainClass>"));
-        assertTrue(appPom.contains("<mainClass>com.youngledo.jmcfx.launcher/com.youngledo.jmcfx.launcher.JmcFxApplication</mainClass>"));
+        assertTrue(rootPom.contains("<mainClass>com.youngledo.jmcfx.launcher/com.youngledo.jmcfx.launcher.JmcFxLauncher</mainClass>"));
+        assertTrue(appPom.contains("<mainClass>com.youngledo.jmcfx.launcher/com.youngledo.jmcfx.launcher.JmcFxLauncher</mainClass>"));
         assertTrue(appPom.contains("<id>jpackage-classpath-jlink</id>"));
         assertTrue(appPom.contains("<mainJar>${project.build.finalName}.jar</mainJar>"));
-        assertTrue(appPom.contains("<mainClass>com.youngledo.jmcfx.launcher.JmcFxApplication</mainClass>"));
+        assertTrue(appPom.contains("<mainClass>com.youngledo.jmcfx.launcher.JmcFxLauncher</mainClass>"));
         assertFalse(appPom.contains("<option>--module</option>"));
-        assertFalse(appPom.contains("<option>com.youngledo.jmcfx.launcher/com.youngledo.jmcfx.launcher.JmcFxApplication</option>"));
+        assertFalse(appPom.contains("<option>com.youngledo.jmcfx.launcher/com.youngledo.jmcfx.launcher.JmcFxLauncher</option>"));
         assertFalse(rootPom.contains("<modules>"));
         assertFalse(rootPom.contains("<module>"));
         assertFalse(appPom.contains("<modules>"));
