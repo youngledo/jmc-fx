@@ -58,6 +58,16 @@ class JmcFxModuleBoundaryTest {
     }
 
     @Test
+    void javafxApplicationDelegatesConcreteJmcAdapterAssembly() throws Exception {
+        var applicationSource = Files.readString(
+                Path.of("src/main/java/com/youngledo/jmcfx/launcher/JmcFxApplication.java"));
+
+        assertFalse(applicationSource.contains("import com.youngledo.jmcfx.adapter.jmc.Jmc"),
+                "JavaFX entry point should delegate concrete JMC adapter construction");
+        assertTrue(applicationSource.contains("new JmcApplicationServicesFactory()"));
+    }
+
+    @Test
     void flameGraphModuleRemainsReusableAndIndependent() throws Exception {
         var descriptor = moduleInfo("../jmc-fx-flamegraph");
 

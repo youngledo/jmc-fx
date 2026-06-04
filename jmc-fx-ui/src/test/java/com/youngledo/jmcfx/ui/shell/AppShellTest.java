@@ -3140,14 +3140,14 @@ void jvmBrowserSupportsDoubleClickConnectAndNoBottomStatus() throws Exception {
                 java.nio.file.Path.of("../jmc-fx-application/src/main/java/com/youngledo/jmcfx/application/LiveJvmApplicationServices.java"));
         String liveJvmController = java.nio.file.Files.readString(java.nio.file.Path.of(
                 "src/main/java/com/youngledo/jmcfx/ui/shell/ShellLiveJvmWorkspaceController.java"));
-        String app = java.nio.file.Files.readString(
-                java.nio.file.Path.of("../jmc-fx-launcher/src/main/java/com/youngledo/jmcfx/launcher/JmcFxApplication.java"));
+        String assembly = java.nio.file.Files.readString(java.nio.file.Path.of(
+                "../jmc-fx-launcher/src/main/java/com/youngledo/jmcfx/launcher/JmcApplicationServicesFactory.java"));
 
         assertTrue(liveJvmServices.contains("MBeanBrowserService mBeanBrowserService"),
                 "Live JVM service bundle should carry the MBean Browser port");
         assertTrue(liveJvmController.contains("services.mBeanBrowserService()"),
                 "Controller should pass the MBean Browser port to JvmBrowserViewModel");
-        assertTrue(app.contains("new JmcMBeanBrowserService(jmxConnectionService)"),
+        assertTrue(assembly.contains("new JmcMBeanBrowserService(jmxConnectionService)"),
                 "Application assembly should reuse the existing JMX connection service for MBeans");
     }
 
@@ -3159,8 +3159,8 @@ void jvmBrowserSupportsDoubleClickConnectAndNoBottomStatus() throws Exception {
                 java.nio.file.Path.of("../jmc-fx-application/src/main/java/com/youngledo/jmcfx/application/LiveJvmApplicationServices.java"));
         String liveJvmController = java.nio.file.Files.readString(java.nio.file.Path.of(
                 "src/main/java/com/youngledo/jmcfx/ui/shell/ShellLiveJvmWorkspaceController.java"));
-        String app = java.nio.file.Files.readString(
-                java.nio.file.Path.of("../jmc-fx-launcher/src/main/java/com/youngledo/jmcfx/launcher/JmcFxApplication.java"));
+        String assembly = java.nio.file.Files.readString(java.nio.file.Path.of(
+                "../jmc-fx-launcher/src/main/java/com/youngledo/jmcfx/launcher/JmcApplicationServicesFactory.java"));
 
         assertTrue(liveJvmServices.contains("DiagnosticCommandService diagnosticCommandService"),
                 "Live JVM service bundle should carry the Diagnostic Command port");
@@ -3169,9 +3169,9 @@ void jvmBrowserSupportsDoubleClickConnectAndNoBottomStatus() throws Exception {
         assertTrue(liveJvmController.contains("services.diagnosticCommandService()"));
         assertTrue(liveJvmController.contains("services.liveMetricService()"),
                 "Controller should pass diagnostics ports to JvmBrowserViewModel");
-        assertTrue(app.contains("new JmcDiagnosticCommandService(jmxConnectionService)"),
+        assertTrue(assembly.contains("new JmcDiagnosticCommandService(jmxConnectionService)"),
                 "Application assembly should reuse the existing JMX connection service for diagnostic commands");
-        assertTrue(app.contains("new JmcLiveMetricService(jmxConnectionService)"),
+        assertTrue(assembly.contains("new JmcLiveMetricService(jmxConnectionService)"),
                 "Application assembly should reuse the existing JMX connection service for live metrics");
     }
 
@@ -3221,14 +3221,14 @@ void jvmBrowserSupportsDoubleClickConnectAndNoBottomStatus() throws Exception {
                 java.nio.file.Path.of("../jmc-fx-application/src/main/java/com/youngledo/jmcfx/application/RecordingApplicationServices.java"));
         String workspaceFactory = java.nio.file.Files.readString(
                 java.nio.file.Path.of("src/main/java/com/youngledo/jmcfx/ui/shell/RecordingWorkspaceFactory.java"));
-        String app = java.nio.file.Files.readString(
-                java.nio.file.Path.of("../jmc-fx-launcher/src/main/java/com/youngledo/jmcfx/launcher/JmcFxApplication.java"));
+        String assembly = java.nio.file.Files.readString(java.nio.file.Path.of(
+                "../jmc-fx-launcher/src/main/java/com/youngledo/jmcfx/launcher/JmcApplicationServicesFactory.java"));
 
         assertTrue(recordingServices.contains("AdvancedJfrAnalysisService advancedJfrAnalysisService"),
                 "Recording service bundle should carry the advanced JFR analysis port");
         assertTrue(workspaceFactory.contains("new AdvancedJfrViewModel(services.advancedJfrAnalysisService())"),
                 "Recording workspace factory should create the advanced JFR workspace view model when the port is available");
-        assertTrue(app.contains("new JmcAdvancedJfrAnalysisService()"),
+        assertTrue(assembly.contains("new JmcAdvancedJfrAnalysisService()"),
                 "Application assembly should use the JMC-backed advanced JFR analysis adapter");
     }
 
