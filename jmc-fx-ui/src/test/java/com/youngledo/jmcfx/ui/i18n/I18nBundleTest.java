@@ -76,7 +76,7 @@ class I18nBundleTest {
     }
 
     private static ResourceBundle bundle(Locale locale) {
-        return ResourceBundle.getBundle(BUNDLE_BASE_NAME, locale,
-                ResourceBundle.Control.getNoFallbackControl(ResourceBundle.Control.FORMAT_PROPERTIES));
+        Locale bundleLocale = Locale.SIMPLIFIED_CHINESE.equals(locale) ? Locale.SIMPLIFIED_CHINESE : Locale.ROOT;
+        return ResourceBundle.getBundle(BUNDLE_BASE_NAME, bundleLocale);
     }
 }

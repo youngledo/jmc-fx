@@ -16,8 +16,6 @@ import javax.management.remote.JMXConnector;
 import javax.management.remote.JMXConnectorFactory;
 import javax.management.remote.JMXServiceURL;
 
-import org.jolokia.client.jmxadapter.JolokiaJmxConnector;
-
 import com.sun.tools.attach.AttachNotSupportedException;
 import com.sun.tools.attach.VirtualMachine;
 import com.youngledo.jmcfx.domain.model.JvmCapability;
@@ -45,7 +43,7 @@ public class JmcJmxConnectionService implements JmxConnectionService, JmxConnect
 
     public JmcJmxConnectionService() {
         this(new AttachLocalConnectorAddressResolver(), JMXConnectorFactory::connect,
-                serviceUrl -> new JolokiaJmxConnector(serviceUrl, Map.of()));
+                serviceUrl -> JMXConnectorFactory.connect(serviceUrl, Map.of()));
     }
 
     JmcJmxConnectionService(LocalConnectorAddressResolver localConnectorAddressResolver,

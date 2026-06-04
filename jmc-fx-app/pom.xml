@@ -33,18 +33,28 @@
     <build>
         <plugins>
             <plugin>
+                <groupId>org.apache.maven.plugins</groupId>
+                <artifactId>maven-compiler-plugin</artifactId>
+                <configuration>
+                    <testCompilerArgs>
+                        <arg>--add-reads</arg>
+                        <arg>com.youngledo.jmcfx.app=java.xml</arg>
+                    </testCompilerArgs>
+                </configuration>
+            </plugin>
+            <plugin>
                 <groupId>org.openjfx</groupId>
                 <artifactId>javafx-maven-plugin</artifactId>
                 <configuration>
                     <skip>false</skip>
-                    <mainClass>com.youngledo.jmcfx.app.JmcFxApplication</mainClass>
+                    <mainClass>com.youngledo.jmcfx.app/com.youngledo.jmcfx.app.JmcFxApplication</mainClass>
                 </configuration>
             </plugin>
         </plugins>
     </build>
     <profiles>
         <profile>
-            <id>native-package</id>
+            <id>jpackage-classpath-jlink</id>
             <properties>
                 <jmcfx.package.input.dir>${project.build.directory}/jpackage-input</jmcfx.package.input.dir>
                 <jmcfx.package.runtime.dir>${project.build.directory}/jpackage-runtime</jmcfx.package.runtime.dir>
@@ -52,6 +62,33 @@
             </properties>
             <build>
                 <plugins>
+                    <plugin>
+                        <groupId>org.apache.maven.plugins</groupId>
+                        <artifactId>maven-clean-plugin</artifactId>
+                        <executions>
+                            <execution>
+                                <id>clean-jpackage-staging</id>
+                                <phase>initialize</phase>
+                                <goals>
+                                    <goal>clean</goal>
+                                </goals>
+                                <configuration>
+                                    <excludeDefaultDirectories>true</excludeDefaultDirectories>
+                                    <filesets>
+                                        <fileset>
+                                            <directory>${jmcfx.package.input.dir}</directory>
+                                        </fileset>
+                                        <fileset>
+                                            <directory>${jmcfx.package.runtime.dir}</directory>
+                                        </fileset>
+                                        <fileset>
+                                            <directory>${project.build.directory}/jpackage</directory>
+                                        </fileset>
+                                    </filesets>
+                                </configuration>
+                            </execution>
+                        </executions>
+                    </plugin>
                     <plugin>
                         <groupId>org.apache.maven.plugins</groupId>
                         <artifactId>maven-jar-plugin</artifactId>
@@ -122,7 +159,7 @@
                         <version>1.7.4</version>
                         <executions>
                             <execution>
-                                <id>create-native-package</id>
+                                <id>create-platform-installer</id>
                                 <phase>package</phase>
                                 <goals>
                                     <goal>jpackage</goal>
@@ -138,84 +175,6 @@
                             <mainJar>${project.build.finalName}.jar</mainJar>
                             <mainClass>com.youngledo.jmcfx.app.JmcFxApplication</mainClass>
                             <runtimeImage>${jmcfx.package.runtime.dir}</runtimeImage>
-                            <destination>${project.build.directory}/jpackage</destination>
-                            <removeDestination>true</removeDestination>
-                            <verbose>true</verbose>
-                            <javaOptions>
-                                <option>--enable-native-access=javafx.graphics</option>
-                            </javaOptions>
-                            <macPackageIdentifier>com.youngledo.jmcfx</macPackageIdentifier>
-                            <macPackageName>JMC FX</macPackageName>
-                            <linuxPackageName>jmc-fx</linuxPackageName>
-                            <linuxAppCategory>Development</linuxAppCategory>
-                            <winMenu>true</winMenu>
-                            <winShortcut>true</winShortcut>
-                            <winMenuGroup>JMC FX</winMenuGroup>
-                        </configuration>
-                    </plugin>
-                </plugins>
-            </build>
-        </profile>
-        <profile>
-            <id>native-package-full-runtime</id>
-            <properties>
-                <jmcfx.package.input.dir>${project.build.directory}/jpackage-input</jmcfx.package.input.dir>
-                <jmcfx.package.version>1.0.0</jmcfx.package.version>
-            </properties>
-            <build>
-                <plugins>
-                    <plugin>
-                        <groupId>org.apache.maven.plugins</groupId>
-                        <artifactId>maven-jar-plugin</artifactId>
-                        <configuration>
-                            <outputDirectory>${jmcfx.package.input.dir}</outputDirectory>
-                            <archive>
-                                <manifest>
-                                    <mainClass>com.youngledo.jmcfx.app.JmcFxApplication</mainClass>
-                                    <addClasspath>true</addClasspath>
-                                </manifest>
-                            </archive>
-                        </configuration>
-                    </plugin>
-                    <plugin>
-                        <groupId>org.apache.maven.plugins</groupId>
-                        <artifactId>maven-dependency-plugin</artifactId>
-                        <executions>
-                            <execution>
-                                <id>copy-runtime-dependencies</id>
-                                <phase>package</phase>
-                                <goals>
-                                    <goal>copy-dependencies</goal>
-                                </goals>
-                                <configuration>
-                                    <includeScope>runtime</includeScope>
-                                    <outputDirectory>${jmcfx.package.input.dir}</outputDirectory>
-                                </configuration>
-                            </execution>
-                        </executions>
-                    </plugin>
-                    <plugin>
-                        <groupId>org.panteleyev</groupId>
-                        <artifactId>jpackage-maven-plugin</artifactId>
-                        <version>1.7.4</version>
-                        <executions>
-                            <execution>
-                                <id>create-native-package</id>
-                                <phase>package</phase>
-                                <goals>
-                                    <goal>jpackage</goal>
-                                </goals>
-                            </execution>
-                        </executions>
-                        <configuration>
-                            <name>JMC FX</name>
-                            <appVersion>${jmcfx.package.version}</appVersion>
-                            <vendor>Youngledo</vendor>
-                            <description>${project.description}</description>
-                            <input>${jmcfx.package.input.dir}</input>
-                            <mainJar>${project.build.finalName}.jar</mainJar>
-                            <mainClass>com.youngledo.jmcfx.app.JmcFxApplication</mainClass>
-                            <runtimeImage>${java.home}</runtimeImage>
                             <destination>${project.build.directory}/jpackage</destination>
                             <removeDestination>true</removeDestination>
                             <verbose>true</verbose>

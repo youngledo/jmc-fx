@@ -27,31 +27,34 @@ sdk env
 ./mvnw verify
 ```
 
-## Native Package
+## Platform Installer
 
-Build the current platform's native installer with the `native-package` profile:
+Build the current platform's installer with the `jpackage-classpath-jlink` profile:
 
 ```bash
 sdk env
-./mvnw -pl jmc-fx-app -am -Pnative-package package
+./mvnw -pl jmc-fx-app -am -Pjpackage-classpath-jlink package
 ```
 
 The installer is written to `jmc-fx-app/target/jpackage/`. On macOS, the
 default output is `JMC FX-1.0.0.dmg`.
 
-The default profile builds a trimmed runtime image with `jlink` before invoking
-`jpackage`. A full-JDK runtime fallback is available for troubleshooting:
+The package uses a `jlink`-trimmed JDK/JavaFX runtime and launches the
+application from the classpath. OpenJDK JMC 9.1.2 dependencies are automatic
+modules, so they cannot currently be linked into a full JPMS `jlink` image.
+When JMC artifacts become explicit JPMS modules, this profile can move to a
+module launch and full application-module `jlink` image.
 
-```bash
-./mvnw -pl jmc-fx-app -am -Pnative-package-full-runtime package
-```
+This profile is intentionally named for `jpackage`. Future GraalVM native-image
+packaging should use a separate profile instead of overloading this installer
+path.
 
 `jpackage` requires platform-specific package versions. The default package
 version is `1.0.0` because macOS rejects versions whose first number is `0`.
 Override it for releases with:
 
 ```bash
-./mvnw -pl jmc-fx-app -am -Pnative-package -Djmcfx.package.version=1.2.3 package
+./mvnw -pl jmc-fx-app -am -Pjpackage-classpath-jlink -Djmcfx.package.version=1.2.3 package
 ```
 
 ## Run

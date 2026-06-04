@@ -55,4 +55,20 @@
             <scope>test</scope>
         </dependency>
     </dependencies>
+    <build>
+        <plugins>
+            <plugin>
+                <groupId>org.apache.maven.plugins</groupId>
+                <artifactId>maven-compiler-plugin</artifactId>
+                <configuration>
+                    <testCompilerArgs>
+                        <arg>--add-modules</arg>
+                        <arg>com.youngledo.jmcfx.testsupport</arg>
+                        <arg>--add-reads</arg>
+                        <arg>com.youngledo.jmcfx.ui=com.youngledo.jmcfx.testsupport</arg>
+                    </testCompilerArgs>
+                </configuration>
+            </plugin>
+        </plugins>
+    </build>
 </project>

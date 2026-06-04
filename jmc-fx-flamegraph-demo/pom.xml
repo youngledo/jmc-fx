@@ -30,7 +30,7 @@
                 <artifactId>javafx-maven-plugin</artifactId>
                 <configuration>
                     <skip>false</skip>
-                    <mainClass>com.youngledo.jmcfx.flamegraph.demo.FlameGraphDemoApplication</mainClass>
+                    <mainClass>com.youngledo.jmcfx.flamegraph.demo/com.youngledo.jmcfx.flamegraph.demo.FlameGraphDemoApplication</mainClass>
                     <options>
                         <option>--enable-native-access=javafx.graphics</option>
                     </options>

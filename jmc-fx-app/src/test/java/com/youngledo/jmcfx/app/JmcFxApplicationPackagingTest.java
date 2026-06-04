@@ -18,14 +18,13 @@ class JmcFxApplicationPackagingTest {
     private static final String MAVEN_NAMESPACE = "http://maven.apache.org/POM/4.1.0";
 
     @Test
-    void nativePackageProfileStagesRuntimeDependenciesForJpackage() throws Exception {
+    void jpackageClasspathJlinkProfileStagesRuntimeDependenciesForJpackage() throws Exception {
         var pom = readAppPom();
 
-        var profile = findElementByChildText(pom.getElementsByTagNameNS(MAVEN_NAMESPACE, "profile"), "id", "native-package");
-        assertNotNull(profile, "jmc-fx-app should expose a native-package profile");
+        var profile = jpackageProfile(pom);
 
         var dependencyPlugin = findPlugin(profile, "org.apache.maven.plugins", "maven-dependency-plugin");
-        assertNotNull(dependencyPlugin, "native-package should stage runtime dependencies for jpackage");
+        assertNotNull(dependencyPlugin, "jpackage-classpath-jlink should stage runtime dependencies for jpackage");
         assertEquals(
                 "copy-dependencies",
                 childText(dependencyPlugin, "executions", "execution", "goals", "goal"),
@@ -40,47 +39,19 @@ class JmcFxApplicationPackagingTest {
     }
 
     @Test
-    void nativePackageProfileConfiguresPanteleyevJpackagePlugin() throws Exception {
+    void jpackageClasspathJlinkProfileUsesTrimmedRuntimeWithClasspathLaunch() throws Exception {
         var pom = readAppPom();
-        var profile = findElementByChildText(pom.getElementsByTagNameNS(MAVEN_NAMESPACE, "profile"), "id", "native-package");
+        var profile = jpackageProfile(pom);
 
-        var jpackagePlugin = findPlugin(profile, "org.panteleyev", "jpackage-maven-plugin");
-        assertNotNull(jpackagePlugin, "native-package should configure org.panteleyev:jpackage-maven-plugin");
-        assertEquals("1.7.4", childText(jpackagePlugin, "version"));
-        assertEquals("JMC FX", childText(jpackagePlugin, "configuration", "name"));
-        assertEquals("${jmcfx.package.version}", childText(jpackagePlugin, "configuration", "appVersion"));
-        assertEquals("Youngledo", childText(jpackagePlugin, "configuration", "vendor"));
-        assertEquals("${project.description}", childText(jpackagePlugin, "configuration", "description"));
-        assertEquals("${jmcfx.package.input.dir}", childText(jpackagePlugin, "configuration", "input"));
-        assertEquals("${project.build.finalName}.jar", childText(jpackagePlugin, "configuration", "mainJar"));
-        assertEquals("com.youngledo.jmcfx.app.JmcFxApplication", childText(jpackagePlugin, "configuration", "mainClass"));
-        assertEquals("${project.build.directory}/jpackage", childText(jpackagePlugin, "configuration", "destination"));
-        assertEquals("${jmcfx.package.runtime.dir}", childText(jpackagePlugin, "configuration", "runtimeImage"));
-        assertEquals("true", childText(jpackagePlugin, "configuration", "removeDestination"));
-        assertEquals("true", childText(jpackagePlugin, "configuration", "verbose"));
-        assertEquals(
-                "${project.build.directory}/jpackage-input",
-                childText(profile, "properties", "jmcfx.package.input.dir"),
-                "staged input must be outside the removable jpackage destination");
-        assertEquals("${project.build.directory}/jpackage-runtime", childText(profile, "properties", "jmcfx.package.runtime.dir"));
-        assertEquals(
-                "1.0.0",
-                childText(profile, "properties", "jmcfx.package.version"),
-                "default native package version must satisfy macOS CFBundleVersion rules");
-    }
-
-    @Test
-    void nativePackageProfileCreatesJlinkRuntimeImage() throws Exception {
-        var pom = readAppPom();
-        var profile = findElementByChildText(pom.getElementsByTagNameNS(MAVEN_NAMESPACE, "profile"), "id", "native-package");
+        assertEquals("${project.build.directory}/jpackage-input",
+                childText(profile, "properties", "jmcfx.package.input.dir"));
+        assertEquals("${project.build.directory}/jpackage-runtime",
+                childText(profile, "properties", "jmcfx.package.runtime.dir"));
 
         var jlinkPlugin = findPlugin(profile, "org.panteleyev", "jlink-maven-plugin");
-        assertNotNull(jlinkPlugin, "native-package should create a trimmed runtime image with jlink");
+        assertNotNull(jlinkPlugin, "jpackage-classpath-jlink should create a trimmed runtime image");
         assertEquals("${jmcfx.package.runtime.dir}", childText(jlinkPlugin, "configuration", "output"));
         assertEquals("${jmcfx.package.input.dir}", childText(jlinkPlugin, "configuration", "modulePaths", "modulePath"));
-        assertEquals("true", childText(jlinkPlugin, "configuration", "noHeaderFiles"));
-        assertEquals("true", childText(jlinkPlugin, "configuration", "noManPages"));
-        assertEquals("true", childText(jlinkPlugin, "configuration", "stripDebug"));
         assertConfiguredModules(jlinkPlugin,
                 "java.desktop",
                 "java.management",
@@ -92,23 +63,69 @@ class JmcFxApplicationPackagingTest {
                 "jdk.management.agent",
                 "jdk.unsupported",
                 "javafx.controls");
-    }
-
-    @Test
-    void fullRuntimeNativePackageProfileKeepsCompleteJdkFallback() throws Exception {
-        var pom = readAppPom();
-
-        var profile = findElementByChildText(
-                pom.getElementsByTagNameNS(MAVEN_NAMESPACE, "profile"), "id", "native-package-full-runtime");
-        assertNotNull(profile, "a full-runtime fallback profile should remain available for jlink troubleshooting");
 
         var jpackagePlugin = findPlugin(profile, "org.panteleyev", "jpackage-maven-plugin");
-        assertNotNull(jpackagePlugin);
-        assertEquals("${java.home}", childText(jpackagePlugin, "configuration", "runtimeImage"));
+        assertNotNull(jpackagePlugin, "jpackage-classpath-jlink should configure org.panteleyev:jpackage-maven-plugin");
+        assertEquals("1.7.4", childText(jpackagePlugin, "version"));
+        assertEquals("JMC FX", childText(jpackagePlugin, "configuration", "name"));
+        assertEquals("${jmcfx.package.version}", childText(jpackagePlugin, "configuration", "appVersion"));
+        assertEquals("Youngledo", childText(jpackagePlugin, "configuration", "vendor"));
+        assertEquals("${project.description}", childText(jpackagePlugin, "configuration", "description"));
+        assertEquals("${jmcfx.package.input.dir}", childText(jpackagePlugin, "configuration", "input"));
+        assertEquals("${project.build.finalName}.jar", childText(jpackagePlugin, "configuration", "mainJar"));
+        assertEquals("com.youngledo.jmcfx.app.JmcFxApplication",
+                childText(jpackagePlugin, "configuration", "mainClass"));
+        assertEquals("", childText(jpackagePlugin, "configuration", "modulePaths", "path"),
+                "classpath+jlink profile must not use the JPMS application entry point");
+        assertEquals("${project.build.directory}/jpackage", childText(jpackagePlugin, "configuration", "destination"));
+        assertEquals("${jmcfx.package.runtime.dir}", childText(jpackagePlugin, "configuration", "runtimeImage"));
+        assertEquals("true", childText(jpackagePlugin, "configuration", "removeDestination"));
+        assertEquals("true", childText(jpackagePlugin, "configuration", "verbose"));
+        assertEquals(
+                "1.0.0",
+                childText(profile, "properties", "jmcfx.package.version"),
+                "default platform installer version must satisfy macOS CFBundleVersion rules");
     }
 
     @Test
-    void nativePackageProfileUsesMaven4SubprojectSyntaxOnly() throws Exception {
+    void jpackageClasspathJlinkProfileCleansStagingBeforePackaging() throws Exception {
+        var pom = readAppPom();
+        var profile = jpackageProfile(pom);
+
+        var cleanPlugin = findPlugin(profile, "org.apache.maven.plugins", "maven-clean-plugin");
+        assertNotNull(cleanPlugin, "jpackage-classpath-jlink should clean stale staging directories");
+        assertEquals("clean-jpackage-staging", childText(cleanPlugin, "executions", "execution", "id"));
+        assertEquals("initialize", childText(cleanPlugin, "executions", "execution", "phase"));
+        assertEquals("true",
+                childText(cleanPlugin, "executions", "execution", "configuration", "excludeDefaultDirectories"));
+        assertConfiguredFilesets(cleanPlugin,
+                "${jmcfx.package.input.dir}",
+                "${jmcfx.package.runtime.dir}",
+                "${project.build.directory}/jpackage");
+    }
+
+    @Test
+    void appPomKeepsOnlyOneInstallerProfileAndReservesNativeNamingForGraalVm() throws Exception {
+        var pom = readAppPom();
+        var profiles = pom.getElementsByTagNameNS(MAVEN_NAMESPACE, "profile");
+        var profileIds = new java.util.HashSet<String>();
+        var jpackageProfiles = 0;
+        for (var i = 0; i < profiles.getLength(); i++) {
+            var profile = (Element) profiles.item(i);
+            var profileId = childText(profile, "id");
+            profileIds.add(profileId);
+            if (profileId.startsWith("jpackage")) {
+                jpackageProfiles++;
+            }
+        }
+        assertEquals(1, jpackageProfiles);
+        assertFalse(profileIds.stream().anyMatch(profileId -> profileId.startsWith("native")),
+                "native profile names should be reserved for future GraalVM native-image packaging");
+        assertNotNull(jpackageProfile(pom));
+    }
+
+    @Test
+    void appPomUsesMaven4SubprojectSyntaxOnly() throws Exception {
         var pomText = java.nio.file.Files.readString(Path.of("pom.xml"));
 
         assertTrue(pomText.contains("<modelVersion>4.1.0</modelVersion>"));
@@ -120,6 +137,13 @@ class JmcFxApplicationPackagingTest {
         var factory = DocumentBuilderFactory.newInstance();
         factory.setNamespaceAware(true);
         return factory.newDocumentBuilder().parse(Path.of("pom.xml").toFile());
+    }
+
+    private static Element jpackageProfile(Document pom) {
+        var profile = findElementByChildText(
+                pom.getElementsByTagNameNS(MAVEN_NAMESPACE, "profile"), "id", "jpackage-classpath-jlink");
+        assertNotNull(profile, "jmc-fx-app should expose jpackage-classpath-jlink");
+        return profile;
     }
 
     private static Element findPlugin(Element root, String groupId, String artifactId) {
@@ -151,6 +175,18 @@ class JmcFxApplicationPackagingTest {
         }
         for (var expectedModule : expectedModules) {
             assertTrue(configuredModules.contains(expectedModule), () -> "missing jlink module " + expectedModule);
+        }
+    }
+
+    private static void assertConfiguredFilesets(Element plugin, String... expectedDirectories) {
+        var directories = plugin.getElementsByTagNameNS(MAVEN_NAMESPACE, "directory");
+        var configuredDirectories = new java.util.HashSet<String>();
+        for (var i = 0; i < directories.getLength(); i++) {
+            configuredDirectories.add(directories.item(i).getTextContent().trim());
+        }
+        for (var expectedDirectory : expectedDirectories) {
+            assertTrue(configuredDirectories.contains(expectedDirectory),
+                    () -> "missing clean fileset " + expectedDirectory);
         }
     }
 

@@ -84,7 +84,7 @@ public class JmcFxApplication extends Application {
                 heapDumpServices, new I18n(systemLocale), new JavaAppPreferences());
         shell = new AppShellFactory(dependencies).create();
         Scene scene = new Scene(shell.root(), 1280, 800);
-        scene.getStylesheets().add(getClass().getResource("/css/app.css").toExternalForm());
+        scene.getStylesheets().add(AppShell.class.getResource("/css/app.css").toExternalForm());
         stage.titleProperty().bind(shell.titleBinding());
         stage.setScene(scene);
         stage.show();

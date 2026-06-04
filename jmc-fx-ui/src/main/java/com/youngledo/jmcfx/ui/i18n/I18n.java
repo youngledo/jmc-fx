@@ -67,12 +67,21 @@ public final class I18n {
     }
 
     private ResourceBundle bundle() {
-        return ResourceBundle.getBundle(BUNDLE_BASE_NAME, locale.get(),
-                ResourceBundle.Control.getNoFallbackControl(ResourceBundle.Control.FORMAT_PROPERTIES));
+        return ResourceBundle.getBundle(BUNDLE_BASE_NAME, bundleLocale(locale.get()));
     }
 
     static List<Locale> candidateLocales(Locale locale) {
-        return ResourceBundle.Control.getNoFallbackControl(ResourceBundle.Control.FORMAT_PROPERTIES)
-                .getCandidateLocales(BUNDLE_BASE_NAME, locale);
+        Locale bundleLocale = bundleLocale(locale);
+        if (bundleLocale.equals(Locale.ROOT)) {
+            return List.of(Locale.ROOT);
+        }
+        return List.of(bundleLocale, Locale.ROOT);
+    }
+
+    private static Locale bundleLocale(Locale locale) {
+        if (Locale.SIMPLIFIED_CHINESE.equals(locale)) {
+            return Locale.SIMPLIFIED_CHINESE;
+        }
+        return Locale.ROOT;
     }
 }
