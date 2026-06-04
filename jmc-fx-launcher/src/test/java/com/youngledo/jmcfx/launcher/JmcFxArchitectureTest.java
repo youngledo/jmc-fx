@@ -85,6 +85,20 @@ class JmcFxArchitectureTest {
     }
 
     @Test
+    void preferencesAdapterDoesNotDependOnUiApplicationLauncherOrJavaFx() {
+        noClasses()
+                .that().resideInAPackage("..adapter.preferences..")
+                .should().dependOnClassesThat().resideInAnyPackage(
+                        "..application..",
+                        "..ui..",
+                        "..launcher..",
+                        "javafx..",
+                        "atlantafx..",
+                        "org.kordamp.ikonli..")
+                .check(PRODUCTION_CLASSES);
+    }
+
+    @Test
     void reusableFlamegraphDoesNotDependOnApplicationLayersOrJmcApis() {
         noClasses()
                 .that().resideInAPackage("..flamegraph..")

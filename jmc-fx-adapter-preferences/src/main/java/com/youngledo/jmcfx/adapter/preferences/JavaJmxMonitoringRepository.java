@@ -1,4 +1,4 @@
-package com.youngledo.jmcfx.ui.preferences;
+package com.youngledo.jmcfx.adapter.preferences;
 
 import java.nio.charset.StandardCharsets;
 import java.time.DateTimeException;
@@ -24,6 +24,7 @@ import com.youngledo.jmcfx.domain.service.JmxMonitoringRepository;
 
 public final class JavaJmxMonitoringRepository implements JmxMonitoringRepository {
 
+    private static final String LEGACY_UI_PREFERENCES_NODE = "/com/youngledo/jmcfx/ui/preferences";
     static final String ATTRIBUTE_IDS = "attributeSubscriptionIds";
     static final String ATTRIBUTE_PREFIX = "attribute.";
     static final String SAMPLE_PREFIX = "samples.";
@@ -42,7 +43,7 @@ public final class JavaJmxMonitoringRepository implements JmxMonitoringRepositor
     private final Preferences preferences;
 
     public JavaJmxMonitoringRepository() {
-        this(Preferences.userNodeForPackage(JavaJmxMonitoringRepository.class));
+        this(Preferences.userRoot().node(LEGACY_UI_PREFERENCES_NODE));
     }
 
     private JavaJmxMonitoringRepository(Preferences preferences) {

@@ -1,4 +1,4 @@
-package com.youngledo.jmcfx.ui.preferences;
+package com.youngledo.jmcfx.adapter.preferences;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertThrows;
@@ -9,6 +9,8 @@ import java.time.Duration;
 import java.time.Instant;
 import java.util.Base64;
 import java.util.List;
+import java.util.UUID;
+import java.util.prefs.BackingStoreException;
 import java.util.prefs.Preferences;
 
 import com.youngledo.jmcfx.domain.model.JmxAttributeSubscription;
@@ -18,6 +20,8 @@ import com.youngledo.jmcfx.domain.model.JmxSubscriptionSample;
 import org.junit.jupiter.api.Test;
 
 class JavaJmxMonitoringRepositoryTest {
+
+    private static final String LEGACY_NODE_PATH = "/com/youngledo/jmcfx/ui/preferences";
 
     @Test
     void savesAttributeSubscriptionsPerConnection() {
@@ -118,6 +122,23 @@ class JavaJmxMonitoringRepositoryTest {
 
         assertEquals(List.of(subscription), repository.findNotificationSubscriptions("42"));
         assertTrue(repository.findNotificationSubscriptions("99").isEmpty());
+    }
+
+    @Test
+    void defaultRepositoryUsesLegacyUiPreferenceNodeAfterAdapterMove() throws BackingStoreException {
+        Preferences legacyNode = legacyNode();
+        JmxAttributeSubscription subscription = new JmxAttributeSubscription(
+                "legacy-sub-" + UUID.randomUUID(), "legacy-connection", "java.lang:type=Memory",
+                "HeapMemoryUsage", "Heap", "%", Duration.ofSeconds(1), 2, true, true);
+
+        try {
+            new JavaJmxMonitoringRepository().saveAttributeSubscription(subscription);
+
+            assertTrue(legacyNode.get("attribute." + subscription.id(), "").contains(encoded("legacy-connection")));
+        } finally {
+            new JavaJmxMonitoringRepository().deleteAttributeSubscription(subscription.id());
+            legacyNode.remove("attribute." + subscription.id());
+        }
     }
 
     @Test
@@ -386,5 +407,9 @@ class JavaJmxMonitoringRepositoryTest {
 
     private static String encoded(String value) {
         return Base64.getUrlEncoder().encodeToString(value.getBytes(StandardCharsets.UTF_8));
+    }
+
+    private static Preferences legacyNode() throws BackingStoreException {
+        return Preferences.userRoot().node(LEGACY_NODE_PATH);
     }
 }

@@ -1,4 +1,4 @@
-package com.youngledo.jmcfx.ui.preferences;
+package com.youngledo.jmcfx.adapter.preferences;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertFalse;
@@ -10,11 +10,15 @@ import java.util.ArrayList;
 import java.util.Base64;
 import java.util.List;
 import java.util.UUID;
+import java.util.prefs.BackingStoreException;
+import java.util.prefs.Preferences;
 
 import com.youngledo.jmcfx.domain.model.SavedJvmTarget;
 import org.junit.jupiter.api.Test;
 
 class JavaSavedJvmTargetRepositoryTest {
+
+    private static final String LEGACY_NODE_PATH = "/com/youngledo/jmcfx/ui/preferences";
 
     @Test
     void storesUpdatesAndDeletesTargets() {
@@ -133,6 +137,24 @@ class JavaSavedJvmTargetRepositoryTest {
         }
     }
 
+    @Test
+    void defaultRepositoryUsesLegacyUiPreferenceNodeAfterAdapterMove() throws BackingStoreException {
+        Preferences legacyNode = legacyNode();
+        String id = "legacy-node-" + UUID.randomUUID();
+        SavedJvmTarget target = new SavedJvmTarget(id, "Legacy Node",
+                "service:jmx:rmi:///legacy-node-" + UUID.randomUUID(), null);
+
+        try {
+            new JavaSavedJvmTargetRepository().save(target);
+
+            assertEquals(encodedEntry(target.id(), target.displayName(), target.serviceUrl(), ""),
+                    legacyNode.get(targetKey(id), ""));
+        } finally {
+            new JavaSavedJvmTargetRepository().deleteById(id);
+            legacyNode.remove(targetKey(id));
+        }
+    }
+
     private static String encodedEntry(String id, String displayName, String serviceUrl, String lastConnectedAt) {
         return String.join("|", encoded(id), encoded(displayName), encoded(serviceUrl), encoded(lastConnectedAt));
     }
@@ -143,5 +165,9 @@ class JavaSavedJvmTargetRepositoryTest {
 
     private static String targetKey(String id) {
         return "target." + UUID.nameUUIDFromBytes(id.getBytes(StandardCharsets.UTF_8));
+    }
+
+    private static Preferences legacyNode() throws BackingStoreException {
+        return Preferences.userRoot().node(LEGACY_NODE_PATH);
     }
 }

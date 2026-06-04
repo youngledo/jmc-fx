@@ -29,11 +29,11 @@ import com.youngledo.jmcfx.adapter.jmc.JmcRuleAnalysisService;
 import com.youngledo.jmcfx.adapter.jmc.JmcSocketIOService;
 import com.youngledo.jmcfx.adapter.jmc.JmcThreadService;
 import com.youngledo.jmcfx.adapter.jmc.JmcTlabService;
+import com.youngledo.jmcfx.adapter.preferences.JavaJmxMonitoringRepository;
+import com.youngledo.jmcfx.adapter.preferences.JavaSavedJvmTargetRepository;
 import com.youngledo.jmcfx.application.HeapDumpApplicationServices;
 import com.youngledo.jmcfx.application.LiveJvmApplicationServices;
 import com.youngledo.jmcfx.application.RecordingApplicationServices;
-import com.youngledo.jmcfx.ui.preferences.JavaJmxMonitoringRepository;
-import com.youngledo.jmcfx.ui.preferences.JavaSavedJvmTargetRepository;
 
 final class JmcFxLauncherServicesFactory {
 

@@ -1,4 +1,4 @@
-package com.youngledo.jmcfx.ui.preferences;
+package com.youngledo.jmcfx.adapter.preferences;
 
 import java.nio.charset.StandardCharsets;
 import java.time.DateTimeException;
@@ -21,6 +21,7 @@ import com.youngledo.jmcfx.domain.service.SavedJvmTargetRepository;
 
 public final class JavaSavedJvmTargetRepository implements SavedJvmTargetRepository {
 
+    private static final String LEGACY_UI_PREFERENCES_NODE = "/com/youngledo/jmcfx/ui/preferences";
     private static final String TARGET_IDS = "targetIds";
     private static final String TARGET_PREFIX = "target.";
     private static final String FIELD_SEPARATOR = "\\|";
@@ -33,7 +34,7 @@ public final class JavaSavedJvmTargetRepository implements SavedJvmTargetReposit
     private final Preferences preferences;
 
     public JavaSavedJvmTargetRepository() {
-        this(Preferences.userNodeForPackage(JavaSavedJvmTargetRepository.class));
+        this(Preferences.userRoot().node(LEGACY_UI_PREFERENCES_NODE));
     }
 
     private JavaSavedJvmTargetRepository(Preferences preferences) {

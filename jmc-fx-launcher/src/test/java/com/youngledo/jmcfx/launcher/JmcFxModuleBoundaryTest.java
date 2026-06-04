@@ -73,10 +73,25 @@ class JmcFxModuleBoundaryTest {
     }
 
     @Test
+    void preferencesAdapterModuleOwnsLiveJvmPersistenceAdapters() throws Exception {
+        var descriptor = moduleInfo("../jmc-fx-adapter-preferences");
+
+        assertEquals(Set.of("exports com.youngledo.jmcfx.adapter.preferences;"), exportedStatements(descriptor));
+        assertTrue(descriptor.contains("requires com.youngledo.jmcfx.domain;"));
+        assertFalse(descriptor.contains("com.youngledo.jmcfx.application"),
+                "preferences adapter must not require the application use-case layer");
+        assertFalse(descriptor.contains("com.youngledo.jmcfx.ui"), "preferences adapter must not require UI");
+        assertFalse(descriptor.contains("com.youngledo.jmcfx.launcher"),
+                "preferences adapter must not require launcher");
+        assertFalse(descriptor.contains("javafx."), "preferences adapter must not depend on JavaFX UI modules");
+    }
+
+    @Test
     void launcherModuleAssemblesAdaptersWithoutOpeningItsPackageGlobally() throws Exception {
         var descriptor = moduleInfo(".");
 
         assertTrue(descriptor.contains("requires com.youngledo.jmcfx.adapter.jmc;"));
+        assertTrue(descriptor.contains("requires com.youngledo.jmcfx.adapter.preferences;"));
         assertTrue(descriptor.contains("requires com.youngledo.jmcfx.ui;"));
         assertTrue(descriptor.contains("exports com.youngledo.jmcfx.launcher to javafx.graphics;"));
         assertFalse(descriptor.contains("exports com.youngledo.jmcfx.launcher;"),
