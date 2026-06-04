@@ -53,18 +53,8 @@ import com.youngledo.jmcfx.domain.model.TriggerActionType;
 import com.youngledo.jmcfx.domain.model.TriggerEvent;
 import com.youngledo.jmcfx.domain.model.TriggerOperator;
 import com.youngledo.jmcfx.domain.model.TriggerRule;
-import com.youngledo.jmcfx.domain.service.DiagnosticCommandService;
-import com.youngledo.jmcfx.domain.service.FlightRecordingService;
-import com.youngledo.jmcfx.domain.service.JmcAgentService;
-import com.youngledo.jmcfx.domain.service.JmcFxException;
-import com.youngledo.jmcfx.domain.service.JmxConnectionService;
-import com.youngledo.jmcfx.domain.service.JmxMonitoringRepository;
-import com.youngledo.jmcfx.domain.service.JmxMonitoringService;
-import com.youngledo.jmcfx.domain.service.JdpDiscoveryService;
-import com.youngledo.jmcfx.domain.service.JvmDiscoveryService;
-import com.youngledo.jmcfx.domain.service.LiveMetricService;
-import com.youngledo.jmcfx.domain.service.MBeanBrowserService;
-import com.youngledo.jmcfx.domain.service.SavedJvmTargetRepository;
+import com.youngledo.jmcfx.application.LiveJvmApplicationServices;
+import com.youngledo.jmcfx.application.LiveJvmUseCases;
 
 import javafx.beans.property.BooleanProperty;
 import javafx.beans.property.ObjectProperty;
@@ -83,17 +73,7 @@ public class JvmBrowserViewModel implements AutoCloseable {
     private static final DateTimeFormatter RECORDING_NAME_TIMESTAMP =
             DateTimeFormatter.ofPattern("yyyyMMddHHmmss");
 
-    private final JvmDiscoveryService discoveryService;
-    private final JmxConnectionService connectionService;
-    private final FlightRecordingService flightRecordingService;
-    private final MBeanBrowserService mBeanBrowserService;
-    private final DiagnosticCommandService diagnosticCommandService;
-    private final LiveMetricService liveMetricService;
-    private final JmcAgentService jmcAgentService;
-    private final JmxMonitoringService jmxMonitoringService;
-    private final JmxMonitoringRepository jmxMonitoringRepository;
-    private final SavedJvmTargetRepository savedTargetRepository;
-    private final JdpDiscoveryService jdpDiscoveryService;
+    private final LiveJvmUseCases useCases;
     private final JvmBrowserExecutor executor;
     private final Consumer<Runnable> fxRunner;
     private final Consumer<Path> savedRecordingHandler;
@@ -194,94 +174,17 @@ public class JvmBrowserViewModel implements AutoCloseable {
     private long triggerRuleSequence;
     private long triggerEvaluationGeneration;
 
-    public JvmBrowserViewModel(JvmDiscoveryService discoveryService, JmxConnectionService connectionService) {
-        this(discoveryService, connectionService, null, new VirtualThreadJvmBrowserExecutor(),
+    public JvmBrowserViewModel(LiveJvmApplicationServices services) {
+        this(LiveJvmUseCases.from(services), new VirtualThreadJvmBrowserExecutor(),
                 javafx.application.Platform::runLater, path -> { });
     }
 
-    public JvmBrowserViewModel(JvmDiscoveryService discoveryService, JmxConnectionService connectionService,
-            JvmBrowserExecutor executor, Consumer<Runnable> fxRunner) {
-        this(discoveryService, connectionService, null, executor, fxRunner, path -> { });
-    }
-
-    public JvmBrowserViewModel(JvmDiscoveryService discoveryService, JmxConnectionService connectionService,
-            MBeanBrowserService mBeanBrowserService, JvmBrowserExecutor executor, Consumer<Runnable> fxRunner) {
-        this(discoveryService, connectionService, null, mBeanBrowserService, null, null, executor, fxRunner,
-                path -> { });
-    }
-
-    public JvmBrowserViewModel(JvmDiscoveryService discoveryService, JmxConnectionService connectionService,
-            FlightRecordingService flightRecordingService, JvmBrowserExecutor executor, Consumer<Runnable> fxRunner,
+    public JvmBrowserViewModel(
+            LiveJvmUseCases useCases,
+            JvmBrowserExecutor executor,
+            Consumer<Runnable> fxRunner,
             Consumer<Path> savedRecordingHandler) {
-        this(discoveryService, connectionService, flightRecordingService, null, null, null, executor, fxRunner,
-                savedRecordingHandler);
-    }
-
-    public JvmBrowserViewModel(JvmDiscoveryService discoveryService, JmxConnectionService connectionService,
-            FlightRecordingService flightRecordingService, MBeanBrowserService mBeanBrowserService,
-            JvmBrowserExecutor executor, Consumer<Runnable> fxRunner, Consumer<Path> savedRecordingHandler) {
-        this(discoveryService, connectionService, flightRecordingService, mBeanBrowserService, null, null, executor,
-                fxRunner, savedRecordingHandler);
-    }
-
-    public JvmBrowserViewModel(JvmDiscoveryService discoveryService, JmxConnectionService connectionService,
-            FlightRecordingService flightRecordingService, MBeanBrowserService mBeanBrowserService,
-            DiagnosticCommandService diagnosticCommandService, LiveMetricService liveMetricService,
-            JvmBrowserExecutor executor, Consumer<Runnable> fxRunner, Consumer<Path> savedRecordingHandler) {
-        this(discoveryService, connectionService, flightRecordingService, mBeanBrowserService,
-                diagnosticCommandService, liveMetricService, null, null, null, null, null, executor, fxRunner,
-                savedRecordingHandler);
-    }
-
-    public JvmBrowserViewModel(JvmDiscoveryService discoveryService, JmxConnectionService connectionService,
-            FlightRecordingService flightRecordingService, MBeanBrowserService mBeanBrowserService,
-            DiagnosticCommandService diagnosticCommandService, LiveMetricService liveMetricService,
-            JmcAgentService jmcAgentService, JvmBrowserExecutor executor, Consumer<Runnable> fxRunner,
-            Consumer<Path> savedRecordingHandler) {
-        this(discoveryService, connectionService, flightRecordingService, mBeanBrowserService,
-                diagnosticCommandService, liveMetricService, jmcAgentService, null, null, null, null, executor, fxRunner,
-                savedRecordingHandler);
-    }
-
-    public JvmBrowserViewModel(JvmDiscoveryService discoveryService, JmxConnectionService connectionService,
-            FlightRecordingService flightRecordingService, MBeanBrowserService mBeanBrowserService,
-            DiagnosticCommandService diagnosticCommandService, LiveMetricService liveMetricService,
-            SavedJvmTargetRepository savedTargetRepository, JdpDiscoveryService jdpDiscoveryService,
-            JvmBrowserExecutor executor, Consumer<Runnable> fxRunner, Consumer<Path> savedRecordingHandler) {
-        this(discoveryService, connectionService, flightRecordingService, mBeanBrowserService,
-                diagnosticCommandService, liveMetricService, null, null, null, savedTargetRepository,
-                jdpDiscoveryService, executor, fxRunner, savedRecordingHandler);
-    }
-
-    public JvmBrowserViewModel(JvmDiscoveryService discoveryService, JmxConnectionService connectionService,
-            FlightRecordingService flightRecordingService, MBeanBrowserService mBeanBrowserService,
-            DiagnosticCommandService diagnosticCommandService, LiveMetricService liveMetricService,
-            JmcAgentService jmcAgentService, SavedJvmTargetRepository savedTargetRepository,
-            JdpDiscoveryService jdpDiscoveryService, JvmBrowserExecutor executor, Consumer<Runnable> fxRunner,
-            Consumer<Path> savedRecordingHandler) {
-        this(discoveryService, connectionService, flightRecordingService, mBeanBrowserService,
-                diagnosticCommandService, liveMetricService, jmcAgentService, null, null, savedTargetRepository,
-                jdpDiscoveryService, executor, fxRunner, savedRecordingHandler);
-    }
-
-    public JvmBrowserViewModel(JvmDiscoveryService discoveryService, JmxConnectionService connectionService,
-            FlightRecordingService flightRecordingService, MBeanBrowserService mBeanBrowserService,
-            DiagnosticCommandService diagnosticCommandService, LiveMetricService liveMetricService,
-            JmcAgentService jmcAgentService, JmxMonitoringService jmxMonitoringService,
-            JmxMonitoringRepository jmxMonitoringRepository, SavedJvmTargetRepository savedTargetRepository,
-            JdpDiscoveryService jdpDiscoveryService, JvmBrowserExecutor executor, Consumer<Runnable> fxRunner,
-            Consumer<Path> savedRecordingHandler) {
-        this.discoveryService = Objects.requireNonNull(discoveryService, "discoveryService");
-        this.connectionService = Objects.requireNonNull(connectionService, "connectionService");
-        this.flightRecordingService = flightRecordingService;
-        this.mBeanBrowserService = mBeanBrowserService;
-        this.diagnosticCommandService = diagnosticCommandService;
-        this.liveMetricService = liveMetricService;
-        this.jmcAgentService = jmcAgentService;
-        this.jmxMonitoringService = jmxMonitoringService;
-        this.jmxMonitoringRepository = jmxMonitoringRepository;
-        this.savedTargetRepository = savedTargetRepository;
-        this.jdpDiscoveryService = jdpDiscoveryService;
+        this.useCases = Objects.requireNonNull(useCases, "useCases");
         this.executor = Objects.requireNonNull(executor, "executor");
         this.fxRunner = Objects.requireNonNull(fxRunner, "fxRunner");
         this.savedRecordingHandler = Objects.requireNonNull(savedRecordingHandler, "savedRecordingHandler");
@@ -611,10 +514,10 @@ public class JvmBrowserViewModel implements AutoCloseable {
         beginWork();
         executor.execute(() -> {
             try {
-                List<JvmConnection> discovered = discoveryService.discoverLocalJvms();
-                if (savedTargetRepository != null) {
+                List<JvmConnection> discovered = useCases.discovery().discoverLocalJvms();
+                if (useCases.persistence().available()) {
                     discovered = new ArrayList<>(discovered);
-                    discovered.addAll(savedTargetRepository.findAll().stream()
+                    discovered.addAll(useCases.persistence().findAll().stream()
                             .map(JvmConnection::saved)
                             .toList());
                 }
@@ -660,7 +563,7 @@ public class JvmBrowserViewModel implements AutoCloseable {
     }
 
     public void saveManualTarget() {
-        if (savedTargetRepository == null) {
+        if (!useCases.persistence().available()) {
             error.set(true);
             errorMessage.set("Saved JVM targets are not configured.");
             return;
@@ -676,7 +579,7 @@ public class JvmBrowserViewModel implements AutoCloseable {
             name = url;
         }
         try {
-            SavedJvmTarget saved = savedTargetRepository.save(new SavedJvmTarget("", name, url, null));
+            SavedJvmTarget saved = useCases.persistence().save(new SavedJvmTarget("", name, url, null));
             JvmConnection savedConnection = JvmConnection.saved(saved);
             replaceSavedCandidate(savedConnection);
             manualConnectionName.set("");
@@ -692,14 +595,14 @@ public class JvmBrowserViewModel implements AutoCloseable {
 
     public void removeSelectedSavedTarget() {
         JvmConnection selected = selectedConnection.get();
-        if (savedTargetRepository == null || selected == null || selected.source() != JvmConnectionSource.SAVED
+        if (!useCases.persistence().available() || selected == null || selected.source() != JvmConnectionSource.SAVED
                 || selected.connected()) {
             error.set(true);
             errorMessage.set("Select a disconnected saved JVM target to remove.");
             return;
         }
         try {
-            savedTargetRepository.deleteById(selected.id());
+            useCases.persistence().deleteById(selected.id());
             connections.remove(selected);
             selectedConnection.set(connections.isEmpty() ? null : connections.getFirst());
             statusMessage.set("Removed saved JVM target.");
@@ -712,7 +615,7 @@ public class JvmBrowserViewModel implements AutoCloseable {
     }
 
     public void refreshJdp() {
-        if (jdpDiscoveryService == null) {
+        if (!useCases.discovery().jdpAvailable()) {
             jdpRefreshInProgress.set(false);
             jdpStatusMessage.set("JDP discovery is not configured.");
             return;
@@ -721,7 +624,7 @@ public class JvmBrowserViewModel implements AutoCloseable {
         jdpStatusMessage.set("Refreshing JDP targets.");
         executor.execute(() -> {
             try {
-                List<JvmConnection> discovered = jdpDiscoveryService.discover(JDP_DISCOVERY_TIMEOUT).stream()
+                List<JvmConnection> discovered = useCases.discovery().discoverJdp(JDP_DISCOVERY_TIMEOUT).stream()
                         .map(JvmConnection::jdp)
                         .toList();
                 runOnFx(() -> {
@@ -749,7 +652,7 @@ public class JvmBrowserViewModel implements AutoCloseable {
         beginWork();
         executor.execute(() -> {
             try {
-                connectionService.disconnect(liveConnectionFor(selected));
+                useCases.connection().disconnect(liveConnectionFor(selected));
                 JvmConnection disconnected = selected.asDisconnected("Disconnected");
                 runOnFx(() -> {
                     liveConnectionsByStableKey.remove(stableKey(selected));
@@ -780,9 +683,9 @@ public class JvmBrowserViewModel implements AutoCloseable {
                 JvmConnection liveConnection = liveConnectionFor(selected);
                 FlightRecordingStartRequest request = new FlightRecordingStartRequest(liveConnection,
                         recordingName(selected), FlightRecordingTemplate.profile());
-                FlightRecordingInfo started = flightRecordingService.startRecording(request);
+                FlightRecordingInfo started = useCases.recording().startRecording(request);
                 sessionStartedRecordings.put(started.id(), liveConnection);
-                List<FlightRecordingInfo> updated = flightRecordingService.recordings(liveConnection);
+                List<FlightRecordingInfo> updated = useCases.recording().recordings(liveConnection);
                 runOnFx(() -> {
                     flightRecordings.setAll(updated);
                     selectedFlightRecording.set(updated.isEmpty() ? null : updated.getLast());
@@ -808,10 +711,10 @@ public class JvmBrowserViewModel implements AutoCloseable {
         executor.execute(() -> {
             try {
                 JvmConnection liveConnection = liveConnectionFor(selectedConnection);
-                Path saved = flightRecordingService.stopAndSaveRecording(new FlightRecordingStopRequest(
+                Path saved = useCases.recording().stopAndSaveRecording(new FlightRecordingStopRequest(
                         liveConnection, selectedRecording.id(), destinationFile));
                 sessionStartedRecordings.remove(selectedRecording.id());
-                List<FlightRecordingInfo> updated = flightRecordingService.recordings(liveConnection);
+                List<FlightRecordingInfo> updated = useCases.recording().recordings(liveConnection);
                 runOnFx(() -> {
                     flightRecordings.setAll(updated);
                     selectedFlightRecording.set(updated.isEmpty() ? null : updated.getFirst());
@@ -850,7 +753,7 @@ public class JvmBrowserViewModel implements AutoCloseable {
         clearMBeanError();
         executor.execute(() -> {
             try {
-                MBeanOperationResult result = mBeanBrowserService.invoke(request);
+                MBeanOperationResult result = useCases.mbeans().invoke(request);
                 runOnFx(() -> {
                     if (!isCurrentMBeanRequest(generation, snapshot, node, operation)) {
                         return;
@@ -889,7 +792,7 @@ public class JvmBrowserViewModel implements AutoCloseable {
         clearDiagnosticCommandError();
         executor.execute(() -> {
             try {
-                DiagnosticCommandResult result = diagnosticCommandService.execute(request);
+                DiagnosticCommandResult result = useCases.diagnostics().execute(request);
                 runOnFx(() -> {
                     if (!isCurrentDiagnosticCommandRequest(generation, snapshot, command)) {
                         return;
@@ -942,8 +845,8 @@ public class JvmBrowserViewModel implements AutoCloseable {
         clearJmcAgentError();
         executor.execute(() -> {
             try {
-                jmcAgentService.applyConfiguration(snapshot.connection(), xmlDescription);
-                JmcAgentStatus status = jmcAgentService.status(snapshot.connection());
+                useCases.agent().applyConfiguration(snapshot.connection(), xmlDescription);
+                JmcAgentStatus status = useCases.agent().status(snapshot.connection());
                 runOnFx(() -> {
                     if (!isCurrentJmcAgentRequest(generation, snapshot)) {
                         return;
@@ -982,15 +885,15 @@ public class JvmBrowserViewModel implements AutoCloseable {
                 persisted);
         jmxAttributeSubscriptions.add(subscription);
         selectedJmxAttributeSubscription.set(subscription);
-        if (persisted && jmxMonitoringRepository != null) {
-            jmxMonitoringRepository.saveAttributeSubscription(subscription);
+        if (persisted && useCases.monitoring().repositoryAvailable()) {
+            useCases.monitoring().saveAttributeSubscription(subscription);
         }
         clearJmxMonitoringError();
     }
 
     public void addMBeanNotificationSubscription(MBeanNode node, int maxEvents, boolean persisted) {
         JvmSessionSnapshot snapshot = selectedSession.get();
-        if (snapshot == null || !jmxMonitoringAvailable.get() || jmxMonitoringService == null) {
+        if (snapshot == null || !jmxMonitoringAvailable.get() || !useCases.monitoring().monitoringAvailable()) {
             failJmxMonitoring("Select a connected JVM with JMX monitoring available.");
             return;
         }
@@ -1009,8 +912,8 @@ public class JvmBrowserViewModel implements AutoCloseable {
                 persisted);
         jmxNotificationSubscriptions.add(subscription);
         selectedJmxNotificationSubscription.set(subscription);
-        if (persisted && jmxMonitoringRepository != null) {
-            jmxMonitoringRepository.saveNotificationSubscription(subscription);
+        if (persisted && useCases.monitoring().repositoryAvailable()) {
+            useCases.monitoring().saveNotificationSubscription(subscription);
         }
         updateOverviewPersistenceSummary();
         clearJmxMonitoringError();
@@ -1019,7 +922,7 @@ public class JvmBrowserViewModel implements AutoCloseable {
     public void sampleSelectedJmxSubscriptionNow() {
         JvmSessionSnapshot snapshot = selectedSession.get();
         JmxAttributeSubscription subscription = selectedJmxAttributeSubscription.get();
-        if (snapshot == null || subscription == null || jmxMonitoringService == null) {
+        if (snapshot == null || subscription == null || !useCases.monitoring().monitoringAvailable()) {
             failJmxMonitoring("Select a JMX attribute subscription to sample.");
             return;
         }
@@ -1028,14 +931,14 @@ public class JvmBrowserViewModel implements AutoCloseable {
         clearJmxMonitoringError();
         executor.execute(() -> {
             try {
-                JmxSubscriptionSample sample = jmxMonitoringService.sampleAttribute(snapshot.connection(), subscription);
+                JmxSubscriptionSample sample = useCases.monitoring().sampleAttribute(snapshot.connection(), subscription);
                 runOnFx(() -> {
                     if (!isCurrentJmxMonitoringGeneration(generation, snapshot)) {
                         return;
                     }
                     appendBoundedSample(subscription, sample);
-                    if (subscription.persisted() && jmxMonitoringRepository != null) {
-                        jmxMonitoringRepository.appendSample(sample);
+                    if (subscription.persisted() && useCases.monitoring().repositoryAvailable()) {
+                        useCases.monitoring().appendSample(sample);
                     }
                     jmxMonitoringLoading.set(false);
                     clearJmxMonitoringError();
@@ -1049,7 +952,7 @@ public class JvmBrowserViewModel implements AutoCloseable {
     public void startSelectedJmxNotifications() {
         JvmSessionSnapshot snapshot = selectedSession.get();
         JmxNotificationSubscription subscription = selectedJmxNotificationSubscription.get();
-        if (snapshot == null || subscription == null || jmxMonitoringService == null) {
+        if (snapshot == null || subscription == null || !useCases.monitoring().monitoringAvailable()) {
             failJmxMonitoring("Select a JMX notification subscription to start.");
             return;
         }
@@ -1058,7 +961,7 @@ public class JvmBrowserViewModel implements AutoCloseable {
 
     public void startJmxNotifications(JmxNotificationSubscription subscription) {
         JvmSessionSnapshot snapshot = selectedSession.get();
-        if (snapshot == null || subscription == null || jmxMonitoringService == null) {
+        if (snapshot == null || subscription == null || !useCases.monitoring().monitoringAvailable()) {
             failJmxMonitoring("Select a JMX notification subscription to start.");
             return;
         }
@@ -1066,15 +969,15 @@ public class JvmBrowserViewModel implements AutoCloseable {
             jmxNotificationSubscriptions.add(subscription);
         }
         selectedJmxNotificationSubscription.set(subscription);
-        if (subscription.persisted() && jmxMonitoringRepository != null) {
-            jmxMonitoringRepository.saveNotificationSubscription(subscription);
+        if (subscription.persisted() && useCases.monitoring().repositoryAvailable()) {
+            useCases.monitoring().saveNotificationSubscription(subscription);
         }
         long generation = nextJmxMonitoringGeneration();
         jmxMonitoringLoading.set(true);
         clearJmxMonitoringError();
         executor.execute(() -> {
             try {
-                List<JmxNotificationEvent> initialEvents = jmxMonitoringService.startNotifications(
+                List<JmxNotificationEvent> initialEvents = useCases.monitoring().startNotifications(
                         snapshot.connection(), subscription,
                         event -> runOnFx(() -> appendNotificationEvent(subscription, event)));
                 runOnFx(() -> {
@@ -1094,7 +997,7 @@ public class JvmBrowserViewModel implements AutoCloseable {
     public void stopSelectedJmxNotifications() {
         JvmSessionSnapshot snapshot = selectedSession.get();
         JmxNotificationSubscription subscription = selectedJmxNotificationSubscription.get();
-        if (snapshot == null || subscription == null || jmxMonitoringService == null) {
+        if (snapshot == null || subscription == null || !useCases.monitoring().monitoringAvailable()) {
             failJmxMonitoring("Select a JMX notification subscription to stop.");
             return;
         }
@@ -1103,7 +1006,7 @@ public class JvmBrowserViewModel implements AutoCloseable {
         clearJmxMonitoringError();
         executor.execute(() -> {
             try {
-                jmxMonitoringService.stopNotifications(snapshot.connection(), subscription.id());
+                useCases.monitoring().stopNotifications(snapshot.connection(), subscription.id());
                 runOnFx(() -> {
                     if (!isCurrentJmxMonitoringGeneration(generation, snapshot)) {
                         return;
@@ -1155,7 +1058,7 @@ public class JvmBrowserViewModel implements AutoCloseable {
 
     public void evaluateTriggersNow() {
         JvmSessionSnapshot snapshot = selectedSession.get();
-        if (snapshot == null || !snapshot.connection().connected() || liveMetricService == null
+        if (snapshot == null || !snapshot.connection().connected() || !useCases.diagnostics().liveMetricsAvailable()
                 || triggerRules.isEmpty()) {
             failTrigger("Add a trigger rule for a connected JVM.");
             return;
@@ -1167,7 +1070,7 @@ public class JvmBrowserViewModel implements AutoCloseable {
         clearTriggerError();
         executor.execute(() -> {
             try {
-                List<LiveMetricSnapshot> samples = liveMetricService.snapshot(snapshot.connection());
+                List<LiveMetricSnapshot> samples = useCases.diagnostics().snapshot(snapshot.connection());
                 List<TriggerEvent> events = evaluateTriggerRules(snapshot, samples, rules);
                 runOnFx(() -> {
                     if (!isCurrentTriggerEvaluation(generation, snapshot)) {
@@ -1201,7 +1104,7 @@ public class JvmBrowserViewModel implements AutoCloseable {
         beginWork();
         executor.execute(() -> {
             try {
-                JvmConnection connected = connectionService.connect(url);
+                JvmConnection connected = useCases.connection().connect(url);
                 runOnFx(() -> {
                     connections.add(connected);
                     selectedConnection.set(connected);
@@ -1220,7 +1123,7 @@ public class JvmBrowserViewModel implements AutoCloseable {
         beginWork();
         executor.execute(() -> {
             try {
-                JvmConnection connected = connectionService.connectLocal(selected);
+                JvmConnection connected = useCases.connection().connectLocal(selected);
                 runOnFx(() -> replaceOrAdd(connected, "Connected to " + selected.displayName() + "."));
             } catch (RuntimeException exception) {
                 fail(exception);
@@ -1232,10 +1135,10 @@ public class JvmBrowserViewModel implements AutoCloseable {
         beginWork();
         executor.execute(() -> {
             try {
-                JvmConnection liveConnection = connectionService.connect(selected.connectionUrl());
+                JvmConnection liveConnection = useCases.connection().connect(selected.connectionUrl());
                 JvmConnection connected = selected.asConnected(selected.connectionUrl());
-                if (selected.source() == JvmConnectionSource.SAVED && savedTargetRepository != null) {
-                    savedTargetRepository.markConnected(selected.id(), Instant.now());
+                if (selected.source() == JvmConnectionSource.SAVED && useCases.persistence().available()) {
+                    useCases.persistence().markConnected(selected.id(), Instant.now());
                 }
                 runOnFx(() -> {
                     liveConnectionsByStableKey.put(stableKey(connected), liveConnection);
@@ -1428,7 +1331,7 @@ public class JvmBrowserViewModel implements AutoCloseable {
         sessionLoading.set(true);
         executor.execute(() -> {
             try {
-                JvmSessionSnapshot snapshot = connectionService.sessionSnapshot(liveConnectionFor(connection));
+                JvmSessionSnapshot snapshot = useCases.connection().sessionSnapshot(liveConnectionFor(connection));
                 runOnFx(() -> {
                     if (!isCurrentSessionLoad(generation, connection)) {
                         return;
@@ -1480,14 +1383,14 @@ public class JvmBrowserViewModel implements AutoCloseable {
     }
 
     private void loadRecordingControl(JvmSessionSnapshot snapshot) {
-        if (flightRecordingService == null
+        if (!useCases.recording().available()
                 || snapshot.statusOf(JvmCapability.FLIGHT_RECORDER) != JvmCapabilityStatus.AVAILABLE
-                || !flightRecordingService.isRecordingControlAvailable(snapshot.connection())) {
+                || !useCases.recording().isRecordingControlAvailable(snapshot.connection())) {
             clearRecordingControl();
             return;
         }
         try {
-            List<FlightRecordingInfo> recordings = flightRecordingService.recordings(snapshot.connection());
+            List<FlightRecordingInfo> recordings = useCases.recording().recordings(snapshot.connection());
             flightRecordings.setAll(recordings);
             selectedFlightRecording.set(recordings.isEmpty() ? null : recordings.getFirst());
             recordingControlAvailable.set(true);
@@ -1503,7 +1406,7 @@ public class JvmBrowserViewModel implements AutoCloseable {
     }
 
     private boolean canUseRecordingControl(JvmConnection connection) {
-        return flightRecordingService != null && connection != null && connection.connected()
+        return useCases.recording().available() && connection != null && connection.connected()
                 && recordingControlAvailable.get();
     }
 
@@ -1519,7 +1422,7 @@ public class JvmBrowserViewModel implements AutoCloseable {
         clearMBeanDetails();
         executor.execute(() -> {
             try {
-                List<MBeanNode> tree = mBeanBrowserService.tree(snapshot.connection());
+                List<MBeanNode> tree = useCases.mbeans().tree(snapshot.connection());
                 runOnFx(() -> {
                     if (!isCurrentMBeanSessionRequest(generation, snapshot)) {
                         return;
@@ -1551,9 +1454,9 @@ public class JvmBrowserViewModel implements AutoCloseable {
         clearMBeanError();
         executor.execute(() -> {
             try {
-                List<MBeanAttributeInfo> attributes = mBeanBrowserService.attributes(snapshot.connection(),
+                List<MBeanAttributeInfo> attributes = useCases.mbeans().attributes(snapshot.connection(),
                         node.objectName());
-                List<MBeanOperationInfo> operations = mBeanBrowserService.operations(snapshot.connection(),
+                List<MBeanOperationInfo> operations = useCases.mbeans().operations(snapshot.connection(),
                         node.objectName());
                 runOnFx(() -> {
                     if (!isCurrentMBeanRequest(generation, snapshot, node)) {
@@ -1572,7 +1475,7 @@ public class JvmBrowserViewModel implements AutoCloseable {
     }
 
     private boolean canUseMBeanBrowser(JvmSessionSnapshot snapshot) {
-        return mBeanBrowserService != null && snapshot != null
+        return useCases.mbeans().available() && snapshot != null
                 && snapshot.statusOf(JvmCapability.MBEAN_SERVER) == JvmCapabilityStatus.AVAILABLE;
     }
 
@@ -1589,7 +1492,7 @@ public class JvmBrowserViewModel implements AutoCloseable {
         selectedDiagnosticCommand.set(null);
         executor.execute(() -> {
             try {
-                List<DiagnosticCommandInfo> commands = diagnosticCommandService.commands(snapshot.connection());
+                List<DiagnosticCommandInfo> commands = useCases.diagnostics().commands(snapshot.connection());
                 runOnFx(() -> {
                     if (!isCurrentDiagnosticCommandSessionRequest(generation, snapshot)) {
                         return;
@@ -1610,7 +1513,7 @@ public class JvmBrowserViewModel implements AutoCloseable {
     }
 
     private boolean canLoadDiagnosticCommands(JvmSessionSnapshot snapshot) {
-        return diagnosticCommandService != null && snapshot != null
+        return useCases.diagnostics().diagnosticCommandsAvailable() && snapshot != null
                 && snapshot.statusOf(JvmCapability.DIAGNOSTIC_COMMANDS) == JvmCapabilityStatus.AVAILABLE;
     }
 
@@ -1624,8 +1527,8 @@ public class JvmBrowserViewModel implements AutoCloseable {
         clearJmcAgentError();
         executor.execute(() -> {
             try {
-                List<JmcAgentPreset> presets = jmcAgentService.presets();
-                JmcAgentStatus status = jmcAgentService.status(snapshot.connection());
+                List<JmcAgentPreset> presets = useCases.agent().presets();
+                JmcAgentStatus status = useCases.agent().status(snapshot.connection());
                 runOnFx(() -> {
                     if (!isCurrentJmcAgentRequest(generation, snapshot)) {
                         return;
@@ -1647,7 +1550,7 @@ public class JvmBrowserViewModel implements AutoCloseable {
     }
 
     private boolean canLoadJmcAgent(JvmSessionSnapshot snapshot) {
-        return jmcAgentService != null && snapshot != null && snapshot.connection().connected();
+        return useCases.agent().available() && snapshot != null && snapshot.connection().connected();
     }
 
     private void applyJmcAgentStatus(JmcAgentStatus status) {
@@ -1664,15 +1567,15 @@ public class JvmBrowserViewModel implements AutoCloseable {
         }
         jmxMonitoringAvailable.set(true);
         clearJmxMonitoringError();
-        if (jmxMonitoringRepository == null) {
+        if (!useCases.monitoring().repositoryAvailable()) {
             return;
         }
         List<JmxAttributeSubscription> attributeSubscriptions =
-                jmxMonitoringRepository.findAttributeSubscriptions(snapshot.connection().id());
+                useCases.monitoring().findAttributeSubscriptions(snapshot.connection().id());
         jmxAttributeSubscriptions.setAll(attributeSubscriptions);
         selectedJmxAttributeSubscription.set(attributeSubscriptions.isEmpty() ? null : attributeSubscriptions.getFirst());
         List<JmxNotificationSubscription> notificationSubscriptions =
-                jmxMonitoringRepository.findNotificationSubscriptions(snapshot.connection().id());
+                useCases.monitoring().findNotificationSubscriptions(snapshot.connection().id());
         jmxNotificationSubscriptions.setAll(notificationSubscriptions);
         selectedJmxNotificationSubscription.set(notificationSubscriptions.isEmpty()
                 ? null : notificationSubscriptions.getFirst());
@@ -1680,28 +1583,28 @@ public class JvmBrowserViewModel implements AutoCloseable {
     }
 
     private boolean canUseJmxMonitoring(JvmSessionSnapshot snapshot) {
-        return jmxMonitoringService != null && snapshot != null
+        return useCases.monitoring().monitoringAvailable() && snapshot != null
                 && snapshot.statusOf(JvmCapability.MBEAN_SERVER) == JvmCapabilityStatus.AVAILABLE;
     }
 
     private void loadSamplesForSelection(JmxAttributeSubscription subscription) {
-        if (jmxMonitoringRepository == null || subscription == null) {
+        if (!useCases.monitoring().repositoryAvailable() || subscription == null) {
             jmxSubscriptionSamples.clear();
             return;
         }
-        jmxSubscriptionSamples.setAll(jmxMonitoringRepository.findSamples(subscription.id()));
+        jmxSubscriptionSamples.setAll(useCases.monitoring().findSamples(subscription.id()));
     }
 
     private void loadNotificationEventsForSelection(JmxNotificationSubscription subscription) {
-        if (jmxMonitoringRepository == null || subscription == null) {
+        if (!useCases.monitoring().repositoryAvailable() || subscription == null) {
             jmxNotificationEvents.clear();
             return;
         }
-        jmxNotificationEvents.setAll(jmxMonitoringRepository.findNotificationEvents(subscription.id()));
+        jmxNotificationEvents.setAll(useCases.monitoring().findNotificationEvents(subscription.id()));
     }
 
     private void loadTriggerMetrics(JvmSessionSnapshot snapshot) {
-        if (liveMetricService == null || snapshot == null) {
+        if (!useCases.diagnostics().liveMetricsAvailable() || snapshot == null) {
             clearTriggerSessionState();
             return;
         }
@@ -1712,7 +1615,7 @@ public class JvmBrowserViewModel implements AutoCloseable {
         selectedTriggerMetric.set(null);
         executor.execute(() -> {
             try {
-                List<LiveMetricDefinition> definitions = liveMetricService.definitions(snapshot.connection());
+                List<LiveMetricDefinition> definitions = useCases.diagnostics().definitions(snapshot.connection());
                 runOnFx(() -> {
                     if (!isCurrentTriggerEvaluation(generation, snapshot)) {
                         return;
@@ -1733,7 +1636,7 @@ public class JvmBrowserViewModel implements AutoCloseable {
     }
 
     private void loadOverview(JvmSessionSnapshot snapshot) {
-        if (liveMetricService == null || snapshot == null || !snapshot.connection().connected()) {
+        if (!useCases.diagnostics().liveMetricsAvailable() || snapshot == null || !snapshot.connection().connected()) {
             clearOverview();
             return;
         }
@@ -1742,8 +1645,8 @@ public class JvmBrowserViewModel implements AutoCloseable {
         clearOverviewError();
         executor.execute(() -> {
             try {
-                List<LiveMetricDefinition> definitions = liveMetricService.definitions(snapshot.connection());
-                List<LiveMetricSnapshot> samples = liveMetricService.snapshot(snapshot.connection());
+                List<LiveMetricDefinition> definitions = useCases.diagnostics().definitions(snapshot.connection());
+                List<LiveMetricSnapshot> samples = useCases.diagnostics().snapshot(snapshot.connection());
                 List<LiveJvmOverviewMetric> rows = overviewRows(definitions, samples);
                 runOnFx(() -> {
                     if (!isCurrentOverviewRequest(generation, snapshot)) {
@@ -1851,11 +1754,11 @@ public class JvmBrowserViewModel implements AutoCloseable {
         if (rule.action().type() != TriggerActionType.DIAGNOSTIC_COMMAND) {
             return notification;
         }
-        if (diagnosticCommandService == null || rule.action().commandName().isBlank()) {
+        if (!useCases.diagnostics().diagnosticCommandsAvailable() || rule.action().commandName().isBlank()) {
             return notification + ". Diagnostic command is not available.";
         }
         try {
-            DiagnosticCommandResult result = diagnosticCommandService.execute(new DiagnosticCommandRequest(
+            DiagnosticCommandResult result = useCases.diagnostics().execute(new DiagnosticCommandRequest(
                     snapshot.connection(), rule.action().commandName(), rule.action().arguments()));
             String output = displayDiagnosticCommandResult(result);
             return output.isBlank() ? notification : notification + ". " + output;
@@ -1871,7 +1774,7 @@ public class JvmBrowserViewModel implements AutoCloseable {
     }
 
     private void discardSessionStartedRecordings() {
-        if (flightRecordingService == null || sessionStartedRecordings.isEmpty()) {
+        if (!useCases.recording().available() || sessionStartedRecordings.isEmpty()) {
             return;
         }
         Map<Long, JvmConnection> started = Map.copyOf(sessionStartedRecordings);
@@ -1879,7 +1782,7 @@ public class JvmBrowserViewModel implements AutoCloseable {
         for (Map.Entry<Long, JvmConnection> entry : started.entrySet()) {
             try {
                 if (isStillRunning(entry.getValue(), entry.getKey())) {
-                    flightRecordingService.stopAndDiscardRecording(entry.getValue(), entry.getKey());
+                    useCases.recording().stopAndDiscardRecording(entry.getValue(), entry.getKey());
                 }
             } catch (RuntimeException exception) {
                 LOGGER.atWarn()
@@ -1891,7 +1794,7 @@ public class JvmBrowserViewModel implements AutoCloseable {
     }
 
     private boolean isStillRunning(JvmConnection connection, long recordingId) {
-        return flightRecordingService.recordings(connection).stream()
+        return useCases.recording().recordings(connection).stream()
                 .anyMatch(recording -> recording.id() == recordingId
                         && recording.state() == FlightRecordingState.RUNNING);
     }
@@ -2026,8 +1929,8 @@ public class JvmBrowserViewModel implements AutoCloseable {
         if (!Objects.equals(subscription.id(), event.subscriptionId())) {
             return;
         }
-        if (subscription.persisted() && jmxMonitoringRepository != null) {
-            jmxMonitoringRepository.appendNotificationEvent(event);
+        if (subscription.persisted() && useCases.monitoring().repositoryAvailable()) {
+            useCases.monitoring().appendNotificationEvent(event);
         }
         if (selectedJmxNotificationSubscription.get() == subscription) {
             jmxNotificationEvents.add(event);
@@ -2194,8 +2097,8 @@ public class JvmBrowserViewModel implements AutoCloseable {
         });
     }
 
-    private static void logActionFailure(String action, RuntimeException exception) {
-        if (exception instanceof JmcFxException) {
+    private void logActionFailure(String action, RuntimeException exception) {
+        if (useCases.expectedApplicationFailure(exception)) {
             LOGGER.warn("{}: {}", action, displayMessage(exception));
             LOGGER.debug(action, exception);
             return;
@@ -2278,7 +2181,7 @@ public class JvmBrowserViewModel implements AutoCloseable {
     }
 
     private void updateOverviewPersistenceSummary() {
-        if (jmxMonitoringRepository == null) {
+        if (!useCases.monitoring().repositoryAvailable()) {
             overviewPersistence.set(LiveJvmPersistenceOverview.notConfigured());
             return;
         }

@@ -4,10 +4,7 @@ import java.nio.file.Path;
 import java.util.function.Consumer;
 
 import com.youngledo.jmcfx.application.LiveJvmApplicationServices;
-import com.youngledo.jmcfx.domain.service.JdpDiscoveryService;
-import com.youngledo.jmcfx.domain.service.JmxMonitoringRepository;
-import com.youngledo.jmcfx.domain.service.JmxMonitoringService;
-import com.youngledo.jmcfx.domain.service.SavedJvmTargetRepository;
+import com.youngledo.jmcfx.application.LiveJvmUseCases;
 import com.youngledo.jmcfx.ui.i18n.I18n;
 import com.youngledo.jmcfx.ui.jvms.JvmBrowserViewModel;
 
@@ -59,27 +56,8 @@ final class ShellLiveJvmWorkspaceController {
         if (services.jvmDiscoveryService() == null || services.jmxConnectionService() == null) {
             return null;
         }
-        return new JvmBrowserViewModel(services.jvmDiscoveryService(), services.jmxConnectionService(),
-                services.flightRecordingService(), services.mBeanBrowserService(), services.diagnosticCommandService(),
-                services.liveMetricService(), services.jmcAgentService(), services.jmxMonitoringService(),
-                services.jmxMonitoringRepository(), services.savedTargetRepository(), services.jdpDiscoveryService(),
+        return new JvmBrowserViewModel(LiveJvmUseCases.from(services),
                 new com.youngledo.jmcfx.ui.jvms.VirtualThreadJvmBrowserExecutor(), Platform::runLater,
                 recordingOpenHandler);
-    }
-
-    SavedJvmTargetRepository savedTargetRepository() {
-        return services.savedTargetRepository();
-    }
-
-    JdpDiscoveryService jdpDiscoveryService() {
-        return services.jdpDiscoveryService();
-    }
-
-    JmxMonitoringService jmxMonitoringService() {
-        return services.jmxMonitoringService();
-    }
-
-    JmxMonitoringRepository jmxMonitoringRepository() {
-        return services.jmxMonitoringRepository();
     }
 }

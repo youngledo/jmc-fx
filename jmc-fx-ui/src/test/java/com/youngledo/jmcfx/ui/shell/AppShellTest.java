@@ -782,8 +782,11 @@ class AppShellTest {
         for (String method : List.of("savedTargetRepository()", "jdpDiscoveryService()",
                 "jmxMonitoringService()", "jmxMonitoringRepository()")) {
             assertFalse(shell.contains(method), () -> method + " should not be exposed by AppShellController");
-            assertTrue(liveJvmController.contains(method), () -> method + " should stay with the Live JVM controller");
+            assertFalse(liveJvmController.contains(method),
+                    () -> method + " should not be exposed by the Live JVM controller");
         }
+        assertTrue(liveJvmController.contains("LiveJvmUseCases.from(services)"),
+                "Live JVM controller should inject an application facade instead of domain ports");
     }
 
     @Test
@@ -3159,8 +3162,8 @@ void jvmBrowserSupportsDoubleClickConnectAndNoBottomStatus() throws Exception {
 
         assertTrue(liveJvmServices.contains("MBeanBrowserService mBeanBrowserService"),
                 "Live JVM service bundle should carry the MBean Browser port");
-        assertTrue(liveJvmController.contains("services.mBeanBrowserService()"),
-                "Controller should pass the MBean Browser port to JvmBrowserViewModel");
+        assertTrue(liveJvmController.contains("LiveJvmUseCases.from(services)"),
+                "Controller should pass application use cases to JvmBrowserViewModel");
         assertTrue(assembly.contains("new JmcMBeanBrowserService(jmxConnectionService)"),
                 "Application assembly should reuse the existing JMX connection service for MBeans");
     }
@@ -3180,9 +3183,8 @@ void jvmBrowserSupportsDoubleClickConnectAndNoBottomStatus() throws Exception {
                 "Live JVM service bundle should carry the Diagnostic Command port");
         assertTrue(liveJvmServices.contains("LiveMetricService liveMetricService"),
                 "Live JVM service bundle should carry the Live Metric port");
-        assertTrue(liveJvmController.contains("services.diagnosticCommandService()"));
-        assertTrue(liveJvmController.contains("services.liveMetricService()"),
-                "Controller should pass diagnostics ports to JvmBrowserViewModel");
+        assertTrue(liveJvmController.contains("LiveJvmUseCases.from(services)"),
+                "Controller should pass diagnostics through application use cases");
         assertTrue(assembly.contains("new JmcDiagnosticCommandService(jmxConnectionService)"),
                 "Application assembly should reuse the existing JMX connection service for diagnostic commands");
         assertTrue(assembly.contains("new JmcLiveMetricService(jmxConnectionService)"),

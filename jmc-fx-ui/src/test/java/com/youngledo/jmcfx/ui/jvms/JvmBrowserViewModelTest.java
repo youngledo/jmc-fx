@@ -57,6 +57,8 @@ import com.youngledo.jmcfx.domain.model.TriggerActionType;
 import com.youngledo.jmcfx.domain.model.TriggerEvent;
 import com.youngledo.jmcfx.domain.model.TriggerOperator;
 import com.youngledo.jmcfx.domain.service.JmcFxException;
+import com.youngledo.jmcfx.application.LiveJvmApplicationServices;
+import com.youngledo.jmcfx.application.LiveJvmUseCases;
 import com.youngledo.jmcfx.testsupport.FakeDiagnosticCommandService;
 import com.youngledo.jmcfx.testsupport.FakeFlightRecordingService;
 import com.youngledo.jmcfx.testsupport.FakeJdpDiscoveryService;
@@ -158,8 +160,8 @@ class JvmBrowserViewModelTest {
         FakeJvmDiscoveryService discovery = new FakeJvmDiscoveryService();
         discovery.add(localConnection("42", "demo.Main"));
         QueuedJvmBrowserExecutor executor = new QueuedJvmBrowserExecutor();
-        JvmBrowserViewModel viewModel = new JvmBrowserViewModel(discovery, new FakeJmxConnectionService(),
-                executor, Runnable::run);
+        JvmBrowserViewModel viewModel = new JvmBrowserViewModel(useCases(discovery, new FakeJmxConnectionService()),
+                executor, Runnable::run, path -> { });
 
         viewModel.refresh();
         viewModel.refresh();
@@ -628,9 +630,9 @@ class JvmBrowserViewModelTest {
         savedTargets.save(new SavedJvmTarget("saved-1", "Production", "service:jmx:rmi:///prod", null));
         CapturingRemoteJmxConnectionService jmx = new CapturingRemoteJmxConnectionService();
         FakeFlightRecordingService recordings = new FakeFlightRecordingService();
-        JvmBrowserViewModel viewModel = new JvmBrowserViewModel(new FakeJvmDiscoveryService(), jmx, recordings,
-                null, null, null, savedTargets, new FakeJdpDiscoveryService(), new DirectJvmBrowserExecutor(),
-                Runnable::run, path -> { });
+        JvmBrowserViewModel viewModel = new JvmBrowserViewModel(useCases(new FakeJvmDiscoveryService(), jmx,
+                recordings, null, null, null, null, null, null, savedTargets, new FakeJdpDiscoveryService()),
+                new DirectJvmBrowserExecutor(), Runnable::run, path -> { });
         viewModel.refresh();
         JvmConnection saved = viewModel.connectionsProperty().getFirst();
         JvmConnection live = new JvmConnection("remote-live", "Production", saved.connectionUrl(), true,
@@ -685,8 +687,9 @@ class JvmBrowserViewModelTest {
         FakeFlightRecordingService recordings = new FakeFlightRecordingService();
         FakeJmxConnectionService jmx = new FakeJmxConnectionService();
         List<Path> opened = new ArrayList<>();
-        JvmBrowserViewModel viewModel = new JvmBrowserViewModel(new FakeJvmDiscoveryService(),
-                jmx, recordings, new DirectJvmBrowserExecutor(), Runnable::run, opened::add);
+        JvmBrowserViewModel viewModel = new JvmBrowserViewModel(useCases(new FakeJvmDiscoveryService(), jmx,
+                recordings, null, null, null, null, null, null, null, null), new DirectJvmBrowserExecutor(),
+                Runnable::run, opened::add);
         viewModel.selectedConnectionProperty().set(connectedWithFlightRecorder(viewModel, jmx, recordings));
         viewModel.selectedFlightRecordingProperty().set(viewModel.flightRecordingsProperty().getFirst());
 
@@ -907,8 +910,8 @@ class JvmBrowserViewModelTest {
         FakeMBeanBrowserService mbeans = new FakeMBeanBrowserService();
         mbeans.failWith(new IllegalStateException("stale tree"));
         QueuedJvmBrowserExecutor executor = new QueuedJvmBrowserExecutor();
-        JvmBrowserViewModel viewModel = new JvmBrowserViewModel(new FakeJvmDiscoveryService(), jmx, mbeans,
-                executor, Runnable::run);
+        JvmBrowserViewModel viewModel = new JvmBrowserViewModel(useCases(new FakeJvmDiscoveryService(), jmx, null,
+                mbeans, null, null, null, null, null, null, null), executor, Runnable::run, path -> { });
         JvmConnection connected = connectedWithMBeans(viewModel, jmx);
         viewModel.selectedConnectionProperty().set(connected);
         executor.runNext();
@@ -927,8 +930,8 @@ class JvmBrowserViewModelTest {
         FakeJmxConnectionService jmx = new FakeJmxConnectionService();
         FakeMBeanBrowserService mbeans = new FakeMBeanBrowserService();
         QueuedJvmBrowserExecutor executor = new QueuedJvmBrowserExecutor();
-        JvmBrowserViewModel viewModel = new JvmBrowserViewModel(new FakeJvmDiscoveryService(), jmx, mbeans,
-                executor, Runnable::run);
+        JvmBrowserViewModel viewModel = new JvmBrowserViewModel(useCases(new FakeJvmDiscoveryService(), jmx, null,
+                mbeans, null, null, null, null, null, null, null), executor, Runnable::run, path -> { });
         JvmConnection connected = connectedWithMBeans(viewModel, jmx);
         MBeanNode runtime = MBeanNode.objectName("java.lang:type=Runtime", "Runtime");
         MBeanNode domain = MBeanNode.domain("java.lang", List.of(runtime));
@@ -957,8 +960,8 @@ class JvmBrowserViewModelTest {
         FakeJmxConnectionService jmx = new FakeJmxConnectionService();
         FakeMBeanBrowserService mbeans = new FakeMBeanBrowserService();
         QueuedJvmBrowserExecutor executor = new QueuedJvmBrowserExecutor();
-        JvmBrowserViewModel viewModel = new JvmBrowserViewModel(new FakeJvmDiscoveryService(), jmx, mbeans,
-                executor, Runnable::run);
+        JvmBrowserViewModel viewModel = new JvmBrowserViewModel(useCases(new FakeJvmDiscoveryService(), jmx, null,
+                mbeans, null, null, null, null, null, null, null), executor, Runnable::run, path -> { });
         JvmConnection connected = connectedWithMBeans(viewModel, jmx);
         MBeanNode runtime = MBeanNode.objectName("java.lang:type=Runtime", "Runtime");
         mbeans.setTree(connected.id(), List.of(MBeanNode.domain("java.lang", List.of(runtime))));
@@ -979,8 +982,8 @@ class JvmBrowserViewModelTest {
         FakeJmxConnectionService jmx = new FakeJmxConnectionService();
         CapturingMBeanBrowserService mbeans = new CapturingMBeanBrowserService();
         QueuedJvmBrowserExecutor executor = new QueuedJvmBrowserExecutor();
-        JvmBrowserViewModel viewModel = new JvmBrowserViewModel(new FakeJvmDiscoveryService(), jmx, mbeans,
-                executor, Runnable::run);
+        JvmBrowserViewModel viewModel = new JvmBrowserViewModel(useCases(new FakeJvmDiscoveryService(), jmx, null,
+                mbeans, null, null, null, null, null, null, null), executor, Runnable::run, path -> { });
         JvmConnection first = connectedWithMBeans(viewModel, jmx, "42");
         JvmConnection second = connectedWithMBeans(viewModel, jmx, "84");
         MBeanNode operations = MBeanNode.objectName("demo:type=Operations", "Operations");
@@ -1043,8 +1046,8 @@ class JvmBrowserViewModelTest {
         FakeJmxConnectionService jmx = new FakeJmxConnectionService();
         FakeMBeanBrowserService mbeans = new FakeMBeanBrowserService();
         QueuedJvmBrowserExecutor executor = new QueuedJvmBrowserExecutor();
-        JvmBrowserViewModel viewModel = new JvmBrowserViewModel(new FakeJvmDiscoveryService(), jmx, mbeans,
-                executor, Runnable::run);
+        JvmBrowserViewModel viewModel = new JvmBrowserViewModel(useCases(new FakeJvmDiscoveryService(), jmx, null,
+                mbeans, null, null, null, null, null, null, null), executor, Runnable::run, path -> { });
         JvmConnection connected = connectedWithMBeans(viewModel, jmx);
         MBeanNode operations = MBeanNode.objectName("demo:type=Operations", "Operations");
         MBeanOperationInfo update = new MBeanOperationInfo("update", "void", "", List.of());
@@ -1289,8 +1292,8 @@ class JvmBrowserViewModelTest {
         FakeJmxConnectionService jmx = new FakeJmxConnectionService();
         FakeLiveMetricService metrics = new FakeLiveMetricService();
         QueuedJvmBrowserExecutor executor = new QueuedJvmBrowserExecutor();
-        JvmBrowserViewModel viewModel = new JvmBrowserViewModel(new FakeJvmDiscoveryService(), jmx, null, null,
-                null, metrics, executor, Runnable::run, path -> { });
+        JvmBrowserViewModel viewModel = new JvmBrowserViewModel(useCases(new FakeJvmDiscoveryService(), jmx, null,
+                null, null, metrics, null, null, null, null, null), executor, Runnable::run, path -> { });
         JvmConnection connected = JvmConnection.local("42", "demo.Main", "26.0.1", true)
                 .asConnected("service:jmx:local://42");
         LiveMetricDefinition heap = new LiveMetricDefinition(
@@ -1634,55 +1637,70 @@ class JvmBrowserViewModelTest {
     }
 
     private static JvmBrowserViewModel viewModel(FakeJvmDiscoveryService discovery, FakeJmxConnectionService jmx) {
-        return new JvmBrowserViewModel(discovery, jmx, new DirectJvmBrowserExecutor(), Runnable::run);
-    }
-
-    private static JvmBrowserViewModel viewModel(FakeJvmDiscoveryService discovery, FakeJmxConnectionService jmx,
-            FakeFlightRecordingService recordings) {
-        return new JvmBrowserViewModel(discovery, jmx, recordings, new DirectJvmBrowserExecutor(), Runnable::run,
+        return new JvmBrowserViewModel(useCases(discovery, jmx), new DirectJvmBrowserExecutor(), Runnable::run,
                 path -> { });
     }
 
     private static JvmBrowserViewModel viewModel(FakeJvmDiscoveryService discovery, FakeJmxConnectionService jmx,
+            FakeFlightRecordingService recordings) {
+        return new JvmBrowserViewModel(useCases(discovery, jmx, recordings, null, null, null, null, null, null, null,
+                null), new DirectJvmBrowserExecutor(), Runnable::run, path -> { });
+    }
+
+    private static JvmBrowserViewModel viewModel(FakeJvmDiscoveryService discovery, FakeJmxConnectionService jmx,
             FakeMBeanBrowserService mbeans) {
-        return new JvmBrowserViewModel(discovery, jmx, mbeans, new DirectJvmBrowserExecutor(), Runnable::run);
+        return new JvmBrowserViewModel(useCases(discovery, jmx, null, mbeans, null, null, null, null, null, null,
+                null), new DirectJvmBrowserExecutor(), Runnable::run, path -> { });
     }
 
     private static JvmBrowserViewModel viewModel(FakeJvmDiscoveryService discovery, FakeJmxConnectionService jmx,
             FakeMBeanBrowserService mbeans, FakeJmxMonitoringService monitoring,
             FakeJmxMonitoringRepository repository) {
-        return new JvmBrowserViewModel(discovery, jmx, null, mbeans, null, null, null,
-                monitoring, repository, null, null, new DirectJvmBrowserExecutor(), Runnable::run, path -> { });
+        return new JvmBrowserViewModel(useCases(discovery, jmx, null, mbeans, null, null, null, monitoring,
+                repository, null, null), new DirectJvmBrowserExecutor(), Runnable::run, path -> { });
     }
 
     private static JvmBrowserViewModel viewModel(FakeJvmDiscoveryService discovery, FakeJmxConnectionService jmx,
             FakeDiagnosticCommandService diagnostics) {
-        return new JvmBrowserViewModel(discovery, jmx, null, null, diagnostics, null,
-                new DirectJvmBrowserExecutor(), Runnable::run, path -> { });
+        return new JvmBrowserViewModel(useCases(discovery, jmx, null, null, diagnostics, null, null, null, null, null,
+                null), new DirectJvmBrowserExecutor(), Runnable::run, path -> { });
     }
 
     private static JvmBrowserViewModel viewModel(FakeJvmDiscoveryService discovery, FakeJmxConnectionService jmx,
             FakeLiveMetricService metrics) {
-        return new JvmBrowserViewModel(discovery, jmx, null, null, null, metrics,
-                new DirectJvmBrowserExecutor(), Runnable::run, path -> { });
+        return new JvmBrowserViewModel(useCases(discovery, jmx, null, null, null, metrics, null, null, null, null,
+                null), new DirectJvmBrowserExecutor(), Runnable::run, path -> { });
     }
 
     private static JvmBrowserViewModel viewModel(FakeJvmDiscoveryService discovery, FakeJmxConnectionService jmx,
             FakeJmcAgentService agent) {
-        return new JvmBrowserViewModel(discovery, jmx, null, null, null, null, agent,
-                new DirectJvmBrowserExecutor(), Runnable::run, path -> { });
+        return new JvmBrowserViewModel(useCases(discovery, jmx, null, null, null, null, agent, null, null, null,
+                null), new DirectJvmBrowserExecutor(), Runnable::run, path -> { });
     }
 
     private static JvmBrowserViewModel viewModel(FakeJvmDiscoveryService discovery, FakeJmxConnectionService jmx,
             FakeDiagnosticCommandService diagnostics, FakeLiveMetricService metrics) {
-        return new JvmBrowserViewModel(discovery, jmx, null, null, diagnostics, metrics,
-                new DirectJvmBrowserExecutor(), Runnable::run, path -> { });
+        return new JvmBrowserViewModel(useCases(discovery, jmx, null, null, diagnostics, metrics, null, null, null,
+                null, null), new DirectJvmBrowserExecutor(), Runnable::run, path -> { });
     }
 
     private static JvmBrowserViewModel viewModel(FakeJvmDiscoveryService discovery, FakeJmxConnectionService jmx,
             FakeSavedJvmTargetRepository savedTargets, FakeJdpDiscoveryService jdp) {
-        return new JvmBrowserViewModel(discovery, jmx, null, null, null, null, savedTargets, jdp,
-                new DirectJvmBrowserExecutor(), Runnable::run, path -> { });
+        return new JvmBrowserViewModel(useCases(discovery, jmx, null, null, null, null, null, null, null,
+                savedTargets, jdp), new DirectJvmBrowserExecutor(), Runnable::run, path -> { });
+    }
+
+    private static LiveJvmUseCases useCases(FakeJvmDiscoveryService discovery, FakeJmxConnectionService jmx) {
+        return useCases(discovery, jmx, null, null, null, null, null, null, null, null, null);
+    }
+
+    private static LiveJvmUseCases useCases(FakeJvmDiscoveryService discovery, FakeJmxConnectionService jmx,
+            FakeFlightRecordingService recordings, FakeMBeanBrowserService mbeans,
+            FakeDiagnosticCommandService diagnostics, FakeLiveMetricService metrics, FakeJmcAgentService agent,
+            FakeJmxMonitoringService monitoring, FakeJmxMonitoringRepository repository,
+            FakeSavedJvmTargetRepository savedTargets, FakeJdpDiscoveryService jdp) {
+        return LiveJvmUseCases.from(new LiveJvmApplicationServices(discovery, jmx, recordings, mbeans, diagnostics,
+                metrics, agent, monitoring, repository, savedTargets, jdp));
     }
 
     private static JvmConnection localConnection(String id, String name) {
