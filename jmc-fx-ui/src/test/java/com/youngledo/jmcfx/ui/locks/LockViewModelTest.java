@@ -3,6 +3,8 @@ package com.youngledo.jmcfx.ui.locks;
 import java.nio.file.Path;
 import java.time.Instant;
 
+import com.youngledo.jmcfx.application.LoadLocksUseCase;
+
 import com.youngledo.jmcfx.domain.model.LockGrouping;
 import com.youngledo.jmcfx.domain.model.LockHistogram;
 import com.youngledo.jmcfx.domain.model.RecordingSummary;
@@ -20,7 +22,7 @@ class LockViewModelTest {
         service.addHistogramRow(new LockHistogram("java.lang.Object",
                 100, 5000, 200, 50.0, 3, 5, 12));
 
-        LockViewModel vm = new LockViewModel(service);
+        LockViewModel vm = new LockViewModel(new LoadLocksUseCase(service));
         vm.load(testRecording());
 
         assertEquals(1, vm.classHistogramProperty().size());
@@ -32,7 +34,7 @@ class LockViewModelTest {
     @Test
     void setPrimaryGroupingUpdatesProperty() {
         FakeLockService service = new FakeLockService();
-        LockViewModel vm = new LockViewModel(service);
+        LockViewModel vm = new LockViewModel(new LoadLocksUseCase(service));
         vm.load(testRecording());
 
         assertEquals(LockGrouping.BY_CLASS, vm.primaryGroupingProperty().get());

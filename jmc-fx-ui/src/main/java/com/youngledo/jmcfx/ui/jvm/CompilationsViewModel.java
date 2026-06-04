@@ -5,7 +5,7 @@ import java.util.List;
 import com.youngledo.jmcfx.domain.model.ChartDefinition;
 import com.youngledo.jmcfx.domain.model.CompilationEvent;
 import com.youngledo.jmcfx.domain.model.RecordingSummary;
-import com.youngledo.jmcfx.domain.service.JvmInternalsService;
+import com.youngledo.jmcfx.application.LoadJvmInternalsUseCase;
 import com.youngledo.jmcfx.ui.util.FxDispatch;
 
 import javafx.beans.property.ObjectProperty;
@@ -18,12 +18,12 @@ import javafx.collections.ObservableList;
 /// Loads compilation events, failures, and duration chart.
 public class CompilationsViewModel {
 
-    private final JvmInternalsService service;
+    private final LoadJvmInternalsUseCase service;
     private final ObservableList<CompilationEvent> compilations = FXCollections.observableArrayList();
     private final ObservableList<CompilationEvent> failures = FXCollections.observableArrayList();
     private final ObjectProperty<ChartDefinition> durationChart = new SimpleObjectProperty<>();
 
-    public CompilationsViewModel(JvmInternalsService service) {
+    public CompilationsViewModel(LoadJvmInternalsUseCase service) {
         this.service = service;
     }
 

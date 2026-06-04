@@ -5,7 +5,7 @@ import java.util.List;
 import com.youngledo.jmcfx.domain.model.LockGrouping;
 import com.youngledo.jmcfx.domain.model.LockHistogram;
 import com.youngledo.jmcfx.domain.model.RecordingSummary;
-import com.youngledo.jmcfx.domain.service.LockService;
+import com.youngledo.jmcfx.application.LoadLocksUseCase;
 import com.youngledo.jmcfx.ui.util.FxDispatch;
 
 import javafx.beans.property.ObjectProperty;
@@ -19,7 +19,7 @@ import javafx.collections.ObservableList;
 /// chain filtering. Selecting a row in one histogram filters the others.
 public class LockViewModel {
 
-    private final LockService lockService;
+    private final LoadLocksUseCase lockService;
     private final ObservableList<LockHistogram> classHistogram = FXCollections.observableArrayList();
     private final ObservableList<LockHistogram> addressHistogram = FXCollections.observableArrayList();
     private final ObservableList<LockHistogram> threadHistogram = FXCollections.observableArrayList();
@@ -27,7 +27,7 @@ public class LockViewModel {
             new SimpleObjectProperty<>(LockGrouping.BY_CLASS);
     private RecordingSummary currentRecording;
 
-    public LockViewModel(LockService lockService) {
+    public LockViewModel(LoadLocksUseCase lockService) {
         this.lockService = lockService;
     }
 

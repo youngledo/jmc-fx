@@ -9,6 +9,7 @@ import java.time.Instant;
 
 import org.junit.jupiter.api.Test;
 
+import com.youngledo.jmcfx.application.LoadG1GcUseCase;
 import com.youngledo.jmcfx.domain.model.RecordingSummary;
 import com.youngledo.jmcfx.testsupport.FakeG1GcService;
 
@@ -16,7 +17,7 @@ class G1GcViewModelTest {
 
     @Test
     void loadPublishesG1RowsAndSummary() {
-        G1GcViewModel viewModel = new G1GcViewModel(new FakeG1GcService());
+        G1GcViewModel viewModel = new G1GcViewModel(new LoadG1GcUseCase(new FakeG1GcService()));
 
         viewModel.load(recording());
 
@@ -30,7 +31,7 @@ class G1GcViewModelTest {
 
     @Test
     void selectingRegionStateBuildsDetailText() {
-        G1GcViewModel viewModel = new G1GcViewModel(new FakeG1GcService());
+        G1GcViewModel viewModel = new G1GcViewModel(new LoadG1GcUseCase(new FakeG1GcService()));
         viewModel.load(recording());
 
         viewModel.selectedRegionStateProperty().set(viewModel.recentRegionStatesProperty().get(1));
@@ -41,9 +42,9 @@ class G1GcViewModelTest {
 
     @Test
     void loadFailurePublishesErrorState() {
-        G1GcViewModel viewModel = new G1GcViewModel(recording -> {
+        G1GcViewModel viewModel = new G1GcViewModel(new LoadG1GcUseCase(recording -> {
             throw new IllegalStateException("broken g1 report");
-        });
+        }));
 
         viewModel.load(recording());
 

@@ -10,7 +10,7 @@ import com.youngledo.jmcfx.domain.model.HotMethod;
 import com.youngledo.jmcfx.domain.model.RecordingSummary;
 import com.youngledo.jmcfx.domain.model.StackFrameInfo;
 import com.youngledo.jmcfx.domain.model.StackTreeNode;
-import com.youngledo.jmcfx.domain.service.ProfilingService;
+import com.youngledo.jmcfx.application.LoadProfilingUseCase;
 import com.youngledo.jmcfx.flamegraph.FlameGraphModel;
 import com.youngledo.jmcfx.ui.util.FxDispatch;
 
@@ -24,7 +24,7 @@ import javafx.collections.ObservableList;
 /// Manages hot-methods list and callers/callees stack trees for a selected recording.
 public class ProfilingViewModel {
 
-    private final ProfilingService profilingService;
+    private final LoadProfilingUseCase profilingService;
     private final ObservableList<HotMethod> hotMethods = FXCollections.observableArrayList();
     private final ObservableList<DependencyGraphEdge> dependencyEdges = FXCollections.observableArrayList();
     private final ObjectProperty<HotMethod> selectedMethod = new SimpleObjectProperty<>();
@@ -49,7 +49,7 @@ public class ProfilingViewModel {
     private RecordingSummary currentRecording;
     private String selectedMethodName;
 
-    public ProfilingViewModel(ProfilingService profilingService) {
+    public ProfilingViewModel(LoadProfilingUseCase profilingService) {
         this.profilingService = profilingService;
     }
 

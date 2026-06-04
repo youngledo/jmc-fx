@@ -7,7 +7,7 @@ import com.youngledo.jmcfx.domain.model.GcHeapConfiguration;
 import com.youngledo.jmcfx.domain.model.KeyValueEntry;
 import com.youngledo.jmcfx.domain.model.KeyValueSection;
 import com.youngledo.jmcfx.domain.model.RecordingSummary;
-import com.youngledo.jmcfx.domain.service.JvmInternalsService;
+import com.youngledo.jmcfx.application.LoadJvmInternalsUseCase;
 import com.youngledo.jmcfx.ui.util.DisplayFormats;
 import com.youngledo.jmcfx.ui.util.FxDispatch;
 
@@ -19,10 +19,10 @@ import javafx.collections.ObservableList;
 /// Displays GC configuration and heap configuration as key-value sections.
 public class GcConfigViewModel {
 
-    private final JvmInternalsService service;
+    private final LoadJvmInternalsUseCase service;
     private final ObservableList<KeyValueSection> configSections = FXCollections.observableArrayList();
 
-    public GcConfigViewModel(JvmInternalsService service) {
+    public GcConfigViewModel(LoadJvmInternalsUseCase service) {
         this.service = service;
     }
 

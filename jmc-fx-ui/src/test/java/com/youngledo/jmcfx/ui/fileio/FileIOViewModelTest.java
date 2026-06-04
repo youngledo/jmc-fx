@@ -3,6 +3,8 @@ package com.youngledo.jmcfx.ui.fileio;
 import java.nio.file.Path;
 import java.time.Instant;
 
+import com.youngledo.jmcfx.application.LoadFileIOUseCase;
+
 import com.youngledo.jmcfx.domain.model.FileIOHistogram;
 import com.youngledo.jmcfx.domain.model.RecordingSummary;
 import com.youngledo.jmcfx.testsupport.FakeFileIOService;
@@ -19,7 +21,7 @@ class FileIOViewModelTest {
         service.addHistogramRow(new FileIOHistogram("/var/log/app.log",
                 10, 5, 4096, 2048, 150, 50, 10.0));
 
-        FileIOViewModel vm = new FileIOViewModel(service);
+        FileIOViewModel vm = new FileIOViewModel(new LoadFileIOUseCase(service));
         vm.load(testRecording());
 
         assertEquals(1, vm.histogramProperty().size());

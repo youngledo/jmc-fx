@@ -4,7 +4,7 @@ import java.util.List;
 
 import com.youngledo.jmcfx.domain.model.GcSummary;
 import com.youngledo.jmcfx.domain.model.RecordingSummary;
-import com.youngledo.jmcfx.domain.service.JvmInternalsService;
+import com.youngledo.jmcfx.application.LoadJvmInternalsUseCase;
 import com.youngledo.jmcfx.ui.util.FxDispatch;
 
 import javafx.collections.FXCollections;
@@ -15,10 +15,10 @@ import javafx.collections.ObservableList;
 /// Loads per-generation GC summary data from a recording.
 public class GcSummaryViewModel {
 
-    private final JvmInternalsService service;
+    private final LoadJvmInternalsUseCase service;
     private final ObservableList<GcSummary> summaries = FXCollections.observableArrayList();
 
-    public GcSummaryViewModel(JvmInternalsService service) {
+    public GcSummaryViewModel(LoadJvmInternalsUseCase service) {
         this.service = service;
     }
 

@@ -7,7 +7,7 @@ import com.youngledo.jmcfx.domain.model.GcEvent;
 import com.youngledo.jmcfx.domain.model.GcHeapSummary;
 import com.youngledo.jmcfx.domain.model.GcReferenceStat;
 import com.youngledo.jmcfx.domain.model.RecordingSummary;
-import com.youngledo.jmcfx.domain.service.JvmInternalsService;
+import com.youngledo.jmcfx.application.LoadJvmInternalsUseCase;
 import com.youngledo.jmcfx.ui.util.FxDispatch;
 
 import javafx.beans.property.ObjectProperty;
@@ -20,7 +20,7 @@ import javafx.collections.ObservableList;
 /// Loads GC events, reference stats, heap summaries, and chart definitions.
 public class GcDetailsViewModel {
 
-    private final JvmInternalsService service;
+    private final LoadJvmInternalsUseCase service;
     private final ObservableList<GcEvent> gcEvents = FXCollections.observableArrayList();
     private final ObservableList<GcReferenceStat> referenceStats = FXCollections.observableArrayList();
     private final ObservableList<GcHeapSummary> heapSummaries = FXCollections.observableArrayList();
@@ -28,7 +28,7 @@ public class GcDetailsViewModel {
     private final ObjectProperty<ChartDefinition> metaspaceChart = new SimpleObjectProperty<>();
     private final ObjectProperty<ChartDefinition> pauseChart = new SimpleObjectProperty<>();
 
-    public GcDetailsViewModel(JvmInternalsService service) {
+    public GcDetailsViewModel(LoadJvmInternalsUseCase service) {
         this.service = service;
     }
 

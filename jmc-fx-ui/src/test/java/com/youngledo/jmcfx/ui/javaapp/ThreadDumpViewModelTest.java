@@ -7,6 +7,8 @@ import java.time.Instant;
 
 import org.junit.jupiter.api.Test;
 
+import com.youngledo.jmcfx.application.LoadJavaApplicationUseCase;
+
 import com.youngledo.jmcfx.domain.model.RecordingSummary;
 import com.youngledo.jmcfx.domain.model.ThreadDumpEntry;
 import com.youngledo.jmcfx.testsupport.FakeJavaAppService;
@@ -18,7 +20,7 @@ class ThreadDumpViewModelTest {
         FakeJavaAppService service = new FakeJavaAppService();
         service.addThreadDump(new ThreadDumpEntry(Instant.now(), "Full thread dump ..."));
 
-        ThreadDumpViewModel vm = new ThreadDumpViewModel(service);
+        ThreadDumpViewModel vm = new ThreadDumpViewModel(new LoadJavaApplicationUseCase(service));
         vm.load(testRecording());
 
         assertEquals(1, vm.dumpsProperty().size());
@@ -29,7 +31,7 @@ class ThreadDumpViewModelTest {
         FakeJavaAppService service = new FakeJavaAppService();
         service.addThreadDump(new ThreadDumpEntry(Instant.now(), "Full thread dump ..."));
 
-        ThreadDumpViewModel vm = new ThreadDumpViewModel(service);
+        ThreadDumpViewModel vm = new ThreadDumpViewModel(new LoadJavaApplicationUseCase(service));
         vm.load(testRecording());
         vm.selectedDumpProperty().set(vm.dumpsProperty().getFirst());
         assertFalse(vm.dumpTextProperty().get().isEmpty());
@@ -45,7 +47,7 @@ class ThreadDumpViewModelTest {
         String dumpText = "main tid=1 RUNNABLE\n  at foo.Bar.run(Bar.java:42)";
         service.addThreadDump(new ThreadDumpEntry(Instant.now(), dumpText));
 
-        ThreadDumpViewModel vm = new ThreadDumpViewModel(service);
+        ThreadDumpViewModel vm = new ThreadDumpViewModel(new LoadJavaApplicationUseCase(service));
         vm.load(testRecording());
         vm.selectedDumpProperty().set(vm.dumpsProperty().getFirst());
 
@@ -57,7 +59,7 @@ class ThreadDumpViewModelTest {
         FakeJavaAppService service = new FakeJavaAppService();
         service.addThreadDump(new ThreadDumpEntry(Instant.now(), "Full thread dump ..."));
 
-        ThreadDumpViewModel vm = new ThreadDumpViewModel(service);
+        ThreadDumpViewModel vm = new ThreadDumpViewModel(new LoadJavaApplicationUseCase(service));
         vm.load(testRecording());
         vm.selectedDumpProperty().set(vm.dumpsProperty().getFirst());
         vm.selectedDumpProperty().set(null);
@@ -68,7 +70,7 @@ class ThreadDumpViewModelTest {
     @Test
     void startsWithEmptyDefaults() {
         FakeJavaAppService service = new FakeJavaAppService();
-        ThreadDumpViewModel vm = new ThreadDumpViewModel(service);
+        ThreadDumpViewModel vm = new ThreadDumpViewModel(new LoadJavaApplicationUseCase(service));
 
         assertEquals(0, vm.dumpsProperty().size());
         assertNull(vm.selectedDumpProperty().get());

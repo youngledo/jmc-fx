@@ -3,6 +3,8 @@ package com.youngledo.jmcfx.ui.exceptions;
 import java.nio.file.Path;
 import java.time.Instant;
 
+import com.youngledo.jmcfx.application.LoadExceptionsUseCase;
+
 import com.youngledo.jmcfx.domain.model.ExceptionGrouping;
 import com.youngledo.jmcfx.domain.model.ExceptionSummary;
 import com.youngledo.jmcfx.domain.model.RecordingSummary;
@@ -20,7 +22,7 @@ class ExceptionViewModelTest {
         service.addException(new ExceptionSummary("java.lang.NullPointerException",
                 "java.lang.NullPointerException", null, 42, 60.0));
 
-        ExceptionViewModel vm = new ExceptionViewModel(service);
+        ExceptionViewModel vm = new ExceptionViewModel(new LoadExceptionsUseCase(service));
         vm.load(testRecording());
 
         assertEquals(1, vm.histogramProperty().size());
@@ -34,7 +36,7 @@ class ExceptionViewModelTest {
         service.addException(new ExceptionSummary("java.io.IOException",
                 "java.io.IOException", "Connection reset", 10, 100.0));
 
-        ExceptionViewModel vm = new ExceptionViewModel(service);
+        ExceptionViewModel vm = new ExceptionViewModel(new LoadExceptionsUseCase(service));
         vm.load(testRecording());
 
         assertEquals(ExceptionGrouping.BY_CLASS, vm.groupingProperty().get());

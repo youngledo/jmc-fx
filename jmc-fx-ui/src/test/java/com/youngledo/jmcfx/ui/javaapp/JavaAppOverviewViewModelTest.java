@@ -7,6 +7,8 @@ import java.time.Instant;
 
 import org.junit.jupiter.api.Test;
 
+import com.youngledo.jmcfx.application.LoadJavaApplicationUseCase;
+
 import com.youngledo.jmcfx.domain.model.RecordingSummary;
 import com.youngledo.jmcfx.domain.model.ThreadHistogramRow;
 import com.youngledo.jmcfx.testsupport.FakeJavaAppService;
@@ -19,7 +21,7 @@ class JavaAppOverviewViewModelTest {
         service.addHistogramRow(new ThreadHistogramRow("main", 100, 50, 20, 4096, 3));
         service.addHistogramRow(new ThreadHistogramRow("worker-1", 80, 200, 10, 8192, 1));
 
-        JavaAppOverviewViewModel vm = new JavaAppOverviewViewModel(service);
+        JavaAppOverviewViewModel vm = new JavaAppOverviewViewModel(new LoadJavaApplicationUseCase(service));
         vm.load(testRecording());
 
         assertEquals(2, vm.histogramRowsProperty().size());
@@ -32,7 +34,7 @@ class JavaAppOverviewViewModelTest {
         FakeJavaAppService service = new FakeJavaAppService();
         service.addHistogramRow(new ThreadHistogramRow("main", 100, 50, 20, 4096, 3));
 
-        JavaAppOverviewViewModel vm = new JavaAppOverviewViewModel(service);
+        JavaAppOverviewViewModel vm = new JavaAppOverviewViewModel(new LoadJavaApplicationUseCase(service));
         vm.load(testRecording());
         vm.selectedRowProperty().set(vm.histogramRowsProperty().getFirst());
 
@@ -43,7 +45,7 @@ class JavaAppOverviewViewModelTest {
     @Test
     void loadSetsChart() {
         FakeJavaAppService service = new FakeJavaAppService();
-        JavaAppOverviewViewModel vm = new JavaAppOverviewViewModel(service);
+        JavaAppOverviewViewModel vm = new JavaAppOverviewViewModel(new LoadJavaApplicationUseCase(service));
         vm.load(testRecording());
 
         assertNotNull(vm.chartProperty().get());
@@ -52,7 +54,7 @@ class JavaAppOverviewViewModelTest {
     @Test
     void startsWithEmptyDefaults() {
         FakeJavaAppService service = new FakeJavaAppService();
-        JavaAppOverviewViewModel vm = new JavaAppOverviewViewModel(service);
+        JavaAppOverviewViewModel vm = new JavaAppOverviewViewModel(new LoadJavaApplicationUseCase(service));
 
         assertEquals(0, vm.histogramRowsProperty().size());
         assertNull(vm.selectedRowProperty().get());

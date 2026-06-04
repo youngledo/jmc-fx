@@ -12,7 +12,7 @@ import com.youngledo.jmcfx.domain.model.EnvironmentVariable;
 import com.youngledo.jmcfx.domain.model.ProcessInfo;
 import com.youngledo.jmcfx.domain.model.RecordingSummary;
 import com.youngledo.jmcfx.domain.model.SystemProperty;
-import com.youngledo.jmcfx.domain.service.EnvironmentService;
+import com.youngledo.jmcfx.application.LoadEnvironmentUseCase;
 import com.youngledo.jmcfx.ui.util.FxDispatch;
 
 import javafx.beans.property.ObjectProperty;
@@ -24,11 +24,11 @@ import javafx.collections.ObservableList;
 
 /// Unified view model for all six Environment pages.
 ///
-/// Each page loads data from the same EnvironmentService port.
+/// Each page loads data from the same LoadEnvironmentUseCase port.
 /// Search filtering is provided for Environment Variables and System Properties.
 public class EnvironmentViewModel {
 
-    private final EnvironmentService environmentService;
+    private final LoadEnvironmentUseCase environmentService;
     private final ObservableList<ProcessInfo> processes = FXCollections.observableArrayList();
     private final ObservableList<EnvironmentVariable> environmentVariables = FXCollections.observableArrayList();
     private final ObservableList<EnvironmentVariable> filteredEnvironmentVariables = FXCollections.observableArrayList();
@@ -43,7 +43,7 @@ public class EnvironmentViewModel {
     private final ObjectProperty<ActiveRecordingInfo> selectedRecording = new SimpleObjectProperty<>();
     private RecordingSummary currentRecording;
 
-    public EnvironmentViewModel(EnvironmentService environmentService) {
+    public EnvironmentViewModel(LoadEnvironmentUseCase environmentService) {
         this.environmentService = environmentService;
         environmentSearchFilter.addListener((obs, old, val) -> applyEnvironmentFilter());
         systemPropertySearchFilter.addListener((obs, old, val) -> applySystemPropertyFilter());

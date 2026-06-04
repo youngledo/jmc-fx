@@ -7,7 +7,7 @@ import com.youngledo.jmcfx.domain.model.ClassloaderStatistics;
 import com.youngledo.jmcfx.domain.model.ClassloaderSummary;
 import com.youngledo.jmcfx.domain.model.ClassloadEvent;
 import com.youngledo.jmcfx.domain.model.RecordingSummary;
-import com.youngledo.jmcfx.domain.service.JvmInternalsService;
+import com.youngledo.jmcfx.application.LoadJvmInternalsUseCase;
 import com.youngledo.jmcfx.ui.util.FxDispatch;
 
 import javafx.beans.property.ObjectProperty;
@@ -20,13 +20,13 @@ import javafx.collections.ObservableList;
 /// Loads classloader histogram, classload events, statistics, and chart.
 public class ClassLoadingViewModel {
 
-    private final JvmInternalsService service;
+    private final LoadJvmInternalsUseCase service;
     private final ObservableList<ClassloaderSummary> histogram = FXCollections.observableArrayList();
     private final ObservableList<ClassloadEvent> events = FXCollections.observableArrayList();
     private final ObservableList<ClassloaderStatistics> statistics = FXCollections.observableArrayList();
     private final ObjectProperty<ChartDefinition> chart = new SimpleObjectProperty<>();
 
-    public ClassLoadingViewModel(JvmInternalsService service) {
+    public ClassLoadingViewModel(LoadJvmInternalsUseCase service) {
         this.service = service;
     }
 

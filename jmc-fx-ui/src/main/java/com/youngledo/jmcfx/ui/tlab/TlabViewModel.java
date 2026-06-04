@@ -5,7 +5,7 @@ import java.util.List;
 import com.youngledo.jmcfx.domain.model.ChartDefinition;
 import com.youngledo.jmcfx.domain.model.RecordingSummary;
 import com.youngledo.jmcfx.domain.model.TlabAllocation;
-import com.youngledo.jmcfx.domain.service.TlabService;
+import com.youngledo.jmcfx.application.LoadTlabUseCase;
 import com.youngledo.jmcfx.ui.util.FxDispatch;
 
 import javafx.beans.property.BooleanProperty;
@@ -17,14 +17,14 @@ import javafx.collections.ObservableList;
 
 public class TlabViewModel {
 
-    private final TlabService tlabService;
+    private final LoadTlabUseCase tlabService;
     private final ObservableList<TlabAllocation> allocations = FXCollections.observableArrayList();
     private final ObjectProperty<ChartDefinition> timeline = new SimpleObjectProperty<>();
     private final ObjectProperty<TlabAllocation> selectedAllocation = new SimpleObjectProperty<>();
     private final BooleanProperty loading = new SimpleBooleanProperty(false);
     private final BooleanProperty loaded = new SimpleBooleanProperty(false);
 
-    public TlabViewModel(TlabService tlabService) {
+    public TlabViewModel(LoadTlabUseCase tlabService) {
         this.tlabService = tlabService;
     }
 

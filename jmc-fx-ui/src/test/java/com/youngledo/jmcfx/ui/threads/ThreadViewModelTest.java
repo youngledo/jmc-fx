@@ -9,6 +9,8 @@ import java.util.List;
 
 import org.junit.jupiter.api.Test;
 
+import com.youngledo.jmcfx.application.LoadThreadsUseCase;
+
 import com.youngledo.jmcfx.domain.model.RecordingSummary;
 import com.youngledo.jmcfx.domain.model.ThreadSummary;
 import com.youngledo.jmcfx.testsupport.FakeThreadService;
@@ -21,7 +23,7 @@ class ThreadViewModelTest {
         service.addThread(new ThreadSummary("main", 1, "main", false, 100, 50, List.of()));
         service.addThread(new ThreadSummary("worker-1", 2, "pool", true, 80, 10, List.of()));
 
-        ThreadViewModel vm = new ThreadViewModel(service);
+        ThreadViewModel vm = new ThreadViewModel(new LoadThreadsUseCase(service));
         vm.load(testRecording());
 
         assertEquals(2, vm.threadSummariesProperty().size());
@@ -33,7 +35,7 @@ class ThreadViewModelTest {
         FakeThreadService service = new FakeThreadService();
         service.addThread(new ThreadSummary("main", 1, "main", false, 100, 50, List.of()));
 
-        ThreadViewModel vm = new ThreadViewModel(service);
+        ThreadViewModel vm = new ThreadViewModel(new LoadThreadsUseCase(service));
         vm.load(testRecording());
         vm.selectedThreadProperty().set(vm.threadSummariesProperty().getFirst());
 
@@ -45,7 +47,7 @@ class ThreadViewModelTest {
     @Test
     void startsWithEmptyDefaults() {
         FakeThreadService service = new FakeThreadService();
-        ThreadViewModel vm = new ThreadViewModel(service);
+        ThreadViewModel vm = new ThreadViewModel(new LoadThreadsUseCase(service));
 
         assertEquals(0, vm.threadSummariesProperty().size());
         assertNull(vm.selectedThreadProperty().get());

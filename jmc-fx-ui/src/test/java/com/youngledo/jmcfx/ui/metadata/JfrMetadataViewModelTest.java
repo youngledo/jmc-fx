@@ -9,6 +9,8 @@ import java.time.Instant;
 
 import org.junit.jupiter.api.Test;
 
+import com.youngledo.jmcfx.application.LoadJfrMetadataUseCase;
+
 import com.youngledo.jmcfx.domain.model.RecordingSummary;
 import com.youngledo.jmcfx.testsupport.FakeJfrMetadataService;
 
@@ -16,7 +18,7 @@ class JfrMetadataViewModelTest {
 
     @Test
     void loadPublishesMetadataRowsAndSummary() {
-        JfrMetadataViewModel viewModel = new JfrMetadataViewModel(new FakeJfrMetadataService());
+        JfrMetadataViewModel viewModel = new JfrMetadataViewModel(new LoadJfrMetadataUseCase(new FakeJfrMetadataService()));
 
         viewModel.load(recording());
 
@@ -28,7 +30,7 @@ class JfrMetadataViewModelTest {
 
     @Test
     void selectingEventTypeBuildsFieldDetailText() {
-        JfrMetadataViewModel viewModel = new JfrMetadataViewModel(new FakeJfrMetadataService());
+        JfrMetadataViewModel viewModel = new JfrMetadataViewModel(new LoadJfrMetadataUseCase(new FakeJfrMetadataService()));
         viewModel.load(recording());
 
         viewModel.selectedEventTypeProperty().set(viewModel.eventTypesProperty().stream()

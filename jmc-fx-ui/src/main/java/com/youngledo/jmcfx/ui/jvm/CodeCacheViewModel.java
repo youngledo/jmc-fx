@@ -6,7 +6,7 @@ import com.youngledo.jmcfx.domain.model.ChartDefinition;
 import com.youngledo.jmcfx.domain.model.CodeCacheStats;
 import com.youngledo.jmcfx.domain.model.CodeCacheSweep;
 import com.youngledo.jmcfx.domain.model.RecordingSummary;
-import com.youngledo.jmcfx.domain.service.JvmInternalsService;
+import com.youngledo.jmcfx.application.LoadJvmInternalsUseCase;
 import com.youngledo.jmcfx.ui.util.FxDispatch;
 
 import javafx.beans.property.ObjectProperty;
@@ -19,13 +19,13 @@ import javafx.collections.ObservableList;
 /// Loads code cache sweeps, statistics, and chart definitions.
 public class CodeCacheViewModel {
 
-    private final JvmInternalsService service;
+    private final LoadJvmInternalsUseCase service;
     private final ObservableList<CodeCacheSweep> sweeps = FXCollections.observableArrayList();
     private final ObservableList<CodeCacheStats> statistics = FXCollections.observableArrayList();
     private final ObjectProperty<ChartDefinition> entriesChart = new SimpleObjectProperty<>();
     private final ObjectProperty<ChartDefinition> sweepChart = new SimpleObjectProperty<>();
 
-    public CodeCacheViewModel(JvmInternalsService service) {
+    public CodeCacheViewModel(LoadJvmInternalsUseCase service) {
         this.service = service;
     }
 

@@ -4,6 +4,8 @@ import java.nio.file.Path;
 import java.time.Instant;
 import java.util.List;
 
+import com.youngledo.jmcfx.application.LoadEnvironmentUseCase;
+
 import com.youngledo.jmcfx.domain.model.ActiveRecordingInfo;
 import com.youngledo.jmcfx.domain.model.ActiveSetting;
 import com.youngledo.jmcfx.domain.model.AgentInfo;
@@ -25,7 +27,7 @@ class EnvironmentViewModelTest {
         FakeEnvironmentService service = new FakeEnvironmentService();
         service.addProcess(new ProcessInfo("1234", "java MyApp", "2025-01-01 00:00:00.000", "2025-01-01 00:00:00.000"));
 
-        EnvironmentViewModel vm = new EnvironmentViewModel(service);
+        EnvironmentViewModel vm = new EnvironmentViewModel(new LoadEnvironmentUseCase(service));
         vm.load(testRecording());
 
         assertEquals(1, vm.processesProperty().size());
@@ -38,7 +40,7 @@ class EnvironmentViewModelTest {
         service.addEnvVar(new EnvironmentVariable("JAVA_HOME", "/usr/lib/jvm/java-25"));
         service.addEnvVar(new EnvironmentVariable("PATH", "/usr/bin:/bin"));
 
-        EnvironmentViewModel vm = new EnvironmentViewModel(service);
+        EnvironmentViewModel vm = new EnvironmentViewModel(new LoadEnvironmentUseCase(service));
         vm.load(testRecording());
 
         assertEquals(2, vm.environmentVariablesProperty().size());
@@ -50,7 +52,7 @@ class EnvironmentViewModelTest {
         service.addSysProp(new SystemProperty("java.version", "25"));
         service.addSysProp(new SystemProperty("os.name", "Linux"));
 
-        EnvironmentViewModel vm = new EnvironmentViewModel(service);
+        EnvironmentViewModel vm = new EnvironmentViewModel(new LoadEnvironmentUseCase(service));
         vm.load(testRecording());
 
         assertEquals(2, vm.systemPropertiesProperty().size());
@@ -62,7 +64,7 @@ class EnvironmentViewModelTest {
         service.addEnvVar(new EnvironmentVariable("JAVA_HOME", "/usr/lib/jvm"));
         service.addEnvVar(new EnvironmentVariable("HOME", "/home/user"));
 
-        EnvironmentViewModel vm = new EnvironmentViewModel(service);
+        EnvironmentViewModel vm = new EnvironmentViewModel(new LoadEnvironmentUseCase(service));
         vm.load(testRecording());
         vm.setEnvironmentSearchFilter("JAVA");
 
@@ -76,7 +78,7 @@ class EnvironmentViewModelTest {
         service.addSysProp(new SystemProperty("java.version", "25"));
         service.addSysProp(new SystemProperty("os.name", "Linux"));
 
-        EnvironmentViewModel vm = new EnvironmentViewModel(service);
+        EnvironmentViewModel vm = new EnvironmentViewModel(new LoadEnvironmentUseCase(service));
         vm.load(testRecording());
         vm.setSystemPropertySearchFilter("os");
 
@@ -89,7 +91,7 @@ class EnvironmentViewModelTest {
         FakeEnvironmentService service = new FakeEnvironmentService();
         service.addRecording(new ActiveRecordingInfo("1", "recording", "", 0, 0, "", "", 100));
 
-        EnvironmentViewModel vm = new EnvironmentViewModel(service);
+        EnvironmentViewModel vm = new EnvironmentViewModel(new LoadEnvironmentUseCase(service));
         vm.load(testRecording());
 
         assertEquals(1, vm.activeRecordingsProperty().size());
@@ -105,7 +107,7 @@ class EnvironmentViewModelTest {
         service.addRecording(new ActiveRecordingInfo("1", "recording", "", 0, 0, "", "", 100));
         service.addRecording(new ActiveRecordingInfo("1", "recording", "", 0, 0, "", "", 100));
 
-        EnvironmentViewModel vm = new EnvironmentViewModel(service);
+        EnvironmentViewModel vm = new EnvironmentViewModel(new LoadEnvironmentUseCase(service));
         vm.load(testRecording());
 
         assertEquals(1, vm.environmentVariablesProperty().size());
@@ -120,7 +122,7 @@ class EnvironmentViewModelTest {
         FakeEnvironmentService service = new FakeEnvironmentService();
         service.addSetting(new ActiveSetting("jdk.ExecutionSample", "enabled", "true"));
 
-        EnvironmentViewModel vm = new EnvironmentViewModel(service);
+        EnvironmentViewModel vm = new EnvironmentViewModel(new LoadEnvironmentUseCase(service));
         vm.load(testRecording());
 
         assertEquals(1, vm.activeSettingsProperty().size());
@@ -131,7 +133,7 @@ class EnvironmentViewModelTest {
         FakeEnvironmentService service = new FakeEnvironmentService();
         service.addAgent(new AgentInfo("management-agent", "", "", false, "Java"));
 
-        EnvironmentViewModel vm = new EnvironmentViewModel(service);
+        EnvironmentViewModel vm = new EnvironmentViewModel(new LoadEnvironmentUseCase(service));
         vm.load(testRecording());
 
         assertEquals(1, vm.agentsProperty().size());
@@ -142,7 +144,7 @@ class EnvironmentViewModelTest {
         FakeEnvironmentService service = new FakeEnvironmentService();
         service.addPool(new ConstantPoolType("java.lang.String", "java.lang.String", 50, List.of()));
 
-        EnvironmentViewModel vm = new EnvironmentViewModel(service);
+        EnvironmentViewModel vm = new EnvironmentViewModel(new LoadEnvironmentUseCase(service));
         vm.load(testRecording());
 
         assertEquals(1, vm.constantPoolsProperty().size());
@@ -153,12 +155,12 @@ class EnvironmentViewModelTest {
         FakeEnvironmentService service = new FakeEnvironmentService();
         service.addProcess(new ProcessInfo("1", "cmd", "", ""));
 
-        EnvironmentViewModel vm = new EnvironmentViewModel(service);
+        EnvironmentViewModel vm = new EnvironmentViewModel(new LoadEnvironmentUseCase(service));
         vm.load(testRecording());
         assertEquals(1, vm.processesProperty().size());
 
         // Load with fresh service (no data)
-        EnvironmentViewModel vm2 = new EnvironmentViewModel(new FakeEnvironmentService());
+        EnvironmentViewModel vm2 = new EnvironmentViewModel(new LoadEnvironmentUseCase(new FakeEnvironmentService()));
         vm2.load(testRecording());
         assertEquals(0, vm2.processesProperty().size());
     }

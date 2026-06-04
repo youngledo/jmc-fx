@@ -6,7 +6,7 @@ import com.youngledo.jmcfx.domain.model.JfrMetadataEventType;
 import com.youngledo.jmcfx.domain.model.JfrMetadataField;
 import com.youngledo.jmcfx.domain.model.JfrMetadataReport;
 import com.youngledo.jmcfx.domain.model.RecordingSummary;
-import com.youngledo.jmcfx.domain.service.JfrMetadataService;
+import com.youngledo.jmcfx.application.LoadJfrMetadataUseCase;
 import com.youngledo.jmcfx.ui.util.DisplayFormats;
 import com.youngledo.jmcfx.ui.util.FxDispatch;
 
@@ -21,7 +21,7 @@ import javafx.collections.ObservableList;
 
 public class JfrMetadataViewModel {
 
-    private final JfrMetadataService service;
+    private final LoadJfrMetadataUseCase service;
     private final ObservableList<JfrMetadataEventType> eventTypes = FXCollections.observableArrayList();
     private final ObjectProperty<JfrMetadataEventType> selectedEventType = new SimpleObjectProperty<>();
     private final StringProperty summary = new SimpleStringProperty("");
@@ -30,7 +30,7 @@ public class JfrMetadataViewModel {
     private final BooleanProperty loading = new SimpleBooleanProperty(false);
     private final BooleanProperty error = new SimpleBooleanProperty(false);
 
-    public JfrMetadataViewModel(JfrMetadataService service) {
+    public JfrMetadataViewModel(LoadJfrMetadataUseCase service) {
         this.service = service;
         selectedEventType.addListener((observable, oldValue, newValue) -> selectedDetail.set(detailText(newValue)));
     }

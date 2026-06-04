@@ -9,6 +9,7 @@ import java.time.Instant;
 
 import org.junit.jupiter.api.Test;
 
+import com.youngledo.jmcfx.application.LoadJavaFxEventsUseCase;
 import com.youngledo.jmcfx.domain.model.RecordingSummary;
 import com.youngledo.jmcfx.testsupport.FakeJavaFxEventService;
 
@@ -16,7 +17,8 @@ class JavaFxEventsViewModelTest {
 
     @Test
     void loadPublishesJavaFxRowsAndSummary() {
-        JavaFxEventsViewModel viewModel = new JavaFxEventsViewModel(new FakeJavaFxEventService());
+        JavaFxEventsViewModel viewModel =
+                new JavaFxEventsViewModel(new LoadJavaFxEventsUseCase(new FakeJavaFxEventService()));
 
         viewModel.load(recording());
 
@@ -30,7 +32,8 @@ class JavaFxEventsViewModelTest {
 
     @Test
     void selectingPulsePhaseBuildsDetailText() {
-        JavaFxEventsViewModel viewModel = new JavaFxEventsViewModel(new FakeJavaFxEventService());
+        JavaFxEventsViewModel viewModel =
+                new JavaFxEventsViewModel(new LoadJavaFxEventsUseCase(new FakeJavaFxEventService()));
         viewModel.load(recording());
 
         viewModel.selectedPulsePhaseProperty().set(viewModel.pulsePhasesProperty().get(1));
@@ -42,9 +45,9 @@ class JavaFxEventsViewModelTest {
 
     @Test
     void loadFailurePublishesErrorState() {
-        JavaFxEventsViewModel viewModel = new JavaFxEventsViewModel(recording -> {
+        JavaFxEventsViewModel viewModel = new JavaFxEventsViewModel(new LoadJavaFxEventsUseCase(recording -> {
             throw new IllegalStateException("broken javafx report");
-        });
+        }));
 
         viewModel.load(recording());
 

@@ -84,6 +84,14 @@ class JmcFxArchitectureTest {
     }
 
     @Test
+    void uiDoesNotDependOnDomainServicePorts() {
+        noClasses()
+                .that().resideInAPackage("..ui..")
+                .should().dependOnClassesThat().resideInAPackage("..domain.service..")
+                .check(PRODUCTION_CLASSES);
+    }
+
+    @Test
     void jmcAdapterDoesNotDependOnUiLauncherOrJavaFx() {
         noClasses()
                 .that().resideInAPackage("..adapter.jmc..")

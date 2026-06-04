@@ -7,7 +7,7 @@ import com.youngledo.jmcfx.domain.model.RecordingSummary;
 import com.youngledo.jmcfx.domain.model.SocketIOEvent;
 import com.youngledo.jmcfx.domain.model.SocketIOGrouping;
 import com.youngledo.jmcfx.domain.model.SocketIOHistogram;
-import com.youngledo.jmcfx.domain.service.SocketIOService;
+import com.youngledo.jmcfx.application.LoadSocketIOUseCase;
 import com.youngledo.jmcfx.ui.util.FxDispatch;
 
 import javafx.beans.property.ObjectProperty;
@@ -20,7 +20,7 @@ import javafx.collections.ObservableList;
 /// Manages socket I/O histogram with configurable grouping, event log, and timeline chart.
 public class SocketIOViewModel {
 
-    private final SocketIOService socketIOService;
+    private final LoadSocketIOUseCase socketIOService;
     private final ObservableList<SocketIOHistogram> histogram = FXCollections.observableArrayList();
     private final ObservableList<SocketIOEvent> events = FXCollections.observableArrayList();
     private final ObjectProperty<SocketIOGrouping> grouping =
@@ -28,7 +28,7 @@ public class SocketIOViewModel {
     private final ObjectProperty<ChartDefinition> timeline = new SimpleObjectProperty<>();
     private RecordingSummary currentRecording;
 
-    public SocketIOViewModel(SocketIOService socketIOService) {
+    public SocketIOViewModel(LoadSocketIOUseCase socketIOService) {
         this.socketIOService = socketIOService;
     }
 

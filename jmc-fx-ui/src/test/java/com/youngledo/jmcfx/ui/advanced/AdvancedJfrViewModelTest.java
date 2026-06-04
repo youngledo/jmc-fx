@@ -7,6 +7,8 @@ import java.nio.file.Path;
 import java.time.Instant;
 import java.util.List;
 
+import com.youngledo.jmcfx.application.LoadAdvancedJfrUseCase;
+
 import com.youngledo.jmcfx.domain.model.EventHeatmap;
 import com.youngledo.jmcfx.domain.model.EventHeatmapCell;
 import com.youngledo.jmcfx.domain.model.EventHeatmapRow;
@@ -26,7 +28,7 @@ class AdvancedJfrViewModelTest {
         FakeAdvancedJfrAnalysisService service = new FakeAdvancedJfrAnalysisService();
         service.setHeatmap(sampleHeatmap());
 
-        AdvancedJfrViewModel viewModel = new AdvancedJfrViewModel(service);
+        AdvancedJfrViewModel viewModel = new AdvancedJfrViewModel(new LoadAdvancedJfrUseCase(service));
         viewModel.load(recording());
 
         assertEquals(1, viewModel.heatmapProperty().get().rows().size());
@@ -44,7 +46,7 @@ class AdvancedJfrViewModelTest {
         MemoryIssue second = memoryIssue(MemoryIssueSeverity.INFO, "byte[]", 2 * 1024 * 1024, 2, 24.0);
         service.setMemoryAnalysisReport(new MemoryAnalysisReport(10 * 1024 * 1024, 12, List.of(first, second)));
 
-        AdvancedJfrViewModel viewModel = new AdvancedJfrViewModel(service);
+        AdvancedJfrViewModel viewModel = new AdvancedJfrViewModel(new LoadAdvancedJfrUseCase(service));
         viewModel.load(recording());
 
         assertEquals(10 * 1024 * 1024, viewModel.memoryReportProperty().get().totalEstimatedBytes());
@@ -54,7 +56,7 @@ class AdvancedJfrViewModelTest {
 
     @Test
     void selectingCellUpdatesSelectionProperties() {
-        AdvancedJfrViewModel viewModel = new AdvancedJfrViewModel(new FakeAdvancedJfrAnalysisService());
+        AdvancedJfrViewModel viewModel = new AdvancedJfrViewModel(new LoadAdvancedJfrUseCase(new FakeAdvancedJfrAnalysisService()));
         EventHeatmapCell cell = new EventHeatmapCell("jdk.CPULoad", Instant.EPOCH,
                 Instant.EPOCH.plusSeconds(1), 4);
 
@@ -69,7 +71,7 @@ class AdvancedJfrViewModelTest {
     void loadClearsPreviousSelection() {
         FakeAdvancedJfrAnalysisService service = new FakeAdvancedJfrAnalysisService();
         service.setHeatmap(sampleHeatmap());
-        AdvancedJfrViewModel viewModel = new AdvancedJfrViewModel(service);
+        AdvancedJfrViewModel viewModel = new AdvancedJfrViewModel(new LoadAdvancedJfrUseCase(service));
         viewModel.selectCell(new EventHeatmapCell("jdk.CPULoad", Instant.EPOCH,
                 Instant.EPOCH.plusSeconds(1), 4));
 
@@ -82,7 +84,7 @@ class AdvancedJfrViewModelTest {
 
     @Test
     void selectingMemoryIssueStoresRawIssueOnly() {
-        AdvancedJfrViewModel viewModel = new AdvancedJfrViewModel(new FakeAdvancedJfrAnalysisService());
+        AdvancedJfrViewModel viewModel = new AdvancedJfrViewModel(new LoadAdvancedJfrUseCase(new FakeAdvancedJfrAnalysisService()));
         MemoryIssue issue = memoryIssue(MemoryIssueSeverity.WARNING, "java.lang.String",
                 10 * 1024 * 1024, 12, 87.5);
 
@@ -93,7 +95,7 @@ class AdvancedJfrViewModelTest {
 
     @Test
     void nullMemoryIssueSelectionClearsTitleAndDetails() {
-        AdvancedJfrViewModel viewModel = new AdvancedJfrViewModel(new FakeAdvancedJfrAnalysisService());
+        AdvancedJfrViewModel viewModel = new AdvancedJfrViewModel(new LoadAdvancedJfrUseCase(new FakeAdvancedJfrAnalysisService()));
         viewModel.selectMemoryIssue(memoryIssue(MemoryIssueSeverity.WARNING, "java.lang.String",
                 10 * 1024 * 1024, 12, 87.5));
 
@@ -107,7 +109,7 @@ class AdvancedJfrViewModelTest {
         FakeAdvancedJfrAnalysisService service = new FakeAdvancedJfrAnalysisService();
         service.setHeatmap(sampleHeatmap());
         service.setMemoryAnalysisReport(new MemoryAnalysisReport(0, 0, List.of()));
-        AdvancedJfrViewModel viewModel = new AdvancedJfrViewModel(service);
+        AdvancedJfrViewModel viewModel = new AdvancedJfrViewModel(new LoadAdvancedJfrUseCase(service));
         viewModel.selectMemoryIssue(memoryIssue(MemoryIssueSeverity.WARNING, "java.lang.String",
                 10 * 1024 * 1024, 12, 87.5));
 

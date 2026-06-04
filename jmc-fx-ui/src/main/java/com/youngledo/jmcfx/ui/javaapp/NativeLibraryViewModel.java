@@ -4,7 +4,7 @@ import java.util.List;
 
 import com.youngledo.jmcfx.domain.model.NativeLibraryEntry;
 import com.youngledo.jmcfx.domain.model.RecordingSummary;
-import com.youngledo.jmcfx.domain.service.JavaAppService;
+import com.youngledo.jmcfx.application.LoadJavaApplicationUseCase;
 import com.youngledo.jmcfx.ui.util.FxDispatch;
 
 import javafx.beans.property.ObjectProperty;
@@ -17,11 +17,11 @@ import javafx.collections.ObservableList;
 /// Manages native library table data from jdk.NativeLibrary events.
 public class NativeLibraryViewModel {
 
-    private final JavaAppService javaAppService;
+    private final LoadJavaApplicationUseCase javaAppService;
     private final ObservableList<NativeLibraryEntry> libraries = FXCollections.observableArrayList();
     private final ObjectProperty<NativeLibraryEntry> selectedLibrary = new SimpleObjectProperty<>();
 
-    public NativeLibraryViewModel(JavaAppService javaAppService) {
+    public NativeLibraryViewModel(LoadJavaApplicationUseCase javaAppService) {
         this.javaAppService = javaAppService;
     }
 

@@ -5,7 +5,7 @@ import java.util.List;
 import com.youngledo.jmcfx.domain.model.RecordingSummary;
 import com.youngledo.jmcfx.domain.model.VmOperationEvent;
 import com.youngledo.jmcfx.domain.model.VmOperationSummary;
-import com.youngledo.jmcfx.domain.service.JvmInternalsService;
+import com.youngledo.jmcfx.application.LoadJvmInternalsUseCase;
 import com.youngledo.jmcfx.ui.util.FxDispatch;
 
 import javafx.collections.FXCollections;
@@ -16,11 +16,11 @@ import javafx.collections.ObservableList;
 /// Loads VM operation summary and event data from a recording.
 public class VmOperationsViewModel {
 
-    private final JvmInternalsService service;
+    private final LoadJvmInternalsUseCase service;
     private final ObservableList<VmOperationSummary> summary = FXCollections.observableArrayList();
     private final ObservableList<VmOperationEvent> events = FXCollections.observableArrayList();
 
-    public VmOperationsViewModel(JvmInternalsService service) {
+    public VmOperationsViewModel(LoadJvmInternalsUseCase service) {
         this.service = service;
     }
 

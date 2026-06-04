@@ -8,7 +8,7 @@ import com.youngledo.jmcfx.domain.model.G1GcRegionSummary;
 import com.youngledo.jmcfx.domain.model.G1GcReport;
 import com.youngledo.jmcfx.domain.model.GcEvent;
 import com.youngledo.jmcfx.domain.model.RecordingSummary;
-import com.youngledo.jmcfx.domain.service.G1GcService;
+import com.youngledo.jmcfx.application.LoadG1GcUseCase;
 import com.youngledo.jmcfx.ui.util.DisplayFormats;
 import com.youngledo.jmcfx.ui.util.FxDispatch;
 
@@ -23,7 +23,7 @@ import javafx.collections.ObservableList;
 
 public class G1GcViewModel {
 
-    private final G1GcService service;
+    private final LoadG1GcUseCase service;
     private final ObservableList<G1GcRegionSummary> regionSummaries = FXCollections.observableArrayList();
     private final ObservableList<G1GcRegionState> recentRegionStates = FXCollections.observableArrayList();
     private final ObservableList<GcEvent> gcPauses = FXCollections.observableArrayList();
@@ -34,7 +34,7 @@ public class G1GcViewModel {
     private final BooleanProperty loading = new SimpleBooleanProperty(false);
     private final BooleanProperty error = new SimpleBooleanProperty(false);
 
-    public G1GcViewModel(G1GcService service) {
+    public G1GcViewModel(LoadG1GcUseCase service) {
         this.service = service;
         selectedRegionState.addListener((observable, oldValue, newValue) -> selectedDetail.set(detailText(newValue)));
     }

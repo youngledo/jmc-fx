@@ -3242,8 +3242,8 @@ void jvmBrowserSupportsDoubleClickConnectAndNoBottomStatus() throws Exception {
 
         assertTrue(recordingServices.contains("AdvancedJfrAnalysisService advancedJfrAnalysisService"),
                 "Recording service bundle should carry the advanced JFR analysis port");
-        assertTrue(workspaceFactory.contains("new AdvancedJfrViewModel(services.advancedJfrAnalysisService())"),
-                "Recording workspace factory should create the advanced JFR workspace view model when the port is available");
+        assertTrue(workspaceFactory.contains("new AdvancedJfrViewModel(useCases.advancedJfr())"),
+                "Recording workspace factory should create the advanced JFR workspace view model from application use cases");
         assertTrue(assembly.contains("new JmcAdvancedJfrAnalysisService()"),
                 "Application assembly should use the JMC-backed advanced JFR analysis adapter");
     }

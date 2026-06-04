@@ -7,6 +7,8 @@ import java.time.Instant;
 
 import org.junit.jupiter.api.Test;
 
+import com.youngledo.jmcfx.application.LoadJavaApplicationUseCase;
+
 import com.youngledo.jmcfx.domain.model.RecordingSummary;
 import com.youngledo.jmcfx.domain.model.X509CertificateEntry;
 import com.youngledo.jmcfx.testsupport.FakeJavaAppService;
@@ -19,7 +21,7 @@ class SecurityViewModelTest {
         service.addCertificate(new X509CertificateEntry(Instant.now(), "cert-1", "SHA256withRSA",
                 "CN=test", "CN=ca", "ABC123", null, null, 2048));
 
-        SecurityViewModel vm = new SecurityViewModel(service);
+        SecurityViewModel vm = new SecurityViewModel(new LoadJavaApplicationUseCase(service));
         vm.load(testRecording());
 
         assertEquals(1, vm.certificatesProperty().size());
@@ -32,7 +34,7 @@ class SecurityViewModelTest {
         service.addCertificate(new X509CertificateEntry(Instant.now(), "cert-1", "SHA256withRSA",
                 "CN=test", "CN=ca", "ABC123", null, null, 2048));
 
-        SecurityViewModel vm = new SecurityViewModel(service);
+        SecurityViewModel vm = new SecurityViewModel(new LoadJavaApplicationUseCase(service));
         vm.load(testRecording());
         vm.selectedCertificateProperty().set(vm.certificatesProperty().getFirst());
 
@@ -43,7 +45,7 @@ class SecurityViewModelTest {
     @Test
     void startsWithEmptyDefaults() {
         FakeJavaAppService service = new FakeJavaAppService();
-        SecurityViewModel vm = new SecurityViewModel(service);
+        SecurityViewModel vm = new SecurityViewModel(new LoadJavaApplicationUseCase(service));
 
         assertEquals(0, vm.certificatesProperty().size());
         assertNull(vm.selectedCertificateProperty().get());

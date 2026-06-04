@@ -6,7 +6,7 @@ import com.youngledo.jmcfx.domain.model.ChartDefinition;
 import com.youngledo.jmcfx.domain.model.ExceptionGrouping;
 import com.youngledo.jmcfx.domain.model.ExceptionSummary;
 import com.youngledo.jmcfx.domain.model.RecordingSummary;
-import com.youngledo.jmcfx.domain.service.ExceptionService;
+import com.youngledo.jmcfx.application.LoadExceptionsUseCase;
 import com.youngledo.jmcfx.ui.util.FxDispatch;
 
 import javafx.beans.property.ObjectProperty;
@@ -19,13 +19,13 @@ import javafx.collections.ObservableList;
 /// Manages exception histogram with configurable grouping and timeline chart.
 public class ExceptionViewModel {
 
-    private final ExceptionService exceptionService;
+    private final LoadExceptionsUseCase exceptionService;
     private final ObservableList<ExceptionSummary> histogram = FXCollections.observableArrayList();
     private final ObjectProperty<ExceptionGrouping> grouping = new SimpleObjectProperty<>(ExceptionGrouping.BY_CLASS);
     private final ObjectProperty<ChartDefinition> timeline = new SimpleObjectProperty<>();
     private RecordingSummary currentRecording;
 
-    public ExceptionViewModel(ExceptionService exceptionService) {
+    public ExceptionViewModel(LoadExceptionsUseCase exceptionService) {
         this.exceptionService = exceptionService;
     }
 

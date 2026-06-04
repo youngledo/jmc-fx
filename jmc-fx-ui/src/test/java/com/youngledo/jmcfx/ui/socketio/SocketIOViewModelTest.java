@@ -3,6 +3,8 @@ package com.youngledo.jmcfx.ui.socketio;
 import java.nio.file.Path;
 import java.time.Instant;
 
+import com.youngledo.jmcfx.application.LoadSocketIOUseCase;
+
 import com.youngledo.jmcfx.domain.model.RecordingSummary;
 import com.youngledo.jmcfx.domain.model.SocketIOGrouping;
 import com.youngledo.jmcfx.domain.model.SocketIOHistogram;
@@ -20,7 +22,7 @@ class SocketIOViewModelTest {
         service.addHistogramRow(new SocketIOHistogram("10.0.0.1:8080",
                 "10.0.0.1", 8080, 50, 30, 102400, 51200, 300, 25, 3.75));
 
-        SocketIOViewModel vm = new SocketIOViewModel(service);
+        SocketIOViewModel vm = new SocketIOViewModel(new LoadSocketIOUseCase(service));
         vm.load(testRecording());
 
         assertEquals(1, vm.histogramProperty().size());
@@ -33,7 +35,7 @@ class SocketIOViewModelTest {
         service.addHistogramRow(new SocketIOHistogram("10.0.0.1:8080",
                 "10.0.0.1", 8080, 50, 30, 102400, 51200, 300, 25, 3.75));
 
-        SocketIOViewModel vm = new SocketIOViewModel(service);
+        SocketIOViewModel vm = new SocketIOViewModel(new LoadSocketIOUseCase(service));
         vm.load(testRecording());
 
         assertEquals(SocketIOGrouping.BY_HOST_AND_PORT, vm.groupingProperty().get());

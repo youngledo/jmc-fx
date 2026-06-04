@@ -4,7 +4,7 @@ import java.util.List;
 
 import com.youngledo.jmcfx.domain.model.RecordingSummary;
 import com.youngledo.jmcfx.domain.model.ThreadDumpEntry;
-import com.youngledo.jmcfx.domain.service.JavaAppService;
+import com.youngledo.jmcfx.application.LoadJavaApplicationUseCase;
 import com.youngledo.jmcfx.ui.util.FxDispatch;
 
 import javafx.beans.property.ObjectProperty;
@@ -20,12 +20,12 @@ import javafx.collections.ObservableList;
 /// When a dump is selected, its full text is shown in a detail pane.
 public class ThreadDumpViewModel {
 
-    private final JavaAppService javaAppService;
+    private final LoadJavaApplicationUseCase javaAppService;
     private final ObservableList<ThreadDumpEntry> dumps = FXCollections.observableArrayList();
     private final ObjectProperty<ThreadDumpEntry> selectedDump = new SimpleObjectProperty<>();
     private final StringProperty dumpText = new SimpleStringProperty("");
 
-    public ThreadDumpViewModel(JavaAppService javaAppService) {
+    public ThreadDumpViewModel(LoadJavaApplicationUseCase javaAppService) {
         this.javaAppService = javaAppService;
         selectedDump.addListener((obs, oldVal, newVal) -> {
             dumpText.set(newVal != null ? newVal.dumpText() : "");

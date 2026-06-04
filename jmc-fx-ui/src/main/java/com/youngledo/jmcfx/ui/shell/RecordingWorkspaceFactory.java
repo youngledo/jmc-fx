@@ -3,7 +3,6 @@ package com.youngledo.jmcfx.ui.shell;
 import java.nio.file.Path;
 import java.util.Objects;
 
-import com.youngledo.jmcfx.application.RecordingApplicationServices;
 import com.youngledo.jmcfx.application.RecordingPageUseCases;
 import com.youngledo.jmcfx.application.RecordingWorkspacePlan;
 import com.youngledo.jmcfx.ui.advanced.AdvancedJfrViewModel;
@@ -50,57 +49,56 @@ final class RecordingWorkspaceFactory {
 
     PreparedRecordingWorkspace prepare(Path path) {
         RecordingWorkspacePlan plan = useCases.openRecordingWorkspace().open(path);
-        RecordingApplicationServices services = useCases.pageQueries();
         OverviewViewModel overview = new OverviewViewModel();
         EventBrowserViewModel events = new EventBrowserViewModel(useCases.browseEvents(),
                 new VirtualThreadEventBrowserExecutor(), i18n);
         RuleResultsViewModel analysis = new RuleResultsViewModel(useCases.analyzeRules());
         ProfilingViewModel profiling = plan.hasProfiling()
-                ? new ProfilingViewModel(services.profilingService()) : null;
+                ? new ProfilingViewModel(useCases.profiling()) : null;
         ExceptionViewModel exceptions = plan.hasExceptions()
-                ? new ExceptionViewModel(services.exceptionService()) : null;
-        ThreadViewModel threads = plan.hasThreads() ? new ThreadViewModel(services.threadService()) : null;
-        FileIOViewModel fileio = plan.hasFileIO() ? new FileIOViewModel(services.fileIOService()) : null;
+                ? new ExceptionViewModel(useCases.exceptions()) : null;
+        ThreadViewModel threads = plan.hasThreads() ? new ThreadViewModel(useCases.threads()) : null;
+        FileIOViewModel fileio = plan.hasFileIO() ? new FileIOViewModel(useCases.fileIO()) : null;
         SocketIOViewModel socketio = plan.hasSocketIO()
-                ? new SocketIOViewModel(services.socketIOService()) : null;
-        LockViewModel locks = plan.hasLocks() ? new LockViewModel(services.lockService()) : null;
-        HeapViewModel heap = plan.hasHeap() ? new HeapViewModel(services.heapService()) : null;
+                ? new SocketIOViewModel(useCases.socketIO()) : null;
+        LockViewModel locks = plan.hasLocks() ? new LockViewModel(useCases.locks()) : null;
+        HeapViewModel heap = plan.hasHeap() ? new HeapViewModel(useCases.heap()) : null;
         LeakSuspectsViewModel leakSuspects = plan.hasLeakSuspects()
-                ? new LeakSuspectsViewModel(services.leakSuspectsService()) : null;
-        TlabViewModel tlab = plan.hasTlab() ? new TlabViewModel(services.tlabService()) : null;
+                ? new LeakSuspectsViewModel(useCases.leakSuspects()) : null;
+        TlabViewModel tlab = plan.hasTlab() ? new TlabViewModel(useCases.tlab()) : null;
         JvmInfoViewModel jvmInfo = plan.hasJvmInternals()
-                ? new JvmInfoViewModel(services.jvmInternalsService()) : null;
+                ? new JvmInfoViewModel(useCases.jvmInternals()) : null;
         GcConfigViewModel gcConfig = plan.hasJvmInternals()
-                ? new GcConfigViewModel(services.jvmInternalsService()) : null;
+                ? new GcConfigViewModel(useCases.jvmInternals()) : null;
         GcSummaryViewModel gcSummary = plan.hasJvmInternals()
-                ? new GcSummaryViewModel(services.jvmInternalsService()) : null;
+                ? new GcSummaryViewModel(useCases.jvmInternals()) : null;
         GcDetailsViewModel gcDetails = plan.hasJvmInternals()
-                ? new GcDetailsViewModel(services.jvmInternalsService()) : null;
-        G1GcViewModel g1Gc = plan.hasG1Gc() ? new G1GcViewModel(services.g1GcService()) : null;
+                ? new GcDetailsViewModel(useCases.jvmInternals()) : null;
+        G1GcViewModel g1Gc = plan.hasG1Gc() ? new G1GcViewModel(useCases.g1Gc()) : null;
         JavaFxEventsViewModel javaFxEvents = plan.hasJavaFxEvents()
-                ? new JavaFxEventsViewModel(services.javaFxEventService()) : null;
+                ? new JavaFxEventsViewModel(useCases.javaFxEvents()) : null;
         CompilationsViewModel compilationsVm = plan.hasJvmInternals()
-                ? new CompilationsViewModel(services.jvmInternalsService()) : null;
+                ? new CompilationsViewModel(useCases.jvmInternals()) : null;
         CodeCacheViewModel codeCache = plan.hasJvmInternals()
-                ? new CodeCacheViewModel(services.jvmInternalsService()) : null;
+                ? new CodeCacheViewModel(useCases.jvmInternals()) : null;
         ClassLoadingViewModel classLoading = plan.hasJvmInternals()
-                ? new ClassLoadingViewModel(services.jvmInternalsService()) : null;
+                ? new ClassLoadingViewModel(useCases.jvmInternals()) : null;
         VmOperationsViewModel vmOperations = plan.hasJvmInternals()
-                ? new VmOperationsViewModel(services.jvmInternalsService()) : null;
+                ? new VmOperationsViewModel(useCases.jvmInternals()) : null;
         EnvironmentViewModel environment = plan.hasEnvironment()
-                ? new EnvironmentViewModel(services.environmentService()) : null;
+                ? new EnvironmentViewModel(useCases.environment()) : null;
         JavaAppOverviewViewModel javaAppOverview = plan.hasJavaApplication()
-                ? new JavaAppOverviewViewModel(services.javaAppService()) : null;
+                ? new JavaAppOverviewViewModel(useCases.javaApplication()) : null;
         SecurityViewModel security = plan.hasJavaApplication()
-                ? new SecurityViewModel(services.javaAppService()) : null;
+                ? new SecurityViewModel(useCases.javaApplication()) : null;
         NativeLibraryViewModel nativeLibraries = plan.hasJavaApplication()
-                ? new NativeLibraryViewModel(services.javaAppService()) : null;
+                ? new NativeLibraryViewModel(useCases.javaApplication()) : null;
         ThreadDumpViewModel threadDumps = plan.hasJavaApplication()
-                ? new ThreadDumpViewModel(services.javaAppService()) : null;
+                ? new ThreadDumpViewModel(useCases.javaApplication()) : null;
         JfrMetadataViewModel metadata = plan.hasMetadata()
-                ? new JfrMetadataViewModel(services.jfrMetadataService()) : null;
+                ? new JfrMetadataViewModel(useCases.jfrMetadata()) : null;
         AdvancedJfrViewModel advancedJfr = plan.hasAdvancedJfrAnalysis()
-                ? new AdvancedJfrViewModel(services.advancedJfrAnalysisService()) : null;
+                ? new AdvancedJfrViewModel(useCases.advancedJfr()) : null;
         return new PreparedRecordingWorkspace(plan.recording(), overview, events, analysis, profiling, exceptions, threads,
                 fileio, socketio, locks, heap, leakSuspects, tlab, jvmInfo, gcConfig, gcSummary, gcDetails,
                 compilationsVm, codeCache, classLoading, vmOperations, environment, javaAppOverview, security,

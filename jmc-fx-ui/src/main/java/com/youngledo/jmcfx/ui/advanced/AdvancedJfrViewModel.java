@@ -5,7 +5,7 @@ import com.youngledo.jmcfx.domain.model.EventHeatmapCell;
 import com.youngledo.jmcfx.domain.model.MemoryAnalysisReport;
 import com.youngledo.jmcfx.domain.model.MemoryIssue;
 import com.youngledo.jmcfx.domain.model.RecordingSummary;
-import com.youngledo.jmcfx.domain.service.AdvancedJfrAnalysisService;
+import com.youngledo.jmcfx.application.LoadAdvancedJfrUseCase;
 import com.youngledo.jmcfx.ui.util.DisplayFormats;
 import com.youngledo.jmcfx.ui.util.FxDispatch;
 
@@ -22,7 +22,7 @@ public class AdvancedJfrViewModel {
     public static final int DEFAULT_MAX_EVENT_TYPES = 12;
     public static final int DEFAULT_MAX_MEMORY_ISSUES = 12;
 
-    private final AdvancedJfrAnalysisService service;
+    private final LoadAdvancedJfrUseCase service;
     private final ObjectProperty<EventHeatmap> heatmap = new SimpleObjectProperty<>();
     private final ObjectProperty<EventHeatmapCell> selectedCell = new SimpleObjectProperty<>();
     private final ObjectProperty<MemoryAnalysisReport> memoryReport = new SimpleObjectProperty<>();
@@ -32,7 +32,7 @@ public class AdvancedJfrViewModel {
     private final StringProperty selectedEventType = new SimpleStringProperty("");
     private final StringProperty selectedCount = new SimpleStringProperty("");
 
-    public AdvancedJfrViewModel(AdvancedJfrAnalysisService service) {
+    public AdvancedJfrViewModel(LoadAdvancedJfrUseCase service) {
         this.service = service;
     }
 

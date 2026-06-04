@@ -6,7 +6,7 @@ import com.youngledo.jmcfx.domain.model.ChartDefinition;
 import com.youngledo.jmcfx.domain.model.FileIOEvent;
 import com.youngledo.jmcfx.domain.model.FileIOHistogram;
 import com.youngledo.jmcfx.domain.model.RecordingSummary;
-import com.youngledo.jmcfx.domain.service.FileIOService;
+import com.youngledo.jmcfx.application.LoadFileIOUseCase;
 import com.youngledo.jmcfx.ui.util.FxDispatch;
 
 import javafx.beans.property.ObjectProperty;
@@ -19,13 +19,13 @@ import javafx.collections.ObservableList;
 /// Manages file I/O histogram, event log, and timeline chart.
 public class FileIOViewModel {
 
-    private final FileIOService fileIOService;
+    private final LoadFileIOUseCase fileIOService;
     private final ObservableList<FileIOHistogram> histogram = FXCollections.observableArrayList();
     private final ObservableList<FileIOEvent> events = FXCollections.observableArrayList();
     private final ObjectProperty<ChartDefinition> timeline = new SimpleObjectProperty<>();
     private RecordingSummary currentRecording;
 
-    public FileIOViewModel(FileIOService fileIOService) {
+    public FileIOViewModel(LoadFileIOUseCase fileIOService) {
         this.fileIOService = fileIOService;
     }
 

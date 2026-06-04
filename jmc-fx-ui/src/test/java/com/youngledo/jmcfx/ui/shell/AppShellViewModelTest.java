@@ -16,6 +16,8 @@ import org.junit.jupiter.api.Test;
 
 import com.youngledo.jmcfx.application.AnalyzeRulesUseCase;
 import com.youngledo.jmcfx.application.BrowseEventsUseCase;
+import com.youngledo.jmcfx.application.LoadG1GcUseCase;
+import com.youngledo.jmcfx.application.LoadJavaFxEventsUseCase;
 import com.youngledo.jmcfx.domain.model.RecordingSummary;
 import com.youngledo.jmcfx.domain.service.EventQueryService;
 import com.youngledo.jmcfx.domain.service.EventQuerySession;
@@ -542,7 +544,7 @@ class AppShellViewModelTest {
     @Test
     void recordingWorkspaceCarriesG1GcViewModelAndSection() {
         AppShellViewModel viewModel = new AppShellViewModel();
-        G1GcViewModel g1Gc = new G1GcViewModel(new FakeG1GcService());
+        G1GcViewModel g1Gc = new G1GcViewModel(new LoadG1GcUseCase(new FakeG1GcService()));
 
         RecordingWorkspace workspace = viewModel.openRecording(recording(), new OverviewViewModel(),
                 eventBrowserViewModel(), ruleResultsViewModel(),
@@ -562,7 +564,8 @@ class AppShellViewModelTest {
     @Test
     void recordingWorkspaceCarriesJavaFxEventsViewModelAndSection() {
         AppShellViewModel viewModel = new AppShellViewModel();
-        JavaFxEventsViewModel javaFxEvents = new JavaFxEventsViewModel(new FakeJavaFxEventService());
+        JavaFxEventsViewModel javaFxEvents =
+                new JavaFxEventsViewModel(new LoadJavaFxEventsUseCase(new FakeJavaFxEventService()));
 
         RecordingWorkspace workspace = viewModel.openRecording(recording(), new OverviewViewModel(),
                 eventBrowserViewModel(), ruleResultsViewModel(),

@@ -7,6 +7,8 @@ import java.time.Instant;
 
 import org.junit.jupiter.api.Test;
 
+import com.youngledo.jmcfx.application.LoadJavaApplicationUseCase;
+
 import com.youngledo.jmcfx.domain.model.NativeLibraryEntry;
 import com.youngledo.jmcfx.domain.model.RecordingSummary;
 import com.youngledo.jmcfx.testsupport.FakeJavaAppService;
@@ -19,7 +21,7 @@ class NativeLibraryViewModelTest {
         service.addNativeLibrary(new NativeLibraryEntry(Instant.now(), "libjvm.so",
                 "/usr/lib/jvm/", "/usr/lib/jvm/lib/libjvm.so"));
 
-        NativeLibraryViewModel vm = new NativeLibraryViewModel(service);
+        NativeLibraryViewModel vm = new NativeLibraryViewModel(new LoadJavaApplicationUseCase(service));
         vm.load(testRecording());
 
         assertEquals(1, vm.librariesProperty().size());
@@ -31,7 +33,7 @@ class NativeLibraryViewModelTest {
         FakeJavaAppService service = new FakeJavaAppService();
         service.addNativeLibrary(new NativeLibraryEntry(Instant.now(), "libjvm.so", "", ""));
 
-        NativeLibraryViewModel vm = new NativeLibraryViewModel(service);
+        NativeLibraryViewModel vm = new NativeLibraryViewModel(new LoadJavaApplicationUseCase(service));
         vm.load(testRecording());
         vm.selectedLibraryProperty().set(vm.librariesProperty().getFirst());
 
@@ -42,7 +44,7 @@ class NativeLibraryViewModelTest {
     @Test
     void startsWithEmptyDefaults() {
         FakeJavaAppService service = new FakeJavaAppService();
-        NativeLibraryViewModel vm = new NativeLibraryViewModel(service);
+        NativeLibraryViewModel vm = new NativeLibraryViewModel(new LoadJavaApplicationUseCase(service));
 
         assertEquals(0, vm.librariesProperty().size());
         assertNull(vm.selectedLibraryProperty().get());

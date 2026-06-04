@@ -5,7 +5,7 @@ import java.util.List;
 import com.youngledo.jmcfx.domain.model.ChartDefinition;
 import com.youngledo.jmcfx.domain.model.HeapClassHistogram;
 import com.youngledo.jmcfx.domain.model.RecordingSummary;
-import com.youngledo.jmcfx.domain.service.HeapService;
+import com.youngledo.jmcfx.application.LoadHeapUseCase;
 import com.youngledo.jmcfx.ui.util.FxDispatch;
 
 import javafx.beans.property.ObjectProperty;
@@ -15,12 +15,12 @@ import javafx.collections.ObservableList;
 
 public class HeapViewModel {
 
-    private final HeapService heapService;
+    private final LoadHeapUseCase heapService;
     private final ObservableList<HeapClassHistogram> histogram = FXCollections.observableArrayList();
     private final ObjectProperty<ChartDefinition> timeline = new SimpleObjectProperty<>();
     private final ObjectProperty<HeapClassHistogram> selectedRow = new SimpleObjectProperty<>();
 
-    public HeapViewModel(HeapService heapService) {
+    public HeapViewModel(LoadHeapUseCase heapService) {
         this.heapService = heapService;
     }
 

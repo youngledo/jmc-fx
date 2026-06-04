@@ -8,7 +8,7 @@ import com.youngledo.jmcfx.domain.model.JvmInfo;
 import com.youngledo.jmcfx.domain.model.KeyValueEntry;
 import com.youngledo.jmcfx.domain.model.KeyValueSection;
 import com.youngledo.jmcfx.domain.model.RecordingSummary;
-import com.youngledo.jmcfx.domain.service.JvmInternalsService;
+import com.youngledo.jmcfx.application.LoadJvmInternalsUseCase;
 import com.youngledo.jmcfx.ui.util.DisplayFormats;
 import com.youngledo.jmcfx.ui.util.FxDispatch;
 
@@ -20,12 +20,12 @@ import javafx.collections.ObservableList;
 /// Loads JVM info, flags, and flag changes from a recording.
 public class JvmInfoViewModel {
 
-    private final JvmInternalsService service;
+    private final LoadJvmInternalsUseCase service;
     private final ObservableList<KeyValueSection> infoSections = FXCollections.observableArrayList();
     private final ObservableList<JvmFlag> flags = FXCollections.observableArrayList();
     private final ObservableList<JvmFlagChange> flagChanges = FXCollections.observableArrayList();
 
-    public JvmInfoViewModel(JvmInternalsService service) {
+    public JvmInfoViewModel(LoadJvmInternalsUseCase service) {
         this.service = service;
     }
 

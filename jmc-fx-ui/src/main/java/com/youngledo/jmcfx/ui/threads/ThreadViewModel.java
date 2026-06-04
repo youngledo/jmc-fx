@@ -4,7 +4,7 @@ import java.util.List;
 
 import com.youngledo.jmcfx.domain.model.RecordingSummary;
 import com.youngledo.jmcfx.domain.model.ThreadSummary;
-import com.youngledo.jmcfx.domain.service.ThreadService;
+import com.youngledo.jmcfx.application.LoadThreadsUseCase;
 import com.youngledo.jmcfx.ui.util.FxDispatch;
 
 import javafx.beans.property.ObjectProperty;
@@ -17,11 +17,11 @@ import javafx.collections.ObservableList;
 /// Manages thread summary list and selected thread state for a recording.
 public class ThreadViewModel {
 
-    private final ThreadService threadService;
+    private final LoadThreadsUseCase threadService;
     private final ObservableList<ThreadSummary> threadSummaries = FXCollections.observableArrayList();
     private final ObjectProperty<ThreadSummary> selectedThread = new SimpleObjectProperty<>();
 
-    public ThreadViewModel(ThreadService threadService) {
+    public ThreadViewModel(LoadThreadsUseCase threadService) {
         this.threadService = threadService;
     }
 

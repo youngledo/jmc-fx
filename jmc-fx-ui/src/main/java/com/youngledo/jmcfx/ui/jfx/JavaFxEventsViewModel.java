@@ -8,7 +8,7 @@ import com.youngledo.jmcfx.domain.model.JavaFxInputEvent;
 import com.youngledo.jmcfx.domain.model.JavaFxPulsePhase;
 import com.youngledo.jmcfx.domain.model.JavaFxPulseSummary;
 import com.youngledo.jmcfx.domain.model.RecordingSummary;
-import com.youngledo.jmcfx.domain.service.JavaFxEventService;
+import com.youngledo.jmcfx.application.LoadJavaFxEventsUseCase;
 import com.youngledo.jmcfx.ui.util.DisplayFormats;
 import com.youngledo.jmcfx.ui.util.FxDispatch;
 
@@ -23,7 +23,7 @@ import javafx.collections.ObservableList;
 
 public class JavaFxEventsViewModel {
 
-    private final JavaFxEventService service;
+    private final LoadJavaFxEventsUseCase service;
     private final ObservableList<JavaFxPulseSummary> pulseSummaries = FXCollections.observableArrayList();
     private final ObservableList<JavaFxPulsePhase> pulsePhases = FXCollections.observableArrayList();
     private final ObservableList<JavaFxInputEvent> inputEvents = FXCollections.observableArrayList();
@@ -34,7 +34,7 @@ public class JavaFxEventsViewModel {
     private final BooleanProperty loading = new SimpleBooleanProperty(false);
     private final BooleanProperty error = new SimpleBooleanProperty(false);
 
-    public JavaFxEventsViewModel(JavaFxEventService service) {
+    public JavaFxEventsViewModel(LoadJavaFxEventsUseCase service) {
         this.service = service;
         selectedPulsePhase.addListener((observable, oldValue, newValue) -> selectedDetail.set(detailText(newValue)));
     }

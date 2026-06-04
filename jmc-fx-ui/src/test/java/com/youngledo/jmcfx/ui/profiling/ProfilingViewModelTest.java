@@ -8,6 +8,8 @@ import java.util.concurrent.TimeUnit;
 import java.util.concurrent.atomic.AtomicInteger;
 import java.util.concurrent.atomic.AtomicReference;
 
+import com.youngledo.jmcfx.application.LoadProfilingUseCase;
+
 import com.youngledo.jmcfx.domain.model.HotMethod;
 import com.youngledo.jmcfx.domain.model.DependencyGraphEdge;
 import com.youngledo.jmcfx.domain.model.DependencyGraphReport;
@@ -33,7 +35,7 @@ class ProfilingViewModelTest {
         service.setDependencyReport(new DependencyGraphReport(
                 List.of(new DependencyGraphEdge("com.foo", "com.bar", 7, 70.0)), 10, 2));
 
-        ProfilingViewModel vm = new ProfilingViewModel(service);
+        ProfilingViewModel vm = new ProfilingViewModel(new LoadProfilingUseCase(service));
         vm.load(testRecording());
 
         assertEquals(2, vm.hotMethodsProperty().size());
@@ -50,7 +52,7 @@ class ProfilingViewModelTest {
                 new DependencyGraphEdge("com.ui", "com.service", 8, 80.0),
                 new DependencyGraphEdge("com.service", "com.repo", 2, 20.0)), 10, 2));
 
-        ProfilingViewModel vm = new ProfilingViewModel(service);
+        ProfilingViewModel vm = new ProfilingViewModel(new LoadProfilingUseCase(service));
         vm.load(testRecording());
 
         assertEquals(List.of("com.ui", "com.service", "com.repo"), labels(vm.dependencyGraphProperty().get()));
@@ -65,7 +67,7 @@ class ProfilingViewModelTest {
         service.setDependencyReport(new DependencyGraphReport(
                 List.of(new DependencyGraphEdge("com.example", "org.example", 4, 100.0)), 4, 2));
 
-        ProfilingViewModel vm = new ProfilingViewModel(service);
+        ProfilingViewModel vm = new ProfilingViewModel(new LoadProfilingUseCase(service));
         vm.load(testRecording());
 
         service.setDependencyReport(new DependencyGraphReport(
@@ -83,7 +85,7 @@ class ProfilingViewModelTest {
         service.setDependencyReport(new DependencyGraphReport(
                 List.of(new DependencyGraphEdge("a", "b", 1, 100.0)), 1, 1));
 
-        ProfilingViewModel vm = new ProfilingViewModel(service);
+        ProfilingViewModel vm = new ProfilingViewModel(new LoadProfilingUseCase(service));
         vm.load(testRecording());
         vm.selectedDependencyEdgeProperty().set(vm.dependencyEdgesProperty().getFirst());
 
@@ -100,7 +102,7 @@ class ProfilingViewModelTest {
         FakeProfilingService service = new FakeProfilingService();
         service.addHotMethod(new HotMethod("com.Foo.bar()", "JIT_COMPILED", 50, 50.0));
 
-        ProfilingViewModel vm = new ProfilingViewModel(service);
+        ProfilingViewModel vm = new ProfilingViewModel(new LoadProfilingUseCase(service));
         vm.load(testRecording());
         vm.selectMethod("com.Foo.bar()");
 
@@ -118,7 +120,7 @@ class ProfilingViewModelTest {
         service.setFlameGraphTree(node("root", 100, node("thread-root", 60)));
         service.setInvertedFlameGraphTree(node("root", 100, node("top-frame", 70)));
 
-        ProfilingViewModel vm = new ProfilingViewModel(service);
+        ProfilingViewModel vm = new ProfilingViewModel(new LoadProfilingUseCase(service));
         vm.load(testRecording());
 
         assertEquals(FlameGraphModel.empty(), vm.callersFlameGraphProperty().get());
@@ -135,7 +137,7 @@ class ProfilingViewModelTest {
         service.setCallersTree(node("root", 100, node("caller", 30)));
         service.setCalleesTree(node("root", 100, node("callee", 40)));
 
-        ProfilingViewModel vm = new ProfilingViewModel(service);
+        ProfilingViewModel vm = new ProfilingViewModel(new LoadProfilingUseCase(service));
         vm.load(testRecording());
         vm.selectMethod("com.Foo.bar()");
 
@@ -153,7 +155,7 @@ class ProfilingViewModelTest {
         service.setMethodFlameGraphTree("com.Foo.bar()", node("root", 1071, node("method-root", 1071)));
         service.setMethodInvertedFlameGraphTree("com.Foo.bar()", node("root", 1071, node("method-top", 1071)));
 
-        ProfilingViewModel vm = new ProfilingViewModel(service);
+        ProfilingViewModel vm = new ProfilingViewModel(new LoadProfilingUseCase(service));
         vm.load(testRecording());
         vm.selectMethod("com.Foo.bar()");
 
@@ -166,7 +168,7 @@ class ProfilingViewModelTest {
         service.addHotMethod(new HotMethod("com.Foo.bar()", "JIT_COMPILED", 50, 50.0));
         service.setCalleesTree(node("root", 100, node("callee", 70)));
 
-        ProfilingViewModel vm = new ProfilingViewModel(service);
+        ProfilingViewModel vm = new ProfilingViewModel(new LoadProfilingUseCase(service));
         vm.load(testRecording());
         vm.selectMethod("com.Foo.bar()");
 
@@ -184,7 +186,7 @@ class ProfilingViewModelTest {
         service.setCallersTree(node("root", 100, node("caller", 60)));
         service.setCalleesTree(node("root", 100, node("callee", 70)));
 
-        ProfilingViewModel vm = new ProfilingViewModel(service);
+        ProfilingViewModel vm = new ProfilingViewModel(new LoadProfilingUseCase(service));
         vm.load(testRecording());
         vm.selectMethod("com.Foo.bar()");
 
@@ -203,7 +205,7 @@ class ProfilingViewModelTest {
         service.addHotMethod(new HotMethod("com.Foo.bar()", "JIT_COMPILED", 50, 50.0));
         service.setCalleesTree(node("root", 100, node("callee", 70, node("deep callee", 40))));
 
-        ProfilingViewModel vm = new ProfilingViewModel(service);
+        ProfilingViewModel vm = new ProfilingViewModel(new LoadProfilingUseCase(service));
         vm.load(testRecording());
         vm.selectMethod("com.Foo.bar()");
 
@@ -221,7 +223,7 @@ class ProfilingViewModelTest {
         service.addHotMethod(new HotMethod("com.Foo.bar()", "JIT_COMPILED", 50, 50.0));
         service.setCalleesTree(node("root", 100, node("callee", 70)));
 
-        ProfilingViewModel vm = new ProfilingViewModel(service);
+        ProfilingViewModel vm = new ProfilingViewModel(new LoadProfilingUseCase(service));
         vm.load(testRecording());
         vm.selectMethod("com.Foo.bar()");
 
@@ -239,7 +241,7 @@ class ProfilingViewModelTest {
         service.setCallersTree(node("root", 100, node("caller", 60)));
         service.setCalleesTree(node("root", 100, node("callee", 70)));
 
-        ProfilingViewModel vm = new ProfilingViewModel(service);
+        ProfilingViewModel vm = new ProfilingViewModel(new LoadProfilingUseCase(service));
         vm.load(testRecording());
         vm.selectMethod("com.Foo.bar()");
 
@@ -260,7 +262,7 @@ class ProfilingViewModelTest {
         service.setCallersTree(node("root", 100, node("caller", 60)));
         service.setCalleesTree(node("root", 100, node("callee", 70)));
 
-        ProfilingViewModel vm = new ProfilingViewModel(service);
+        ProfilingViewModel vm = new ProfilingViewModel(new LoadProfilingUseCase(service));
         vm.load(testRecording());
         vm.selectMethod("com.Foo.bar()");
 
@@ -316,7 +318,7 @@ class ProfilingViewModelTest {
                 return DependencyGraphReport.EMPTY;
             }
         };
-        ProfilingViewModel vm = new ProfilingViewModel(service);
+        ProfilingViewModel vm = new ProfilingViewModel(new LoadProfilingUseCase(service));
         vmReference.set(vm);
         vm.load(testRecording());
 
@@ -353,7 +355,7 @@ class ProfilingViewModelTest {
         service.setMethodFlameGraphTree("com.Foo.baz()", node("root", 100, node("baz-root", 40)));
         service.setMethodInvertedFlameGraphTree("com.Foo.baz()", node("root", 100, node("baz-top", 50)));
 
-        ProfilingViewModel vm = new ProfilingViewModel(service);
+        ProfilingViewModel vm = new ProfilingViewModel(new LoadProfilingUseCase(service));
         vm.load(testRecording());
         vm.selectMethod("com.Foo.bar()");
 
@@ -390,7 +392,7 @@ class ProfilingViewModelTest {
                 "INTERPRETED",
                 node("root", 20, node("interpreted-top", 20)));
 
-        ProfilingViewModel vm = new ProfilingViewModel(service);
+        ProfilingViewModel vm = new ProfilingViewModel(new LoadProfilingUseCase(service));
         vm.load(testRecording());
         vm.selectMethod(jit);
 
@@ -414,7 +416,7 @@ class ProfilingViewModelTest {
         service.setMethodFlameGraphTree("com.Foo.bar()", node("root", 100, node("method-root", 60)));
         service.setMethodInvertedFlameGraphTree("com.Foo.bar()", node("root", 100, node("method-top", 70)));
 
-        ProfilingViewModel vm = new ProfilingViewModel(service);
+        ProfilingViewModel vm = new ProfilingViewModel(new LoadProfilingUseCase(service));
         vm.load(testRecording());
         vm.selectMethod("com.Foo.bar()");
 
@@ -460,7 +462,7 @@ class ProfilingViewModelTest {
                 return DependencyGraphReport.EMPTY;
             }
         };
-        ProfilingViewModel vm = new ProfilingViewModel(service);
+        ProfilingViewModel vm = new ProfilingViewModel(new LoadProfilingUseCase(service));
 
         vm.load(testRecording());
         vm.selectMethod("com.Foo.bar()");
@@ -476,7 +478,7 @@ class ProfilingViewModelTest {
         service.setCallersTree(node("root", 100, node("caller", 60)));
         service.setCalleesTree(node("root", 100, node("callee", 70)));
 
-        ProfilingViewModel vm = new ProfilingViewModel(service);
+        ProfilingViewModel vm = new ProfilingViewModel(new LoadProfilingUseCase(service));
         vm.load(testRecording());
         vm.selectMethod("com.Foo.bar()");
 
@@ -495,7 +497,7 @@ class ProfilingViewModelTest {
     @Test
     void selectMethodWithoutRecordingIsNoOp() {
         FakeProfilingService service = new FakeProfilingService();
-        ProfilingViewModel vm = new ProfilingViewModel(service);
+        ProfilingViewModel vm = new ProfilingViewModel(new LoadProfilingUseCase(service));
 
         vm.selectMethod("com.Foo.bar()");
 
