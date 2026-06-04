@@ -31,6 +31,7 @@ import org.xml.sax.SAXException;
 
 import com.youngledo.jmcfx.application.LiveJvmApplicationServices;
 import com.youngledo.jmcfx.application.RecordingApplicationServices;
+import com.youngledo.jmcfx.application.RecordingPageUseCases;
 import com.youngledo.jmcfx.ui.util.DisplayFormats;
 import com.youngledo.jmcfx.domain.model.EventTypeSelection;
 import com.youngledo.jmcfx.domain.model.JdpJvmAdvertisement;
@@ -262,7 +263,8 @@ class AppShellTest {
                 java.nio.file.Path.of("src/main/java/com/youngledo/jmcfx/ui/shell/PreparedRecordingWorkspace.java"));
 
         assertTrue(runtime.contains("private final RecordingSectionLoader recordingSectionLoader;"));
-        assertTrue(runtime.contains("RecordingWorkspaceFactory recordingWorkspaceFactory = new RecordingWorkspaceFactory("));
+        assertTrue(runtime.contains("RecordingWorkspaceFactory recordingWorkspaceFactory ="));
+        assertTrue(runtime.contains("new RecordingWorkspaceFactory(RecordingPageUseCases.from(recordingServices), i18n)"));
         assertFalse(shell.contains("record PreparedRecordingWorkspace("),
                 "The prepared recording workspace data carrier belongs in its own source file");
         assertFalse(shell.contains("private void loadWorkspaceSectionNow("),
@@ -271,11 +273,10 @@ class AppShellTest {
                 "Feature-specific nullable load helpers belong in RecordingSectionLoader");
 
         assertTrue(factory.contains("final class RecordingWorkspaceFactory"));
-        assertTrue(factory.contains("private final RecordingApplicationServices services;"));
-        assertTrue(factory.contains("private final OpenRecordingWorkspaceUseCase openRecordingWorkspace;"));
-        assertTrue(factory.contains("RecordingWorkspaceFactory(RecordingApplicationServices services, I18n i18n)"));
+        assertTrue(factory.contains("private final RecordingPageUseCases useCases;"));
+        assertTrue(factory.contains("RecordingWorkspaceFactory(RecordingPageUseCases useCases, I18n i18n)"));
         assertTrue(factory.contains("PreparedRecordingWorkspace prepare(Path path)"));
-        assertTrue(factory.contains("RecordingWorkspacePlan plan = openRecordingWorkspace.open(path)"));
+        assertTrue(factory.contains("RecordingWorkspacePlan plan = useCases.openRecordingWorkspace().open(path)"));
         assertFalse(factory.contains("services.recordingRepository().open(path)"),
                 "Opening the recording repository belongs in the application use case");
 
@@ -284,6 +285,16 @@ class AppShellTest {
         assertTrue(loader.contains("private void loadWorkspaceSectionNow("));
 
         assertTrue(prepared.contains("record PreparedRecordingWorkspace("));
+    }
+
+    @Test
+    void recordingWorkspaceFactoryConsumesApplicationUseCasesInsteadOfServiceBundle() throws Exception {
+        String factory = java.nio.file.Files.readString(java.nio.file.Path.of(
+                "src/main/java/com/youngledo/jmcfx/ui/shell/RecordingWorkspaceFactory.java"));
+
+        assertTrue(factory.contains("private final RecordingPageUseCases useCases;"));
+        assertFalse(factory.contains("private final RecordingApplicationServices services;"));
+        assertFalse(factory.contains("new OpenRecordingWorkspaceUseCase(services)"));
     }
 
     @Test
@@ -654,7 +665,8 @@ class AppShellTest {
         assertFalse(shell.contains("this.sidebar = view.sidebar;"));
         assertTrue(shell.contains("return view.root;"));
         assertTrue(runtime.contains("view.sidebar.bind(viewModel);"));
-        assertTrue(runtime.contains("RecordingWorkspaceFactory recordingWorkspaceFactory = new RecordingWorkspaceFactory("));
+        assertTrue(runtime.contains("RecordingWorkspaceFactory recordingWorkspaceFactory ="));
+        assertTrue(runtime.contains("new RecordingWorkspaceFactory(RecordingPageUseCases.from(recordingServices), i18n)"));
         assertTrue(runtime.contains("ShellRecordingWorkspaceAttacher recordingWorkspaceAttacher ="));
         assertTrue(runtime.contains("new ShellRecordingWorkspaceAttacher(viewModel, pageControllerRegistry, i18n)"));
     }
@@ -3704,7 +3716,8 @@ void settingsPageContainsThemeSelectorNextToLanguageSelector() {
         RecordingApplicationServices services = new RecordingApplicationServices(new FakeRecordingRepository(), new FakeEventQueryService(),
                 ruleAnalysisService, profilingService, null, null, null, null, null, null, null, null, null, null, null,
                 null, null, null, null);
-        return new RecordingWorkspaceFactory(services, new I18n(java.util.Locale.ENGLISH)).prepare(Path.of("startup.jfr"));
+        return new RecordingWorkspaceFactory(RecordingPageUseCases.from(services), new I18n(java.util.Locale.ENGLISH))
+                .prepare(Path.of("startup.jfr"));
     }
 
     private static ProfilingService profilingService(AtomicInteger calls) {

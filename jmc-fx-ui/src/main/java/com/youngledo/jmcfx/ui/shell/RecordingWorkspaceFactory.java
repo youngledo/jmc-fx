@@ -1,9 +1,10 @@
 package com.youngledo.jmcfx.ui.shell;
 
 import java.nio.file.Path;
+import java.util.Objects;
 
-import com.youngledo.jmcfx.application.OpenRecordingWorkspaceUseCase;
 import com.youngledo.jmcfx.application.RecordingApplicationServices;
+import com.youngledo.jmcfx.application.RecordingPageUseCases;
 import com.youngledo.jmcfx.application.RecordingWorkspacePlan;
 import com.youngledo.jmcfx.ui.advanced.AdvancedJfrViewModel;
 import com.youngledo.jmcfx.ui.environment.EnvironmentViewModel;
@@ -39,18 +40,17 @@ import com.youngledo.jmcfx.ui.tlab.TlabViewModel;
 
 final class RecordingWorkspaceFactory {
 
-    private final RecordingApplicationServices services;
-    private final OpenRecordingWorkspaceUseCase openRecordingWorkspace;
+    private final RecordingPageUseCases useCases;
     private final I18n i18n;
 
-    RecordingWorkspaceFactory(RecordingApplicationServices services, I18n i18n) {
-        this.services = services;
-        this.openRecordingWorkspace = new OpenRecordingWorkspaceUseCase(services);
+    RecordingWorkspaceFactory(RecordingPageUseCases useCases, I18n i18n) {
+        this.useCases = Objects.requireNonNull(useCases, "useCases");
         this.i18n = i18n;
     }
 
     PreparedRecordingWorkspace prepare(Path path) {
-        RecordingWorkspacePlan plan = openRecordingWorkspace.open(path);
+        RecordingWorkspacePlan plan = useCases.openRecordingWorkspace().open(path);
+        RecordingApplicationServices services = useCases.pageQueries();
         OverviewViewModel overview = new OverviewViewModel();
         EventBrowserViewModel events = new EventBrowserViewModel(services.eventQueryService(),
                 new VirtualThreadEventBrowserExecutor(), i18n);

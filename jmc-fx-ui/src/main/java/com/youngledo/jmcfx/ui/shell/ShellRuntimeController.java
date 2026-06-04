@@ -5,6 +5,7 @@ import java.nio.file.Path;
 import com.youngledo.jmcfx.application.HeapDumpApplicationServices;
 import com.youngledo.jmcfx.application.LiveJvmApplicationServices;
 import com.youngledo.jmcfx.application.RecordingApplicationServices;
+import com.youngledo.jmcfx.application.RecordingPageUseCases;
 import com.youngledo.jmcfx.ui.i18n.I18n;
 
 final class ShellRuntimeController {
@@ -33,7 +34,8 @@ final class ShellRuntimeController {
         this.viewModel = viewModel;
         this.i18n = i18n;
         this.backgroundWorkController = new ShellBackgroundWorkController(view.progressBar);
-        RecordingWorkspaceFactory recordingWorkspaceFactory = new RecordingWorkspaceFactory(recordingServices, i18n);
+        RecordingWorkspaceFactory recordingWorkspaceFactory =
+                new RecordingWorkspaceFactory(RecordingPageUseCases.from(recordingServices), i18n);
         this.recordingSectionLoader = new RecordingSectionLoader(recordingOpenExecutor, i18n,
                 backgroundWorkController::setVisible, viewModel::showTaskSummary, backgroundWorkController::onFxThread);
         this.pageControllerRegistry = new ShellPageControllerRegistry(view, viewModel, i18n);
