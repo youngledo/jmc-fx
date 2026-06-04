@@ -3,8 +3,9 @@ package com.youngledo.jmcfx.ui.shell;
 import java.nio.file.Path;
 import java.util.function.Consumer;
 
-import com.youngledo.jmcfx.application.AnalyzeHeapDumpUseCase;
 import com.youngledo.jmcfx.application.HeapDumpApplicationServices;
+import com.youngledo.jmcfx.application.HeapDumpWorkspacePlan;
+import com.youngledo.jmcfx.application.OpenHeapDumpWorkspaceUseCase;
 import com.youngledo.jmcfx.domain.model.HeapDumpAnalysisState;
 import com.youngledo.jmcfx.ui.heapdump.HeapDumpAnalysisViewModel;
 import com.youngledo.jmcfx.ui.heapdump.VirtualThreadHeapDumpAnalysisExecutor;
@@ -25,6 +26,7 @@ final class WorkspaceOpenCoordinator {
     private final AppShellViewModel viewModel;
     private final RecordingWorkspaceFactory recordingWorkspaceFactory;
     private final HeapDumpApplicationServices heapDumpServices;
+    private final OpenHeapDumpWorkspaceUseCase openHeapDumpWorkspace;
     private final I18n i18n;
     private final RecordingOpenExecutor recordingOpenExecutor;
     private final Consumer<PreparedRecordingWorkspace> recordingWorkspaceConsumer;
@@ -42,6 +44,7 @@ final class WorkspaceOpenCoordinator {
         this.viewModel = viewModel;
         this.recordingWorkspaceFactory = recordingWorkspaceFactory;
         this.heapDumpServices = heapDumpServices;
+        openHeapDumpWorkspace = new OpenHeapDumpWorkspaceUseCase(heapDumpServices);
         this.i18n = i18n;
         this.recordingOpenExecutor = recordingOpenExecutor;
         this.recordingWorkspaceConsumer = recordingWorkspaceConsumer;
@@ -117,9 +120,10 @@ final class WorkspaceOpenCoordinator {
         backgroundWorkVisibleConsumer.accept(true);
         viewModel.showStatus(openingHeapDumpStatus(i18n, path));
         viewModel.showTaskSummary(i18n.get("taskSummary.openingHeapDump"));
-        HeapDumpAnalysisViewModel nextViewModel = new HeapDumpAnalysisViewModel(new AnalyzeHeapDumpUseCase(heapDumpServices),
+        HeapDumpWorkspacePlan plan = openHeapDumpWorkspace.open(path);
+        HeapDumpAnalysisViewModel nextViewModel = new HeapDumpAnalysisViewModel(plan.analyzeHeapDump(),
                 new VirtualThreadHeapDumpAnalysisExecutor(), i18n);
-        HeapDumpWorkspace workspace = new HeapDumpWorkspace(path, nextViewModel);
+        HeapDumpWorkspace workspace = new HeapDumpWorkspace(plan.path(), nextViewModel);
         viewModel.openHeapDump(workspace);
         nextViewModel.stateProperty().addListener((observable, oldValue, newValue) -> {
             if (newValue != HeapDumpAnalysisState.ANALYZING) {
@@ -127,7 +131,7 @@ final class WorkspaceOpenCoordinator {
                 viewModel.showTaskSummary(nextViewModel.statusMessageProperty().get());
             }
         });
-        nextViewModel.analyze(path);
+        nextViewModel.analyze(plan.path());
     }
 
     private boolean selectExistingRecordingWorkspace(Path path) {
