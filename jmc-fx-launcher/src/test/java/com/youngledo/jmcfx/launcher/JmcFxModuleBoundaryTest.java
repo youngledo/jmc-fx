@@ -33,6 +33,7 @@ class JmcFxModuleBoundaryTest {
         var descriptor = moduleInfo("../jmc-fx-ui");
 
         assertTrue(descriptor.contains("requires transitive com.youngledo.jmcfx.domain;"));
+        assertTrue(descriptor.contains("requires com.youngledo.jmcfx.application;"));
         assertTrue(descriptor.contains("requires com.youngledo.jmcfx.flamegraph;"));
         assertEquals(
                 Set.of(
@@ -42,6 +43,33 @@ class JmcFxModuleBoundaryTest {
                 exportedStatements(descriptor));
         assertFalse(descriptor.contains("com.youngledo.jmcfx.adapter"), "UI must not require adapter modules");
         assertFalse(descriptor.contains(OPENJDK_JMC_MODULE_PREFIX), "UI must not require JMC modules");
+    }
+
+    @Test
+    void applicationModuleStaysUseCaseOnly() throws Exception {
+        var descriptor = moduleInfo("../jmc-fx-application");
+
+        assertEquals(Set.of("exports com.youngledo.jmcfx.application;"), exportedStatements(descriptor));
+        assertTrue(descriptor.contains("requires com.youngledo.jmcfx.domain;"));
+        assertFalse(descriptor.contains("com.youngledo.jmcfx.adapter"), "application must not require adapters");
+        assertFalse(descriptor.contains("com.youngledo.jmcfx.ui"), "application must not require UI");
+        assertFalse(descriptor.contains("com.youngledo.jmcfx.launcher"), "application must not require launcher");
+        assertFalse(descriptor.contains("javafx."), "application must not depend on JavaFX");
+        assertFalse(descriptor.contains(OPENJDK_JMC_MODULE_PREFIX), "application must not require JMC modules");
+        assertFalse(descriptor.contains("org.jolokia"), "application must not require Jolokia modules");
+    }
+
+    @Test
+    void jmcAdapterModuleStaysUiAndApplicationNeutral() throws Exception {
+        var descriptor = moduleInfo("../jmc-fx-adapter-jmc");
+
+        assertEquals(Set.of("exports com.youngledo.jmcfx.adapter.jmc;"), exportedStatements(descriptor));
+        assertTrue(descriptor.contains("requires com.youngledo.jmcfx.domain;"));
+        assertFalse(descriptor.contains("com.youngledo.jmcfx.application"),
+                "adapter must not require the application use-case layer");
+        assertFalse(descriptor.contains("com.youngledo.jmcfx.ui"), "adapter must not require UI");
+        assertFalse(descriptor.contains("com.youngledo.jmcfx.launcher"), "adapter must not require launcher");
+        assertFalse(descriptor.contains("javafx."), "adapter must not depend on JavaFX UI modules");
     }
 
     @Test

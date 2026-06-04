@@ -75,6 +75,7 @@ class JmcFxArchitectureTest {
         noClasses()
                 .that().resideInAPackage("..adapter.jmc..")
                 .should().dependOnClassesThat().resideInAnyPackage(
+                        "..application..",
                         "..ui..",
                         "..launcher..",
                         "javafx..",
