@@ -27,16 +27,19 @@ sdk env
 ./mvnw verify
 ```
 
+Architecture boundaries are documented in
+`docs/hexagonal-boundary-guide.md`. Use that guide when adding workflows,
+ports, adapters, UI pages, or startup wiring.
+
 ## Platform Installer
 
 Build the current platform's installer with the `jpackage-classpath-jlink` profile:
 
 ```bash
-sdk env
-./mvnw -pl jmc-fx-app -am -Pjpackage-classpath-jlink package
+sdk env && ./mvnw -pl jmc-fx-launcher -am -Pjpackage-classpath-jlink package
 ```
 
-The installer is written to `jmc-fx-app/target/jpackage/`. On macOS, the
+The installer is written to `jmc-fx-launcher/target/jpackage/`. On macOS, the
 default output is `JMC FX-1.0.0.dmg`.
 
 The package uses a `jlink`-trimmed JDK/JavaFX runtime and launches the
@@ -54,14 +57,13 @@ version is `1.0.0` because macOS rejects versions whose first number is `0`.
 Override it for releases with:
 
 ```bash
-./mvnw -pl jmc-fx-app -am -Pjpackage-classpath-jlink -Djmcfx.package.version=1.2.3 package
+./mvnw -pl jmc-fx-launcher -am -Pjpackage-classpath-jlink -Djmcfx.package.version=1.2.3 package
 ```
 
 ## Run
 
 ```bash
-sdk env
-./mvnw -pl jmc-fx-app -am org.openjfx:javafx-maven-plugin:0.0.8:run
+sdk env && ./mvnw -pl jmc-fx-launcher -am org.openjfx:javafx-maven-plugin:0.0.8:run
 ```
 
 ## Legal Notice

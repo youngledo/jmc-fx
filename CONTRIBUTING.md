@@ -35,11 +35,32 @@ Do not use Maven 3 `<modules>` in this repository.
 
 - Keep domain models UI-neutral.
 - Keep all OpenJDK JMC API calls inside `jmc-fx-adapter-jmc`.
+- Drive user workflows through `jmc-fx-application` use cases instead of
+  letting UI controllers call secondary adapters directly.
 - Keep JavaFX controllers thin and move behavior into view models.
 - Keep long-running file, parsing, analysis, JMX, and recording-control work off the FX Application Thread.
 - Prefer Java 26 language and library features when they make code clearer.
 - Do not enable preview or experimental JDK features in the default build.
 - Use AtlantaFX as the base theme and layer small app-specific CSS after it.
+
+## Architecture Boundaries
+
+JMC FX follows Hexagonal Architecture. The durable boundary guide is
+`docs/hexagonal-boundary-guide.md`; use it before adding new features, moving
+workflow logic, introducing ports, or wiring adapters.
+
+In short:
+
+- `jmc-fx-domain` owns UI-neutral records, enums, exceptions, and secondary
+  ports.
+- `jmc-fx-application` owns use-case orchestration and workflow service
+  groupings.
+- `jmc-fx-adapter-jmc` owns OpenJDK JMC, JFR, JMX, Jolokia, and JOverflow
+  integration.
+- `jmc-fx-ui` owns JavaFX views, controllers, view models, themes,
+  preferences, i18n, and presentation state.
+- `jmc-fx-launcher` owns startup, dependency assembly, stage lifecycle, and
+  packaging.
 
 ## UI Design Workflow
 
@@ -97,7 +118,7 @@ To run the desktop app:
 
 ```bash
 sdk env
-./mvnw -pl jmc-fx-app -am org.openjfx:javafx-maven-plugin:0.0.8:run
+./mvnw -pl jmc-fx-launcher -am org.openjfx:javafx-maven-plugin:0.0.8:run
 ```
 
 Before submitting changes, verify:
@@ -107,7 +128,7 @@ sdk env
 ./mvnw -v
 ./mvnw verify
 rg -n "<modules>|<module>" pom.xml **/pom.xml
-rg -n "org.openjdk.jmc|JfrLoaderToolkit" jmc-fx-ui jmc-fx-app jmc-fx-domain
+rg -n "org.openjdk.jmc|JfrLoaderToolkit" jmc-fx-ui jmc-fx-launcher jmc-fx-application jmc-fx-domain
 ```
 
 Expected:

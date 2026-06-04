@@ -37,23 +37,28 @@ Use Java 26 style deliberately where it improves clarity:
 JMC FX follows the **Hexagonal (Ports & Adapters)** architecture:
 
 - **Domain core** (`jmc-fx-domain`) defines ports (interfaces) and data records, depending on nothing.
+- **Application** (`jmc-fx-application`) coordinates use cases and workflow service groups using domain ports.
 - **Adapters** (`jmc-fx-adapter-jmc`) implement those ports by calling external frameworks (JMC core APIs).
-- **UI** (`jmc-fx-ui`) depends only on domain ports, never on adapter internals.
-- **App** (`jmc-fx-app`) assembles concrete adapters and injects them at startup.
+- **UI** (`jmc-fx-ui`) drives application use cases and domain ports, never adapter internals.
+- **Launcher** (`jmc-fx-launcher`) assembles concrete adapters and injects them at startup.
 
 The intended subprojects are:
 
 - `jmc-fx-domain`: UI-neutral records, enums, ports, and exceptions.
+- `jmc-fx-application`: use-case orchestration and workflow-level service groups.
 - `jmc-fx-adapter-jmc`: all OpenJDK JMC core/headless integration.
 - `jmc-fx-ui`: JavaFX/FXML/CSS, controllers, view models, navigation, task state.
-- `jmc-fx-app`: application startup, dependency assembly, stage lifecycle.
+- `jmc-fx-launcher`: application startup, dependency assembly, stage lifecycle, packaging.
 - `jmc-fx-test-support`: fakes, fixtures, and deterministic test helpers.
 
 Rules:
 
 - UI code must not directly call OpenJDK JMC APIs.
+- UI code must not directly instantiate or call concrete adapter implementations.
+- Workflow orchestration that spans ports or decides feature capabilities belongs in `jmc-fx-application`.
 - JMC API usage belongs in `jmc-fx-adapter-jmc`.
 - `jmc-fx-domain` must stay free of JavaFX types.
+- `jmc-fx-application` must stay free of JavaFX, adapter, and launcher types.
 - Controllers stay thin. Put testable state and behavior in view models.
 - Long-running work must not run on the FX Application Thread.
 - Large JFR event data must be paged, sliced, or summarized; do not eagerly load huge recordings into JavaFX observable lists.
@@ -101,7 +106,7 @@ Also verify:
 
 ```bash
 rg -n "<modules>|<module>" pom.xml **/pom.xml
-rg -n "org.openjdk.jmc|JfrLoaderToolkit" jmc-fx-ui jmc-fx-app jmc-fx-domain
+rg -n "org.openjdk.jmc|JfrLoaderToolkit" jmc-fx-ui jmc-fx-launcher jmc-fx-application jmc-fx-domain
 ```
 
 Expected:

@@ -17,7 +17,7 @@ Baseline date: 2026-05-31.
 - `./mvnw verify`: passed for the full Maven reactor.
 - `rg -n "<modules>|<module>" pom.xml **/pom.xml`: no Maven 3 module syntax
   found.
-- `rg -n "org.openjdk.jmc|JfrLoaderToolkit" jmc-fx-ui jmc-fx-launcher jmc-fx-domain`:
+- `rg -n "org.openjdk.jmc|JfrLoaderToolkit" jmc-fx-ui jmc-fx-launcher jmc-fx-application jmc-fx-domain`:
   no JMC API usage found outside the adapter boundary.
 
 ## Current Capabilities
@@ -101,6 +101,7 @@ Baseline date: 2026-05-31.
 ### Documentation, Licensing, And Repository Workflow
 
 - Documents Java, Maven, build, run, and native-package commands in `README.md`.
+- Documents module boundary maintenance in `docs/hexagonal-boundary-guide.md`.
 - Defines project-wide UI/UX contracts in `docs/ui-ux-system.md`.
 - Defines AtlantaFX and JavaFX styling rules in `docs/ui-guidelines.md`.
 - Keeps JMC FX positioned as an independent JavaFX application, not an
