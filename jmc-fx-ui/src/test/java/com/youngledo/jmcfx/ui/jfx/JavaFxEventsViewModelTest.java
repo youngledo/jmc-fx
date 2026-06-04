@@ -11,7 +11,7 @@ import org.junit.jupiter.api.Test;
 
 import com.youngledo.jmcfx.application.LoadJavaFxEventsUseCase;
 import com.youngledo.jmcfx.domain.model.RecordingSummary;
-import com.youngledo.jmcfx.testsupport.FakeJavaFxEventService;
+import com.youngledo.jmcfx.ui.testsupport.FakeJavaFxEventService;
 
 class JavaFxEventsViewModelTest {
 

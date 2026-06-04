@@ -8,7 +8,7 @@ import com.youngledo.jmcfx.application.LoadLocksUseCase;
 import com.youngledo.jmcfx.domain.model.LockGrouping;
 import com.youngledo.jmcfx.domain.model.LockHistogram;
 import com.youngledo.jmcfx.domain.model.RecordingSummary;
-import com.youngledo.jmcfx.testsupport.FakeLockService;
+import com.youngledo.jmcfx.ui.testsupport.FakeLockService;
 
 import org.junit.jupiter.api.Test;
 

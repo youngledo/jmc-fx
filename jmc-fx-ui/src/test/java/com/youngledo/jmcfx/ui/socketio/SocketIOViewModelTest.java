@@ -8,7 +8,7 @@ import com.youngledo.jmcfx.application.LoadSocketIOUseCase;
 import com.youngledo.jmcfx.domain.model.RecordingSummary;
 import com.youngledo.jmcfx.domain.model.SocketIOGrouping;
 import com.youngledo.jmcfx.domain.model.SocketIOHistogram;
-import com.youngledo.jmcfx.testsupport.FakeSocketIOService;
+import com.youngledo.jmcfx.ui.testsupport.FakeSocketIOService;
 
 import org.junit.jupiter.api.Test;
 

@@ -52,7 +52,6 @@ The intended subprojects are:
   persistence adapters.
 - `jmc-fx-ui`: JavaFX/FXML/CSS, controllers, view models, navigation, task state.
 - `jmc-fx-launcher`: application startup, dependency assembly, stage lifecycle, packaging.
-- `jmc-fx-test-support`: fakes, fixtures, and deterministic test helpers.
 
 Rules:
 
@@ -60,6 +59,8 @@ Rules:
 - UI code must not directly instantiate or call concrete adapter implementations.
 - Production UI code must not import `com.youngledo.jmcfx.domain.service`.
 - UI-driven workflows enter through `jmc-fx-application` use cases.
+- UI-specific fakes and fixtures live in `jmc-fx-ui/src/test/java`, close to
+  the tests that consume them.
 - Secondary persistence adapters belong outside `jmc-fx-ui`.
 - Workflow orchestration that spans ports or decides feature capabilities belongs in `jmc-fx-application`.
 - JMC API usage belongs in `jmc-fx-adapter` under

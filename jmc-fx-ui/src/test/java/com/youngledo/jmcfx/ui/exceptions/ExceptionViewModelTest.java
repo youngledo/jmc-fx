@@ -8,7 +8,7 @@ import com.youngledo.jmcfx.application.LoadExceptionsUseCase;
 import com.youngledo.jmcfx.domain.model.ExceptionGrouping;
 import com.youngledo.jmcfx.domain.model.ExceptionSummary;
 import com.youngledo.jmcfx.domain.model.RecordingSummary;
-import com.youngledo.jmcfx.testsupport.FakeExceptionService;
+import com.youngledo.jmcfx.ui.testsupport.FakeExceptionService;
 
 import org.junit.jupiter.api.Test;
 

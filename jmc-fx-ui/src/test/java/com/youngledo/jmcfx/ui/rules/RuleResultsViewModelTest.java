@@ -14,7 +14,7 @@ import com.youngledo.jmcfx.application.AnalyzeRulesUseCase;
 import com.youngledo.jmcfx.domain.model.RecordingSummary;
 import com.youngledo.jmcfx.domain.model.RuleResult;
 import com.youngledo.jmcfx.domain.model.Severity;
-import com.youngledo.jmcfx.testsupport.FakeRuleAnalysisService;
+import com.youngledo.jmcfx.ui.testsupport.FakeRuleAnalysisService;
 
 class RuleResultsViewModelTest {
 

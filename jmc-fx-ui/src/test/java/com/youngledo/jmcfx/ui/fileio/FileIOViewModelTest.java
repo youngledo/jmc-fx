@@ -7,7 +7,7 @@ import com.youngledo.jmcfx.application.LoadFileIOUseCase;
 
 import com.youngledo.jmcfx.domain.model.FileIOHistogram;
 import com.youngledo.jmcfx.domain.model.RecordingSummary;
-import com.youngledo.jmcfx.testsupport.FakeFileIOService;
+import com.youngledo.jmcfx.ui.testsupport.FakeFileIOService;
 
 import org.junit.jupiter.api.Test;
 

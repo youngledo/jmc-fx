@@ -17,7 +17,7 @@ import com.youngledo.jmcfx.domain.model.HeapDumpAnalysisState;
 import com.youngledo.jmcfx.domain.model.HeapDumpIssue;
 import com.youngledo.jmcfx.domain.model.HeapDumpIssueCategory;
 import com.youngledo.jmcfx.domain.service.JmcFxException;
-import com.youngledo.jmcfx.testsupport.FakeHeapDumpAnalysisService;
+import com.youngledo.jmcfx.ui.testsupport.FakeHeapDumpAnalysisService;
 import com.youngledo.jmcfx.ui.i18n.I18n;
 
 class HeapDumpAnalysisViewModelTest {

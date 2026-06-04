@@ -88,11 +88,6 @@ the application layer.
 - Keep detailed adapter construction delegated to focused assembly factories so
   the JavaFX `Application` subclass does not grow into a service registry.
 
-`jmc-fx-test-support`
-
-- Owns fakes, fixtures, builders, and deterministic helpers shared by tests.
-- Keep production modules independent of test-support code.
-
 ## Placement Rules
 
 Put a new type in `jmc-fx-domain` when it is a UI-neutral data concept, domain
@@ -112,6 +107,11 @@ when it implements a domain persistence port with Java Preferences.
 Put it in `jmc-fx-ui` when it is JavaFX-specific, presentation-specific, or
 depends on control state, bindings, selections, formatting, localization, or
 view lifecycle.
+
+Put UI-specific fakes, fixtures, builders, and deterministic helpers in
+`jmc-fx-ui/src/test/java`, close to the tests that consume them. Do not create
+a separate test-support module unless multiple non-UI modules need the same
+test fixture API.
 
 Put it in `jmc-fx-launcher` when it starts the app, chooses concrete
 implementations, creates top-level dependencies, or changes packaging/runtime

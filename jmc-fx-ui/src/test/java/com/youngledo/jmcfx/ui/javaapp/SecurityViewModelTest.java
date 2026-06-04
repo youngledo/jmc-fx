@@ -11,7 +11,7 @@ import com.youngledo.jmcfx.application.LoadJavaApplicationUseCase;
 
 import com.youngledo.jmcfx.domain.model.RecordingSummary;
 import com.youngledo.jmcfx.domain.model.X509CertificateEntry;
-import com.youngledo.jmcfx.testsupport.FakeJavaAppService;
+import com.youngledo.jmcfx.ui.testsupport.FakeJavaAppService;
 
 class SecurityViewModelTest {
 

@@ -17,7 +17,7 @@ import com.youngledo.jmcfx.domain.model.RecordingSummary;
 import com.youngledo.jmcfx.domain.model.StackTreeNode;
 import com.youngledo.jmcfx.domain.service.ProfilingService;
 import com.youngledo.jmcfx.flamegraph.FlameGraphModel;
-import com.youngledo.jmcfx.testsupport.FakeProfilingService;
+import com.youngledo.jmcfx.ui.testsupport.FakeProfilingService;
 
 import org.junit.jupiter.api.Test;
 

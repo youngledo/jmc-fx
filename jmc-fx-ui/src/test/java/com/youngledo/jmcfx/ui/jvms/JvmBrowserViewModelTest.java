@@ -59,17 +59,17 @@ import com.youngledo.jmcfx.domain.model.TriggerOperator;
 import com.youngledo.jmcfx.domain.service.JmcFxException;
 import com.youngledo.jmcfx.application.LiveJvmApplicationServices;
 import com.youngledo.jmcfx.application.LiveJvmUseCases;
-import com.youngledo.jmcfx.testsupport.FakeDiagnosticCommandService;
-import com.youngledo.jmcfx.testsupport.FakeFlightRecordingService;
-import com.youngledo.jmcfx.testsupport.FakeJdpDiscoveryService;
-import com.youngledo.jmcfx.testsupport.FakeJmcAgentService;
-import com.youngledo.jmcfx.testsupport.FakeJmxConnectionService;
-import com.youngledo.jmcfx.testsupport.FakeJmxMonitoringRepository;
-import com.youngledo.jmcfx.testsupport.FakeJmxMonitoringService;
-import com.youngledo.jmcfx.testsupport.FakeJvmDiscoveryService;
-import com.youngledo.jmcfx.testsupport.FakeLiveMetricService;
-import com.youngledo.jmcfx.testsupport.FakeMBeanBrowserService;
-import com.youngledo.jmcfx.testsupport.FakeSavedJvmTargetRepository;
+import com.youngledo.jmcfx.ui.testsupport.FakeDiagnosticCommandService;
+import com.youngledo.jmcfx.ui.testsupport.FakeFlightRecordingService;
+import com.youngledo.jmcfx.ui.testsupport.FakeJdpDiscoveryService;
+import com.youngledo.jmcfx.ui.testsupport.FakeJmcAgentService;
+import com.youngledo.jmcfx.ui.testsupport.FakeJmxConnectionService;
+import com.youngledo.jmcfx.ui.testsupport.FakeJmxMonitoringRepository;
+import com.youngledo.jmcfx.ui.testsupport.FakeJmxMonitoringService;
+import com.youngledo.jmcfx.ui.testsupport.FakeJvmDiscoveryService;
+import com.youngledo.jmcfx.ui.testsupport.FakeLiveMetricService;
+import com.youngledo.jmcfx.ui.testsupport.FakeMBeanBrowserService;
+import com.youngledo.jmcfx.ui.testsupport.FakeSavedJvmTargetRepository;
 
 class JvmBrowserViewModelTest {
 

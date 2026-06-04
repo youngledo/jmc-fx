@@ -112,6 +112,22 @@ class JmcFxModuleBoundaryTest {
     }
 
     @Test
+    void uiTestSupportFakesStayInUiTestSources() throws Exception {
+        var rootPom = Files.readString(Path.of("../pom.xml"));
+        var uiPom = Files.readString(Path.of("../jmc-fx-ui/pom.xml"));
+
+        assertFalse(rootPom.contains("<subproject>jmc-fx-test-support</subproject>"),
+                "test support fakes should not be a separate Maven subproject");
+        assertFalse(uiPom.contains("<artifactId>jmc-fx-test-support</artifactId>"),
+                "UI tests should use local test-source fakes instead of a test-support module");
+        assertFalse(uiPom.contains("com.youngledo.jmcfx.testsupport"),
+                "UI tests should not require add-reads for a test-support module");
+        assertTrue(Files.isRegularFile(Path.of(
+                "../jmc-fx-ui/src/test/java/com/youngledo/jmcfx/ui/testsupport/FakeEventQueryService.java")),
+                "UI test fakes should live with the UI tests that consume them");
+    }
+
+    @Test
     void javafxRunUsesModuleLaunchWhileJpackageUsesClasspathJlink() throws Exception {
         var rootPom = Files.readString(Path.of("../pom.xml"));
         var appPom = Files.readString(Path.of("pom.xml"));

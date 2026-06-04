@@ -17,7 +17,7 @@ import com.youngledo.jmcfx.domain.model.MemoryIssue;
 import com.youngledo.jmcfx.domain.model.MemoryIssueCategory;
 import com.youngledo.jmcfx.domain.model.MemoryIssueSeverity;
 import com.youngledo.jmcfx.domain.model.RecordingSummary;
-import com.youngledo.jmcfx.testsupport.FakeAdvancedJfrAnalysisService;
+import com.youngledo.jmcfx.ui.testsupport.FakeAdvancedJfrAnalysisService;
 
 import org.junit.jupiter.api.Test;
 

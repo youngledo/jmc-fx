@@ -14,7 +14,7 @@ import com.youngledo.jmcfx.domain.model.EnvironmentVariable;
 import com.youngledo.jmcfx.domain.model.ProcessInfo;
 import com.youngledo.jmcfx.domain.model.RecordingSummary;
 import com.youngledo.jmcfx.domain.model.SystemProperty;
-import com.youngledo.jmcfx.testsupport.FakeEnvironmentService;
+import com.youngledo.jmcfx.ui.testsupport.FakeEnvironmentService;
 
 import org.junit.jupiter.api.Test;
 

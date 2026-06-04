@@ -12,7 +12,7 @@ import org.junit.jupiter.api.Test;
 import com.youngledo.jmcfx.application.LoadJfrMetadataUseCase;
 
 import com.youngledo.jmcfx.domain.model.RecordingSummary;
-import com.youngledo.jmcfx.testsupport.FakeJfrMetadataService;
+import com.youngledo.jmcfx.ui.testsupport.FakeJfrMetadataService;
 
 class JfrMetadataViewModelTest {
 

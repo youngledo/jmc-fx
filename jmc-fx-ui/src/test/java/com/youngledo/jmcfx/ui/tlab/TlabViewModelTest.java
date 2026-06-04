@@ -9,7 +9,7 @@ import com.youngledo.jmcfx.application.LoadTlabUseCase;
 import com.youngledo.jmcfx.domain.model.ChartDefinition;
 import com.youngledo.jmcfx.domain.model.RecordingSummary;
 import com.youngledo.jmcfx.domain.model.TlabAllocation;
-import com.youngledo.jmcfx.testsupport.FakeTlabService;
+import com.youngledo.jmcfx.ui.testsupport.FakeTlabService;
 
 import org.junit.jupiter.api.Test;
 

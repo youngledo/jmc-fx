@@ -13,7 +13,7 @@ import com.youngledo.jmcfx.application.LoadThreadsUseCase;
 
 import com.youngledo.jmcfx.domain.model.RecordingSummary;
 import com.youngledo.jmcfx.domain.model.ThreadSummary;
-import com.youngledo.jmcfx.testsupport.FakeThreadService;
+import com.youngledo.jmcfx.ui.testsupport.FakeThreadService;
 
 class ThreadViewModelTest {
 

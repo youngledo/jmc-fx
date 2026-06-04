@@ -8,7 +8,7 @@ import org.junit.jupiter.api.Test;
 
 import com.youngledo.jmcfx.application.OpenRecordingUseCase;
 
-import com.youngledo.jmcfx.testsupport.FakeRecordingRepository;
+import com.youngledo.jmcfx.ui.testsupport.FakeRecordingRepository;
 
 class RecordingBrowserViewModelTest {
 

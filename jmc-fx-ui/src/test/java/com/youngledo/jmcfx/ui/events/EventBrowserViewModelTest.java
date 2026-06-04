@@ -40,7 +40,7 @@ import com.youngledo.jmcfx.domain.model.EventWindowRequest;
 import com.youngledo.jmcfx.domain.model.RecordingSummary;
 import com.youngledo.jmcfx.domain.service.EventQueryService;
 import com.youngledo.jmcfx.domain.service.EventQuerySession;
-import com.youngledo.jmcfx.testsupport.FakeEventQueryService;
+import com.youngledo.jmcfx.ui.testsupport.FakeEventQueryService;
 
 import javafx.application.Platform;
 

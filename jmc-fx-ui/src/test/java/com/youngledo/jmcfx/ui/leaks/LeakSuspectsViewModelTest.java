@@ -9,7 +9,7 @@ import com.youngledo.jmcfx.application.LoadLeakSuspectsUseCase;
 import com.youngledo.jmcfx.domain.model.LeakCandidate;
 import com.youngledo.jmcfx.domain.model.LeakReferenceNode;
 import com.youngledo.jmcfx.domain.model.RecordingSummary;
-import com.youngledo.jmcfx.testsupport.FakeLeakSuspectsService;
+import com.youngledo.jmcfx.ui.testsupport.FakeLeakSuspectsService;
 
 import org.junit.jupiter.api.Test;
 

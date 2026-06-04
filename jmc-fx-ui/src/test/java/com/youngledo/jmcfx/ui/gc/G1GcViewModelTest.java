@@ -11,7 +11,7 @@ import org.junit.jupiter.api.Test;
 
 import com.youngledo.jmcfx.application.LoadG1GcUseCase;
 import com.youngledo.jmcfx.domain.model.RecordingSummary;
-import com.youngledo.jmcfx.testsupport.FakeG1GcService;
+import com.youngledo.jmcfx.ui.testsupport.FakeG1GcService;
 
 class G1GcViewModelTest {
 

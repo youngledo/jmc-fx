@@ -9,7 +9,7 @@ import com.youngledo.jmcfx.application.LoadHeapUseCase;
 import com.youngledo.jmcfx.domain.model.ChartDefinition;
 import com.youngledo.jmcfx.domain.model.HeapClassHistogram;
 import com.youngledo.jmcfx.domain.model.RecordingSummary;
-import com.youngledo.jmcfx.testsupport.FakeHeapService;
+import com.youngledo.jmcfx.ui.testsupport.FakeHeapService;
 
 import org.junit.jupiter.api.Test;
 
