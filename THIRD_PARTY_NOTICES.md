@@ -23,11 +23,6 @@ AtlantaFX dependencies must be reviewed when runtime packaging is added.
 
 Ikonli dependencies must be reviewed when runtime packaging is added.
 
-## TestFX
-
-TestFX is used for testing and must be reviewed if test artifacts are
-redistributed.
-
 ## JPackage Maven Plugin
 
 The `org.panteleyev:jpackage-maven-plugin` Maven plugin is used at build time to

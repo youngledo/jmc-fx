@@ -215,5 +215,5 @@ Before public release, review the project name, package metadata, app bundle nam
 - The change does not introduce Maven 3 reactor syntax.
 - UI code does not directly depend on OpenJDK JMC APIs.
 - Long-running operations do not run on the FX Application Thread.
-- New user-facing workflows have view model tests or TestFX coverage.
+- New user-facing workflows have view model tests, JavaFX control tests, or JavaFX Robot coverage.
 - Dependency changes update third-party notices or explain why no notice update is needed.

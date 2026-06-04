@@ -78,15 +78,18 @@ provide JMC-style labels, tooltips, colors, and profiling data.
 
 ## Demo
 
-Run the local demo from the repository root:
+The local demo lives in test sources so it can exercise the reusable control
+without creating another production module. Run it from the repository root:
 
 ```bash
 sdk env
-./mvnw -pl jmc-fx-flamegraph-demo -am org.openjfx:javafx-maven-plugin:0.0.8:run
+./mvnw -pl jmc-fx-flamegraph -Dexec.classpathScope=test \
+  -Dexec.mainClass=com.youngledo.jmcfx.flamegraph.demo.FlameGraphDemoApplication \
+  org.codehaus.mojo:exec-maven-plugin:3.5.0:java
 ```
 
-The demo is intentionally separate from `jmc-fx-flamegraph` so the reusable
-module stays free of application-specific code.
+The demo must stay under `src/test/java` and must not introduce dependencies on
+JMC FX domain, UI, adapter, or OpenJDK JMC APIs.
 
 ## Extraction Notes
 

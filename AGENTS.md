@@ -91,7 +91,7 @@ Rules:
 - Do not copy Eclipse RCP/SWT UI code, icons, branding, workbench layouts, or product assets.
 - Preserve OpenJDK JMC copyright notices, license notices, and third-party notices when redistributing JMC-derived artifacts.
 - Maintain project-level `LICENSE`, `NOTICE`, and `THIRD_PARTY_NOTICES.md` before public binary distribution.
-- Include third-party notices for JMC core/headless dependencies, JavaFX, AtlantaFX, Ikonli, TestFX, Maven plugins, and future runtime dependencies.
+- Include third-party notices for JMC core/headless dependencies, JavaFX, AtlantaFX, Ikonli, Maven plugins, and future runtime dependencies.
 - Do not imply Oracle or OpenJDK endorsement.
 - Keep this disclaimer in public-facing docs:
 

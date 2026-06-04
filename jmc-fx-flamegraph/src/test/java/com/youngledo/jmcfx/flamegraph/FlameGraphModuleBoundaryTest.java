@@ -35,11 +35,36 @@ class FlameGraphModuleBoundaryTest {
         }
     }
 
+    @Test
+    void demoApplicationStaysInFlameGraphTestSources() throws IOException {
+        Path projectRoot = projectRoot();
+
+        assertTrue(
+                Files.isRegularFile(projectRoot.resolve(
+                        "jmc-fx-flamegraph/src/test/java/com/youngledo/jmcfx/flamegraph/demo/FlameGraphDemoApplication.java")),
+                "flame graph demo should live in flamegraph test sources");
+        assertTrue(
+                Files.notExists(projectRoot.resolve("jmc-fx-flamegraph-demo")),
+                "flame graph demo should not be a separate Maven subproject");
+        assertTrue(
+                !Files.readString(projectRoot.resolve("pom.xml")).contains("<subproject>jmc-fx-flamegraph-demo</subproject>"),
+                "root reactor should not include the flame graph demo subproject");
+    }
+
     private Path sourceRoot() {
         Path direct = Path.of("src/main/java");
         if (Files.isDirectory(direct.resolve("com/youngledo/jmcfx/flamegraph"))) {
             return direct;
         }
         return Path.of("jmc-fx-flamegraph/src/main/java");
+    }
+
+    private Path projectRoot() {
+        Path direct = Path.of(".");
+        if (Files.isRegularFile(direct.resolve("pom.xml"))
+                && Files.isDirectory(direct.resolve("jmc-fx-flamegraph"))) {
+            return direct;
+        }
+        return Path.of("..");
     }
 }

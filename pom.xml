@@ -19,7 +19,6 @@
         <subproject>jmc-fx-test-support</subproject>
         <subproject>jmc-fx-adapter</subproject>
         <subproject>jmc-fx-flamegraph</subproject>
-        <subproject>jmc-fx-flamegraph-demo</subproject>
         <subproject>jmc-fx-ui</subproject>
         <subproject>jmc-fx-launcher</subproject>
     </subprojects>
@@ -34,7 +33,6 @@
         <jolokia.version>2.5.1</jolokia.version>
         <atlantafx.version>2.0.1</atlantafx.version>
         <ikonli.version>12.3.1</ikonli.version>
-        <testfx.version>4.0.18</testfx.version>
         <log4j2.version>2.26.0</log4j2.version>
         <archunit.version>1.4.2</archunit.version>
 

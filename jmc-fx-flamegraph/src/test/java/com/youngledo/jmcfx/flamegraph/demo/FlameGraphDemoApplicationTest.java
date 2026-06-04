@@ -11,9 +11,9 @@ class FlameGraphDemoApplicationTest {
 
     @Test
     void demoUsesReusableFlameGraphModuleOnly() throws Exception {
-        Path source = Path.of("src/main/java/com/youngledo/jmcfx/flamegraph/demo/FlameGraphDemoApplication.java");
+        Path source = Path.of("src/test/java/com/youngledo/jmcfx/flamegraph/demo/FlameGraphDemoApplication.java");
         if (!Files.isRegularFile(source)) {
-            source = Path.of("jmc-fx-flamegraph-demo/src/main/java/com/youngledo/jmcfx/flamegraph/demo/FlameGraphDemoApplication.java");
+            source = Path.of("jmc-fx-flamegraph/src/test/java/com/youngledo/jmcfx/flamegraph/demo/FlameGraphDemoApplication.java");
         }
 
         String text = Files.readString(source);
