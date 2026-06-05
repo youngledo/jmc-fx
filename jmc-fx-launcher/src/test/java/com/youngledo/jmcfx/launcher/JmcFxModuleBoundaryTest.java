@@ -128,13 +128,14 @@ class JmcFxModuleBoundaryTest {
     }
 
     @Test
-    void javafxRunUsesModuleLaunchWhileJpackageUsesClasspathJlink() throws Exception {
+    void javafxRunUsesModuleLaunchWhileJpackageUsesExplicitLeydenClasspathJlink() throws Exception {
         var rootPom = Files.readString(Path.of("../pom.xml"));
         var appPom = Files.readString(Path.of("pom.xml"));
 
         assertTrue(rootPom.contains("<mainClass>com.youngledo.jmcfx.launcher/com.youngledo.jmcfx.launcher.JmcFxLauncher</mainClass>"));
         assertTrue(appPom.contains("<mainClass>com.youngledo.jmcfx.launcher/com.youngledo.jmcfx.launcher.JmcFxLauncher</mainClass>"));
-        assertTrue(appPom.contains("<id>jpackage-classpath-jlink</id>"));
+        assertFalse(appPom.contains("<id>jpackage-classpath-jlink</id>"));
+        assertTrue(appPom.contains("<id>jpackage-classpath-jlink-leyden</id>"));
         assertTrue(appPom.contains("<mainJar>${project.build.finalName}.jar</mainJar>"));
         assertTrue(appPom.contains("<mainClass>com.youngledo.jmcfx.launcher.JmcFxLauncher</mainClass>"));
         assertFalse(appPom.contains("<option>--module</option>"));

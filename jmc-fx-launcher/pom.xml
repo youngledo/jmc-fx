@@ -59,12 +59,23 @@
         </plugins>
     </build>
     <profiles>
+        <!--
+            Leyden packaging intentionally stays behind an explicit profile.
+            Binding this installer flow to the default build would make package and verify generate
+            a native installer instead of just building and testing the launcher jar.
+            Use:
+              ./mvnw -pl jmc-fx-launcher -am -Pjpackage-classpath-jlink-leyden package
+            The macOS, Linux, and Windows Leyden profiles are OS-activated and only provide
+            platform-specific app-image paths and installer types.
+        -->
         <profile>
-            <id>jpackage-classpath-jlink</id>
+            <id>jpackage-classpath-jlink-leyden</id>
             <properties>
-                <jmcfx.package.input.dir>${project.build.directory}/jpackage-input</jmcfx.package.input.dir>
-                <jmcfx.package.runtime.dir>${project.build.directory}/jpackage-runtime</jmcfx.package.runtime.dir>
+                <jmcfx.package.input.dir>${project.build.directory}/jpackage-leyden-input</jmcfx.package.input.dir>
+                <jmcfx.package.runtime.dir>${project.build.directory}/jpackage-leyden-runtime</jmcfx.package.runtime.dir>
                 <jmcfx.package.version>1.0.0</jmcfx.package.version>
+                <jmcfx.leyden.app.image.dir>${project.build.directory}/jpackage-leyden-app-image</jmcfx.leyden.app.image.dir>
+                <jmcfx.leyden.package.dir>${project.build.directory}/jpackage-leyden</jmcfx.leyden.package.dir>
             </properties>
             <build>
                 <plugins>
@@ -73,7 +84,7 @@
                         <artifactId>maven-clean-plugin</artifactId>
                         <executions>
                             <execution>
-                                <id>clean-jpackage-staging</id>
+                                <id>clean-leyden-jpackage-staging</id>
                                 <phase>initialize</phase>
                                 <goals>
                                     <goal>clean</goal>
@@ -88,7 +99,10 @@
                                             <directory>${jmcfx.package.runtime.dir}</directory>
                                         </fileset>
                                         <fileset>
-                                            <directory>${project.build.directory}/jpackage</directory>
+                                            <directory>${jmcfx.leyden.app.image.dir}</directory>
+                                        </fileset>
+                                        <fileset>
+                                            <directory>${jmcfx.leyden.package.dir}</directory>
                                         </fileset>
                                     </filesets>
                                 </configuration>
@@ -113,7 +127,7 @@
                         <artifactId>maven-dependency-plugin</artifactId>
                         <executions>
                             <execution>
-                                <id>copy-runtime-dependencies</id>
+                                <id>copy-leyden-runtime-dependencies</id>
                                 <phase>package</phase>
                                 <goals>
                                     <goal>copy-dependencies</goal>
@@ -130,7 +144,7 @@
                         <artifactId>jlink-maven-plugin</artifactId>
                         <executions>
                             <execution>
-                                <id>create-jpackage-runtime</id>
+                                <id>create-leyden-jpackage-runtime</id>
                                 <phase>package</phase>
                                 <goals>
                                     <goal>jlink</goal>
@@ -165,39 +179,195 @@
                         <version>1.7.4</version>
                         <executions>
                             <execution>
-                                <id>create-platform-installer</id>
+                                <id>create-leyden-app-image</id>
                                 <phase>package</phase>
                                 <goals>
                                     <goal>jpackage</goal>
                                 </goals>
+                                <configuration>
+                                    <name>JMC FX</name>
+                                    <type>APP_IMAGE</type>
+                                    <appVersion>${jmcfx.package.version}</appVersion>
+                                    <vendor>Youngledo</vendor>
+                                    <description>${project.description}</description>
+                                    <input>${jmcfx.package.input.dir}</input>
+                                    <mainJar>${project.build.finalName}.jar</mainJar>
+                                    <mainClass>com.youngledo.jmcfx.launcher.JmcFxLauncher</mainClass>
+                                    <runtimeImage>${jmcfx.package.runtime.dir}</runtimeImage>
+                                    <destination>${jmcfx.leyden.app.image.dir}</destination>
+                                    <removeDestination>true</removeDestination>
+                                    <verbose>true</verbose>
+                                    <javaOptions>
+                                        <option>--enable-native-access=javafx.graphics</option>
+                                        <option>-Djmcfx.leyden.training=true</option>
+                                        <option>-XX:AOTCacheOutput=$APPDIR/jmcfx-startup.aot</option>
+                                    </javaOptions>
+                                    <macPackageIdentifier>com.youngledo.jmcfx</macPackageIdentifier>
+                                    <macPackageName>JMC FX</macPackageName>
+                                    <linuxPackageName>jmc-fx</linuxPackageName>
+                                    <linuxAppCategory>Development</linuxAppCategory>
+                                    <winMenu>true</winMenu>
+                                    <winShortcut>true</winShortcut>
+                                    <winMenuGroup>JMC FX</winMenuGroup>
+                                </configuration>
                             </execution>
                         </executions>
-                        <configuration>
-                            <name>JMC FX</name>
-                            <appVersion>${jmcfx.package.version}</appVersion>
-                            <vendor>Youngledo</vendor>
-                            <description>${project.description}</description>
-                            <input>${jmcfx.package.input.dir}</input>
-                            <mainJar>${project.build.finalName}.jar</mainJar>
-                            <mainClass>com.youngledo.jmcfx.launcher.JmcFxLauncher</mainClass>
-                            <runtimeImage>${jmcfx.package.runtime.dir}</runtimeImage>
-                            <destination>${project.build.directory}/jpackage</destination>
-                            <removeDestination>true</removeDestination>
-                            <verbose>true</verbose>
-                            <javaOptions>
-                                <option>--enable-native-access=javafx.graphics</option>
-                            </javaOptions>
-                            <macPackageIdentifier>com.youngledo.jmcfx</macPackageIdentifier>
-                            <macPackageName>JMC FX</macPackageName>
-                            <linuxPackageName>jmc-fx</linuxPackageName>
-                            <linuxAppCategory>Development</linuxAppCategory>
-                            <winMenu>true</winMenu>
-                            <winShortcut>true</winShortcut>
-                            <winMenuGroup>JMC FX</winMenuGroup>
-                        </configuration>
+                    </plugin>
+                    <plugin>
+                        <groupId>org.apache.maven.plugins</groupId>
+                        <artifactId>maven-antrun-plugin</artifactId>
+                        <executions>
+                            <execution>
+                                <id>train-leyden-aot-cache-and-package-installer</id>
+                                <phase>package</phase>
+                                <goals>
+                                    <goal>run</goal>
+                                </goals>
+                                <configuration>
+                                    <target>
+                                        <exec executable="${jmcfx.leyden.app.executable}" failonerror="true"/>
+                                        <condition property="jmcfx.leyden.aot.cache.present">
+                                            <available file="${jmcfx.leyden.aot.cache}"/>
+                                        </condition>
+                                        <fail unless="jmcfx.leyden.aot.cache.present"
+                                              message="Leyden AOT cache was not generated: ${jmcfx.leyden.aot.cache}"/>
+                                        <replace file="${jmcfx.leyden.app.config}"
+                                                 token="java-options=-XX:AOTCacheOutput=$APPDIR/jmcfx-startup.aot"
+                                                 value="java-options=-XX:AOTCache=$APPDIR/jmcfx-startup.aot"/>
+                                        <replace file="${jmcfx.leyden.app.config}"
+                                                 token="java-options=-Djmcfx.leyden.training=true"
+                                                 value=""/>
+                                        <exec executable="${jmcfx.leyden.sign.executable}" osfamily="mac"
+                                              failonerror="true">
+                                            <arg value="-s"/>
+                                            <arg value="-"/>
+                                            <arg value="--force"/>
+                                            <arg value="--deep"/>
+                                            <arg value="${jmcfx.leyden.app.image}"/>
+                                        </exec>
+                                        <mkdir dir="${jmcfx.leyden.package.dir}"/>
+                                        <exec executable="${jmcfx.jpackage.executable}" osfamily="mac"
+                                              failonerror="true" id="package-leyden-macos">
+                                            <arg value="--name"/>
+                                            <arg value="JMC FX"/>
+                                            <arg value="--type"/>
+                                            <arg value="${jmcfx.leyden.package.type}"/>
+                                            <arg value="--app-version"/>
+                                            <arg value="${jmcfx.package.version}"/>
+                                            <arg value="--vendor"/>
+                                            <arg value="Youngledo"/>
+                                            <arg value="--description"/>
+                                            <arg value="${project.description}"/>
+                                            <arg value="--app-image"/>
+                                            <arg value="${jmcfx.leyden.app.image}"/>
+                                            <arg value="--dest"/>
+                                            <arg value="${jmcfx.leyden.package.dir}"/>
+                                            <arg value="--mac-package-identifier"/>
+                                            <arg value="com.youngledo.jmcfx"/>
+                                            <arg value="--mac-package-name"/>
+                                            <arg value="JMC FX"/>
+                                            <arg value="--verbose"/>
+                                        </exec>
+                                        <exec executable="${jmcfx.jpackage.executable}" os="Linux"
+                                              failonerror="true" id="package-leyden-linux">
+                                            <arg value="--name"/>
+                                            <arg value="JMC FX"/>
+                                            <arg value="--type"/>
+                                            <arg value="${jmcfx.leyden.package.type}"/>
+                                            <arg value="--app-version"/>
+                                            <arg value="${jmcfx.package.version}"/>
+                                            <arg value="--vendor"/>
+                                            <arg value="Youngledo"/>
+                                            <arg value="--description"/>
+                                            <arg value="${project.description}"/>
+                                            <arg value="--app-image"/>
+                                            <arg value="${jmcfx.leyden.app.image}"/>
+                                            <arg value="--dest"/>
+                                            <arg value="${jmcfx.leyden.package.dir}"/>
+                                            <arg value="--linux-package-name"/>
+                                            <arg value="jmc-fx"/>
+                                            <arg value="--linux-app-category"/>
+                                            <arg value="Development"/>
+                                            <arg value="--verbose"/>
+                                        </exec>
+                                        <exec executable="${jmcfx.jpackage.executable}" osfamily="windows"
+                                              failonerror="true" id="package-leyden-windows">
+                                            <arg value="--name"/>
+                                            <arg value="JMC FX"/>
+                                            <arg value="--type"/>
+                                            <arg value="${jmcfx.leyden.package.type}"/>
+                                            <arg value="--app-version"/>
+                                            <arg value="${jmcfx.package.version}"/>
+                                            <arg value="--vendor"/>
+                                            <arg value="Youngledo"/>
+                                            <arg value="--description"/>
+                                            <arg value="${project.description}"/>
+                                            <arg value="--app-image"/>
+                                            <arg value="${jmcfx.leyden.app.image}"/>
+                                            <arg value="--dest"/>
+                                            <arg value="${jmcfx.leyden.package.dir}"/>
+                                            <arg value="--win-menu"/>
+                                            <arg value="--win-shortcut"/>
+                                            <arg value="--win-menu-group"/>
+                                            <arg value="JMC FX"/>
+                                            <arg value="--verbose"/>
+                                        </exec>
+                                    </target>
+                                </configuration>
+                            </execution>
+                        </executions>
                     </plugin>
                 </plugins>
             </build>
+        </profile>
+        <profile>
+            <id>jpackage-classpath-jlink-leyden-macos</id>
+            <activation>
+                <os>
+                    <family>mac</family>
+                </os>
+            </activation>
+            <properties>
+                <jmcfx.leyden.app.image>${jmcfx.leyden.app.image.dir}/JMC FX.app</jmcfx.leyden.app.image>
+                <jmcfx.leyden.app.executable>${jmcfx.leyden.app.image}/Contents/MacOS/JMC FX</jmcfx.leyden.app.executable>
+                <jmcfx.leyden.app.config>${jmcfx.leyden.app.image}/Contents/app/JMC FX.cfg</jmcfx.leyden.app.config>
+                <jmcfx.leyden.aot.cache>${jmcfx.leyden.app.image}/Contents/app/jmcfx-startup.aot</jmcfx.leyden.aot.cache>
+                <jmcfx.leyden.package.type>dmg</jmcfx.leyden.package.type>
+                <jmcfx.jpackage.executable>${java.home}/bin/jpackage</jmcfx.jpackage.executable>
+                <jmcfx.leyden.sign.executable>/usr/bin/codesign</jmcfx.leyden.sign.executable>
+            </properties>
+        </profile>
+        <profile>
+            <id>jpackage-classpath-jlink-leyden-linux</id>
+            <activation>
+                <os>
+                    <family>linux</family>
+                </os>
+            </activation>
+            <properties>
+                <jmcfx.leyden.app.image>${jmcfx.leyden.app.image.dir}/JMC FX</jmcfx.leyden.app.image>
+                <jmcfx.leyden.app.executable>${jmcfx.leyden.app.image}/bin/JMC FX</jmcfx.leyden.app.executable>
+                <jmcfx.leyden.app.config>${jmcfx.leyden.app.image}/lib/app/JMC FX.cfg</jmcfx.leyden.app.config>
+                <jmcfx.leyden.aot.cache>${jmcfx.leyden.app.image}/lib/app/jmcfx-startup.aot</jmcfx.leyden.aot.cache>
+                <jmcfx.leyden.package.type>deb</jmcfx.leyden.package.type>
+                <jmcfx.jpackage.executable>${java.home}/bin/jpackage</jmcfx.jpackage.executable>
+            </properties>
+        </profile>
+        <profile>
+            <id>jpackage-classpath-jlink-leyden-windows</id>
+            <activation>
+                <os>
+                    <family>windows</family>
+                </os>
+            </activation>
+            <properties>
+                <jmcfx.leyden.app.image>${jmcfx.leyden.app.image.dir}/JMC FX</jmcfx.leyden.app.image>
+                <jmcfx.leyden.app.executable>${jmcfx.leyden.app.image}/JMC FX.exe</jmcfx.leyden.app.executable>
+                <jmcfx.leyden.app.config>${jmcfx.leyden.app.image}/app/JMC FX.cfg</jmcfx.leyden.app.config>
+                <jmcfx.leyden.aot.cache>${jmcfx.leyden.app.image}/app/jmcfx-startup.aot</jmcfx.leyden.aot.cache>
+                <jmcfx.leyden.package.type>msi</jmcfx.leyden.package.type>
+                <jmcfx.jpackage.executable>${java.home}/bin/jpackage.exe</jmcfx.jpackage.executable>
+            </properties>
         </profile>
     </profiles>
 </project>

@@ -8,6 +8,7 @@ import com.youngledo.jmcfx.ui.shell.AppShell;
 import com.youngledo.jmcfx.ui.shell.AppShellFactory;
 import com.youngledo.jmcfx.ui.shell.AppShellFactoryDependencies;
 import javafx.application.Application;
+import javafx.application.Platform;
 import javafx.scene.Scene;
 import javafx.stage.Stage;
 
@@ -20,6 +21,7 @@ import org.apache.logging.log4j.Logger;
 /// stylesheet ordering, and primary stage lifecycle.
 public class JmcFxLauncher extends Application {
 
+    private static final String LEYDEN_TRAINING_PROPERTY = "jmcfx.leyden.training";
     private static final Logger LOGGER = LogManager.getLogger(JmcFxLauncher.class);
 
     private AppShell shell;
@@ -41,6 +43,9 @@ public class JmcFxLauncher extends Application {
         stage.titleProperty().bind(shell.titleBinding());
         stage.setScene(scene);
         stage.show();
+        if (Boolean.getBoolean(LEYDEN_TRAINING_PROPERTY)) {
+            Platform.runLater(Platform::exit);
+        }
     }
 
     @Override

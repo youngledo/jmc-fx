@@ -33,31 +33,40 @@ ports, adapters, UI pages, or startup wiring.
 
 ## Platform Installer
 
-Build the current platform's installer with the `jpackage-classpath-jlink` profile:
+Build the current platform's Leyden-optimized installer with the
+`jpackage-classpath-jlink-leyden` profile:
 
 ```bash
-sdk env && ./mvnw -pl jmc-fx-launcher -am -Pjpackage-classpath-jlink package
+sdk env && ./mvnw -pl jmc-fx-launcher -am -Pjpackage-classpath-jlink-leyden package
 ```
 
-The installer is written to `jmc-fx-launcher/target/jpackage/`. On macOS, the
+The macOS, Linux, and Windows Leyden profiles are activated automatically by
+Maven according to the current operating system; do not pass them manually. The
+installer is written to `jmc-fx-launcher/target/jpackage-leyden/`. On macOS, the
 default output is `JMC FX-1.0.0.dmg`.
+
+Leyden packaging is intentionally kept behind an explicit profile instead of the
+default build. The installer flow reaches Maven's `package` phase, runs the
+application once to train an AOT cache, rewrites the jpackage launcher
+configuration from `-XX:AOTCacheOutput` to `-XX:AOTCache`, then packages the
+trained app image. Keeping it explicit prevents normal `./mvnw verify` runs from
+building installers.
 
 The package uses a `jlink`-trimmed JDK/JavaFX runtime and launches the
 application from the classpath. OpenJDK JMC 9.1.2 dependencies are automatic
 modules, so they cannot currently be linked into a full JPMS `jlink` image.
-When JMC artifacts become explicit JPMS modules, this profile can move to a
-module launch and full application-module `jlink` image.
+When JMC artifacts become explicit JPMS modules, this installer path can move to
+a module launch and full application-module `jlink` image.
 
-This profile is intentionally named for `jpackage`. Future GraalVM native-image
-packaging should use a separate profile instead of overloading this installer
-path.
+Future GraalVM native-image packaging should use a separate profile instead of
+overloading this jpackage/Leyden installer path.
 
 `jpackage` requires platform-specific package versions. The default package
 version is `1.0.0` because macOS rejects versions whose first number is `0`.
 Override it for releases with:
 
 ```bash
-./mvnw -pl jmc-fx-launcher -am -Pjpackage-classpath-jlink -Djmcfx.package.version=1.2.3 package
+./mvnw -pl jmc-fx-launcher -am -Pjpackage-classpath-jlink-leyden -Djmcfx.package.version=1.2.3 package
 ```
 
 ## Run
