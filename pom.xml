@@ -19,7 +19,6 @@
         <subproject>jmc-fx-adapter</subproject>
         <subproject>jmc-fx-flamegraph</subproject>
         <subproject>jmc-fx-ui</subproject>
-        <subproject>jpackage-maven-plugin</subproject>
         <subproject>jmc-fx-launcher</subproject>
     </subprojects>
 
@@ -143,16 +142,6 @@
                             <option>--enable-native-access=javafx.graphics</option>
                         </options>
                     </configuration>
-                </plugin>
-                <plugin>
-                    <groupId>org.panteleyev</groupId>
-                    <artifactId>jpackage-maven-plugin</artifactId>
-                    <version>1.7.4</version>
-                </plugin>
-                <plugin>
-                    <groupId>org.panteleyev</groupId>
-                    <artifactId>jlink-maven-plugin</artifactId>
-                    <version>1.2.1</version>
                 </plugin>
                 <plugin>
                     <groupId>org.apache.maven.plugins</groupId>

@@ -25,15 +25,10 @@ Ikonli dependencies must be reviewed when runtime packaging is added.
 
 ## JPackage Maven Plugin
 
-The `org.panteleyev:jpackage-maven-plugin` Maven plugin is used at build time to
-invoke `jpackage` for native application installers. Review its license and
-notices before distributing generated packages.
-
-## JLink Maven Plugin
-
-The `org.panteleyev:jlink-maven-plugin` Maven plugin is used at build time to
-create a trimmed Java runtime image for native packages. Review its license and
-notices before distributing generated packages.
+The `io.github.youngledo:jpackage-maven-plugin` Maven plugin is used at build
+time to invoke `jlink`, `jpackage`, and the Leyden AOT cache workflow for
+application installers. Review its license and notices before distributing
+generated packages.
 
 ## SLF4J
 

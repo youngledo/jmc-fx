@@ -49,7 +49,7 @@ class JmcFxLauncherPackagingTest {
 
         assertTrue(pomText.contains("Leyden packaging intentionally stays behind an explicit profile"),
                 "POM should explain why package/verify do not build installers by default");
-        assertTrue(pomText.contains("The in-repository jpackage-maven-plugin provides a Leyden-enhanced goal"),
+        assertTrue(pomText.contains("The standalone io.github.youngledo:jpackage-maven-plugin provides a Leyden-enhanced goal"),
                 "POM should explain that platform details are handled by the packager plugin");
     }
 
@@ -74,7 +74,7 @@ class JmcFxLauncherPackagingTest {
         assertNull(findPlugin(profile, "org.panteleyev", "jpackage-maven-plugin"));
         assertNull(findPlugin(profile, "org.apache.maven.plugins", "maven-antrun-plugin"));
 
-        var packagerPlugin = findPlugin(profile, "com.youngledo.jmcfx",
+        var packagerPlugin = findPlugin(profile, "io.github.youngledo",
                 "jpackage-maven-plugin");
         assertNotNull(packagerPlugin);
         var execution = findExecution(packagerPlugin, "leyden-jpackage-installer");

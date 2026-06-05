@@ -65,7 +65,7 @@
             a native installer instead of just building and testing the launcher jar.
             Use:
               ./mvnw -pl jmc-fx-launcher -am -Pjpackage-classpath-jlink-leyden package
-            The in-repository jpackage-maven-plugin provides a Leyden-enhanced goal
+            The standalone io.github.youngledo:jpackage-maven-plugin provides a Leyden-enhanced goal
             that derives platform paths, installer types, AOT cache locations, and
             macOS signing internally.
         -->
@@ -78,9 +78,9 @@
             <build>
                 <plugins>
                     <plugin>
-                        <groupId>com.youngledo.jmcfx</groupId>
+                        <groupId>io.github.youngledo</groupId>
                         <artifactId>jpackage-maven-plugin</artifactId>
-                        <version>${project.version}</version>
+                        <version>0.1.0-SNAPSHOT</version>
                         <executions>
                             <execution>
                                 <id>leyden-jpackage-installer</id>
