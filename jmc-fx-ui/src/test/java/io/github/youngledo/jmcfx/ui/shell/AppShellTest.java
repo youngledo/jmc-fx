@@ -1470,6 +1470,8 @@ class AppShellTest {
         assertTrue(controller.contains("new CheckMenuItem(field.label())"));
         assertTrue(controller.contains("new EventFilter("));
         assertTrue(controller.contains("fieldConditions("));
+        assertTrue(controller.contains("fieldFilterOperator().getItems().setAll"));
+        assertTrue(controller.contains("new EventFieldCondition(field.id(), operator, value)"));
         assertTrue(controller.contains("showEventDetails("));
         assertTrue(controller.contains("showSelectionProperties("));
         assertTrue(controller.contains("shouldClearEventTypesTreeSelection"));
@@ -1501,6 +1503,7 @@ class AppShellTest {
         assertTrue(eventsPaneView.contains("package io.github.youngledo.jmcfx.ui.events;"));
         assertTrue(eventsPaneView.contains("public final class EventsPaneView"));
         assertTrue(eventsPaneView.contains("private final TreeView<EventTypeNode> eventTypesTree = new TreeView<>();"));
+        assertTrue(eventsPaneView.contains("private final ComboBox<EventFieldDescriptor> fieldFilterField = new ComboBox<>();"));
         assertTrue(eventsPaneView.contains("private final TableView<EventRow> eventsTable = denseTable();"));
         assertTrue(eventsPaneView.contains("public EventsPaneView(VBox pane)"));
         assertTrue(eventsPaneView.contains("public EventsPageView view()"));

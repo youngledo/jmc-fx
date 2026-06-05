@@ -8,6 +8,7 @@ import java.util.StringJoiner;
 import io.github.youngledo.jmcfx.domain.model.EventColumn;
 import io.github.youngledo.jmcfx.domain.model.EventDetails;
 import io.github.youngledo.jmcfx.domain.model.EventFieldCondition;
+import io.github.youngledo.jmcfx.domain.model.EventFieldDescriptor;
 import io.github.youngledo.jmcfx.domain.model.EventFilter;
 import io.github.youngledo.jmcfx.domain.model.EventFilterOperator;
 import io.github.youngledo.jmcfx.domain.model.EventProperty;
@@ -32,6 +33,7 @@ import javafx.scene.control.TreeItem;
 import javafx.scene.control.TreeView;
 import javafx.scene.layout.Region;
 import javafx.scene.control.SplitPane;
+import javafx.util.StringConverter;
 
 /// Controller for the recording Event Browser split table/detail page.
 public final class EventsPageController {
@@ -45,8 +47,10 @@ public final class EventsPageController {
     private final I18n i18n;
     private final ListChangeListener<EventTypeNode> eventTypeTreeListener = change -> rebuildEventTypeTree();
     private final ListChangeListener<EventColumn> eventColumnsListener = change -> rebuildEventColumns();
-    private final ListChangeListener<io.github.youngledo.jmcfx.domain.model.EventFieldDescriptor> fieldDescriptorsListener =
-            change -> rebuildColumnsMenu();
+    private final ListChangeListener<EventFieldDescriptor> fieldDescriptorsListener = change -> {
+        rebuildColumnsMenu();
+        rebuildFieldFilterFields();
+    };
     private final ListChangeListener<EventRow> eventRowsListener = change -> selectFirstEventRow();
     private final ChangeListener<EventDetails> selectedDetailsListener =
             (observable, oldValue, newValue) -> showEventDetails(newValue);
@@ -81,6 +85,7 @@ public final class EventsPageController {
             view.eventsTable().setItems(FXCollections.emptyObservableList());
             view.eventsTable().getColumns().clear();
             view.columnsButton().getItems().clear();
+            rebuildFieldFilterFields();
             view.windowStatusLabel().setText(i18n.get("events.window.openPrompt"));
             showEventDetails(null);
             showSelectionProperties(null);
@@ -96,6 +101,7 @@ public final class EventsPageController {
         view.windowStatusLabel().textProperty().bind(nextViewModel.statusMessageProperty());
         rebuildEventTypeTree();
         rebuildEventColumns();
+        rebuildFieldFilterFields();
         showEventDetails(nextViewModel.selectedDetailsProperty().get());
         showSelectionProperties(nextViewModel.selectionPropertiesProperty().get());
     }
@@ -126,6 +132,8 @@ public final class EventsPageController {
         view.searchField().promptTextProperty().bind(i18n.text("events.search.prompt"));
         view.threadFilterField().promptTextProperty().bind(i18n.text("events.thread.prompt"));
         view.fieldFilterField().promptTextProperty().bind(i18n.text("events.field.prompt"));
+        view.fieldFilterValue().promptTextProperty().bind(i18n.text("events.field.value.prompt"));
+        view.applyFiltersButton().textProperty().bind(i18n.text("events.filters.apply"));
         view.clearFiltersButton().textProperty().bind(i18n.text("events.filters.clear"));
         view.columnsButton().textProperty().bind(i18n.text("events.columns"));
         view.propertiesTab().textProperty().bind(i18n.text("events.details.properties"));
@@ -157,12 +165,51 @@ public final class EventsPageController {
                 .addListener((observable, oldValue, newValue) -> selectEventRow(newValue));
 
         view.clearFiltersButton().setOnAction(event -> clearEventFilters());
+        view.applyFiltersButton().setOnAction(event -> refreshVisibleRange());
         view.searchField().setOnAction(event -> refreshVisibleRange());
         view.threadFilterField().setOnAction(event -> refreshVisibleRange());
-        view.fieldFilterField().setOnAction(event -> refreshVisibleRange());
+        view.fieldFilterValue().setOnAction(event -> refreshVisibleRange());
+        configureFieldFilterControls();
 
         configureEventPropertiesTable();
         bind(null);
+    }
+
+    private void configureFieldFilterControls() {
+        view.fieldFilterField().setConverter(new StringConverter<>() {
+            @Override
+            public String toString(EventFieldDescriptor field) {
+                return field == null ? "" : field.label();
+            }
+
+            @Override
+            public EventFieldDescriptor fromString(String string) {
+                return view.fieldFilterField().getItems().stream()
+                        .filter(field -> field.label().equals(string))
+                        .findFirst()
+                        .orElse(null);
+            }
+        });
+        view.fieldFilterOperator().setConverter(new StringConverter<>() {
+            @Override
+            public String toString(EventFilterOperator operator) {
+                return operator == null ? "" : operatorSymbol(operator);
+            }
+
+            @Override
+            public EventFilterOperator fromString(String string) {
+                return null;
+            }
+        });
+        view.fieldFilterField().getSelectionModel().selectedItemProperty()
+                .addListener((observable, oldValue, newValue) -> {
+                    rebuildFieldFilterOperators(newValue);
+                    updateFieldFilterValueState();
+                });
+        view.fieldFilterOperator().getSelectionModel().selectedItemProperty()
+                .addListener((observable, oldValue, newValue) -> updateFieldFilterValueState());
+        rebuildFieldFilterOperators(null);
+        updateFieldFilterValueState();
     }
 
     private void initializeEventTypesDivider() {
@@ -259,6 +306,27 @@ public final class EventsPageController {
                 .toList());
     }
 
+    private void rebuildFieldFilterFields() {
+        if (viewModel == null) {
+            view.fieldFilterField().getItems().clear();
+            view.fieldFilterField().getSelectionModel().clearSelection();
+            updateFieldFilterValueState();
+            return;
+        }
+        EventFieldDescriptor selected = view.fieldFilterField().getSelectionModel().getSelectedItem();
+        view.fieldFilterField().getItems().setAll(viewModel.fieldDescriptorsProperty().stream()
+                .filter(EventFieldDescriptor::filterable)
+                .toList());
+        if (selected != null) {
+            view.fieldFilterField().getItems().stream()
+                    .filter(field -> field.id().equals(selected.id()))
+                    .findFirst()
+                    .ifPresentOrElse(view.fieldFilterField().getSelectionModel()::select,
+                            () -> view.fieldFilterField().getSelectionModel().clearSelection());
+        }
+        updateFieldFilterValueState();
+    }
+
     private TableColumn<EventRow, String> toTableColumn(EventColumn column) {
         TableColumn<EventRow, String> tableColumn = new TableColumn<>(column.label());
         tableColumn.setPrefWidth(column.width());
@@ -311,7 +379,9 @@ public final class EventsPageController {
     private void clearEventFilters() {
         view.searchField().clear();
         view.threadFilterField().clear();
-        view.fieldFilterField().clear();
+        view.fieldFilterField().getSelectionModel().clearSelection();
+        rebuildFieldFilterOperators(null);
+        view.fieldFilterValue().clear();
         refreshVisibleRange();
     }
 
@@ -320,28 +390,76 @@ public final class EventsPageController {
             return;
         }
         viewModel.setFilter(new EventFilter(view.searchField().getText(), view.threadFilterField().getText(),
-                null, null, fieldConditions(view.fieldFilterField().getText())));
+                null, null, fieldConditions()));
     }
 
-    private List<EventFieldCondition> fieldConditions(String expression) {
-        if (expression == null || expression.isBlank()) {
+    private List<EventFieldCondition> fieldConditions() {
+        EventFieldDescriptor field = view.fieldFilterField().getSelectionModel().getSelectedItem();
+        EventFilterOperator operator = view.fieldFilterOperator().getSelectionModel().getSelectedItem();
+        String value = view.fieldFilterValue().getText();
+        if (field == null || operator == null) {
             return List.of();
         }
-        String[] parts = expression.trim().split("\\s+", 3);
-        if (parts.length < 3) {
+        if (operator == EventFilterOperator.IS_TRUE || operator == EventFilterOperator.IS_FALSE) {
+            return List.of(new EventFieldCondition(field.id(), operator, ""));
+        }
+        if (value == null || value.isBlank()) {
             return List.of();
         }
-        EventFilterOperator operator = switch (parts[1]) {
-            case "contains" -> EventFilterOperator.CONTAINS;
-            case "=", "==" -> EventFilterOperator.EQUALS;
-            case "!=", "<>" -> EventFilterOperator.NOT_EQUALS;
-            case ">" -> EventFilterOperator.GREATER_THAN;
-            case ">=" -> EventFilterOperator.GREATER_THAN_OR_EQUAL;
-            case "<" -> EventFilterOperator.LESS_THAN;
-            case "<=" -> EventFilterOperator.LESS_THAN_OR_EQUAL;
-            default -> null;
+        return List.of(new EventFieldCondition(field.id(), operator, value));
+    }
+
+    private void updateFieldFilterValueState() {
+        boolean fieldMissing = view.fieldFilterField().getSelectionModel().getSelectedItem() == null;
+        EventFilterOperator operator = view.fieldFilterOperator().getSelectionModel().getSelectedItem();
+        boolean valueNotNeeded = operator == EventFilterOperator.IS_TRUE || operator == EventFilterOperator.IS_FALSE;
+        view.fieldFilterOperator().setDisable(fieldMissing);
+        view.fieldFilterValue().setDisable(fieldMissing || valueNotNeeded);
+    }
+
+    private void rebuildFieldFilterOperators(EventFieldDescriptor field) {
+        EventFilterOperator selected = view.fieldFilterOperator().getSelectionModel().getSelectedItem();
+        List<EventFilterOperator> operators = operatorsFor(field);
+        view.fieldFilterOperator().getItems().setAll(operators);
+        if (selected != null && operators.contains(selected)) {
+            view.fieldFilterOperator().getSelectionModel().select(selected);
+        } else if (!operators.isEmpty()) {
+            view.fieldFilterOperator().getSelectionModel().selectFirst();
+        }
+    }
+
+    private static List<EventFilterOperator> operatorsFor(EventFieldDescriptor field) {
+        if (field == null) {
+            return List.of(EventFilterOperator.CONTAINS);
+        }
+        return switch (field.valueType()) {
+            case BOOLEAN -> List.of(EventFilterOperator.IS_TRUE, EventFilterOperator.IS_FALSE);
+            case NUMBER, DURATION, TIMESTAMP -> List.of(
+                    EventFilterOperator.EQUALS,
+                    EventFilterOperator.NOT_EQUALS,
+                    EventFilterOperator.GREATER_THAN,
+                    EventFilterOperator.GREATER_THAN_OR_EQUAL,
+                    EventFilterOperator.LESS_THAN,
+                    EventFilterOperator.LESS_THAN_OR_EQUAL);
+            case TEXT, ENUM, UNKNOWN -> List.of(
+                    EventFilterOperator.CONTAINS,
+                    EventFilterOperator.EQUALS,
+                    EventFilterOperator.NOT_EQUALS);
         };
-        return operator == null ? List.of() : List.of(new EventFieldCondition(parts[0], operator, parts[2]));
+    }
+
+    static String operatorSymbol(EventFilterOperator operator) {
+        return switch (operator) {
+            case CONTAINS -> "contains";
+            case EQUALS -> "=";
+            case NOT_EQUALS -> "!=";
+            case GREATER_THAN -> ">";
+            case GREATER_THAN_OR_EQUAL -> ">=";
+            case LESS_THAN -> "<";
+            case LESS_THAN_OR_EQUAL -> "<=";
+            case IS_TRUE -> "is true";
+            case IS_FALSE -> "is false";
+        };
     }
 
     private void configureEventPropertiesTable() {

@@ -1,11 +1,14 @@
 package io.github.youngledo.jmcfx.ui.events;
 
+import io.github.youngledo.jmcfx.domain.model.EventFieldDescriptor;
+import io.github.youngledo.jmcfx.domain.model.EventFilterOperator;
 import io.github.youngledo.jmcfx.domain.model.EventProperty;
 import io.github.youngledo.jmcfx.domain.model.EventRow;
 import io.github.youngledo.jmcfx.domain.model.EventTypeNode;
 
 import javafx.scene.Node;
 import javafx.scene.control.Button;
+import javafx.scene.control.ComboBox;
 import javafx.scene.control.Label;
 import javafx.scene.control.ListView;
 import javafx.scene.control.MenuButton;
@@ -26,7 +29,10 @@ public final class EventsPaneView {
     private final TreeView<EventTypeNode> eventTypesTree = new TreeView<>();
     private final TextField eventSearchField = new TextField();
     private final TextField threadFilterField = new TextField();
-    private final TextField fieldFilterField = new TextField();
+    private final ComboBox<EventFieldDescriptor> fieldFilterField = new ComboBox<>();
+    private final ComboBox<EventFilterOperator> fieldFilterOperator = new ComboBox<>();
+    private final TextField fieldFilterValue = new TextField();
+    private final Button applyEventFiltersButton = new Button();
     private final Button clearEventFiltersButton = new Button();
     private final MenuButton columnsButton = new MenuButton();
     private final SplitPane eventsSplitPane = new SplitPane();
@@ -48,7 +54,8 @@ public final class EventsPaneView {
 
     public EventsPageView view() {
         return new EventsPageView(pane(), eventsTitleLabel, eventTypesTree, eventSearchField,
-                threadFilterField, fieldFilterField, clearEventFiltersButton, columnsButton, eventsSplitPane,
+                threadFilterField, fieldFilterField, fieldFilterOperator, fieldFilterValue,
+                applyEventFiltersButton, clearEventFiltersButton, columnsButton, eventsSplitPane,
                 eventsTable, eventWindowStatusLabel, eventDetailsTabs, eventPropertiesTab, eventTimingTab,
                 eventThreadTab, eventStackTraceTab, eventPropertiesTable, eventTimingLabel, eventThreadLabel,
                 eventStackTraceList);
@@ -62,9 +69,12 @@ public final class EventsPaneView {
         pane.setSpacing(8);
         styles(eventsTitleLabel, "view-title");
         HBox filters = hbox(8, eventSearchField, threadFilterField, fieldFilterField,
-                clearEventFiltersButton, columnsButton);
+                fieldFilterOperator, fieldFilterValue, applyEventFiltersButton, clearEventFiltersButton, columnsButton);
         styles(filters, "event-filter-bar");
         HBox.setHgrow(eventSearchField, Priority.ALWAYS);
+        fieldFilterField.setPrefWidth(190);
+        fieldFilterOperator.setPrefWidth(110);
+        fieldFilterValue.setPrefWidth(160);
         styles(eventsTable, "dense-table");
         eventsSplitPane.getItems().setAll(eventTypesTree, vbox(6, eventsTable, eventWindowStatusLabel));
         VBox.setVgrow(eventsTable, Priority.ALWAYS);
@@ -74,7 +84,7 @@ public final class EventsPaneView {
         tab(eventStackTraceTab, eventStackTraceList);
         eventDetailsTabs.getTabs().setAll(eventPropertiesTab, eventTimingTab, eventThreadTab, eventStackTraceTab);
         eventDetailsTabs.setPrefHeight(220);
-        wrap(eventTimingLabel, eventThreadLabel);
+        wrap(eventWindowStatusLabel, eventTimingLabel, eventThreadLabel);
         styles(eventWindowStatusLabel, "event-window-status");
         VBox.setVgrow(eventsSplitPane, Priority.ALWAYS);
         pane.getChildren().setAll(eventsTitleLabel, filters, eventsSplitPane, eventDetailsTabs);

@@ -1,10 +1,13 @@
 package io.github.youngledo.jmcfx.ui.events;
 
+import io.github.youngledo.jmcfx.domain.model.EventFieldDescriptor;
+import io.github.youngledo.jmcfx.domain.model.EventFilterOperator;
 import io.github.youngledo.jmcfx.domain.model.EventProperty;
 import io.github.youngledo.jmcfx.domain.model.EventRow;
 import io.github.youngledo.jmcfx.domain.model.EventTypeNode;
 
 import javafx.scene.control.Button;
+import javafx.scene.control.ComboBox;
 import javafx.scene.control.Label;
 import javafx.scene.control.ListView;
 import javafx.scene.control.MenuButton;
@@ -23,7 +26,10 @@ public record EventsPageView(
         TreeView<EventTypeNode> eventTypesTree,
         TextField searchField,
         TextField threadFilterField,
-        TextField fieldFilterField,
+        ComboBox<EventFieldDescriptor> fieldFilterField,
+        ComboBox<EventFilterOperator> fieldFilterOperator,
+        TextField fieldFilterValue,
+        Button applyFiltersButton,
         Button clearFiltersButton,
         MenuButton columnsButton,
         SplitPane splitPane,

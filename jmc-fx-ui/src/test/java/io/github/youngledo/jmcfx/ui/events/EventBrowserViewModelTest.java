@@ -41,8 +41,10 @@ import io.github.youngledo.jmcfx.domain.model.RecordingSummary;
 import io.github.youngledo.jmcfx.domain.service.EventQueryService;
 import io.github.youngledo.jmcfx.domain.service.EventQuerySession;
 import io.github.youngledo.jmcfx.ui.testsupport.FakeEventQueryService;
+import io.github.youngledo.jmcfx.ui.i18n.I18n;
 
 import javafx.application.Platform;
+import javafx.scene.layout.VBox;
 
 class EventBrowserViewModelTest {
 
@@ -133,6 +135,8 @@ class EventBrowserViewModelTest {
         assertEquals(40, service.lastWindowRequest().visibleRowCount());
         assertEquals(50, service.lastWindowRequest().prefetchBefore());
         assertEquals(100, service.lastWindowRequest().prefetchAfter());
+        assertEquals("Start row 100, requested 40, returned 1; no filters. Selection: All Events.",
+                viewModel.statusMessageProperty().get());
     }
 
     @Test
@@ -150,6 +154,48 @@ class EventBrowserViewModelTest {
         assertEquals(List.of("Text: Thread Start", "Thread: main",
                 "Time: 1970-01-01T00:00:00Z - 1970-01-01T00:00:01Z",
                 "duration > 10 ms"), viewModel.filterChipsProperty());
+        assertEquals("Start row 0, requested 100, returned 1; filtered. Selection: All Events.",
+                viewModel.statusMessageProperty().get());
+    }
+
+    @Test
+    void controllerBuildsFieldFilterFromSelectedFieldAndOperator() throws Exception {
+        ensureFxToolkit();
+        RecordingEventQueryService service = new RecordingEventQueryService();
+        EventBrowserViewModel viewModel = new EventBrowserViewModel(new BrowseEventsUseCase(service), new DirectEventBrowserExecutor());
+        ControllerFixture fixture = fx(() -> {
+            EventsPaneView pane = new EventsPaneView(new VBox());
+            EventsPageView page = pane.view();
+            EventsPageController pageController = new EventsPageController(page, new I18n(java.util.Locale.ENGLISH));
+            pageController.configure();
+            return new ControllerFixture(page, pageController);
+        });
+
+        viewModel.loadRecording(recording());
+        viewModel.selectAllEventTypes();
+
+        runAndDrainFxEvents(() -> {
+            fixture.controller().bind(viewModel);
+            fixture.view().searchField().setText("Thread Start");
+            fixture.view().threadFilterField().setText("main");
+            fixture.view().fieldFilterField().getSelectionModel().select(fixture.view().fieldFilterField().getItems().stream()
+                    .filter(field -> field.id().equals("duration"))
+                    .findFirst()
+                    .orElseThrow());
+            assertEquals(List.of(EventFilterOperator.EQUALS, EventFilterOperator.NOT_EQUALS,
+                    EventFilterOperator.GREATER_THAN, EventFilterOperator.GREATER_THAN_OR_EQUAL,
+                    EventFilterOperator.LESS_THAN, EventFilterOperator.LESS_THAN_OR_EQUAL),
+                    fixture.view().fieldFilterOperator().getItems());
+            fixture.view().fieldFilterOperator().getSelectionModel().select(EventFilterOperator.GREATER_THAN);
+            fixture.view().fieldFilterValue().setText("10");
+            fixture.view().applyFiltersButton().fire();
+        });
+
+        EventFilter filter = service.lastWindowRequest().filter();
+        assertEquals("Thread Start", filter.text());
+        assertEquals("main", filter.thread());
+        assertEquals(List.of(new EventFieldCondition("duration", EventFilterOperator.GREATER_THAN, "10")),
+                filter.fieldConditions());
     }
 
     @Test
@@ -293,6 +339,8 @@ class EventBrowserViewModelTest {
         EventBrowserViewModel viewModel = new EventBrowserViewModel(new BrowseEventsUseCase(service), new DirectEventBrowserExecutor());
 
         viewModel.loadRecording(recording());
+        viewModel.selectAllEventTypes();
+        String windowStatus = viewModel.statusMessageProperty().get();
         EventRow row = new EventRow("rec.CPULoad#42", "rec.CPULoad", Instant.EPOCH,
                 "1970-01-01T00:00:00Z", 0, "0 ns", "JVM Periodic Tasks", Map.of("jvmUser", "0.99"));
 
@@ -300,6 +348,7 @@ class EventBrowserViewModelTest {
 
         assertEquals("rec.CPULoad#42", viewModel.selectedDetailsProperty().get().eventId());
         assertEquals("rec.CPULoad#42", service.lastDetailsEventId());
+        assertEquals(windowStatus, viewModel.statusMessageProperty().get());
     }
 
     @Test
@@ -470,6 +519,31 @@ class EventBrowserViewModelTest {
             Thread.currentThread().interrupt();
             throw new AssertionError("Interrupted waiting for JavaFX events", exception);
         }
+    }
+
+    private static <T> T fx(java.util.concurrent.Callable<T> callable) throws Exception {
+        AtomicReference<T> value = new AtomicReference<>();
+        AtomicReference<Exception> failure = new AtomicReference<>();
+        CountDownLatch latch = new CountDownLatch(1);
+        Platform.runLater(() -> {
+            try {
+                value.set(callable.call());
+            } catch (Exception exception) {
+                failure.set(exception);
+            } finally {
+                latch.countDown();
+            }
+        });
+        if (!latch.await(5, TimeUnit.SECONDS)) {
+            throw new AssertionError("Timed out waiting for JavaFX events");
+        }
+        if (failure.get() != null) {
+            throw failure.get();
+        }
+        return value.get();
+    }
+
+    private record ControllerFixture(EventsPageView view, EventsPageController controller) {
     }
 
     private static void ensureFxToolkit() throws InterruptedException {

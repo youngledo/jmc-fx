@@ -192,8 +192,8 @@ public class EventBrowserViewModel implements AutoCloseable {
         clearError();
         List<String> columnFieldIds = activeFieldIds(columns);
         executeRequest(sequence, () -> {
-            EventWindow window = session.loadEventWindow(
-                    windowRequest(selection, startRow, rowCount, PREFETCH_BEFORE, columnFieldIds));
+            EventWindowRequest request = windowRequest(selection, startRow, rowCount, PREFETCH_BEFORE, columnFieldIds);
+            EventWindow window = session.loadEventWindow(request);
             EventDetails details = firstDetails(session, window);
 
             onFxThread(() -> {
@@ -203,7 +203,7 @@ public class EventBrowserViewModel implements AutoCloseable {
                 rows.setAll(window.rows());
                 selectedDetails.set(details);
                 loading.set(false);
-                statusMessage.set(i18n.format("events.status.loaded", rows.size(), selection.label()));
+                statusMessage.set(windowStatus(window, request, selection));
             });
         });
     }
@@ -281,7 +281,6 @@ public class EventBrowserViewModel implements AutoCloseable {
                 }
                 selectedDetails.set(details);
                 loading.set(false);
-                statusMessage.set(i18n.get("events.status.detailsLoaded"));
             });
         });
     }
@@ -319,8 +318,8 @@ public class EventBrowserViewModel implements AutoCloseable {
         executeRequest(sequence, () -> {
             List<EventFieldDescriptor> loadedFields = session.loadFieldDescriptors(selection);
             List<EventColumn> loadedColumns = initialColumns(selection, loadedFields);
-            EventWindow window = session.loadEventWindow(
-                    windowRequest(selection, 0, rowCount, 0, activeFieldIds(loadedColumns)));
+            EventWindowRequest request = windowRequest(selection, 0, rowCount, 0, activeFieldIds(loadedColumns));
+            EventWindow window = session.loadEventWindow(request);
             EventSelectionProperties loadedSelectionProperties = session.loadSelectionProperties(selection);
             EventDetails details = firstDetails(session, window);
 
@@ -334,7 +333,7 @@ public class EventBrowserViewModel implements AutoCloseable {
                 selectionProperties.set(loadedSelectionProperties);
                 selectedDetails.set(details);
                 loading.set(false);
-                statusMessage.set(i18n.format("events.status.loaded", rows.size(), selection.label()));
+                statusMessage.set(windowStatus(window, request, selection));
             });
         });
     }
@@ -371,6 +370,18 @@ public class EventBrowserViewModel implements AutoCloseable {
             return null;
         }
         return session.loadEventDetails(window.rows().getFirst().id());
+    }
+
+    private String windowStatus(EventWindow window, EventWindowRequest request, EventTypeSelection selection) {
+        String filterState = request.filter().active()
+                ? i18n.get("events.status.filter.active")
+                : i18n.get("events.status.filter.inactive");
+        return i18n.format("events.status.windowLoaded",
+                selection.label(),
+                request.visibleStartRow(),
+                request.visibleRowCount(),
+                window.rows().size(),
+                filterState);
     }
 
     private List<EventColumn> initialColumns(EventTypeSelection selection, List<EventFieldDescriptor> descriptors) {
