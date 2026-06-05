@@ -15,34 +15,34 @@ class LauncherConfigEditorTest {
 
     @Test
     void rewritesTrainingOptionsToRuntimeAotCache() throws Exception {
-        var config = tempDir.resolve("JMC FX.cfg");
+        var config = tempDir.resolve("Sample App.cfg");
         Files.writeString(config, """
                 [JavaOptions]
-                java-options=--enable-native-access=javafx.graphics
-                java-options=-Djmcfx.leyden.training=true
-                java-options=-XX:AOTCacheOutput=$APPDIR/jmcfx-startup.aot
+                java-options=-Dsample.option=true
+                java-options=-Dsample.training=true
+                java-options=-XX:AOTCacheOutput=$APPDIR/startup.aot
                 """);
 
-        new LauncherConfigEditor().rewriteForRuntime(config, "jmcfx.leyden.training", "jmcfx-startup.aot");
+        new LauncherConfigEditor().rewriteForRuntime(config, "sample.training", "startup.aot");
 
         assertEquals("""
                 [JavaOptions]
-                java-options=--enable-native-access=javafx.graphics
-                java-options=-XX:AOTCache=$APPDIR/jmcfx-startup.aot
+                java-options=-Dsample.option=true
+                java-options=-XX:AOTCache=$APPDIR/startup.aot
                 """, Files.readString(config));
     }
 
     @Test
     void failsWhenAotOutputOptionIsMissing() throws Exception {
-        var config = tempDir.resolve("JMC FX.cfg");
+        var config = tempDir.resolve("Sample App.cfg");
         Files.writeString(config, """
                 [JavaOptions]
-                java-options=-Djmcfx.leyden.training=true
+                java-options=-Dsample.training=true
                 """);
 
         var error = assertThrows(IllegalStateException.class,
-                () -> new LauncherConfigEditor().rewriteForRuntime(config, "jmcfx.leyden.training",
-                        "jmcfx-startup.aot"));
+                () -> new LauncherConfigEditor().rewriteForRuntime(config, "sample.training",
+                        "startup.aot"));
 
         assertEquals("Missing Leyden AOT cache output option in " + config, error.getMessage());
     }

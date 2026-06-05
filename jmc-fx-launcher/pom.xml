@@ -65,26 +65,28 @@
             a native installer instead of just building and testing the launcher jar.
             Use:
               ./mvnw -pl jmc-fx-launcher -am -Pjpackage-classpath-jlink-leyden package
-            The in-repository Leyden packager Maven plugin derives platform paths,
-            installer types, AOT cache locations, and macOS signing internally.
+            The in-repository jpackage-maven-plugin provides a Leyden-enhanced goal
+            that derives platform paths, installer types, AOT cache locations, and
+            macOS signing internally.
         -->
         <profile>
             <id>jpackage-classpath-jlink-leyden</id>
             <properties>
                 <jmcfx.package.version>1.0.0</jmcfx.package.version>
+                <jpackage.appVersion>${jmcfx.package.version}</jpackage.appVersion>
             </properties>
             <build>
                 <plugins>
                     <plugin>
                         <groupId>com.youngledo.jmcfx</groupId>
-                        <artifactId>jmc-fx-leyden-packager-maven-plugin</artifactId>
+                        <artifactId>jpackage-maven-plugin</artifactId>
                         <version>${project.version}</version>
                         <executions>
                             <execution>
                                 <id>leyden-jpackage-installer</id>
                                 <phase>package</phase>
                                 <goals>
-                                    <goal>leyden-package</goal>
+                                    <goal>leyden</goal>
                                 </goals>
                                 <configuration>
                                     <name>JMC FX</name>
@@ -110,6 +112,10 @@
                                     </javaOptions>
                                     <trainingProperty>jmcfx.leyden.training</trainingProperty>
                                     <aotCacheName>jmcfx-startup.aot</aotCacheName>
+                                    <inputDirectory>${project.build.directory}/jpackage-leyden-input</inputDirectory>
+                                    <runtimeDirectory>${project.build.directory}/jpackage-leyden-runtime</runtimeDirectory>
+                                    <appImageDirectory>${project.build.directory}/jpackage-leyden-app-image</appImageDirectory>
+                                    <packageDirectory>${project.build.directory}/jpackage-leyden</packageDirectory>
                                     <macPackageIdentifier>com.youngledo.jmcfx</macPackageIdentifier>
                                     <macPackageName>JMC FX</macPackageName>
                                     <linuxPackageName>jmc-fx</linuxPackageName>

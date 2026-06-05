@@ -49,7 +49,7 @@ class JmcFxLauncherPackagingTest {
 
         assertTrue(pomText.contains("Leyden packaging intentionally stays behind an explicit profile"),
                 "POM should explain why package/verify do not build installers by default");
-        assertTrue(pomText.contains("The in-repository Leyden packager Maven plugin derives platform paths"),
+        assertTrue(pomText.contains("The in-repository jpackage-maven-plugin provides a Leyden-enhanced goal"),
                 "POM should explain that platform details are handled by the packager plugin");
     }
 
@@ -75,12 +75,12 @@ class JmcFxLauncherPackagingTest {
         assertNull(findPlugin(profile, "org.apache.maven.plugins", "maven-antrun-plugin"));
 
         var packagerPlugin = findPlugin(profile, "com.youngledo.jmcfx",
-                "jmc-fx-leyden-packager-maven-plugin");
+                "jpackage-maven-plugin");
         assertNotNull(packagerPlugin);
         var execution = findExecution(packagerPlugin, "leyden-jpackage-installer");
         assertNotNull(execution);
         assertEquals("package", childText(execution, "phase"));
-        assertEquals("leyden-package", childText(execution, "goals", "goal"));
+        assertEquals("leyden", childText(execution, "goals", "goal"));
         assertEquals("JMC FX", childText(execution, "configuration", "name"));
         assertEquals("com.youngledo.jmcfx.launcher.JmcFxLauncher",
                 childText(execution, "configuration", "mainClass"));
@@ -88,6 +88,14 @@ class JmcFxLauncherPackagingTest {
         assertEquals("${jmcfx.package.version}", childText(execution, "configuration", "packageVersion"));
         assertEquals("jmcfx.leyden.training", childText(execution, "configuration", "trainingProperty"));
         assertEquals("jmcfx-startup.aot", childText(execution, "configuration", "aotCacheName"));
+        assertEquals("${project.build.directory}/jpackage-leyden-input",
+                childText(execution, "configuration", "inputDirectory"));
+        assertEquals("${project.build.directory}/jpackage-leyden-runtime",
+                childText(execution, "configuration", "runtimeDirectory"));
+        assertEquals("${project.build.directory}/jpackage-leyden-app-image",
+                childText(execution, "configuration", "appImageDirectory"));
+        assertEquals("${project.build.directory}/jpackage-leyden",
+                childText(execution, "configuration", "packageDirectory"));
         assertConfiguredModules(packagerPlugin,
                 "java.desktop",
                 "java.management",

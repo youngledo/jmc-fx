@@ -19,7 +19,7 @@
         <subproject>jmc-fx-adapter</subproject>
         <subproject>jmc-fx-flamegraph</subproject>
         <subproject>jmc-fx-ui</subproject>
-        <subproject>jmc-fx-leyden-packager-maven-plugin</subproject>
+        <subproject>jpackage-maven-plugin</subproject>
         <subproject>jmc-fx-launcher</subproject>
     </subprojects>
 

@@ -41,11 +41,12 @@ sdk env && ./mvnw -pl jmc-fx-launcher -am -Pjpackage-classpath-jlink-leyden pack
 ```
 
 There is one Leyden installer profile. It delegates the packaging workflow to
-the in-repository `jmc-fx-leyden-packager-maven-plugin`, which detects the
-current operating system and derives the platform-specific `jpackage` options,
-installer type, app-image paths, and AOT cache location internally. The
-installer is written to `jmc-fx-launcher/target/jpackage-leyden/`. On macOS, the
-default output is `JMC FX-1.0.0.dmg`.
+the in-repository `com.youngledo.jmcfx:jpackage-maven-plugin`. Its
+`leyden` goal detects the current operating system and derives the
+platform-specific `jpackage` options, installer type, app-image paths, and AOT
+cache location internally. The installer is written to
+`jmc-fx-launcher/target/jpackage-leyden/`. On macOS, the default output is
+`JMC FX-1.0.0.dmg`.
 
 Leyden packaging is intentionally kept behind an explicit profile instead of the
 default build. The installer flow reaches Maven's `package` phase, runs the
