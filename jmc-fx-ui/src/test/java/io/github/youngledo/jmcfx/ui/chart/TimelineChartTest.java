@@ -108,6 +108,19 @@ class TimelineChartTest {
     }
 
     @Test
+    void tickUnitUsesReadableMajorTicksForEpochMillisRanges() {
+        double tickUnit = TimelineChart.tickUnit(1_778_121_011_513.0, 1_778_121_363_322.0);
+
+        assertEquals(50_000.0, tickUnit);
+    }
+
+    @Test
+    void tickUnitFallsBackForInvalidRanges() {
+        assertEquals(1.0, TimelineChart.tickUnit(10, 10));
+        assertEquals(1.0, TimelineChart.tickUnit(Double.NaN, 10));
+    }
+
+    @Test
     void timelineChartUsesCaptureFiltersForMouseAndScrollGestures() throws IOException {
         String source = timelineChartSource();
 
@@ -145,6 +158,8 @@ class TimelineChartTest {
 
         assertTrue(source.contains("getStyleClass().addAll(\"timeline-chart\", \"diagnostic-chart\")"));
         assertTrue(source.contains("configureDiagnosticChart(chart);"));
+        assertTrue(source.contains("axis.setTickUnit(tickUnit(lowerBound, upperBound));"));
+        assertTrue(source.contains("axis.setMinorTickVisible(false);"));
         assertTrue(source.contains("lineChart.setCreateSymbols(false);"));
         assertTrue(source.contains("areaChart.setCreateSymbols(false);"));
     }

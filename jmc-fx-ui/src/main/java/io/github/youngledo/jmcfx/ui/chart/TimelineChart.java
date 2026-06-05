@@ -18,7 +18,6 @@ import javafx.scene.chart.BarChart;
 import javafx.scene.chart.CategoryAxis;
 import javafx.scene.chart.LineChart;
 import javafx.scene.chart.NumberAxis;
-import javafx.scene.chart.ValueAxis;
 import javafx.scene.chart.XYChart;
 import javafx.scene.input.MouseButton;
 import javafx.scene.input.MouseEvent;
@@ -31,6 +30,7 @@ import javafx.scene.layout.VBox;
 public class TimelineChart extends VBox {
 
     private static final double ZOOM_FACTOR = 0.85;
+    private static final int TARGET_MAJOR_TICK_COUNT = 8;
     static final int MAX_RENDERED_POINTS_PER_SERIES = 2_000;
 
     private final NumberAxis xAxis = new NumberAxis();
@@ -213,8 +213,7 @@ public class TimelineChart extends VBox {
         }
         xAxis.setAutoRanging(false);
         AxisRange range = zoomRange(xAxis.getLowerBound(), xAxis.getUpperBound(), factor);
-        xAxis.setLowerBound(range.lowerBound());
-        xAxis.setUpperBound(range.upperBound());
+        setAxisBounds(xAxis, range.lowerBound(), range.upperBound());
     }
 
     void resetZoom() {
@@ -227,28 +226,42 @@ public class TimelineChart extends VBox {
         }
         xAxis.setAutoRanging(false);
         AxisRange range = zoomRangeAtPixel(xAxis.getLowerBound(), xAxis.getUpperBound(), factor, pixelX, pixelWidth);
-        xAxis.setLowerBound(range.lowerBound());
-        xAxis.setUpperBound(range.upperBound());
+        setAxisBounds(xAxis, range.lowerBound(), range.upperBound());
     }
 
     void panXAxis(double dragDeltaX, double pixelWidth) {
         AxisRange range = panRange(xAxis.getLowerBound(), xAxis.getUpperBound(),
                 initialLowerBound, initialUpperBound, dragDeltaX, pixelWidth);
-        xAxis.setLowerBound(range.lowerBound());
-        xAxis.setUpperBound(range.upperBound());
+        setAxisBounds(xAxis, range.lowerBound(), range.upperBound());
     }
 
     void panXAxisFromDragStart(double dragDeltaX, double pixelWidth) {
         AxisRange range = panRange(dragStartLowerBound, dragStartUpperBound,
                 initialLowerBound, initialUpperBound, dragDeltaX, pixelWidth);
-        xAxis.setLowerBound(range.lowerBound());
-        xAxis.setUpperBound(range.upperBound());
+        setAxisBounds(xAxis, range.lowerBound(), range.upperBound());
     }
 
-    private static void setAxisBounds(ValueAxis<Number> axis, double lowerBound, double upperBound) {
+    private static void setAxisBounds(NumberAxis axis, double lowerBound, double upperBound) {
         axis.setAutoRanging(false);
         axis.setLowerBound(lowerBound);
         axis.setUpperBound(upperBound);
+        axis.setTickUnit(tickUnit(lowerBound, upperBound));
+        axis.setMinorTickVisible(false);
+    }
+
+    static double tickUnit(double lowerBound, double upperBound) {
+        double range = upperBound - lowerBound;
+        if (!Double.isFinite(range) || range <= 0) {
+            return 1;
+        }
+        double rawUnit = range / TARGET_MAJOR_TICK_COUNT;
+        double magnitude = Math.pow(10, Math.floor(Math.log10(rawUnit)));
+        double normalized = rawUnit / magnitude;
+        double niceNormalized = normalized <= 1 ? 1
+                : normalized <= 2 ? 2
+                : normalized <= 5 ? 5
+                : 10;
+        return niceNormalized * magnitude;
     }
 
     static AxisRange zoomRange(double lowerBound, double upperBound, double factor) {
