@@ -26,6 +26,8 @@ public final class JavaApplicationDataPaneView {
 
     private final Label exceptionsTitleLabel = new Label();
     private final Label exceptionsRecordingContextLabel = new Label();
+    private final Button exceptionsClearTimeRangeButton = new Button();
+    private final HBox exceptionsRecordingContextBar = new HBox();
     private final Button exceptionsGroupByClass = new Button();
     private final Button exceptionsGroupByMessage = new Button();
     private final Button exceptionsGroupByClassAndMessage = new Button();
@@ -36,6 +38,8 @@ public final class JavaApplicationDataPaneView {
     private final TableView<ThreadSummary> threadsTable = denseTable();
     private final Label threadHistogramTitleLabel = new Label();
     private final Label threadHistogramRecordingContextLabel = new Label();
+    private final Button threadHistogramClearTimeRangeButton = new Button();
+    private final HBox threadHistogramRecordingContextBar = new HBox();
     private final VBox threadHistogramChartContainer = new VBox();
     private final TimelineChart threadHistogramChart = new TimelineChart();
     private final TableView<ThreadHistogramRow> threadHistogramTable = denseTable();
@@ -56,6 +60,7 @@ public final class JavaApplicationDataPaneView {
 
     public ExceptionsPageView exceptionsPage() {
         return new ExceptionsPageView(exceptionsTitleLabel, exceptionsRecordingContextLabel,
+                exceptionsClearTimeRangeButton,
                 exceptionsGroupByClass, exceptionsGroupByMessage, exceptionsGroupByClassAndMessage,
                 exceptionsTable, exceptionsTimelineChart);
     }
@@ -66,6 +71,7 @@ public final class JavaApplicationDataPaneView {
 
     public JavaApplicationDataPagesView javaApplicationDataPages() {
         return new JavaApplicationDataPagesView(threadHistogramTitleLabel, threadHistogramRecordingContextLabel,
+                threadHistogramClearTimeRangeButton,
                 threadHistogramChart, threadHistogramTable,
                 securityTitleLabel, securityTable, nativeLibrariesTitleLabel, nativeLibrariesTable,
                 threadDumpsTitleLabel, threadDumpsTable, threadDumpTextArea);
@@ -74,15 +80,23 @@ public final class JavaApplicationDataPaneView {
     private void configure(VBox exceptionsPane, VBox threadsPane, VBox threadHistogramPane,
             VBox securityPane, VBox nativeLibrariesPane, VBox threadDumpsPane) {
         exceptionsTimelineContainer.getChildren().setAll(exceptionsTimelineChart);
+        exceptionsRecordingContextBar.setSpacing(8);
+        exceptionsRecordingContextBar.getChildren().setAll(exceptionsRecordingContextLabel,
+                exceptionsClearTimeRangeButton);
         styles(exceptionsRecordingContextLabel, "detail-panel-meta");
+        styles(exceptionsRecordingContextBar, "page-toolbar");
         configureTablePage(exceptionsPane, exceptionsTitleLabel,
-                exceptionsRecordingContextLabel,
+                exceptionsRecordingContextBar,
                 hbox(8, exceptionsGroupByClass, exceptionsGroupByMessage, exceptionsGroupByClassAndMessage),
                 new SplitPane(exceptionsTable, exceptionsTimelineContainer));
         configureTablePage(threadsPane, threadsTitleLabel, threadsTable);
         threadHistogramChartContainer.getChildren().setAll(threadHistogramChart);
+        threadHistogramRecordingContextBar.setSpacing(8);
+        threadHistogramRecordingContextBar.getChildren().setAll(threadHistogramRecordingContextLabel,
+                threadHistogramClearTimeRangeButton);
         styles(threadHistogramRecordingContextLabel, "detail-panel-meta");
-        configureTablePage(threadHistogramPane, threadHistogramTitleLabel, threadHistogramRecordingContextLabel,
+        styles(threadHistogramRecordingContextBar, "page-toolbar");
+        configureTablePage(threadHistogramPane, threadHistogramTitleLabel, threadHistogramRecordingContextBar,
                 threadHistogramChartContainer, threadHistogramTable);
         configureTablePage(securityPane, securityTitleLabel, securityTable);
         configureTablePage(nativeLibrariesPane, nativeLibrariesTitleLabel, nativeLibrariesTable);

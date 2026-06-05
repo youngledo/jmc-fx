@@ -19,6 +19,7 @@ import io.github.youngledo.jmcfx.ui.leaks.LeakSuspectsViewModel;
 import io.github.youngledo.jmcfx.ui.locks.LockViewModel;
 import io.github.youngledo.jmcfx.ui.overview.OverviewViewModel;
 import io.github.youngledo.jmcfx.ui.profiling.ProfilingViewModel;
+import io.github.youngledo.jmcfx.ui.recording.RecordingTimeRange;
 import io.github.youngledo.jmcfx.ui.rules.RuleResultsViewModel;
 import io.github.youngledo.jmcfx.ui.socketio.SocketIOViewModel;
 import io.github.youngledo.jmcfx.ui.jvm.ClassLoadingViewModel;
@@ -38,6 +39,8 @@ import io.github.youngledo.jmcfx.ui.metadata.JfrMetadataViewModel;
 import io.github.youngledo.jmcfx.ui.tlab.TlabViewModel;
 import io.github.youngledo.jmcfx.ui.threads.ThreadViewModel;
 
+import javafx.beans.property.ObjectProperty;
+import javafx.beans.property.SimpleObjectProperty;
 import javafx.beans.property.SimpleStringProperty;
 import javafx.beans.property.StringProperty;
 
@@ -47,6 +50,7 @@ public final class RecordingWorkspace {
     private final String id = UUID.randomUUID().toString();
     private final RecordingSummary recording;
     private final StringProperty selectedSection = new SimpleStringProperty("analysis");
+    private final ObjectProperty<RecordingTimeRange> selectedTimeRange = new SimpleObjectProperty<>();
     private final Set<String> loadedSections = new HashSet<>();
     private final Set<String> loadingSections = new HashSet<>();
     private final Map<String, RecordingPageLayoutState> pageLayoutStates = new HashMap<>();
@@ -240,6 +244,10 @@ public final class RecordingWorkspace {
 
     public StringProperty selectedSectionProperty() {
         return selectedSection;
+    }
+
+    public ObjectProperty<RecordingTimeRange> selectedTimeRangeProperty() {
+        return selectedTimeRange;
     }
 
     public boolean isSectionLoaded(String sectionId) {

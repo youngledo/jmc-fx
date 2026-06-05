@@ -7,6 +7,7 @@ import io.github.youngledo.jmcfx.domain.model.FileIOEvent;
 import io.github.youngledo.jmcfx.domain.model.FileIOHistogram;
 import io.github.youngledo.jmcfx.domain.model.RecordingSummary;
 import io.github.youngledo.jmcfx.application.LoadFileIOUseCase;
+import io.github.youngledo.jmcfx.ui.recording.RecordingTimeRange;
 import io.github.youngledo.jmcfx.ui.util.FxDispatch;
 
 import javafx.beans.property.ObjectProperty;
@@ -21,12 +22,15 @@ public class FileIOViewModel {
 
     private final LoadFileIOUseCase fileIOService;
     private final ObservableList<FileIOHistogram> histogram = FXCollections.observableArrayList();
+    private final ObservableList<FileIOEvent> allEvents = FXCollections.observableArrayList();
     private final ObservableList<FileIOEvent> events = FXCollections.observableArrayList();
+    private final ObjectProperty<RecordingTimeRange> timeRange = new SimpleObjectProperty<>();
     private final ObjectProperty<ChartDefinition> timeline = new SimpleObjectProperty<>();
     private final ObjectProperty<RecordingSummary> currentRecording = new SimpleObjectProperty<>();
 
     public FileIOViewModel(LoadFileIOUseCase fileIOService) {
         this.fileIOService = fileIOService;
+        timeRange.addListener((observable, oldValue, newValue) -> applyEventFilter());
     }
 
     public ObservableList<FileIOHistogram> histogramProperty() {
@@ -35,6 +39,10 @@ public class FileIOViewModel {
 
     public ObservableList<FileIOEvent> eventsProperty() {
         return events;
+    }
+
+    public ObjectProperty<RecordingTimeRange> timeRangeProperty() {
+        return timeRange;
     }
 
     public ObjectProperty<ChartDefinition> timelineProperty() {
@@ -52,7 +60,8 @@ public class FileIOViewModel {
         FxDispatch.run(() -> {
             currentRecording.set(recording);
             histogram.setAll(histogramData);
-            events.setAll(eventData);
+            allEvents.setAll(eventData);
+            applyEventFilter();
             timeline.set(chart);
         });
     }
@@ -64,6 +73,18 @@ public class FileIOViewModel {
 
     private void reloadEvents() {
         List<FileIOEvent> data = fileIOService.loadFileIOEvents(currentRecording.get());
-        events.setAll(data);
+        allEvents.setAll(data);
+        applyEventFilter();
+    }
+
+    private void applyEventFilter() {
+        RecordingTimeRange range = timeRange.get();
+        if (range == null) {
+            events.setAll(allEvents);
+            return;
+        }
+        events.setAll(allEvents.stream()
+                .filter(event -> range.contains(event.timestamp()))
+                .toList());
     }
 }

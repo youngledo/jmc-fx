@@ -6,6 +6,7 @@ import io.github.youngledo.jmcfx.domain.model.ThreadHistogramRow;
 import io.github.youngledo.jmcfx.domain.model.X509CertificateEntry;
 import io.github.youngledo.jmcfx.ui.chart.TimelineChart;
 
+import javafx.scene.control.Button;
 import javafx.scene.control.Label;
 import javafx.scene.control.TableView;
 import javafx.scene.control.TextArea;
@@ -14,6 +15,7 @@ import javafx.scene.control.TextArea;
 public record JavaApplicationDataPagesView(
         Label threadHistogramTitleLabel,
         Label threadHistogramRecordingContextLabel,
+        Button threadHistogramClearTimeRangeButton,
         TimelineChart threadHistogramChart,
         TableView<ThreadHistogramRow> threadHistogramTable,
         Label securityTitleLabel,

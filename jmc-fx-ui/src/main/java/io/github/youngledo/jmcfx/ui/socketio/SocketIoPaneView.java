@@ -20,6 +20,8 @@ public final class SocketIoPaneView {
 
     private final Label titleLabel = new Label();
     private final Label recordingContextLabel = new Label();
+    private final Button clearTimeRangeButton = new Button();
+    private final HBox recordingContextBar = new HBox();
     private final HBox groupingBar = new HBox();
     private final Button groupByHostAndPortButton = new Button();
     private final Button groupByHostButton = new Button();
@@ -38,12 +40,16 @@ public final class SocketIoPaneView {
     }
 
     public SocketIoPageView view() {
-        return new SocketIoPageView(titleLabel, recordingContextLabel, groupByHostAndPortButton, groupByHostButton,
+        return new SocketIoPageView(titleLabel, recordingContextLabel, clearTimeRangeButton,
+                groupByHostAndPortButton, groupByHostButton,
                 groupByPortButton, timelineTab, durationTab, eventLogTab,
                 timelineChart, histogramTable, eventTable);
     }
 
     private void configure(VBox pane) {
+        recordingContextBar.setSpacing(8);
+        recordingContextBar.getChildren().setAll(recordingContextLabel, clearTimeRangeButton);
+        styles(recordingContextBar, "page-toolbar");
         groupingBar.setSpacing(8);
         groupingBar.getChildren().setAll(groupByHostAndPortButton, groupByHostButton, groupByPortButton);
         styles(groupingBar, "socketio-grouping-bar");
@@ -52,7 +58,7 @@ public final class SocketIoPaneView {
         tab(durationTab, histogramTable);
         tab(eventLogTab, eventTable);
         tabs.getTabs().setAll(timelineTab, durationTab, eventLogTab);
-        configureTablePage(pane, titleLabel, recordingContextLabel, groupingBar, tabs);
+        configureTablePage(pane, titleLabel, recordingContextBar, groupingBar, tabs);
     }
 
     private void configureTablePage(VBox pane, Label title, Node... content) {

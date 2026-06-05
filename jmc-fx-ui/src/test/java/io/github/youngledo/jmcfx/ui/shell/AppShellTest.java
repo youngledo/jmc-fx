@@ -1243,9 +1243,12 @@ class AppShellTest {
         assertTrue(javaApplicationPaneView.contains("public ThreadsPageView threadsPage()"));
         assertTrue(javaApplicationPaneView.contains("public JavaApplicationDataPagesView javaApplicationDataPages()"));
         assertTrue(javaApplicationPaneView.contains("private final Label threadHistogramRecordingContextLabel = new Label();"));
+        assertTrue(javaApplicationPaneView.contains("private final Button threadHistogramClearTimeRangeButton = new Button();"));
+        assertTrue(javaApplicationPaneView.contains("threadHistogramRecordingContextBar.getChildren().setAll(threadHistogramRecordingContextLabel,"));
         assertTrue(javaApplicationPaneView.contains("styles(threadHistogramRecordingContextLabel, \"detail-panel-meta\")"));
+        assertTrue(javaApplicationPaneView.contains("styles(threadHistogramRecordingContextBar, \"page-toolbar\")"));
         assertTrue(javaApplicationPaneView.contains("configureTablePage(exceptionsPane, exceptionsTitleLabel"));
-        assertTrue(javaApplicationPaneView.contains("configureTablePage(threadHistogramPane, threadHistogramTitleLabel, threadHistogramRecordingContextLabel,"));
+        assertTrue(javaApplicationPaneView.contains("configureTablePage(threadHistogramPane, threadHistogramTitleLabel, threadHistogramRecordingContextBar,"));
         assertTrue(javaApplicationPaneView.contains("configureTablePage(threadDumpsPane, threadDumpsTitleLabel"));
         assertTrue(javaApplicationPaneView.contains("styles(threadDumpTextArea, \"dump-text-area\")"));
     }
@@ -1284,17 +1287,21 @@ class AppShellTest {
         assertTrue(fileIoPaneView.contains("public FileIoPageView view()"));
         assertTrue(fileIoPaneView.contains("tab(timelineTab, timelineContainer);"));
         assertTrue(fileIoPaneView.contains("private final Label recordingContextLabel = new Label();"));
+        assertTrue(fileIoPaneView.contains("private final Button clearTimeRangeButton = new Button();"));
+        assertTrue(fileIoPaneView.contains("private final HBox recordingContextBar = new HBox();"));
         assertTrue(fileIoPaneView.contains("styles(recordingContextLabel, \"detail-panel-meta\")"));
-        assertTrue(fileIoPaneView.contains("configureTablePage(pane, titleLabel, recordingContextLabel, tabs);"));
+        assertTrue(fileIoPaneView.contains("configureTablePage(pane, titleLabel, recordingContextBar, tabs);"));
 
         assertTrue(socketIoPaneView.contains("package io.github.youngledo.jmcfx.ui.socketio;"));
         assertTrue(socketIoPaneView.contains("public final class SocketIoPaneView"));
         assertTrue(socketIoPaneView.contains("public SocketIoPaneView(VBox pane)"));
         assertTrue(socketIoPaneView.contains("public SocketIoPageView view()"));
         assertTrue(socketIoPaneView.contains("private final Label recordingContextLabel = new Label();"));
+        assertTrue(socketIoPaneView.contains("private final Button clearTimeRangeButton = new Button();"));
+        assertTrue(socketIoPaneView.contains("private final HBox recordingContextBar = new HBox();"));
         assertTrue(socketIoPaneView.contains("styles(recordingContextLabel, \"detail-panel-meta\")"));
         assertTrue(socketIoPaneView.contains("styles(groupingBar, \"socketio-grouping-bar\")"));
-        assertTrue(socketIoPaneView.contains("configureTablePage(pane, titleLabel, recordingContextLabel, groupingBar, tabs);"));
+        assertTrue(socketIoPaneView.contains("configureTablePage(pane, titleLabel, recordingContextBar, groupingBar, tabs);"));
 
         assertTrue(locksPaneView.contains("package io.github.youngledo.jmcfx.ui.locks;"));
         assertTrue(locksPaneView.contains("public final class LocksPaneView"));
@@ -1337,9 +1344,11 @@ class AppShellTest {
         assertTrue(heapPaneView.contains("public HeapPaneView(VBox pane)"));
         assertTrue(heapPaneView.contains("public HeapPageView view()"));
         assertTrue(heapPaneView.contains("private final Label recordingContextLabel = new Label();"));
+        assertTrue(heapPaneView.contains("private final Button clearTimeRangeButton = new Button();"));
         assertTrue(heapPaneView.contains("styles(recordingContextLabel, \"detail-panel-meta\")"));
+        assertTrue(heapPaneView.contains("styles(recordingContextBar, \"page-toolbar\")"));
         assertTrue(heapPaneView.contains("timelineContainer.getChildren().setAll(timelineChart);"));
-        assertTrue(heapPaneView.contains("configureTablePage(pane, titleLabel, recordingContextLabel, new SplitPane(table, timelineContainer));"));
+        assertTrue(heapPaneView.contains("configureTablePage(pane, titleLabel, recordingContextBar, new SplitPane(table, timelineContainer));"));
 
         assertTrue(leaksPaneView.contains("package io.github.youngledo.jmcfx.ui.leaks;"));
         assertTrue(leaksPaneView.contains("public final class LeakSuspectsPaneView"));
@@ -1352,9 +1361,11 @@ class AppShellTest {
         assertTrue(tlabPaneView.contains("public TlabPaneView(VBox pane)"));
         assertTrue(tlabPaneView.contains("public TlabPageView view()"));
         assertTrue(tlabPaneView.contains("private final Label recordingContextLabel = new Label();"));
+        assertTrue(tlabPaneView.contains("private final Button clearTimeRangeButton = new Button();"));
         assertTrue(tlabPaneView.contains("styles(recordingContextLabel, \"detail-panel-meta\")"));
+        assertTrue(tlabPaneView.contains("styles(recordingContextBar, \"page-toolbar\")"));
         assertTrue(tlabPaneView.contains("timelineContainer.getChildren().setAll(timelineChart);"));
-        assertTrue(tlabPaneView.contains("configureTablePage(pane, titleLabel, recordingContextLabel, new SplitPane(table, timelineContainer));"));
+        assertTrue(tlabPaneView.contains("configureTablePage(pane, titleLabel, recordingContextBar, new SplitPane(table, timelineContainer));"));
     }
 
     @Test
@@ -1393,12 +1404,17 @@ class AppShellTest {
         assertTrue(jvmPaneView.contains("public JvmInternalsPaneView(VBox jvmInfoPane,"));
         assertTrue(jvmPaneView.contains("public JvmInternalsPagesView view()"));
         assertTrue(jvmPaneView.contains("private final Label gcDetailsRecordingContextLabel = new Label();"));
+        assertTrue(jvmPaneView.contains("private final Button gcDetailsClearTimeRangeButton = new Button();"));
         assertTrue(jvmPaneView.contains("private final Label compilationsRecordingContextLabel = new Label();"));
+        assertTrue(jvmPaneView.contains("private final Button compilationsClearTimeRangeButton = new Button();"));
         assertTrue(jvmPaneView.contains("private final Label codeCacheRecordingContextLabel = new Label();"));
+        assertTrue(jvmPaneView.contains("private final Button codeCacheClearTimeRangeButton = new Button();"));
         assertTrue(jvmPaneView.contains("private final Label classLoadingRecordingContextLabel = new Label();"));
+        assertTrue(jvmPaneView.contains("private final Button classLoadingClearTimeRangeButton = new Button();"));
         assertTrue(jvmPaneView.contains("styles(gcDetailsRecordingContextLabel, \"detail-panel-meta\")"));
+        assertTrue(jvmPaneView.contains("styles(gcDetailsRecordingContextBar, \"page-toolbar\")"));
         assertTrue(jvmPaneView.contains("configureTablePage(jvmInfoPane, jvmInfoTitleLabel"));
-        assertTrue(jvmPaneView.contains("configureTablePage(gcDetailsPane, gcDetailsTitleLabel, gcDetailsRecordingContextLabel"));
+        assertTrue(jvmPaneView.contains("configureTablePage(gcDetailsPane, gcDetailsTitleLabel, gcDetailsRecordingContextBar"));
         assertTrue(jvmPaneView.contains("configureTablePage(vmOperationsPane, vmOperationsTitleLabel"));
 
         assertTrue(g1PaneView.contains("package io.github.youngledo.jmcfx.ui.gc;"));
@@ -2552,10 +2568,13 @@ class AppShellTest {
         assertTrue(registry.contains("exceptionsPageController = new ExceptionsPageController(view.exceptionsPage(), i18n);"));
         assertTrue(registry.contains("threadsPageController = new ThreadsPageController(view.threadsPage(), i18n);"));
         assertTrue(registry.contains("javaApplicationDataPagesController = new JavaApplicationDataPagesController(view.javaApplicationDataPages(), i18n);"));
-        assertTrue(selection.contains("pages.exceptionsPageController().bind(workspace == null ? null : workspace.exceptionViewModel())"));
+        assertTrue(selection.contains("pages.exceptionsPageController().bind("));
+        assertTrue(selection.contains("workspace == null ? null : workspace.exceptionViewModel(),"));
+        assertTrue(selection.contains("workspace == null ? null : workspace.selectedTimeRangeProperty())"));
         assertTrue(selection.contains("pages.threadsPageController().bind(workspace == null ? null : workspace.threadViewModel())"));
         assertTrue(selection.contains("pages.javaApplicationDataPagesController().bindThreadHistogram("));
-        assertTrue(selection.contains("workspace == null ? null : workspace.javaAppOverviewViewModel()"));
+        assertTrue(selection.contains("workspace == null ? null : workspace.javaAppOverviewViewModel(),"));
+        assertTrue(selection.contains("workspace == null ? null : workspace.selectedTimeRangeProperty())"));
         assertTrue(selection.contains("pages.javaApplicationDataPagesController().bindSecurity(workspace == null ? null : workspace.securityViewModel())"));
         assertTrue(selection.contains("pages.javaApplicationDataPagesController().bindNativeLibraries("));
         assertTrue(selection.contains("workspace == null ? null : workspace.nativeLibraryViewModel()"));
@@ -2596,12 +2615,16 @@ class AppShellTest {
         assertTrue(appShellView.contains("JavaApplicationDataPagesView javaApplicationDataPages()"));
         assertTrue(exceptionsView.contains("public record ExceptionsPageView("));
         assertTrue(exceptionsView.contains("Label recordingContextLabel,"));
+        assertTrue(exceptionsView.contains("Button clearTimeRangeButton,"));
         assertTrue(threadsView.contains("public record ThreadsPageView("));
         assertTrue(javaAppView.contains("public record JavaApplicationDataPagesView("));
         assertTrue(javaAppView.contains("Label threadHistogramRecordingContextLabel,"));
+        assertTrue(javaAppView.contains("Button threadHistogramClearTimeRangeButton,"));
 
         assertTrue(exceptionsController.contains("package io.github.youngledo.jmcfx.ui.exceptions;"));
         assertTrue(exceptionsController.contains("public final class ExceptionsPageController"));
+        assertTrue(exceptionsController.contains("new RecordingTimeRangeChartBinding(view.timelineChart(), sharedTimeRange)"));
+        assertTrue(exceptionsController.contains("new RecordingTimeRangeClearButtonBinding("));
         assertTrue(exceptionsController.contains("view.titleLabel().textProperty().bind(i18n.text(\"exceptions.title\"))"));
         assertTrue(exceptionsController.contains("view.recordingContextLabel().textProperty().bind(recordingContextBinding)"));
         assertTrue(exceptionsController.contains("view.groupByClassButton().setOnAction(event -> setExceptionGrouping(ExceptionGrouping.BY_CLASS))"));
@@ -2617,6 +2640,8 @@ class AppShellTest {
 
         assertTrue(javaAppController.contains("package io.github.youngledo.jmcfx.ui.javaapp;"));
         assertTrue(javaAppController.contains("public final class JavaApplicationDataPagesController"));
+        assertTrue(javaAppController.contains("new RecordingTimeRangeChartBinding(view.threadHistogramChart(), sharedTimeRange)"));
+        assertTrue(javaAppController.contains("new RecordingTimeRangeClearButtonBinding("));
         assertTrue(javaAppController.contains("view.threadHistogramTitleLabel().textProperty().bind(i18n.text(\"threadHistogram.title\"))"));
         assertTrue(javaAppController.contains("view.threadHistogramRecordingContextLabel().textProperty().bind(threadHistogramRecordingContextBinding)"));
         assertTrue(javaAppController.contains("view.securityTitleLabel().textProperty().bind(i18n.text(\"security.title\"))"));
@@ -2654,8 +2679,9 @@ class AppShellTest {
         assertTrue(registry.contains("fileIoPageController = new FileIoPageController(view.fileIoPage(), i18n);"));
         assertTrue(registry.contains("socketIoPageController = new SocketIoPageController(view.socketIoPage(), i18n);"));
         assertTrue(registry.contains("locksPageController = new LocksPageController(view.locksPage(), i18n);"));
-        assertTrue(selection.contains("pages.fileIoPageController().bind(workspace == null ? null : workspace.fileIOViewModel())"));
-        assertTrue(selection.contains("pages.socketIoPageController().bind(workspace == null ? null : workspace.socketIOViewModel())"));
+        assertTrue(selection.contains("workspace == null ? null : workspace.fileIOViewModel(),"));
+        assertTrue(selection.contains("workspace == null ? null : workspace.socketIOViewModel(),"));
+        assertTrue(selection.contains("workspace == null ? null : workspace.selectedTimeRangeProperty())"));
         assertTrue(selection.contains("pages.locksPageController().bind(workspace == null ? null : workspace.lockViewModel())"));
         assertTrue(registry.contains("fileIoPageController.exportTables().forEach(installer::install)"));
         assertTrue(registry.contains("socketIoPageController.exportTables().forEach(installer::install)"));
@@ -2692,6 +2718,10 @@ class AppShellTest {
         assertTrue(fileIoController.contains("view.titleLabel().textProperty().bind(i18n.text(\"fileio.title\"))"));
         assertTrue(fileIoController.contains("view.timelineTab().textProperty().bind(i18n.text(\"fileio.tab.timeline\"))"));
         assertTrue(fileIoController.contains("view.recordingContextLabel().textProperty().bind(recordingContextBinding)"));
+        assertTrue(fileIoController.contains("view.clearTimeRangeButton().textProperty().bind(i18n.text(\"recordingTimeRange.clear\"))"));
+        assertTrue(fileIoController.contains("timelineSelectionBinding = new RecordingTimeRangeChartBinding(view.timelineChart(), nextSharedTimeRange)"));
+        assertTrue(fileIoController.contains("nextViewModel.timeRangeProperty().bind(nextSharedTimeRange)"));
+        assertTrue(fileIoController.contains("timelineSelectionBinding.setData(definition)"));
         assertTrue(fileIoController.contains("view.histogramTable().setItems(nextViewModel.histogramProperty())"));
         assertTrue(fileIoController.contains("currentViewModel.timelineProperty().removeListener(timelineListener)"));
         assertTrue(fileIoController.contains("public List<TableView<?>> exportTables()"));
@@ -2700,6 +2730,10 @@ class AppShellTest {
         assertTrue(socketIoController.contains("public final class SocketIoPageController"));
         assertTrue(socketIoController.contains("view.groupByHostAndPortButton().setOnAction(event -> setGrouping(SocketIOGrouping.BY_HOST_AND_PORT))"));
         assertTrue(socketIoController.contains("view.recordingContextLabel().textProperty().bind(recordingContextBinding)"));
+        assertTrue(socketIoController.contains("view.clearTimeRangeButton().textProperty().bind(i18n.text(\"recordingTimeRange.clear\"))"));
+        assertTrue(socketIoController.contains("timelineSelectionBinding = new RecordingTimeRangeChartBinding(view.timelineChart(), nextSharedTimeRange)"));
+        assertTrue(socketIoController.contains("nextViewModel.timeRangeProperty().bind(nextSharedTimeRange)"));
+        assertTrue(socketIoController.contains("timelineSelectionBinding.setData(definition)"));
         assertTrue(socketIoController.contains("view.histogramTable().setItems(nextViewModel.histogramProperty())"));
         assertTrue(socketIoController.contains("currentViewModel.timelineProperty().removeListener(timelineListener)"));
         assertTrue(socketIoController.contains("public List<TableView<?>> exportTables()"));
@@ -2738,9 +2772,13 @@ class AppShellTest {
         assertTrue(registry.contains("heapPageController = new HeapPageController(view.heapPage(), i18n);"));
         assertTrue(registry.contains("leakSuspectsPageController = new LeakSuspectsPageController(view.leakSuspectsPage(), i18n);"));
         assertTrue(registry.contains("tlabPageController = new TlabPageController(view.tlabPage(), i18n);"));
-        assertTrue(selection.contains("pages.heapPageController().bind(workspace == null ? null : workspace.heapViewModel())"));
+        assertTrue(selection.contains("pages.heapPageController().bind("));
+        assertTrue(selection.contains("workspace == null ? null : workspace.heapViewModel(),"));
+        assertTrue(selection.contains("workspace == null ? null : workspace.selectedTimeRangeProperty())"));
         assertTrue(selection.contains("pages.leakSuspectsPageController().bind(workspace == null ? null : workspace.leakSuspectsViewModel())"));
-        assertTrue(selection.contains("pages.tlabPageController().bind(workspace == null ? null : workspace.tlabViewModel())"));
+        assertTrue(selection.contains("pages.tlabPageController().bind("));
+        assertTrue(selection.contains("workspace == null ? null : workspace.tlabViewModel(),"));
+        assertTrue(selection.contains("workspace == null ? null : workspace.selectedTimeRangeProperty())"));
         assertTrue(registry.contains("installer.install(heapPageController.table())"));
         assertTrue(registry.contains("installer.install(leakSuspectsPageController.table())"));
         assertTrue(registry.contains("installer.install(tlabPageController.table())"));
@@ -2766,12 +2804,16 @@ class AppShellTest {
         assertTrue(appShellView.contains("LeakSuspectsPageView leakSuspectsPage()"));
         assertTrue(appShellView.contains("TlabPageView tlabPage()"));
         assertTrue(heapView.contains("public record HeapPageView("));
+        assertTrue(heapView.contains("Button clearTimeRangeButton,"));
         assertTrue(leaksView.contains("public record LeakSuspectsPageView("));
         assertTrue(tlabView.contains("public record TlabPageView("));
         assertTrue(tlabView.contains("Label recordingContextLabel,"));
+        assertTrue(tlabView.contains("Button clearTimeRangeButton,"));
 
         assertTrue(heapController.contains("package io.github.youngledo.jmcfx.ui.heap;"));
         assertTrue(heapController.contains("public final class HeapPageController"));
+        assertTrue(heapController.contains("new RecordingTimeRangeChartBinding(view.timelineChart(), sharedTimeRange)"));
+        assertTrue(heapController.contains("new RecordingTimeRangeClearButtonBinding("));
         assertTrue(heapController.contains("view.titleLabel().textProperty().bind(i18n.text(\"heap.title\"))"));
         assertTrue(heapController.contains("view.recordingContextLabel().textProperty().bind(recordingContextBinding)"));
         assertTrue(heapController.contains("view.table().setItems(nextViewModel.histogramProperty())"));
@@ -2788,6 +2830,8 @@ class AppShellTest {
 
         assertTrue(tlabController.contains("package io.github.youngledo.jmcfx.ui.tlab;"));
         assertTrue(tlabController.contains("public final class TlabPageController"));
+        assertTrue(tlabController.contains("new RecordingTimeRangeChartBinding(view.timelineChart(), sharedTimeRange)"));
+        assertTrue(tlabController.contains("new RecordingTimeRangeClearButtonBinding("));
         assertTrue(tlabController.contains("view.titleLabel().textProperty().bind(i18n.text(\"tlab.title\"))"));
         assertTrue(tlabController.contains("view.recordingContextLabel().textProperty().bind(recordingContextBinding)"));
         assertTrue(tlabController.contains("view.table().setItems(nextViewModel.allocationsProperty())"));
@@ -2827,12 +2871,18 @@ class AppShellTest {
         assertTrue(selection.contains("pages.jvmInternalsPagesController().bindJvmInfo(workspace == null ? null : workspace.jvmInfoViewModel())"));
         assertTrue(selection.contains("pages.jvmInternalsPagesController().bindGcConfig(workspace == null ? null : workspace.gcConfigViewModel())"));
         assertTrue(selection.contains("pages.jvmInternalsPagesController().bindGcSummary(workspace == null ? null : workspace.gcSummaryViewModel())"));
-        assertTrue(selection.contains("pages.jvmInternalsPagesController().bindGcDetails(workspace == null ? null : workspace.gcDetailsViewModel())"));
+        assertTrue(selection.contains("pages.jvmInternalsPagesController().bindGcDetails("));
+        assertTrue(selection.contains("workspace == null ? null : workspace.gcDetailsViewModel(),"));
+        assertTrue(selection.contains("workspace == null ? null : workspace.selectedTimeRangeProperty())"));
         assertTrue(selection.contains("pages.g1GcPageController().bind(workspace == null ? null : workspace.g1GcViewModel())"));
         assertTrue(selection.contains("pages.javaFxEventsPageController().bind(workspace == null ? null : workspace.javaFxEventsViewModel())"));
-        assertTrue(selection.contains("pages.jvmInternalsPagesController().bindCompilations(workspace == null ? null : workspace.compilationsViewModel())"));
-        assertTrue(selection.contains("pages.jvmInternalsPagesController().bindCodeCache(workspace == null ? null : workspace.codeCacheViewModel())"));
-        assertTrue(selection.contains("pages.jvmInternalsPagesController().bindClassLoading(workspace == null ? null : workspace.classLoadingViewModel())"));
+        assertTrue(selection.contains("pages.jvmInternalsPagesController().bindCompilations("));
+        assertTrue(selection.contains("workspace == null ? null : workspace.compilationsViewModel(),"));
+        assertTrue(selection.contains("pages.jvmInternalsPagesController().bindCodeCache("));
+        assertTrue(selection.contains("workspace == null ? null : workspace.codeCacheViewModel(),"));
+        assertTrue(selection.contains("pages.jvmInternalsPagesController().bindClassLoading("));
+        assertTrue(selection.contains("workspace == null ? null : workspace.classLoadingViewModel(),"));
+        assertTrue(selection.contains("workspace == null ? null : workspace.selectedTimeRangeProperty())"));
         assertTrue(selection.contains("pages.jvmInternalsPagesController().bindVmOperations(workspace == null ? null : workspace.vmOperationsViewModel())"));
         assertTrue(registry.contains("jvmInternalsPagesController.exportTables().forEach(installer::install)"));
         assertTrue(registry.contains("g1GcPageController.exportTables().forEach(installer::install)"));
@@ -2855,9 +2905,13 @@ class AppShellTest {
         assertTrue(appShellView.contains("JavaFxEventsPageView javaFxEventsPage()"));
         assertTrue(jvmView.contains("public record JvmInternalsPagesView("));
         assertTrue(jvmView.contains("Label gcDetailsRecordingContextLabel,"));
+        assertTrue(jvmView.contains("Button gcDetailsClearTimeRangeButton,"));
         assertTrue(jvmView.contains("Label compilationsRecordingContextLabel,"));
+        assertTrue(jvmView.contains("Button compilationsClearTimeRangeButton,"));
         assertTrue(jvmView.contains("Label codeCacheRecordingContextLabel,"));
+        assertTrue(jvmView.contains("Button codeCacheClearTimeRangeButton,"));
         assertTrue(jvmView.contains("Label classLoadingRecordingContextLabel,"));
+        assertTrue(jvmView.contains("Button classLoadingClearTimeRangeButton,"));
         assertTrue(g1View.contains("public record G1GcPageView("));
         assertTrue(javaFxView.contains("public record JavaFxEventsPageView("));
 
@@ -2865,6 +2919,15 @@ class AppShellTest {
         assertTrue(jvmController.contains("public final class JvmInternalsPagesController"));
         assertTrue(jvmController.contains("public void bindJvmInfo(JvmInfoViewModel nextViewModel)"));
         assertTrue(jvmController.contains("public void bindGcDetails(GcDetailsViewModel nextViewModel)"));
+        assertTrue(jvmController.contains("new RecordingTimeRangeChartBinding(view.gcHeapChart(), sharedTimeRange)"));
+        assertTrue(jvmController.contains("new RecordingTimeRangeChartBinding(view.gcMetaspaceChart(), sharedTimeRange)"));
+        assertTrue(jvmController.contains("new RecordingTimeRangeChartBinding(view.gcPauseChart(), sharedTimeRange)"));
+        assertTrue(jvmController.contains("new RecordingTimeRangeChartBinding("));
+        assertTrue(jvmController.contains("view.compilationDurationChart(), sharedTimeRange)"));
+        assertTrue(jvmController.contains("view.codeCacheEntriesChart(), sharedTimeRange)"));
+        assertTrue(jvmController.contains("new RecordingTimeRangeChartBinding(view.codeCacheSweepChart(), sharedTimeRange)"));
+        assertTrue(jvmController.contains("new RecordingTimeRangeChartBinding(view.classLoadingChart(), sharedTimeRange)"));
+        assertTrue(jvmController.contains("new RecordingTimeRangeClearButtonBinding("));
         assertTrue(jvmController.contains("currentViewModel.heapChartProperty().removeListener(heapChartListener)"));
         assertTrue(jvmController.contains("view.gcDetailsRecordingContextLabel().textProperty().bind(gcDetailsRecordingContextBinding)"));
         assertTrue(jvmController.contains("view.compilationsRecordingContextLabel().textProperty().bind(compilationsRecordingContextBinding)"));

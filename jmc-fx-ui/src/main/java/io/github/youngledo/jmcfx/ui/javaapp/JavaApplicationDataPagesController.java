@@ -11,10 +11,14 @@ import io.github.youngledo.jmcfx.domain.model.ThreadHistogramRow;
 import io.github.youngledo.jmcfx.domain.model.X509CertificateEntry;
 import io.github.youngledo.jmcfx.ui.events.EventsPageController;
 import io.github.youngledo.jmcfx.ui.i18n.I18n;
+import io.github.youngledo.jmcfx.ui.recording.RecordingTimeRange;
+import io.github.youngledo.jmcfx.ui.recording.RecordingTimeRangeChartBinding;
+import io.github.youngledo.jmcfx.ui.recording.RecordingTimeRangeClearButtonBinding;
 import io.github.youngledo.jmcfx.ui.util.DisplayFormats;
 
 import javafx.beans.binding.Bindings;
 import javafx.beans.binding.StringBinding;
+import javafx.beans.property.ObjectProperty;
 import javafx.beans.property.ReadOnlyStringWrapper;
 import javafx.beans.value.ChangeListener;
 import javafx.collections.FXCollections;
@@ -31,6 +35,8 @@ public final class JavaApplicationDataPagesController {
     private final ChangeListener<ChartDefinition> threadHistogramChartListener;
     private StringBinding threadHistogramRecordingContextBinding;
     private JavaAppOverviewViewModel threadHistogramViewModel;
+    private RecordingTimeRangeChartBinding threadHistogramChartBinding;
+    private RecordingTimeRangeClearButtonBinding threadHistogramClearTimeRangeButtonBinding;
     private SecurityViewModel securityViewModel;
     private NativeLibraryViewModel nativeLibraryViewModel;
     private ThreadDumpViewModel threadDumpViewModel;
@@ -38,7 +44,7 @@ public final class JavaApplicationDataPagesController {
     public JavaApplicationDataPagesController(JavaApplicationDataPagesView view, I18n i18n) {
         this.view = view;
         this.i18n = i18n;
-        threadHistogramChartListener = (observable, oldValue, newValue) -> view.threadHistogramChart().setData(newValue);
+        threadHistogramChartListener = (observable, oldValue, newValue) -> setThreadHistogramChartData(newValue);
     }
 
     public void configure() {
@@ -62,9 +68,22 @@ public final class JavaApplicationDataPagesController {
     }
 
     public void bindThreadHistogram(JavaAppOverviewViewModel nextViewModel) {
+        bindThreadHistogram(nextViewModel, null);
+    }
+
+    public void bindThreadHistogram(JavaAppOverviewViewModel nextViewModel,
+            ObjectProperty<RecordingTimeRange> sharedTimeRange) {
         JavaAppOverviewViewModel currentThreadHistogramViewModel = threadHistogramViewModel;
         if (currentThreadHistogramViewModel != null) {
             currentThreadHistogramViewModel.chartProperty().removeListener(threadHistogramChartListener);
+        }
+        if (threadHistogramChartBinding != null) {
+            threadHistogramChartBinding.close();
+            threadHistogramChartBinding = null;
+        }
+        if (threadHistogramClearTimeRangeButtonBinding != null) {
+            threadHistogramClearTimeRangeButtonBinding.close();
+            threadHistogramClearTimeRangeButtonBinding = null;
         }
         if (threadHistogramRecordingContextBinding != null) {
             view.threadHistogramRecordingContextLabel().textProperty().unbind();
@@ -80,12 +99,23 @@ public final class JavaApplicationDataPagesController {
         }
         view.threadHistogramTable().setItems(nextViewModel.histogramRowsProperty());
         nextViewModel.chartProperty().addListener(threadHistogramChartListener);
-        view.threadHistogramChart().setData(nextViewModel.chartProperty().get());
+        threadHistogramChartBinding = new RecordingTimeRangeChartBinding(view.threadHistogramChart(), sharedTimeRange);
+        threadHistogramClearTimeRangeButtonBinding = new RecordingTimeRangeClearButtonBinding(
+                view.threadHistogramClearTimeRangeButton(), i18n, sharedTimeRange);
+        setThreadHistogramChartData(nextViewModel.chartProperty().get());
         threadHistogramRecordingContextBinding = Bindings.createStringBinding(
                 () -> recordingContext(nextViewModel.currentRecordingProperty().get()),
                 nextViewModel.currentRecordingProperty(),
                 i18n.localeProperty());
         view.threadHistogramRecordingContextLabel().textProperty().bind(threadHistogramRecordingContextBinding);
+    }
+
+    private void setThreadHistogramChartData(ChartDefinition definition) {
+        if (threadHistogramChartBinding != null) {
+            threadHistogramChartBinding.setData(definition);
+            return;
+        }
+        view.threadHistogramChart().setData(definition);
     }
 
     public void bindSecurity(SecurityViewModel nextViewModel) {

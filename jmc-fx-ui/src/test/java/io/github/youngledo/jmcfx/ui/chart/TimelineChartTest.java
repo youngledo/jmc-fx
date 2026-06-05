@@ -4,13 +4,31 @@ import java.io.IOException;
 import java.io.InputStream;
 import java.nio.charset.StandardCharsets;
 import java.util.List;
+import java.util.concurrent.CountDownLatch;
+import java.util.concurrent.TimeUnit;
 
 import io.github.youngledo.jmcfx.domain.model.*;
+import io.github.youngledo.jmcfx.ui.recording.RecordingTimeRange;
+import io.github.youngledo.jmcfx.ui.recording.RecordingTimeRangeChartBinding;
+import javafx.application.Platform;
+import javafx.beans.property.SimpleObjectProperty;
+import org.junit.jupiter.api.BeforeAll;
 import org.junit.jupiter.api.Test;
 import static org.junit.jupiter.api.Assertions.*;
 
 /// Tests TimelineChart structural and CSS properties without JavaFX toolkit initialization.
 class TimelineChartTest {
+
+    @BeforeAll
+    static void initToolkit() throws InterruptedException {
+        try {
+            CountDownLatch latch = new CountDownLatch(1);
+            Platform.startup(latch::countDown);
+            latch.await(5, TimeUnit.SECONDS);
+        } catch (IllegalStateException ignored) {
+            // Toolkit already initialized by another test class.
+        }
+    }
 
     @Test
     void appCssContainsTimelineChartStyle() throws IOException {
@@ -108,6 +126,138 @@ class TimelineChartTest {
     }
 
     @Test
+    void zoomDoesNotCreateSelectionBecauseFilteringUsesBrushSelection() {
+        TimelineChart chart = new TimelineChart();
+        ChartDefinition definition = new ChartDefinition("Time", "Value", List.of(
+                new ChartSeries("io", "I/O", ChartSeriesType.LINE,
+                        List.of(new ChartDataPoint(0, 1), new ChartDataPoint(100, 2)))));
+
+        chart.setData(definition);
+
+        assertNull(chart.userSelectedRangeProperty().get());
+
+        chart.zoomXAxis(0.5);
+
+        assertNull(chart.userSelectedRangeProperty().get());
+    }
+
+    @Test
+    void brushSelectionPublishesSelectedRange() {
+        TimelineChart chart = new TimelineChart();
+        ChartDefinition definition = new ChartDefinition("Time", "Value", List.of(
+                new ChartSeries("io", "I/O", ChartSeriesType.LINE,
+                        List.of(new ChartDataPoint(0, 1), new ChartDataPoint(100, 2)))));
+        chart.setData(definition);
+
+        chart.selectXAxisRange(100, 300, 400);
+
+        assertNotNull(chart.userSelectedRangeProperty().get());
+        assertEquals(25.0, chart.userSelectedRangeProperty().get().lowerBound());
+        assertEquals(75.0, chart.userSelectedRangeProperty().get().upperBound());
+    }
+
+    @Test
+    void clickClearsExistingBrushSelection() {
+        TimelineChart chart = new TimelineChart();
+        ChartDefinition definition = new ChartDefinition("Time", "Value", List.of(
+                new ChartSeries("io", "I/O", ChartSeriesType.LINE,
+                        List.of(new ChartDataPoint(0, 1), new ChartDataPoint(100, 2)))));
+        chart.setData(definition);
+        chart.setUserSelection(new TimelineChart.AxisRange(25, 75));
+
+        chart.selectXAxisRange(100, 102, 400);
+
+        assertNull(chart.userSelectedRangeProperty().get());
+    }
+
+    @Test
+    void recordingTimeRangeBindingSynchronizesSelectionAcrossTimelineCharts() {
+        TimelineChart sourceChart = new TimelineChart();
+        TimelineChart targetChart = new TimelineChart();
+        ChartDefinition definition = new ChartDefinition("Time", "Value", ChartXAxisType.EPOCH_MILLIS, List.of(
+                new ChartSeries("io", "I/O", ChartSeriesType.LINE,
+                        List.of(new ChartDataPoint(1_000, 1), new ChartDataPoint(2_000, 2)))));
+        SimpleObjectProperty<RecordingTimeRange> sharedRange = new SimpleObjectProperty<>();
+
+        try (RecordingTimeRangeChartBinding sourceBinding =
+                        new RecordingTimeRangeChartBinding(sourceChart, sharedRange);
+                RecordingTimeRangeChartBinding targetBinding =
+                        new RecordingTimeRangeChartBinding(targetChart, sharedRange)) {
+            sourceBinding.setData(definition);
+            targetBinding.setData(definition);
+
+            sourceChart.setUserSelection(new TimelineChart.AxisRange(1_200, 1_500));
+
+            assertEquals(new RecordingTimeRange(1_200, 1_500), sharedRange.get());
+            assertNotNull(targetChart.userSelectedRangeProperty().get());
+            assertEquals(1_200.0, targetChart.userSelectedRangeProperty().get().lowerBound());
+            assertEquals(1_500.0, targetChart.userSelectedRangeProperty().get().upperBound());
+
+            sharedRange.set(null);
+
+            assertNull(sourceChart.userSelectedRangeProperty().get());
+            assertNull(targetChart.userSelectedRangeProperty().get());
+        }
+    }
+
+    @Test
+    void recordingTimeRangeBindingPropagatesClearedSelectionButKeepsRangeAcrossDataRefresh() {
+        TimelineChart sourceChart = new TimelineChart();
+        TimelineChart targetChart = new TimelineChart();
+        ChartDefinition definition = new ChartDefinition("Time", "Value", ChartXAxisType.EPOCH_MILLIS, List.of(
+                new ChartSeries("io", "I/O", ChartSeriesType.LINE,
+                        List.of(new ChartDataPoint(1_000, 1), new ChartDataPoint(2_000, 2)))));
+        SimpleObjectProperty<RecordingTimeRange> sharedRange =
+                new SimpleObjectProperty<>(new RecordingTimeRange(1_200, 1_500));
+
+        try (RecordingTimeRangeChartBinding sourceBinding =
+                        new RecordingTimeRangeChartBinding(sourceChart, sharedRange);
+                RecordingTimeRangeChartBinding targetBinding =
+                        new RecordingTimeRangeChartBinding(targetChart, sharedRange)) {
+            sourceBinding.setData(definition);
+            targetBinding.setData(definition);
+
+            assertEquals(new RecordingTimeRange(1_200, 1_500), sharedRange.get(),
+                    "chart data refresh must reapply the shared range, not clear it");
+
+            sourceChart.clearUserSelection();
+
+            assertNull(sharedRange.get());
+            assertNull(targetChart.userSelectedRangeProperty().get());
+        }
+    }
+
+    @Test
+    void recordingTimeRangeBindingConvertsEpochMillisToEpochSecondsChartAxis() {
+        TimelineChart chart = new TimelineChart();
+        ChartDefinition definition = new ChartDefinition("Time", "Value", ChartXAxisType.EPOCH_SECONDS, List.of(
+                new ChartSeries("gc", "GC", ChartSeriesType.LINE,
+                        List.of(new ChartDataPoint(1_000, 1), new ChartDataPoint(2_000, 2)))));
+        SimpleObjectProperty<RecordingTimeRange> sharedRange =
+                new SimpleObjectProperty<>(new RecordingTimeRange(1_200_000, 1_500_000));
+
+        try (RecordingTimeRangeChartBinding binding = new RecordingTimeRangeChartBinding(chart, sharedRange)) {
+            binding.setData(definition);
+
+            assertNotNull(chart.userSelectedRangeProperty().get());
+            assertEquals(1_200.0, chart.userSelectedRangeProperty().get().lowerBound());
+            assertEquals(1_500.0, chart.userSelectedRangeProperty().get().upperBound());
+
+            chart.setUserSelection(new TimelineChart.AxisRange(1_300, 1_600));
+
+            assertEquals(new RecordingTimeRange(1_300_000, 1_600_000), sharedRange.get());
+        }
+    }
+
+    @Test
+    void rangeFromPixelsMapsDragBandOntoVisibleAxisRange() {
+        TimelineChart.AxisRange range = TimelineChart.rangeFromPixels(100, 300, 50, 150, 200);
+
+        assertEquals(150.0, range.lowerBound());
+        assertEquals(250.0, range.upperBound());
+    }
+
+    @Test
     void tickUnitUsesReadableMajorTicksForEpochMillisRanges() {
         double tickUnit = TimelineChart.tickUnit(1_778_121_011_513.0, 1_778_121_363_322.0);
 
@@ -142,6 +292,10 @@ class TimelineChartTest {
                 "drag panning must use event filters so inner chart nodes cannot consume it first");
         assertTrue(source.contains("event.isPrimaryButtonDown()"),
                 "drag panning must not use MouseEvent#getButton(), which is NONE during drag");
+        assertTrue(source.contains("selectXAxisRange(selectionStartX, event.getX(), chart.getWidth())"),
+                "drag release should publish a brush-selected time range");
+        assertFalse(source.contains("panXAxisFromDragStart"),
+                "left-button drag is reserved for brush selection; panning uses horizontal scroll");
     }
 
     @Test
@@ -162,6 +316,17 @@ class TimelineChartTest {
         assertTrue(source.contains("axis.setMinorTickVisible(false);"));
         assertTrue(source.contains("lineChart.setCreateSymbols(false);"));
         assertTrue(source.contains("areaChart.setCreateSymbols(false);"));
+        assertTrue(source.contains("new StackPane(chart, selectionOverlay)"));
+    }
+
+    @Test
+    void appCssContainsBrushSelectionOverlayStyles() throws IOException {
+        String css = appCss();
+
+        assertTrue(css.contains(".timeline-selection-muted"));
+        assertTrue(css.contains(".timeline-selection-band"));
+        assertTrue(css.contains(".timeline-selection-band {\n    -fx-fill: transparent;"),
+                "the selected time range should keep the original chart brightness");
     }
 
     @Test
@@ -183,6 +348,18 @@ class TimelineChartTest {
         assertTrue(source.contains("chart.setCategoryGap(6);"));
         assertTrue(source.contains("chart.setBarGap(2);"));
         assertTrue(css.contains(".diagnostic-chart .chart-bar"));
+    }
+
+    @Test
+    void chartCountIncludesChartsNestedUnderSelectionOverlayLayer() {
+        TimelineChart chart = new TimelineChart();
+        ChartDefinition definition = new ChartDefinition("Time", "Value", List.of(
+                new ChartSeries("cpu", "CPU", ChartSeriesType.LINE,
+                        List.of(new ChartDataPoint(0, 1), new ChartDataPoint(1, 2)))));
+
+        chart.setData(definition);
+
+        assertEquals(1, chart.getChartCount());
     }
 
     @Test

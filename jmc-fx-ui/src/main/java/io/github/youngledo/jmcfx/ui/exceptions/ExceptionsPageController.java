@@ -8,10 +8,14 @@ import io.github.youngledo.jmcfx.domain.model.ExceptionGrouping;
 import io.github.youngledo.jmcfx.domain.model.ExceptionSummary;
 import io.github.youngledo.jmcfx.domain.model.RecordingSummary;
 import io.github.youngledo.jmcfx.ui.i18n.I18n;
+import io.github.youngledo.jmcfx.ui.recording.RecordingTimeRange;
+import io.github.youngledo.jmcfx.ui.recording.RecordingTimeRangeChartBinding;
+import io.github.youngledo.jmcfx.ui.recording.RecordingTimeRangeClearButtonBinding;
 import io.github.youngledo.jmcfx.ui.util.DisplayFormats;
 
 import javafx.beans.binding.Bindings;
 import javafx.beans.binding.StringBinding;
+import javafx.beans.property.ObjectProperty;
 import javafx.beans.property.ReadOnlyStringWrapper;
 import javafx.beans.value.ChangeListener;
 import javafx.collections.FXCollections;
@@ -28,11 +32,13 @@ public final class ExceptionsPageController {
     private final ChangeListener<ChartDefinition> timelineListener;
     private StringBinding recordingContextBinding;
     private ExceptionViewModel viewModel;
+    private RecordingTimeRangeChartBinding timelineSelectionBinding;
+    private RecordingTimeRangeClearButtonBinding clearTimeRangeButtonBinding;
 
     public ExceptionsPageController(ExceptionsPageView view, I18n i18n) {
         this.view = view;
         this.i18n = i18n;
-        timelineListener = (observable, oldValue, newValue) -> view.timelineChart().setData(newValue);
+        timelineListener = (observable, oldValue, newValue) -> setTimelineData(newValue);
     }
 
     public void configure() {
@@ -46,9 +52,21 @@ public final class ExceptionsPageController {
     }
 
     public void bind(ExceptionViewModel nextViewModel) {
+        bind(nextViewModel, null);
+    }
+
+    public void bind(ExceptionViewModel nextViewModel, ObjectProperty<RecordingTimeRange> sharedTimeRange) {
         ExceptionViewModel currentViewModel = viewModel;
         if (currentViewModel != null) {
             currentViewModel.timelineProperty().removeListener(timelineListener);
+        }
+        if (timelineSelectionBinding != null) {
+            timelineSelectionBinding.close();
+            timelineSelectionBinding = null;
+        }
+        if (clearTimeRangeButtonBinding != null) {
+            clearTimeRangeButtonBinding.close();
+            clearTimeRangeButtonBinding = null;
         }
         if (recordingContextBinding != null) {
             view.recordingContextLabel().textProperty().unbind();
@@ -64,12 +82,23 @@ public final class ExceptionsPageController {
         }
         view.table().setItems(nextViewModel.histogramProperty());
         nextViewModel.timelineProperty().addListener(timelineListener);
-        view.timelineChart().setData(nextViewModel.timelineProperty().get());
+        timelineSelectionBinding = new RecordingTimeRangeChartBinding(view.timelineChart(), sharedTimeRange);
+        clearTimeRangeButtonBinding = new RecordingTimeRangeClearButtonBinding(
+                view.clearTimeRangeButton(), i18n, sharedTimeRange);
+        setTimelineData(nextViewModel.timelineProperty().get());
         recordingContextBinding = Bindings.createStringBinding(
                 () -> recordingContext(nextViewModel.currentRecordingProperty().get()),
                 nextViewModel.currentRecordingProperty(),
                 i18n.localeProperty());
         view.recordingContextLabel().textProperty().bind(recordingContextBinding);
+    }
+
+    private void setTimelineData(ChartDefinition definition) {
+        if (timelineSelectionBinding != null) {
+            timelineSelectionBinding.setData(definition);
+            return;
+        }
+        view.timelineChart().setData(definition);
     }
 
     private void bindLocalizedText() {

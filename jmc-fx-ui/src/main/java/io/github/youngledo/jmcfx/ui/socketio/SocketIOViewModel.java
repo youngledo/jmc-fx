@@ -8,6 +8,7 @@ import io.github.youngledo.jmcfx.domain.model.SocketIOEvent;
 import io.github.youngledo.jmcfx.domain.model.SocketIOGrouping;
 import io.github.youngledo.jmcfx.domain.model.SocketIOHistogram;
 import io.github.youngledo.jmcfx.application.LoadSocketIOUseCase;
+import io.github.youngledo.jmcfx.ui.recording.RecordingTimeRange;
 import io.github.youngledo.jmcfx.ui.util.FxDispatch;
 
 import javafx.beans.property.ObjectProperty;
@@ -22,7 +23,9 @@ public class SocketIOViewModel {
 
     private final LoadSocketIOUseCase socketIOService;
     private final ObservableList<SocketIOHistogram> histogram = FXCollections.observableArrayList();
+    private final ObservableList<SocketIOEvent> allEvents = FXCollections.observableArrayList();
     private final ObservableList<SocketIOEvent> events = FXCollections.observableArrayList();
+    private final ObjectProperty<RecordingTimeRange> timeRange = new SimpleObjectProperty<>();
     private final ObjectProperty<SocketIOGrouping> grouping =
             new SimpleObjectProperty<>(SocketIOGrouping.BY_HOST_AND_PORT);
     private final ObjectProperty<ChartDefinition> timeline = new SimpleObjectProperty<>();
@@ -30,6 +33,7 @@ public class SocketIOViewModel {
 
     public SocketIOViewModel(LoadSocketIOUseCase socketIOService) {
         this.socketIOService = socketIOService;
+        timeRange.addListener((observable, oldValue, newValue) -> applyEventFilter());
     }
 
     public ObservableList<SocketIOHistogram> histogramProperty() {
@@ -38,6 +42,10 @@ public class SocketIOViewModel {
 
     public ObservableList<SocketIOEvent> eventsProperty() {
         return events;
+    }
+
+    public ObjectProperty<RecordingTimeRange> timeRangeProperty() {
+        return timeRange;
     }
 
     public ObjectProperty<SocketIOGrouping> groupingProperty() {
@@ -60,7 +68,8 @@ public class SocketIOViewModel {
         FxDispatch.run(() -> {
             currentRecording.set(recording);
             histogram.setAll(histogramData);
-            events.setAll(eventData);
+            allEvents.setAll(eventData);
+            applyEventFilter();
             timeline.set(chart);
         });
     }
@@ -80,6 +89,20 @@ public class SocketIOViewModel {
 
     private void reloadEvents() {
         List<SocketIOEvent> data = socketIOService.loadSocketIOEvents(currentRecording.get());
-        FxDispatch.run(() -> events.setAll(data));
+        FxDispatch.run(() -> {
+            allEvents.setAll(data);
+            applyEventFilter();
+        });
+    }
+
+    private void applyEventFilter() {
+        RecordingTimeRange range = timeRange.get();
+        if (range == null) {
+            events.setAll(allEvents);
+            return;
+        }
+        events.setAll(allEvents.stream()
+                .filter(event -> range.contains(event.timestamp()))
+                .toList());
     }
 }

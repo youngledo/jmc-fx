@@ -12,9 +12,11 @@ import io.github.youngledo.jmcfx.application.LoadJvmInternalsUseCase;
 import io.github.youngledo.jmcfx.domain.model.RecordingSummary;
 import io.github.youngledo.jmcfx.ui.i18n.I18n;
 import io.github.youngledo.jmcfx.ui.i18n.LanguageMode;
+import io.github.youngledo.jmcfx.ui.recording.RecordingTimeRange;
 import io.github.youngledo.jmcfx.ui.testsupport.FakeJvmInternalsService;
 
 import javafx.application.Platform;
+import javafx.beans.property.SimpleObjectProperty;
 import javafx.scene.layout.VBox;
 
 import org.junit.jupiter.api.BeforeAll;
@@ -89,6 +91,53 @@ class JvmInternalsRecordingContextTest {
         assertTrue(pane.view().compilationsRecordingContextLabel().getText().startsWith("录制范围："));
         assertTrue(pane.view().codeCacheRecordingContextLabel().getText().startsWith("录制范围："));
         assertTrue(pane.view().classLoadingRecordingContextLabel().getText().startsWith("录制范围："));
+    }
+
+    @Test
+    void chartBackedPagesApplySharedEpochMillisRangeToEpochSecondsCharts() {
+        LoadJvmInternalsUseCase useCase = new LoadJvmInternalsUseCase(new FakeJvmInternalsService());
+        GcDetailsViewModel gc = new GcDetailsViewModel(useCase);
+        CompilationsViewModel compilations = new CompilationsViewModel(useCase);
+        CodeCacheViewModel codeCache = new CodeCacheViewModel(useCase);
+        ClassLoadingViewModel classLoading = new ClassLoadingViewModel(useCase);
+        RecordingSummary recording = testRecording();
+        gc.load(recording);
+        compilations.load(recording);
+        codeCache.load(recording);
+        classLoading.load(recording);
+
+        JvmInternalsPaneView pane = new JvmInternalsPaneView(
+                new VBox(), new VBox(), new VBox(), new VBox(), new VBox(), new VBox(), new VBox(), new VBox());
+        JvmInternalsPagesController controller = new JvmInternalsPagesController(pane.view(), new I18n(Locale.ENGLISH));
+        controller.configure();
+        SimpleObjectProperty<RecordingTimeRange> sharedRange =
+                new SimpleObjectProperty<>(new RecordingTimeRange(1_600_000, 1_700_000));
+
+        controller.bindGcDetails(gc, sharedRange);
+        controller.bindCompilations(compilations, sharedRange);
+        controller.bindCodeCache(codeCache, sharedRange);
+        controller.bindClassLoading(classLoading, sharedRange);
+
+        assertEquals(1_600.0, pane.view().gcHeapChart().userSelectedRangeProperty().get().lowerBound());
+        assertEquals(1_600.0, pane.view().compilationDurationChart().userSelectedRangeProperty().get().lowerBound());
+        assertEquals(1_600.0, pane.view().codeCacheEntriesChart().userSelectedRangeProperty().get().lowerBound());
+        assertEquals(1_600.0, pane.view().classLoadingChart().userSelectedRangeProperty().get().lowerBound());
+        assertTrue(pane.view().gcDetailsClearTimeRangeButton().isVisible());
+        assertTrue(pane.view().compilationsClearTimeRangeButton().isVisible());
+        assertTrue(pane.view().codeCacheClearTimeRangeButton().isVisible());
+        assertTrue(pane.view().classLoadingClearTimeRangeButton().isVisible());
+
+        pane.view().codeCacheClearTimeRangeButton().fire();
+
+        assertNull(sharedRange.get());
+        assertNull(pane.view().gcHeapChart().userSelectedRangeProperty().get());
+        assertNull(pane.view().compilationDurationChart().userSelectedRangeProperty().get());
+        assertNull(pane.view().codeCacheEntriesChart().userSelectedRangeProperty().get());
+        assertNull(pane.view().classLoadingChart().userSelectedRangeProperty().get());
+        assertFalse(pane.view().gcDetailsClearTimeRangeButton().isVisible());
+        assertFalse(pane.view().compilationsClearTimeRangeButton().isVisible());
+        assertFalse(pane.view().codeCacheClearTimeRangeButton().isVisible());
+        assertFalse(pane.view().classLoadingClearTimeRangeButton().isVisible());
     }
 
     private RecordingSummary testRecording() {

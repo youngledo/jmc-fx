@@ -12,7 +12,9 @@ import io.github.youngledo.jmcfx.domain.model.ChartSeriesType;
 import io.github.youngledo.jmcfx.domain.model.ChartXAxisType;
 import io.github.youngledo.jmcfx.ui.util.DisplayFormats;
 
-import javafx.util.StringConverter;
+import javafx.beans.property.ReadOnlyObjectProperty;
+import javafx.beans.property.ReadOnlyObjectWrapper;
+import javafx.scene.Parent;
 import javafx.scene.chart.AreaChart;
 import javafx.scene.chart.BarChart;
 import javafx.scene.chart.CategoryAxis;
@@ -23,30 +25,40 @@ import javafx.scene.input.MouseButton;
 import javafx.scene.input.MouseEvent;
 import javafx.scene.input.ScrollEvent;
 import javafx.scene.input.ZoomEvent;
+import javafx.scene.layout.Pane;
 import javafx.scene.layout.Priority;
+import javafx.scene.layout.StackPane;
 import javafx.scene.layout.VBox;
+import javafx.scene.shape.Rectangle;
+import javafx.util.StringConverter;
 
 /// Reusable XY chart component supporting line, bar, and area series.
 public class TimelineChart extends VBox {
 
     private static final double ZOOM_FACTOR = 0.85;
+    private static final double MIN_SELECTION_PIXELS = 4.0;
     private static final int TARGET_MAJOR_TICK_COUNT = 8;
     static final int MAX_RENDERED_POINTS_PER_SERIES = 2_000;
 
     private final NumberAxis xAxis = new NumberAxis();
     private final NumberAxis yAxis = new NumberAxis();
+    private final ReadOnlyObjectWrapper<AxisRange> userSelectedRange = new ReadOnlyObjectWrapper<>();
+    private final Pane selectionOverlay = new Pane();
+    private final Rectangle leftMutedRegion = selectionRegion("timeline-selection-muted");
+    private final Rectangle selectedRegion = selectionRegion("timeline-selection-band");
+    private final Rectangle rightMutedRegion = selectionRegion("timeline-selection-muted");
     private double initialLowerBound;
     private double initialUpperBound;
-    private double dragStartX = Double.NaN;
-    private double dragStartLowerBound;
-    private double dragStartUpperBound;
+    private double selectionStartX = Double.NaN;
 
     public TimelineChart() {
         getStyleClass().addAll("timeline-chart", "diagnostic-chart");
+        configureSelectionOverlay();
     }
 
     public void setData(ChartDefinition definition) {
         getChildren().clear();
+        clearUserSelection();
         if (definition == null || definition.series().isEmpty()) {
             return;
         }
@@ -76,7 +88,10 @@ public class TimelineChart extends VBox {
             chart.getData().add(fxSeries);
         }
         configureZoom(chart, initialRange);
-        getChildren().add(chart);
+        StackPane chartLayer = new StackPane(chart, selectionOverlay);
+        VBox.setVgrow(chartLayer, Priority.ALWAYS);
+        chartLayer.setMaxSize(Double.MAX_VALUE, Double.MAX_VALUE);
+        getChildren().add(chartLayer);
     }
 
     static ChartDefinition renderableDefinition(ChartDefinition definition) {
@@ -107,7 +122,7 @@ public class TimelineChart extends VBox {
     }
 
     public int getChartCount() {
-        return (int) getChildren().stream().filter(n -> n instanceof XYChart).count();
+        return countCharts(this);
     }
 
     public double xAxisLowerBound() {
@@ -116,6 +131,21 @@ public class TimelineChart extends VBox {
 
     public double xAxisUpperBound() {
         return xAxis.getUpperBound();
+    }
+
+    public ReadOnlyObjectProperty<AxisRange> userSelectedRangeProperty() {
+        return userSelectedRange.getReadOnlyProperty();
+    }
+
+    public void setUserSelection(AxisRange range) {
+        userSelectedRange.set(range);
+        refreshSelectionOverlay();
+    }
+
+    public void clearUserSelection() {
+        userSelectedRange.set(null);
+        selectionStartX = Double.NaN;
+        clearSelectionOverlay();
     }
 
     private XYChart<Number, Number> createChart(ChartSeriesType type) {
@@ -132,6 +162,18 @@ public class TimelineChart extends VBox {
                 yield areaChart;
             }
         };
+    }
+
+    private static int countCharts(javafx.scene.Node node) {
+        if (node instanceof XYChart<?, ?>) {
+            return 1;
+        }
+        if (node instanceof Parent parent) {
+            return parent.getChildrenUnmodifiable().stream()
+                    .mapToInt(TimelineChart::countCharts)
+                    .sum();
+        }
+        return 0;
     }
 
     private static void configureDiagnosticChart(XYChart<?, ?> chart) {
@@ -187,21 +229,22 @@ public class TimelineChart extends VBox {
         });
         chart.addEventFilter(MouseEvent.MOUSE_PRESSED, event -> {
             if (event.getButton() == MouseButton.PRIMARY) {
-                dragStartX = event.getX();
-                dragStartLowerBound = xAxis.getLowerBound();
-                dragStartUpperBound = xAxis.getUpperBound();
+                selectionStartX = clampPixel(event.getX(), chart.getWidth());
+                renderSelectionOverlay(selectionStartX, selectionStartX, chart.getWidth(), chart.getHeight());
                 event.consume();
             }
         });
         chart.addEventFilter(MouseEvent.MOUSE_DRAGGED, event -> {
-            if (event.isPrimaryButtonDown() && !Double.isNaN(dragStartX)) {
-                panXAxisFromDragStart(event.getX() - dragStartX, chart.getWidth());
+            if (event.isPrimaryButtonDown() && !Double.isNaN(selectionStartX)) {
+                renderSelectionOverlay(selectionStartX, clampPixel(event.getX(), chart.getWidth()),
+                        chart.getWidth(), chart.getHeight());
                 event.consume();
             }
         });
         chart.addEventFilter(MouseEvent.MOUSE_RELEASED, event -> {
             if (event.getButton() == MouseButton.PRIMARY) {
-                dragStartX = Double.NaN;
+                selectXAxisRange(selectionStartX, event.getX(), chart.getWidth());
+                selectionStartX = Double.NaN;
                 event.consume();
             }
         });
@@ -213,11 +256,11 @@ public class TimelineChart extends VBox {
         }
         xAxis.setAutoRanging(false);
         AxisRange range = zoomRange(xAxis.getLowerBound(), xAxis.getUpperBound(), factor);
-        setAxisBounds(xAxis, range.lowerBound(), range.upperBound());
+        setAxisBoundsAndRefresh(range.lowerBound(), range.upperBound());
     }
 
     void resetZoom() {
-        setAxisBounds(xAxis, initialLowerBound, initialUpperBound);
+        setAxisBoundsAndRefresh(initialLowerBound, initialUpperBound);
     }
 
     void zoomXAxisAtPixel(double factor, double pixelX, double pixelWidth) {
@@ -226,19 +269,29 @@ public class TimelineChart extends VBox {
         }
         xAxis.setAutoRanging(false);
         AxisRange range = zoomRangeAtPixel(xAxis.getLowerBound(), xAxis.getUpperBound(), factor, pixelX, pixelWidth);
-        setAxisBounds(xAxis, range.lowerBound(), range.upperBound());
+        setAxisBoundsAndRefresh(range.lowerBound(), range.upperBound());
     }
 
     void panXAxis(double dragDeltaX, double pixelWidth) {
         AxisRange range = panRange(xAxis.getLowerBound(), xAxis.getUpperBound(),
                 initialLowerBound, initialUpperBound, dragDeltaX, pixelWidth);
-        setAxisBounds(xAxis, range.lowerBound(), range.upperBound());
+        setAxisBoundsAndRefresh(range.lowerBound(), range.upperBound());
     }
 
-    void panXAxisFromDragStart(double dragDeltaX, double pixelWidth) {
-        AxisRange range = panRange(dragStartLowerBound, dragStartUpperBound,
-                initialLowerBound, initialUpperBound, dragDeltaX, pixelWidth);
-        setAxisBounds(xAxis, range.lowerBound(), range.upperBound());
+    void selectXAxisRange(double startPixel, double endPixel, double pixelWidth) {
+        if (Double.isNaN(startPixel) || pixelWidth <= 0) {
+            clearSelectionOverlay();
+            return;
+        }
+        double clampedStart = clampPixel(startPixel, pixelWidth);
+        double clampedEnd = clampPixel(endPixel, pixelWidth);
+        if (Math.abs(clampedEnd - clampedStart) < MIN_SELECTION_PIXELS) {
+            clearUserSelection();
+            return;
+        }
+        AxisRange range = rangeFromPixels(xAxis.getLowerBound(), xAxis.getUpperBound(),
+                clampedStart, clampedEnd, pixelWidth);
+        setUserSelection(range);
     }
 
     private static void setAxisBounds(NumberAxis axis, double lowerBound, double upperBound) {
@@ -247,6 +300,97 @@ public class TimelineChart extends VBox {
         axis.setUpperBound(upperBound);
         axis.setTickUnit(tickUnit(lowerBound, upperBound));
         axis.setMinorTickVisible(false);
+    }
+
+    private void setAxisBoundsAndRefresh(double lowerBound, double upperBound) {
+        setAxisBounds(xAxis, lowerBound, upperBound);
+        refreshSelectionOverlay();
+    }
+
+    static AxisRange rangeFromPixels(double lowerBound, double upperBound,
+            double startPixel, double endPixel, double pixelWidth) {
+        double start = valueAtPixel(lowerBound, upperBound, startPixel, pixelWidth);
+        double end = valueAtPixel(lowerBound, upperBound, endPixel, pixelWidth);
+        return new AxisRange(Math.min(start, end), Math.max(start, end));
+    }
+
+    static double valueAtPixel(double lowerBound, double upperBound, double pixelX, double pixelWidth) {
+        if (pixelWidth <= 0 || lowerBound >= upperBound) {
+            return lowerBound;
+        }
+        double ratio = Math.clamp(pixelX / pixelWidth, 0, 1);
+        return lowerBound + (upperBound - lowerBound) * ratio;
+    }
+
+    static double pixelForValue(double lowerBound, double upperBound, double value, double pixelWidth) {
+        if (pixelWidth <= 0 || lowerBound >= upperBound) {
+            return 0;
+        }
+        double ratio = (value - lowerBound) / (upperBound - lowerBound);
+        return Math.clamp(ratio, 0, 1) * pixelWidth;
+    }
+
+    private static double clampPixel(double pixel, double pixelWidth) {
+        if (!Double.isFinite(pixel) || pixelWidth <= 0) {
+            return 0;
+        }
+        return Math.clamp(pixel, 0, pixelWidth);
+    }
+
+    private void configureSelectionOverlay() {
+        selectionOverlay.getStyleClass().add("timeline-selection-overlay");
+        selectionOverlay.setMouseTransparent(true);
+        selectionOverlay.getChildren().setAll(leftMutedRegion, selectedRegion, rightMutedRegion);
+        selectionOverlay.widthProperty().addListener((observable, oldValue, newValue) -> refreshSelectionOverlay());
+        selectionOverlay.heightProperty().addListener((observable, oldValue, newValue) -> refreshSelectionOverlay());
+        clearSelectionOverlay();
+    }
+
+    private static Rectangle selectionRegion(String styleClass) {
+        Rectangle rectangle = new Rectangle();
+        rectangle.getStyleClass().add(styleClass);
+        rectangle.setManaged(false);
+        rectangle.setVisible(false);
+        return rectangle;
+    }
+
+    private void refreshSelectionOverlay() {
+        AxisRange range = userSelectedRange.get();
+        if (range == null || selectionOverlay.getWidth() <= 0) {
+            clearSelectionOverlay();
+            return;
+        }
+        double startPixel = pixelForValue(xAxis.getLowerBound(), xAxis.getUpperBound(),
+                range.lowerBound(), selectionOverlay.getWidth());
+        double endPixel = pixelForValue(xAxis.getLowerBound(), xAxis.getUpperBound(),
+                range.upperBound(), selectionOverlay.getWidth());
+        renderSelectionOverlay(startPixel, endPixel, selectionOverlay.getWidth(), selectionOverlay.getHeight());
+    }
+
+    private void renderSelectionOverlay(double startPixel, double endPixel, double width, double height) {
+        if (width <= 0 || height <= 0) {
+            clearSelectionOverlay();
+            return;
+        }
+        double start = clampPixel(Math.min(startPixel, endPixel), width);
+        double end = clampPixel(Math.max(startPixel, endPixel), width);
+        layoutRegion(leftMutedRegion, 0, start, height);
+        layoutRegion(selectedRegion, start, end - start, height);
+        layoutRegion(rightMutedRegion, end, width - end, height);
+    }
+
+    private static void layoutRegion(Rectangle region, double x, double width, double height) {
+        region.setVisible(width > 0 && height > 0);
+        region.setX(x);
+        region.setY(0);
+        region.setWidth(Math.max(0, width));
+        region.setHeight(Math.max(0, height));
+    }
+
+    private void clearSelectionOverlay() {
+        leftMutedRegion.setVisible(false);
+        selectedRegion.setVisible(false);
+        rightMutedRegion.setVisible(false);
     }
 
     static double tickUnit(double lowerBound, double upperBound) {
@@ -366,6 +510,6 @@ public class TimelineChart extends VBox {
         }
     }
 
-    record AxisRange(double lowerBound, double upperBound) {
+    public record AxisRange(double lowerBound, double upperBound) {
     }
 }

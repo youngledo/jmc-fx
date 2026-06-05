@@ -16,6 +16,7 @@ import io.github.youngledo.jmcfx.domain.model.VmOperationEvent;
 import io.github.youngledo.jmcfx.domain.model.VmOperationSummary;
 import io.github.youngledo.jmcfx.ui.chart.TimelineChart;
 
+import javafx.scene.control.Button;
 import javafx.scene.control.Label;
 import javafx.scene.control.TableView;
 
@@ -32,6 +33,7 @@ public record JvmInternalsPagesView(
         TableView<GcSummary> gcSummaryTable,
         Label gcDetailsTitleLabel,
         Label gcDetailsRecordingContextLabel,
+        Button gcDetailsClearTimeRangeButton,
         TimelineChart gcHeapChart,
         TimelineChart gcMetaspaceChart,
         TimelineChart gcPauseChart,
@@ -43,6 +45,7 @@ public record JvmInternalsPagesView(
         TableView<GcHeapSummary> gcHeapSummaryTable,
         Label compilationsTitleLabel,
         Label compilationsRecordingContextLabel,
+        Button compilationsClearTimeRangeButton,
         TimelineChart compilationDurationChart,
         Label compilationEventsLabel,
         TableView<CompilationEvent> compilationsTable,
@@ -50,6 +53,7 @@ public record JvmInternalsPagesView(
         TableView<CompilationEvent> compilationFailuresTable,
         Label codeCacheTitleLabel,
         Label codeCacheRecordingContextLabel,
+        Button codeCacheClearTimeRangeButton,
         TimelineChart codeCacheEntriesChart,
         TimelineChart codeCacheSweepChart,
         Label codeCacheSweepsLabel,
@@ -58,6 +62,7 @@ public record JvmInternalsPagesView(
         TableView<CodeCacheStats> codeCacheStatsTable,
         Label classLoadingTitleLabel,
         Label classLoadingRecordingContextLabel,
+        Button classLoadingClearTimeRangeButton,
         TimelineChart classLoadingChart,
         Label classLoadingHistogramLabel,
         TableView<ClassloaderSummary> classLoadingHistogramTable,

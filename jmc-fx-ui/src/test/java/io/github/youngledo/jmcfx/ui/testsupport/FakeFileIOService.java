@@ -4,6 +4,9 @@ import java.util.ArrayList;
 import java.util.List;
 
 import io.github.youngledo.jmcfx.domain.model.ChartDefinition;
+import io.github.youngledo.jmcfx.domain.model.ChartDataPoint;
+import io.github.youngledo.jmcfx.domain.model.ChartSeries;
+import io.github.youngledo.jmcfx.domain.model.ChartSeriesType;
 import io.github.youngledo.jmcfx.domain.model.FileIOEvent;
 import io.github.youngledo.jmcfx.domain.model.FileIOHistogram;
 import io.github.youngledo.jmcfx.domain.model.RecordingSummary;
@@ -34,6 +37,9 @@ public class FakeFileIOService implements FileIOService {
 
     @Override
     public ChartDefinition loadTimeline(RecordingSummary recording) {
-        return new ChartDefinition("Time", "Duration (ms)", List.of());
+        return new ChartDefinition("Time", "Duration (ms)", List.of(new ChartSeries("io", "I/O",
+                ChartSeriesType.LINE, List.of(
+                        new ChartDataPoint(recording.startTime().toEpochMilli(), 1),
+                        new ChartDataPoint(recording.endTime().toEpochMilli(), 2)))));
     }
 }

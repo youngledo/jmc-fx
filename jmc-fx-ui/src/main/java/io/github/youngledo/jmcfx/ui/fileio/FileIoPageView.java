@@ -4,6 +4,7 @@ import io.github.youngledo.jmcfx.domain.model.FileIOEvent;
 import io.github.youngledo.jmcfx.domain.model.FileIOHistogram;
 import io.github.youngledo.jmcfx.ui.chart.TimelineChart;
 
+import javafx.scene.control.Button;
 import javafx.scene.control.Label;
 import javafx.scene.control.Tab;
 import javafx.scene.control.TableView;
@@ -12,6 +13,7 @@ import javafx.scene.control.TableView;
 public record FileIoPageView(
         Label titleLabel,
         Label recordingContextLabel,
+        Button clearTimeRangeButton,
         Tab timelineTab,
         Tab durationTab,
         Tab eventLogTab,

@@ -20,10 +20,14 @@ import io.github.youngledo.jmcfx.domain.model.RecordingSummary;
 import io.github.youngledo.jmcfx.domain.model.VmOperationEvent;
 import io.github.youngledo.jmcfx.domain.model.VmOperationSummary;
 import io.github.youngledo.jmcfx.ui.i18n.I18n;
+import io.github.youngledo.jmcfx.ui.recording.RecordingTimeRange;
+import io.github.youngledo.jmcfx.ui.recording.RecordingTimeRangeChartBinding;
+import io.github.youngledo.jmcfx.ui.recording.RecordingTimeRangeClearButtonBinding;
 import io.github.youngledo.jmcfx.ui.util.DisplayFormats;
 
 import javafx.beans.binding.Bindings;
 import javafx.beans.binding.StringBinding;
+import javafx.beans.property.ObjectProperty;
 import javafx.beans.property.ReadOnlyStringWrapper;
 import javafx.beans.value.ChangeListener;
 import javafx.collections.FXCollections;
@@ -50,19 +54,30 @@ public final class JvmInternalsPagesController {
     private CompilationsViewModel compilationsViewModel;
     private CodeCacheViewModel codeCacheViewModel;
     private ClassLoadingViewModel classLoadingViewModel;
+    private RecordingTimeRangeChartBinding gcHeapChartBinding;
+    private RecordingTimeRangeChartBinding gcMetaspaceChartBinding;
+    private RecordingTimeRangeChartBinding gcPauseChartBinding;
+    private RecordingTimeRangeChartBinding compilationDurationChartBinding;
+    private RecordingTimeRangeChartBinding codeCacheEntriesChartBinding;
+    private RecordingTimeRangeChartBinding codeCacheSweepChartBinding;
+    private RecordingTimeRangeChartBinding classLoadingChartBinding;
+    private RecordingTimeRangeClearButtonBinding gcDetailsClearTimeRangeButtonBinding;
+    private RecordingTimeRangeClearButtonBinding compilationsClearTimeRangeButtonBinding;
+    private RecordingTimeRangeClearButtonBinding codeCacheClearTimeRangeButtonBinding;
+    private RecordingTimeRangeClearButtonBinding classLoadingClearTimeRangeButtonBinding;
 
     public JvmInternalsPagesController(JvmInternalsPagesView view, I18n i18n) {
         this.view = view;
         this.i18n = i18n;
-        heapChartListener = (observable, oldValue, newValue) -> view.gcHeapChart().setData(newValue);
-        metaspaceChartListener = (observable, oldValue, newValue) -> view.gcMetaspaceChart().setData(newValue);
-        pauseChartListener = (observable, oldValue, newValue) -> view.gcPauseChart().setData(newValue);
+        heapChartListener = (observable, oldValue, newValue) -> setGcHeapChartData(newValue);
+        metaspaceChartListener = (observable, oldValue, newValue) -> setGcMetaspaceChartData(newValue);
+        pauseChartListener = (observable, oldValue, newValue) -> setGcPauseChartData(newValue);
         compilationDurationChartListener = (observable, oldValue, newValue) ->
-                view.compilationDurationChart().setData(newValue);
+                setCompilationDurationChartData(newValue);
         codeCacheEntriesChartListener = (observable, oldValue, newValue) ->
-                view.codeCacheEntriesChart().setData(newValue);
-        codeCacheSweepChartListener = (observable, oldValue, newValue) -> view.codeCacheSweepChart().setData(newValue);
-        classLoadingChartListener = (observable, oldValue, newValue) -> view.classLoadingChart().setData(newValue);
+                setCodeCacheEntriesChartData(newValue);
+        codeCacheSweepChartListener = (observable, oldValue, newValue) -> setCodeCacheSweepChartData(newValue);
+        classLoadingChartListener = (observable, oldValue, newValue) -> setClassLoadingChartData(newValue);
     }
 
     public void configure() {
@@ -123,12 +138,20 @@ public final class JvmInternalsPagesController {
     }
 
     public void bindGcDetails(GcDetailsViewModel nextViewModel) {
+        bindGcDetails(nextViewModel, null);
+    }
+
+    public void bindGcDetails(GcDetailsViewModel nextViewModel, ObjectProperty<RecordingTimeRange> sharedTimeRange) {
         GcDetailsViewModel currentViewModel = gcDetailsViewModel;
         if (currentViewModel != null) {
             currentViewModel.heapChartProperty().removeListener(heapChartListener);
             currentViewModel.metaspaceChartProperty().removeListener(metaspaceChartListener);
             currentViewModel.pauseChartProperty().removeListener(pauseChartListener);
         }
+        gcHeapChartBinding = closeBinding(gcHeapChartBinding);
+        gcMetaspaceChartBinding = closeBinding(gcMetaspaceChartBinding);
+        gcPauseChartBinding = closeBinding(gcPauseChartBinding);
+        gcDetailsClearTimeRangeButtonBinding = closeBinding(gcDetailsClearTimeRangeButtonBinding);
         if (gcDetailsRecordingContextBinding != null) {
             view.gcDetailsRecordingContextLabel().textProperty().unbind();
             gcDetailsRecordingContextBinding.dispose();
@@ -151,9 +174,14 @@ public final class JvmInternalsPagesController {
         nextViewModel.heapChartProperty().addListener(heapChartListener);
         nextViewModel.metaspaceChartProperty().addListener(metaspaceChartListener);
         nextViewModel.pauseChartProperty().addListener(pauseChartListener);
-        view.gcHeapChart().setData(nextViewModel.heapChartProperty().get());
-        view.gcMetaspaceChart().setData(nextViewModel.metaspaceChartProperty().get());
-        view.gcPauseChart().setData(nextViewModel.pauseChartProperty().get());
+        gcHeapChartBinding = new RecordingTimeRangeChartBinding(view.gcHeapChart(), sharedTimeRange);
+        gcMetaspaceChartBinding = new RecordingTimeRangeChartBinding(view.gcMetaspaceChart(), sharedTimeRange);
+        gcPauseChartBinding = new RecordingTimeRangeChartBinding(view.gcPauseChart(), sharedTimeRange);
+        gcDetailsClearTimeRangeButtonBinding = new RecordingTimeRangeClearButtonBinding(
+                view.gcDetailsClearTimeRangeButton(), i18n, sharedTimeRange);
+        setGcHeapChartData(nextViewModel.heapChartProperty().get());
+        setGcMetaspaceChartData(nextViewModel.metaspaceChartProperty().get());
+        setGcPauseChartData(nextViewModel.pauseChartProperty().get());
         gcDetailsRecordingContextBinding = Bindings.createStringBinding(
                 () -> recordingContext(nextViewModel.currentRecordingProperty().get(), "gcDetails.recordingContext"),
                 nextViewModel.currentRecordingProperty(),
@@ -162,10 +190,17 @@ public final class JvmInternalsPagesController {
     }
 
     public void bindCompilations(CompilationsViewModel nextViewModel) {
+        bindCompilations(nextViewModel, null);
+    }
+
+    public void bindCompilations(CompilationsViewModel nextViewModel,
+            ObjectProperty<RecordingTimeRange> sharedTimeRange) {
         CompilationsViewModel currentViewModel = compilationsViewModel;
         if (currentViewModel != null) {
             currentViewModel.durationChartProperty().removeListener(compilationDurationChartListener);
         }
+        compilationDurationChartBinding = closeBinding(compilationDurationChartBinding);
+        compilationsClearTimeRangeButtonBinding = closeBinding(compilationsClearTimeRangeButtonBinding);
         if (compilationsRecordingContextBinding != null) {
             view.compilationsRecordingContextLabel().textProperty().unbind();
             compilationsRecordingContextBinding.dispose();
@@ -182,7 +217,11 @@ public final class JvmInternalsPagesController {
         view.compilationsTable().setItems(nextViewModel.compilations());
         view.compilationFailuresTable().setItems(nextViewModel.failures());
         nextViewModel.durationChartProperty().addListener(compilationDurationChartListener);
-        view.compilationDurationChart().setData(nextViewModel.durationChartProperty().get());
+        compilationDurationChartBinding = new RecordingTimeRangeChartBinding(
+                view.compilationDurationChart(), sharedTimeRange);
+        compilationsClearTimeRangeButtonBinding = new RecordingTimeRangeClearButtonBinding(
+                view.compilationsClearTimeRangeButton(), i18n, sharedTimeRange);
+        setCompilationDurationChartData(nextViewModel.durationChartProperty().get());
         compilationsRecordingContextBinding = Bindings.createStringBinding(
                 () -> recordingContext(nextViewModel.currentRecordingProperty().get(), "compilations.recordingContext"),
                 nextViewModel.currentRecordingProperty(),
@@ -191,11 +230,18 @@ public final class JvmInternalsPagesController {
     }
 
     public void bindCodeCache(CodeCacheViewModel nextViewModel) {
+        bindCodeCache(nextViewModel, null);
+    }
+
+    public void bindCodeCache(CodeCacheViewModel nextViewModel, ObjectProperty<RecordingTimeRange> sharedTimeRange) {
         CodeCacheViewModel currentViewModel = codeCacheViewModel;
         if (currentViewModel != null) {
             currentViewModel.entriesChartProperty().removeListener(codeCacheEntriesChartListener);
             currentViewModel.sweepChartProperty().removeListener(codeCacheSweepChartListener);
         }
+        codeCacheEntriesChartBinding = closeBinding(codeCacheEntriesChartBinding);
+        codeCacheSweepChartBinding = closeBinding(codeCacheSweepChartBinding);
+        codeCacheClearTimeRangeButtonBinding = closeBinding(codeCacheClearTimeRangeButtonBinding);
         if (codeCacheRecordingContextBinding != null) {
             view.codeCacheRecordingContextLabel().textProperty().unbind();
             codeCacheRecordingContextBinding.dispose();
@@ -214,8 +260,13 @@ public final class JvmInternalsPagesController {
         view.codeCacheStatsTable().setItems(nextViewModel.statistics());
         nextViewModel.entriesChartProperty().addListener(codeCacheEntriesChartListener);
         nextViewModel.sweepChartProperty().addListener(codeCacheSweepChartListener);
-        view.codeCacheEntriesChart().setData(nextViewModel.entriesChartProperty().get());
-        view.codeCacheSweepChart().setData(nextViewModel.sweepChartProperty().get());
+        codeCacheEntriesChartBinding = new RecordingTimeRangeChartBinding(
+                view.codeCacheEntriesChart(), sharedTimeRange);
+        codeCacheSweepChartBinding = new RecordingTimeRangeChartBinding(view.codeCacheSweepChart(), sharedTimeRange);
+        codeCacheClearTimeRangeButtonBinding = new RecordingTimeRangeClearButtonBinding(
+                view.codeCacheClearTimeRangeButton(), i18n, sharedTimeRange);
+        setCodeCacheEntriesChartData(nextViewModel.entriesChartProperty().get());
+        setCodeCacheSweepChartData(nextViewModel.sweepChartProperty().get());
         codeCacheRecordingContextBinding = Bindings.createStringBinding(
                 () -> recordingContext(nextViewModel.currentRecordingProperty().get(), "codeCache.recordingContext"),
                 nextViewModel.currentRecordingProperty(),
@@ -224,10 +275,17 @@ public final class JvmInternalsPagesController {
     }
 
     public void bindClassLoading(ClassLoadingViewModel nextViewModel) {
+        bindClassLoading(nextViewModel, null);
+    }
+
+    public void bindClassLoading(ClassLoadingViewModel nextViewModel,
+            ObjectProperty<RecordingTimeRange> sharedTimeRange) {
         ClassLoadingViewModel currentViewModel = classLoadingViewModel;
         if (currentViewModel != null) {
             currentViewModel.chartProperty().removeListener(classLoadingChartListener);
         }
+        classLoadingChartBinding = closeBinding(classLoadingChartBinding);
+        classLoadingClearTimeRangeButtonBinding = closeBinding(classLoadingClearTimeRangeButtonBinding);
         if (classLoadingRecordingContextBinding != null) {
             view.classLoadingRecordingContextLabel().textProperty().unbind();
             classLoadingRecordingContextBinding.dispose();
@@ -246,12 +304,66 @@ public final class JvmInternalsPagesController {
         view.classLoadingEventsTable().setItems(nextViewModel.events());
         view.classLoadingStatsTable().setItems(nextViewModel.statistics());
         nextViewModel.chartProperty().addListener(classLoadingChartListener);
-        view.classLoadingChart().setData(nextViewModel.chartProperty().get());
+        classLoadingChartBinding = new RecordingTimeRangeChartBinding(view.classLoadingChart(), sharedTimeRange);
+        classLoadingClearTimeRangeButtonBinding = new RecordingTimeRangeClearButtonBinding(
+                view.classLoadingClearTimeRangeButton(), i18n, sharedTimeRange);
+        setClassLoadingChartData(nextViewModel.chartProperty().get());
         classLoadingRecordingContextBinding = Bindings.createStringBinding(
                 () -> recordingContext(nextViewModel.currentRecordingProperty().get(), "classLoading.recordingContext"),
                 nextViewModel.currentRecordingProperty(),
                 i18n.localeProperty());
         view.classLoadingRecordingContextLabel().textProperty().bind(classLoadingRecordingContextBinding);
+    }
+
+    private void setGcHeapChartData(ChartDefinition definition) {
+        setChartData(gcHeapChartBinding, view.gcHeapChart(), definition);
+    }
+
+    private void setGcMetaspaceChartData(ChartDefinition definition) {
+        setChartData(gcMetaspaceChartBinding, view.gcMetaspaceChart(), definition);
+    }
+
+    private void setGcPauseChartData(ChartDefinition definition) {
+        setChartData(gcPauseChartBinding, view.gcPauseChart(), definition);
+    }
+
+    private void setCompilationDurationChartData(ChartDefinition definition) {
+        setChartData(compilationDurationChartBinding, view.compilationDurationChart(), definition);
+    }
+
+    private void setCodeCacheEntriesChartData(ChartDefinition definition) {
+        setChartData(codeCacheEntriesChartBinding, view.codeCacheEntriesChart(), definition);
+    }
+
+    private void setCodeCacheSweepChartData(ChartDefinition definition) {
+        setChartData(codeCacheSweepChartBinding, view.codeCacheSweepChart(), definition);
+    }
+
+    private void setClassLoadingChartData(ChartDefinition definition) {
+        setChartData(classLoadingChartBinding, view.classLoadingChart(), definition);
+    }
+
+    private static void setChartData(RecordingTimeRangeChartBinding binding,
+            io.github.youngledo.jmcfx.ui.chart.TimelineChart chart, ChartDefinition definition) {
+        if (binding != null) {
+            binding.setData(definition);
+            return;
+        }
+        chart.setData(definition);
+    }
+
+    private static RecordingTimeRangeChartBinding closeBinding(RecordingTimeRangeChartBinding binding) {
+        if (binding != null) {
+            binding.close();
+        }
+        return null;
+    }
+
+    private static RecordingTimeRangeClearButtonBinding closeBinding(RecordingTimeRangeClearButtonBinding binding) {
+        if (binding != null) {
+            binding.close();
+        }
+        return null;
     }
 
     public void bindVmOperations(VmOperationsViewModel nextViewModel) {

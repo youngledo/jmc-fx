@@ -63,30 +63,49 @@ final class WorkspaceSelectionController {
         pages.eventsPageController().bind(workspace == null ? null : workspace.eventBrowserViewModel());
         pages.analysisPageController().bind(workspace == null ? null : workspace.ruleResultsViewModel());
         pages.profilingPageController().bind(workspace == null ? null : workspace.profilingViewModel());
-        pages.exceptionsPageController().bind(workspace == null ? null : workspace.exceptionViewModel());
+        pages.exceptionsPageController().bind(
+                workspace == null ? null : workspace.exceptionViewModel(),
+                workspace == null ? null : workspace.selectedTimeRangeProperty());
         pages.threadsPageController().bind(workspace == null ? null : workspace.threadViewModel());
-        pages.fileIoPageController().bind(workspace == null ? null : workspace.fileIOViewModel());
-        pages.socketIoPageController().bind(workspace == null ? null : workspace.socketIOViewModel());
+        pages.fileIoPageController().bind(
+                workspace == null ? null : workspace.fileIOViewModel(),
+                workspace == null ? null : workspace.selectedTimeRangeProperty());
+        pages.socketIoPageController().bind(
+                workspace == null ? null : workspace.socketIOViewModel(),
+                workspace == null ? null : workspace.selectedTimeRangeProperty());
         pages.locksPageController().bind(workspace == null ? null : workspace.lockViewModel());
         pages.javaApplicationDataPagesController().bindThreadHistogram(
-                workspace == null ? null : workspace.javaAppOverviewViewModel());
+                workspace == null ? null : workspace.javaAppOverviewViewModel(),
+                workspace == null ? null : workspace.selectedTimeRangeProperty());
         pages.javaApplicationDataPagesController().bindSecurity(workspace == null ? null : workspace.securityViewModel());
         pages.javaApplicationDataPagesController().bindNativeLibraries(
                 workspace == null ? null : workspace.nativeLibraryViewModel());
         pages.javaApplicationDataPagesController().bindThreadDumps(
                 workspace == null ? null : workspace.threadDumpViewModel());
-        pages.heapPageController().bind(workspace == null ? null : workspace.heapViewModel());
+        pages.heapPageController().bind(
+                workspace == null ? null : workspace.heapViewModel(),
+                workspace == null ? null : workspace.selectedTimeRangeProperty());
         pages.leakSuspectsPageController().bind(workspace == null ? null : workspace.leakSuspectsViewModel());
-        pages.tlabPageController().bind(workspace == null ? null : workspace.tlabViewModel());
+        pages.tlabPageController().bind(
+                workspace == null ? null : workspace.tlabViewModel(),
+                workspace == null ? null : workspace.selectedTimeRangeProperty());
         pages.jvmInternalsPagesController().bindJvmInfo(workspace == null ? null : workspace.jvmInfoViewModel());
         pages.jvmInternalsPagesController().bindGcConfig(workspace == null ? null : workspace.gcConfigViewModel());
         pages.jvmInternalsPagesController().bindGcSummary(workspace == null ? null : workspace.gcSummaryViewModel());
-        pages.jvmInternalsPagesController().bindGcDetails(workspace == null ? null : workspace.gcDetailsViewModel());
+        pages.jvmInternalsPagesController().bindGcDetails(
+                workspace == null ? null : workspace.gcDetailsViewModel(),
+                workspace == null ? null : workspace.selectedTimeRangeProperty());
         pages.g1GcPageController().bind(workspace == null ? null : workspace.g1GcViewModel());
         pages.javaFxEventsPageController().bind(workspace == null ? null : workspace.javaFxEventsViewModel());
-        pages.jvmInternalsPagesController().bindCompilations(workspace == null ? null : workspace.compilationsViewModel());
-        pages.jvmInternalsPagesController().bindCodeCache(workspace == null ? null : workspace.codeCacheViewModel());
-        pages.jvmInternalsPagesController().bindClassLoading(workspace == null ? null : workspace.classLoadingViewModel());
+        pages.jvmInternalsPagesController().bindCompilations(
+                workspace == null ? null : workspace.compilationsViewModel(),
+                workspace == null ? null : workspace.selectedTimeRangeProperty());
+        pages.jvmInternalsPagesController().bindCodeCache(
+                workspace == null ? null : workspace.codeCacheViewModel(),
+                workspace == null ? null : workspace.selectedTimeRangeProperty());
+        pages.jvmInternalsPagesController().bindClassLoading(
+                workspace == null ? null : workspace.classLoadingViewModel(),
+                workspace == null ? null : workspace.selectedTimeRangeProperty());
         pages.jvmInternalsPagesController().bindVmOperations(workspace == null ? null : workspace.vmOperationsViewModel());
         pages.environmentPagesController().bind(workspace == null ? null : workspace.environmentViewModel());
         pages.metadataPageController().bind(workspace == null ? null : workspace.jfrMetadataViewModel());

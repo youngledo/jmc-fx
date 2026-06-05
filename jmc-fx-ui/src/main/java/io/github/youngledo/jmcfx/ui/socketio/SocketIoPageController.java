@@ -9,10 +9,13 @@ import io.github.youngledo.jmcfx.domain.model.SocketIOEvent;
 import io.github.youngledo.jmcfx.domain.model.SocketIOGrouping;
 import io.github.youngledo.jmcfx.domain.model.SocketIOHistogram;
 import io.github.youngledo.jmcfx.ui.i18n.I18n;
+import io.github.youngledo.jmcfx.ui.recording.RecordingTimeRange;
+import io.github.youngledo.jmcfx.ui.recording.RecordingTimeRangeChartBinding;
 import io.github.youngledo.jmcfx.ui.util.DisplayFormats;
 
 import javafx.beans.binding.Bindings;
 import javafx.beans.binding.StringBinding;
+import javafx.beans.property.ObjectProperty;
 import javafx.beans.property.ReadOnlyStringWrapper;
 import javafx.beans.value.ChangeListener;
 import javafx.collections.FXCollections;
@@ -27,19 +30,25 @@ public final class SocketIoPageController {
     private final SocketIoPageView view;
     private final I18n i18n;
     private final ChangeListener<ChartDefinition> timelineListener;
+    private final ChangeListener<RecordingTimeRange> sharedTimeRangeListener;
     private StringBinding recordingContextBinding;
     private SocketIOViewModel viewModel;
+    private ObjectProperty<RecordingTimeRange> sharedTimeRange;
+    private RecordingTimeRangeChartBinding timelineSelectionBinding;
 
     public SocketIoPageController(SocketIoPageView view, I18n i18n) {
         this.view = view;
         this.i18n = i18n;
-        timelineListener = (observable, oldValue, newValue) -> view.timelineChart().setData(newValue);
+        timelineListener = (observable, oldValue, newValue) -> setTimelineData(newValue);
+        sharedTimeRangeListener = (observable, oldValue, newValue) -> {
+            refreshTimeRangeStatus();
+        };
     }
 
     public void configure() {
         bindLocalizedText();
         configureTables();
-        bind(null);
+        bind(null, null);
     }
 
     public List<TableView<?>> exportTables() {
@@ -47,9 +56,22 @@ public final class SocketIoPageController {
     }
 
     public void bind(SocketIOViewModel nextViewModel) {
+        bind(nextViewModel, null);
+    }
+
+    public void bind(SocketIOViewModel nextViewModel, ObjectProperty<RecordingTimeRange> nextSharedTimeRange) {
         SocketIOViewModel currentViewModel = viewModel;
         if (currentViewModel != null) {
             currentViewModel.timelineProperty().removeListener(timelineListener);
+            currentViewModel.timeRangeProperty().unbind();
+            currentViewModel.timeRangeProperty().set(null);
+        }
+        if (sharedTimeRange != null) {
+            sharedTimeRange.removeListener(sharedTimeRangeListener);
+        }
+        if (timelineSelectionBinding != null) {
+            timelineSelectionBinding.close();
+            timelineSelectionBinding = null;
         }
         if (recordingContextBinding != null) {
             view.recordingContextLabel().textProperty().unbind();
@@ -57,32 +79,47 @@ public final class SocketIoPageController {
             recordingContextBinding = null;
         }
         view.recordingContextLabel().setText("");
+        view.clearTimeRangeButton().setVisible(false);
+        view.clearTimeRangeButton().setManaged(false);
         view.timelineChart().setData(null);
         view.histogramTable().setItems(FXCollections.emptyObservableList());
         view.eventTable().setItems(FXCollections.emptyObservableList());
         viewModel = nextViewModel;
+        sharedTimeRange = nextSharedTimeRange;
         if (nextViewModel == null) {
             return;
         }
         view.histogramTable().setItems(nextViewModel.histogramProperty());
         view.eventTable().setItems(nextViewModel.eventsProperty());
         nextViewModel.timelineProperty().addListener(timelineListener);
-        view.timelineChart().setData(nextViewModel.timelineProperty().get());
+        timelineSelectionBinding = new RecordingTimeRangeChartBinding(view.timelineChart(), nextSharedTimeRange);
+        setTimelineData(nextViewModel.timelineProperty().get());
+        if (nextSharedTimeRange != null) {
+            nextViewModel.timeRangeProperty().bind(nextSharedTimeRange);
+            nextSharedTimeRange.addListener(sharedTimeRangeListener);
+        } else {
+            nextViewModel.timeRangeProperty().set(null);
+        }
         recordingContextBinding = Bindings.createStringBinding(
-                () -> recordingContext(nextViewModel.currentRecordingProperty().get()),
+                () -> recordingContext(nextViewModel.currentRecordingProperty().get(),
+                        nextSharedTimeRange == null ? null : nextSharedTimeRange.get()),
                 nextViewModel.currentRecordingProperty(),
+                nextSharedTimeRange == null ? nextViewModel.currentRecordingProperty() : nextSharedTimeRange,
                 i18n.localeProperty());
         view.recordingContextLabel().textProperty().bind(recordingContextBinding);
+        refreshTimeRangeStatus();
     }
 
     private void bindLocalizedText() {
         view.titleLabel().textProperty().bind(i18n.text("socketio.title"));
+        view.clearTimeRangeButton().textProperty().bind(i18n.text("recordingTimeRange.clear"));
         view.groupByHostAndPortButton().textProperty().bind(i18n.text("socketio.grouping.byHostAndPort"));
         view.groupByHostButton().textProperty().bind(i18n.text("socketio.grouping.byHost"));
         view.groupByPortButton().textProperty().bind(i18n.text("socketio.grouping.byPort"));
         view.timelineTab().textProperty().bind(i18n.text("socketio.tab.timeline"));
         view.durationTab().textProperty().bind(i18n.text("socketio.tab.duration"));
         view.eventLogTab().textProperty().bind(i18n.text("socketio.tab.eventLog"));
+        view.clearTimeRangeButton().setOnAction(event -> clearSharedTimeRange());
     }
 
     private void configureTables() {
@@ -184,11 +221,43 @@ public final class SocketIoPageController {
         return label;
     }
 
-    private String recordingContext(RecordingSummary recording) {
+    private void setTimelineData(ChartDefinition definition) {
+        if (timelineSelectionBinding != null) {
+            timelineSelectionBinding.setData(definition);
+            return;
+        }
+        view.timelineChart().setData(definition);
+    }
+
+    private void clearSharedTimeRange() {
+        if (sharedTimeRange != null) {
+            sharedTimeRange.set(null);
+        } else if (viewModel != null) {
+            viewModel.timeRangeProperty().set(null);
+        }
+        refreshTimeRangeStatus();
+    }
+
+    private void refreshTimeRangeStatus() {
+        RecordingTimeRange range = sharedTimeRange == null ? null : sharedTimeRange.get();
+        boolean active = range != null;
+        view.clearTimeRangeButton().setVisible(active);
+        view.clearTimeRangeButton().setManaged(active);
+    }
+
+    private String recordingContext(RecordingSummary recording, RecordingTimeRange range) {
         if (recording == null) {
             return "";
         }
         ZoneId zone = ZoneId.systemDefault();
+        if (range != null) {
+            String start = DisplayFormats.formatTimestamp(
+                    java.time.Instant.ofEpochMilli(range.startEpochMillis()), zone);
+            String end = DisplayFormats.formatTimestamp(
+                    java.time.Instant.ofEpochMilli(range.endEpochMillis()), zone);
+            String duration = DisplayFormats.formatDuration(range.durationMillis());
+            return i18n.format("recordingTimeRange.active", start, end, duration);
+        }
         String start = DisplayFormats.formatTimestamp(recording.startTime(), zone);
         String end = DisplayFormats.formatTimestamp(recording.endTime(), zone);
         String duration = DisplayFormats.formatDuration(recording.durationMillis());

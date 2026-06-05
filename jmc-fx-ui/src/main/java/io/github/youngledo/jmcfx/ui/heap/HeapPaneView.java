@@ -4,11 +4,13 @@ import io.github.youngledo.jmcfx.domain.model.HeapClassHistogram;
 import io.github.youngledo.jmcfx.ui.chart.TimelineChart;
 
 import javafx.scene.Node;
+import javafx.scene.control.Button;
 import javafx.scene.control.Label;
 import javafx.scene.control.SplitPane;
 import javafx.scene.control.TabPane;
 import javafx.scene.control.TableView;
 import javafx.scene.layout.Priority;
+import javafx.scene.layout.HBox;
 import javafx.scene.layout.VBox;
 
 /// Code-first view for the JFR Heap page.
@@ -16,6 +18,8 @@ public final class HeapPaneView {
 
     private final Label titleLabel = new Label();
     private final Label recordingContextLabel = new Label();
+    private final Button clearTimeRangeButton = new Button();
+    private final HBox recordingContextBar = new HBox();
     private final TableView<HeapClassHistogram> table = denseTable();
     private final VBox timelineContainer = new VBox();
     private final TimelineChart timelineChart = new TimelineChart();
@@ -25,12 +29,15 @@ public final class HeapPaneView {
     }
 
     public HeapPageView view() {
-        return new HeapPageView(titleLabel, recordingContextLabel, table, timelineChart);
+        return new HeapPageView(titleLabel, recordingContextLabel, clearTimeRangeButton, table, timelineChart);
     }
 
     private void configure(VBox pane) {
+        recordingContextBar.setSpacing(8);
+        recordingContextBar.getChildren().setAll(recordingContextLabel, clearTimeRangeButton);
+        styles(recordingContextBar, "page-toolbar");
         timelineContainer.getChildren().setAll(timelineChart);
-        configureTablePage(pane, titleLabel, recordingContextLabel, new SplitPane(table, timelineContainer));
+        configureTablePage(pane, titleLabel, recordingContextBar, new SplitPane(table, timelineContainer));
     }
 
     private void configureTablePage(VBox pane, Label title, Node... content) {

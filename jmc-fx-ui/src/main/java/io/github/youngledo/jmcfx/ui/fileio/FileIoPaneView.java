@@ -5,11 +5,13 @@ import io.github.youngledo.jmcfx.domain.model.FileIOHistogram;
 import io.github.youngledo.jmcfx.ui.chart.TimelineChart;
 
 import javafx.scene.Node;
+import javafx.scene.control.Button;
 import javafx.scene.control.Label;
 import javafx.scene.control.SplitPane;
 import javafx.scene.control.Tab;
 import javafx.scene.control.TabPane;
 import javafx.scene.control.TableView;
+import javafx.scene.layout.HBox;
 import javafx.scene.layout.Priority;
 import javafx.scene.layout.VBox;
 
@@ -18,6 +20,8 @@ public final class FileIoPaneView {
 
     private final Label titleLabel = new Label();
     private final Label recordingContextLabel = new Label();
+    private final Button clearTimeRangeButton = new Button();
+    private final HBox recordingContextBar = new HBox();
     private final TabPane tabs = new TabPane();
     private final Tab timelineTab = tab();
     private final VBox timelineContainer = new VBox();
@@ -32,17 +36,21 @@ public final class FileIoPaneView {
     }
 
     public FileIoPageView view() {
-        return new FileIoPageView(titleLabel, recordingContextLabel, timelineTab, durationTab, eventLogTab,
+        return new FileIoPageView(titleLabel, recordingContextLabel, clearTimeRangeButton,
+                timelineTab, durationTab, eventLogTab,
                 timelineChart, histogramTable, eventTable);
     }
 
     private void configure(VBox pane) {
+        recordingContextBar.setSpacing(8);
+        recordingContextBar.getChildren().setAll(recordingContextLabel, clearTimeRangeButton);
+        styles(recordingContextBar, "page-toolbar");
         timelineContainer.getChildren().setAll(timelineChart);
         tab(timelineTab, timelineContainer);
         tab(durationTab, histogramTable);
         tab(eventLogTab, eventTable);
         tabs.getTabs().setAll(timelineTab, durationTab, eventLogTab);
-        configureTablePage(pane, titleLabel, recordingContextLabel, tabs);
+        configureTablePage(pane, titleLabel, recordingContextBar, tabs);
     }
 
     private void configureTablePage(VBox pane, Label title, Node... content) {

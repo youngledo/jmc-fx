@@ -13,6 +13,7 @@ import javafx.scene.control.TableView;
 public record SocketIoPageView(
         Label titleLabel,
         Label recordingContextLabel,
+        Button clearTimeRangeButton,
         Button groupByHostAndPortButton,
         Button groupByHostButton,
         Button groupByPortButton,

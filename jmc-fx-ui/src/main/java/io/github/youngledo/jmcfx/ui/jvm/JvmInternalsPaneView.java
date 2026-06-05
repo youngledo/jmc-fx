@@ -17,10 +17,12 @@ import io.github.youngledo.jmcfx.domain.model.VmOperationSummary;
 import io.github.youngledo.jmcfx.ui.chart.TimelineChart;
 
 import javafx.scene.Node;
+import javafx.scene.control.Button;
 import javafx.scene.control.Label;
 import javafx.scene.control.SplitPane;
 import javafx.scene.control.TabPane;
 import javafx.scene.control.TableView;
+import javafx.scene.layout.HBox;
 import javafx.scene.layout.Priority;
 import javafx.scene.layout.VBox;
 
@@ -64,19 +66,27 @@ public final class JvmInternalsPaneView {
     private final Label gcSummaryTitleLabel = new Label();
     private final Label gcDetailsTitleLabel = new Label();
     private final Label gcDetailsRecordingContextLabel = new Label();
+    private final Button gcDetailsClearTimeRangeButton = new Button();
+    private final HBox gcDetailsRecordingContextBar = new HBox();
     private final Label gcEventsLabel = new Label();
     private final Label gcReferenceStatsLabel = new Label();
     private final Label gcHeapSummaryLabel = new Label();
     private final Label compilationsTitleLabel = new Label();
     private final Label compilationsRecordingContextLabel = new Label();
+    private final Button compilationsClearTimeRangeButton = new Button();
+    private final HBox compilationsRecordingContextBar = new HBox();
     private final Label compilationEventsLabel = new Label();
     private final Label compilationFailuresLabel = new Label();
     private final Label codeCacheTitleLabel = new Label();
     private final Label codeCacheRecordingContextLabel = new Label();
+    private final Button codeCacheClearTimeRangeButton = new Button();
+    private final HBox codeCacheRecordingContextBar = new HBox();
     private final Label codeCacheSweepsLabel = new Label();
     private final Label codeCacheStatsLabel = new Label();
     private final Label classLoadingTitleLabel = new Label();
     private final Label classLoadingRecordingContextLabel = new Label();
+    private final Button classLoadingClearTimeRangeButton = new Button();
+    private final HBox classLoadingRecordingContextBar = new HBox();
     private final Label classLoadingHistogramLabel = new Label();
     private final Label classLoadingEventsLabel = new Label();
     private final Label classLoadingStatsLabel = new Label();
@@ -95,13 +105,17 @@ public final class JvmInternalsPaneView {
         return new JvmInternalsPagesView(jvmInfoTitleLabel, jvmFlagsLabel, jvmFlagChangesLabel,
                 jvmFlagsTable, jvmFlagChangesTable, gcConfigTitleLabel, gcConfigDescriptionLabel,
                 gcSummaryTitleLabel, gcSummaryTable, gcDetailsTitleLabel, gcDetailsRecordingContextLabel,
+                gcDetailsClearTimeRangeButton,
                 gcHeapChart, gcMetaspaceChart, gcPauseChart, gcEventsLabel, gcEventsTable, gcReferenceStatsLabel,
                 gcReferenceStatsTable, gcHeapSummaryLabel, gcHeapSummaryTable, compilationsTitleLabel,
-                compilationsRecordingContextLabel, compilationDurationChart, compilationEventsLabel,
+                compilationsRecordingContextLabel, compilationsClearTimeRangeButton,
+                compilationDurationChart, compilationEventsLabel,
                 compilationsTable, compilationFailuresLabel, compilationFailuresTable, codeCacheTitleLabel,
-                codeCacheRecordingContextLabel, codeCacheEntriesChart, codeCacheSweepChart, codeCacheSweepsLabel,
+                codeCacheRecordingContextLabel, codeCacheClearTimeRangeButton,
+                codeCacheEntriesChart, codeCacheSweepChart, codeCacheSweepsLabel,
                 codeCacheSweepsTable, codeCacheStatsLabel, codeCacheStatsTable, classLoadingTitleLabel,
-                classLoadingRecordingContextLabel, classLoadingChart, classLoadingHistogramLabel,
+                classLoadingRecordingContextLabel, classLoadingClearTimeRangeButton,
+                classLoadingChart, classLoadingHistogramLabel,
                 classLoadingHistogramTable, classLoadingEventsLabel, classLoadingEventsTable,
                 classLoadingStatsLabel, classLoadingStatsTable, vmOperationsTitleLabel, vmOperationSummaryLabel,
                 vmOperationSummaryTable, vmOperationEventsLabel, vmOperationEventsTable);
@@ -118,24 +132,40 @@ public final class JvmInternalsPaneView {
         gcHeapChartContainer.getChildren().setAll(gcHeapChart);
         gcMetaspaceChartContainer.getChildren().setAll(gcMetaspaceChart);
         gcPauseChartContainer.getChildren().setAll(gcPauseChart);
+        gcDetailsRecordingContextBar.setSpacing(8);
+        gcDetailsRecordingContextBar.getChildren().setAll(gcDetailsRecordingContextLabel,
+                gcDetailsClearTimeRangeButton);
         styles(gcDetailsRecordingContextLabel, "detail-panel-meta");
-        configureTablePage(gcDetailsPane, gcDetailsTitleLabel, gcDetailsRecordingContextLabel,
+        styles(gcDetailsRecordingContextBar, "page-toolbar");
+        configureTablePage(gcDetailsPane, gcDetailsTitleLabel, gcDetailsRecordingContextBar,
                 gcHeapChartContainer, gcMetaspaceChartContainer, gcPauseChartContainer, gcEventsLabel, gcEventsTable,
                 gcReferenceStatsLabel, gcReferenceStatsTable, gcHeapSummaryLabel, gcHeapSummaryTable);
         compilationDurationChartContainer.getChildren().setAll(compilationDurationChart);
+        compilationsRecordingContextBar.setSpacing(8);
+        compilationsRecordingContextBar.getChildren().setAll(compilationsRecordingContextLabel,
+                compilationsClearTimeRangeButton);
         styles(compilationsRecordingContextLabel, "detail-panel-meta");
-        configureTablePage(compilationsPane, compilationsTitleLabel, compilationsRecordingContextLabel,
+        styles(compilationsRecordingContextBar, "page-toolbar");
+        configureTablePage(compilationsPane, compilationsTitleLabel, compilationsRecordingContextBar,
                 compilationDurationChartContainer, compilationEventsLabel, compilationsTable, compilationFailuresLabel,
                 compilationFailuresTable);
         codeCacheEntriesChartContainer.getChildren().setAll(codeCacheEntriesChart);
         codeCacheSweepChartContainer.getChildren().setAll(codeCacheSweepChart);
+        codeCacheRecordingContextBar.setSpacing(8);
+        codeCacheRecordingContextBar.getChildren().setAll(codeCacheRecordingContextLabel,
+                codeCacheClearTimeRangeButton);
         styles(codeCacheRecordingContextLabel, "detail-panel-meta");
-        configureTablePage(codeCachePane, codeCacheTitleLabel, codeCacheRecordingContextLabel,
+        styles(codeCacheRecordingContextBar, "page-toolbar");
+        configureTablePage(codeCachePane, codeCacheTitleLabel, codeCacheRecordingContextBar,
                 codeCacheEntriesChartContainer, codeCacheSweepChartContainer, codeCacheSweepsLabel, codeCacheSweepsTable,
                 codeCacheStatsLabel, codeCacheStatsTable);
         classLoadingChartContainer.getChildren().setAll(classLoadingChart);
+        classLoadingRecordingContextBar.setSpacing(8);
+        classLoadingRecordingContextBar.getChildren().setAll(classLoadingRecordingContextLabel,
+                classLoadingClearTimeRangeButton);
         styles(classLoadingRecordingContextLabel, "detail-panel-meta");
-        configureTablePage(classLoadingPane, classLoadingTitleLabel, classLoadingRecordingContextLabel,
+        styles(classLoadingRecordingContextBar, "page-toolbar");
+        configureTablePage(classLoadingPane, classLoadingTitleLabel, classLoadingRecordingContextBar,
                 classLoadingChartContainer, classLoadingHistogramLabel, classLoadingHistogramTable,
                 classLoadingEventsLabel, classLoadingEventsTable, classLoadingStatsLabel, classLoadingStatsTable);
         configureTablePage(vmOperationsPane, vmOperationsTitleLabel, vmOperationSummaryLabel,

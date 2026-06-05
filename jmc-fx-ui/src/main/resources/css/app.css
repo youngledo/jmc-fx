@@ -635,6 +635,17 @@
     -fx-padding: 0;
     -fx-min-height: 160px;
 }
+.timeline-selection-overlay {
+    -fx-background-color: transparent;
+}
+.timeline-selection-muted {
+    -fx-fill: rgba(120, 128, 140, 0.18);
+}
+.timeline-selection-band {
+    -fx-fill: transparent;
+    -fx-stroke: -color-accent-fg;
+    -fx-stroke-width: 1px;
+}
 
 /* Diagnostic chart */
 .diagnostic-chart {

@@ -11,6 +11,7 @@ import javafx.scene.control.TableView;
 public record ExceptionsPageView(
         Label titleLabel,
         Label recordingContextLabel,
+        Button clearTimeRangeButton,
         Button groupByClassButton,
         Button groupByMessageButton,
         Button groupByClassAndMessageButton,
