@@ -8,11 +8,11 @@
     <name>JMC FX UI</name>
     <dependencies>
         <dependency>
-            <groupId>com.youngledo.jmcfx</groupId>
+            <groupId>io.github.youngledo.jmcfx</groupId>
             <artifactId>jmc-fx-application</artifactId>
         </dependency>
         <dependency>
-            <groupId>com.youngledo.jmcfx</groupId>
+            <groupId>io.github.youngledo.jmcfx</groupId>
             <artifactId>jmc-fx-flamegraph</artifactId>
         </dependency>
         <dependency>

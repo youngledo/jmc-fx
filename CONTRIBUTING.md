@@ -35,7 +35,7 @@ Do not use Maven 3 `<modules>` in this repository.
 
 - Keep domain models UI-neutral.
 - Keep all OpenJDK JMC API calls inside `jmc-fx-adapter`, under the
-  `com.youngledo.jmcfx.adapter.jmc` package.
+  `io.github.youngledo.jmcfx.adapter.jmc` package.
 - Drive user workflows through `jmc-fx-application` use cases instead of
   letting UI controllers call secondary adapters directly.
 - Keep JavaFX controllers thin and move behavior into view models.
@@ -57,8 +57,8 @@ In short:
 - `jmc-fx-application` owns use-case orchestration and workflow service
   groupings.
 - `jmc-fx-adapter` owns secondary adapters. Keep package boundaries clear:
-  `com.youngledo.jmcfx.adapter.jmc` owns OpenJDK JMC, JFR, JMX, Jolokia, and
-  JOverflow integration, while `com.youngledo.jmcfx.adapter.preferences` owns
+  `io.github.youngledo.jmcfx.adapter.jmc` owns OpenJDK JMC, JFR, JMX, Jolokia, and
+  JOverflow integration, while `io.github.youngledo.jmcfx.adapter.preferences` owns
   Java Preferences-backed persistence adapters.
 - `jmc-fx-ui` owns JavaFX views, controllers, view models, themes,
   preferences, i18n, and presentation state. Production UI code may use domain

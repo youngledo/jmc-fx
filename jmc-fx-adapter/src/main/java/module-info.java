@@ -1,5 +1,5 @@
-module com.youngledo.jmcfx.adapter {
-    requires com.youngledo.jmcfx.domain;
+module io.github.youngledo.jmcfx.adapter {
+    requires io.github.youngledo.jmcfx.domain;
     requires java.management;
     requires java.prefs;
     requires jdk.attach;
@@ -13,6 +13,6 @@ module com.youngledo.jmcfx.adapter {
     requires org.openjdk.jmc.joverflow;
     requires org.openjdk.jmc.rjmx.common;
 
-    exports com.youngledo.jmcfx.adapter.jmc;
-    exports com.youngledo.jmcfx.adapter.preferences;
+    exports io.github.youngledo.jmcfx.adapter.jmc;
+    exports io.github.youngledo.jmcfx.adapter.preferences;
 }

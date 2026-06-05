@@ -84,7 +84,7 @@ without creating another production module. Run it from the repository root:
 ```bash
 sdk env
 ./mvnw -pl jmc-fx-flamegraph -Dexec.classpathScope=test \
-  -Dexec.mainClass=com.youngledo.jmcfx.flamegraph.demo.FlameGraphDemoApplication \
+  -Dexec.mainClass=io.github.youngledo.jmcfx.flamegraph.demo.FlameGraphDemoApplication \
   org.codehaus.mojo:exec-maven-plugin:3.5.0:java
 ```
 

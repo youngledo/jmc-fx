@@ -47,8 +47,8 @@ The intended subprojects are:
 - `jmc-fx-domain`: UI-neutral records, enums, ports, and exceptions.
 - `jmc-fx-application`: use-case orchestration and workflow-level service groups.
 - `jmc-fx-adapter`: secondary adapters, separated by package:
-  `com.youngledo.jmcfx.adapter.jmc` for OpenJDK JMC core/headless integration,
-  and `com.youngledo.jmcfx.adapter.preferences` for Java Preferences-backed
+  `io.github.youngledo.jmcfx.adapter.jmc` for OpenJDK JMC core/headless integration,
+  and `io.github.youngledo.jmcfx.adapter.preferences` for Java Preferences-backed
   persistence adapters.
 - `jmc-fx-ui`: JavaFX/FXML/CSS, controllers, view models, navigation, task state.
 - `jmc-fx-launcher`: application startup, dependency assembly, stage lifecycle, packaging.
@@ -57,14 +57,14 @@ Rules:
 
 - UI code must not directly call OpenJDK JMC APIs.
 - UI code must not directly instantiate or call concrete adapter implementations.
-- Production UI code must not import `com.youngledo.jmcfx.domain.service`.
+- Production UI code must not import `io.github.youngledo.jmcfx.domain.service`.
 - UI-driven workflows enter through `jmc-fx-application` use cases.
 - UI-specific fakes and fixtures live in `jmc-fx-ui/src/test/java`, close to
   the tests that consume them.
 - Secondary persistence adapters belong outside `jmc-fx-ui`.
 - Workflow orchestration that spans ports or decides feature capabilities belongs in `jmc-fx-application`.
 - JMC API usage belongs in `jmc-fx-adapter` under
-  `com.youngledo.jmcfx.adapter.jmc`.
+  `io.github.youngledo.jmcfx.adapter.jmc`.
 - `jmc-fx-domain` must stay free of JavaFX types.
 - `jmc-fx-application` must stay free of JavaFX, adapter, and launcher types.
 - Controllers stay thin. Put testable state and behavior in view models.

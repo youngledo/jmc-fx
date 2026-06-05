@@ -1,7 +1,7 @@
-module com.youngledo.jmcfx.ui {
-    requires transitive com.youngledo.jmcfx.domain;
-    requires com.youngledo.jmcfx.application;
-    requires com.youngledo.jmcfx.flamegraph;
+module io.github.youngledo.jmcfx.ui {
+    requires transitive io.github.youngledo.jmcfx.domain;
+    requires io.github.youngledo.jmcfx.application;
+    requires io.github.youngledo.jmcfx.flamegraph;
     requires atlantafx.base;
     requires java.prefs;
     requires javafx.base;
@@ -12,10 +12,10 @@ module com.youngledo.jmcfx.ui {
     requires org.kordamp.ikonli.javafx;
     requires org.kordamp.ikonli.material2;
 
-    exports com.youngledo.jmcfx.ui.i18n;
-    exports com.youngledo.jmcfx.ui.preferences;
-    exports com.youngledo.jmcfx.ui.shell;
+    exports io.github.youngledo.jmcfx.ui.i18n;
+    exports io.github.youngledo.jmcfx.ui.preferences;
+    exports io.github.youngledo.jmcfx.ui.shell;
 
     opens css;
-    opens com.youngledo.jmcfx.ui.i18n;
+    opens io.github.youngledo.jmcfx.ui.i18n;
 }

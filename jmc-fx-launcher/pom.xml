@@ -8,11 +8,11 @@
     <name>JMC FX Launcher</name>
     <dependencies>
         <dependency>
-            <groupId>com.youngledo.jmcfx</groupId>
+            <groupId>io.github.youngledo.jmcfx</groupId>
             <artifactId>jmc-fx-ui</artifactId>
         </dependency>
         <dependency>
-            <groupId>com.youngledo.jmcfx</groupId>
+            <groupId>io.github.youngledo.jmcfx</groupId>
             <artifactId>jmc-fx-adapter</artifactId>
         </dependency>
         <dependency>
@@ -44,7 +44,7 @@
                 <configuration>
                     <testCompilerArgs>
                         <arg>--add-reads</arg>
-                        <arg>com.youngledo.jmcfx.launcher=java.xml</arg>
+                        <arg>io.github.youngledo.jmcfx.launcher=java.xml</arg>
                     </testCompilerArgs>
                 </configuration>
             </plugin>
@@ -53,7 +53,7 @@
                 <artifactId>javafx-maven-plugin</artifactId>
                 <configuration>
                     <skip>false</skip>
-                    <mainClass>com.youngledo.jmcfx.launcher/com.youngledo.jmcfx.launcher.JmcFxLauncher</mainClass>
+                    <mainClass>io.github.youngledo.jmcfx.launcher/io.github.youngledo.jmcfx.launcher.JmcFxLauncher</mainClass>
                 </configuration>
             </plugin>
         </plugins>
@@ -91,7 +91,7 @@
                                 <configuration>
                                     <name>JMC FX</name>
                                     <mainJar>${project.build.finalName}.jar</mainJar>
-                                    <mainClass>com.youngledo.jmcfx.launcher.JmcFxLauncher</mainClass>
+                                    <mainClass>io.github.youngledo.jmcfx.launcher.JmcFxLauncher</mainClass>
                                     <packageVersion>${jmcfx.package.version}</packageVersion>
                                     <vendor>Youngledo</vendor>
                                     <description>${project.description}</description>
@@ -116,7 +116,7 @@
                                     <runtimeDirectory>${project.build.directory}/jpackage-leyden-runtime</runtimeDirectory>
                                     <appImageDirectory>${project.build.directory}/jpackage-leyden-app-image</appImageDirectory>
                                     <packageDirectory>${project.build.directory}/jpackage-leyden</packageDirectory>
-                                    <macPackageIdentifier>com.youngledo.jmcfx</macPackageIdentifier>
+                                    <macPackageIdentifier>io.github.youngledo.jmcfx</macPackageIdentifier>
                                     <macPackageName>JMC FX</macPackageName>
                                     <linuxPackageName>jmc-fx</linuxPackageName>
                                     <linuxAppCategory>Development</linuxAppCategory>

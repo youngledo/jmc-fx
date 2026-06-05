@@ -1,5 +1,5 @@
-module com.youngledo.jmcfx.application {
-    requires com.youngledo.jmcfx.domain;
+module io.github.youngledo.jmcfx.application {
+    requires io.github.youngledo.jmcfx.domain;
 
-    exports com.youngledo.jmcfx.application;
+    exports io.github.youngledo.jmcfx.application;
 }

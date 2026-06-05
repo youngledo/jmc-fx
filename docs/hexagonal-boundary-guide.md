@@ -58,8 +58,8 @@ the application layer.
 
 - Implements domain ports using secondary adapter technologies.
 - Keeps implementation families separated by package:
-  `com.youngledo.jmcfx.adapter.jmc` owns OpenJDK JMC, JFR, JMX, Jolokia, and
-  JOverflow APIs; `com.youngledo.jmcfx.adapter.preferences` owns Java
+  `io.github.youngledo.jmcfx.adapter.jmc` owns OpenJDK JMC, JFR, JMX, Jolokia, and
+  JOverflow APIs; `io.github.youngledo.jmcfx.adapter.preferences` owns Java
   Preferences-backed persistence adapters.
 - Does not depend on UI, application, launcher, JavaFX, AtlantaFX, or Ikonli.
 - Use this module for all integration details that would change if the backing
@@ -71,13 +71,13 @@ the application layer.
   preferences, presentation state, JavaFX properties, `ObservableList`, and
   user-facing task state.
 - May call application use cases and use domain records.
-- Must not import `com.youngledo.jmcfx.domain.service` ports in production
+- Must not import `io.github.youngledo.jmcfx.domain.service` ports in production
   sources.
 - Must not import concrete adapter classes or OpenJDK JMC APIs.
 - Keep controllers thin; put testable presentation behavior in view models.
 - `JavaAppPreferences` remains a UI-local Java Preferences-backed presentation
   preference store. Domain-port persistence adapters belong in
-  `jmc-fx-adapter` under `com.youngledo.jmcfx.adapter.preferences`; do not add
+  `jmc-fx-adapter` under `io.github.youngledo.jmcfx.adapter.preferences`; do not add
   new domain-port persistence implementations to UI.
 
 `jmc-fx-launcher`
@@ -97,11 +97,11 @@ Put it in `jmc-fx-application` when it coordinates a user workflow, combines
 multiple domain ports, opens a recording or heap dump repository, decides which
 sections or capabilities are available, or returns a workflow result to the UI.
 
-Put it in `jmc-fx-adapter` under `com.youngledo.jmcfx.adapter.jmc` when it
+Put it in `jmc-fx-adapter` under `io.github.youngledo.jmcfx.adapter.jmc` when it
 imports `org.openjdk.jmc`, `org.jolokia`, or implements a domain port with
 JMC-specific details.
 
-Put it in `jmc-fx-adapter` under `com.youngledo.jmcfx.adapter.preferences`
+Put it in `jmc-fx-adapter` under `io.github.youngledo.jmcfx.adapter.preferences`
 when it implements a domain persistence port with Java Preferences.
 
 Put it in `jmc-fx-ui` when it is JavaFX-specific, presentation-specific, or
@@ -119,8 +119,8 @@ configuration.
 
 ## Common Boundary Smells
 
-- `jmc-fx-ui` imports `com.youngledo.jmcfx.adapter...` or `org.openjdk.jmc...`.
-- `jmc-fx-ui` imports `com.youngledo.jmcfx.domain.service...`.
+- `jmc-fx-ui` imports `io.github.youngledo.jmcfx.adapter...` or `org.openjdk.jmc...`.
+- `jmc-fx-ui` imports `io.github.youngledo.jmcfx.domain.service...`.
 - `jmc-fx-application` imports JavaFX, adapter, UI, launcher, or external JMC
   packages.
 - `jmc-fx-adapter` imports UI, application, launcher, JavaFX, AtlantaFX, or
@@ -135,9 +135,9 @@ configuration.
 
 ArchUnit tests protect the most important boundaries:
 
-- `jmc-fx-launcher/src/test/java/com/youngledo/jmcfx/launcher/JmcFxArchitectureTest.java`
-- `jmc-fx-launcher/src/test/java/com/youngledo/jmcfx/launcher/JmcFxModuleBoundaryTest.java`
-- `jmc-fx-application/src/test/java/com/youngledo/jmcfx/application/JmcFxApplicationArchitectureTest.java`
+- `jmc-fx-launcher/src/test/java/io/github/youngledo/jmcfx/launcher/JmcFxArchitectureTest.java`
+- `jmc-fx-launcher/src/test/java/io/github/youngledo/jmcfx/launcher/JmcFxModuleBoundaryTest.java`
+- `jmc-fx-application/src/test/java/io/github/youngledo/jmcfx/application/JmcFxApplicationArchitectureTest.java`
 
 Run these tests after changing module dependencies or moving workflow logic:
 

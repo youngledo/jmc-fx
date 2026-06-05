@@ -8,7 +8,7 @@
     <name>JMC FX Application</name>
     <dependencies>
         <dependency>
-            <groupId>com.youngledo.jmcfx</groupId>
+            <groupId>io.github.youngledo.jmcfx</groupId>
             <artifactId>jmc-fx-domain</artifactId>
         </dependency>
         <dependency>

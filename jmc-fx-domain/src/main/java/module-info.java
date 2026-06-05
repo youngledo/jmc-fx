@@ -1,4 +1,4 @@
-module com.youngledo.jmcfx.domain {
-    exports com.youngledo.jmcfx.domain.model;
-    exports com.youngledo.jmcfx.domain.service;
+module io.github.youngledo.jmcfx.domain {
+    exports io.github.youngledo.jmcfx.domain.model;
+    exports io.github.youngledo.jmcfx.domain.service;
 }
