@@ -41,7 +41,8 @@ sdk env && ./mvnw -pl jmc-fx-launcher -am -Pjpackage-classpath-jlink-leyden pack
 ```
 
 There is one Leyden installer profile. It delegates the packaging workflow to
-the standalone `io.github.youngledo:jpackage-maven-plugin`. Its
+the standalone `io.github.youngledo:jpackage-maven-plugin` published on Maven
+Central. Its
 `leyden` goal detects the current operating system and derives the
 platform-specific `jpackage` options, installer type, app-image paths, and AOT
 cache location internally. The installer is written to
