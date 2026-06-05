@@ -169,13 +169,12 @@ public class LeydenPackageMojo implements org.apache.maven.api.plugin.Mojo {
         @Override
         public void run(List<String> command) throws Exception {
             log.info(String.join(" ", command));
-            var process = new ProcessBuilder(command)
-                    .inheritIO()
-                    .start();
-            var exitCode = process.waitFor();
-            if (exitCode != 0) {
-                throw new MojoException("Command failed with exit code " + exitCode + ": "
-                        + String.join(" ", command));
+            try (var process = new ProcessBuilder(command).inheritIO().start()) {
+                var exitCode = process.waitFor();
+                if (exitCode != 0) {
+                    throw new MojoException("Command failed with exit code " + exitCode + ": "
+                            + String.join(" ", command));
+                }
             }
         }
     }
