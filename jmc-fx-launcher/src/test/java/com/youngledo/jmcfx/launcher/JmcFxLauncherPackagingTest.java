@@ -62,7 +62,7 @@ class JmcFxLauncherPackagingTest {
     }
 
     @Test
-    void leydenJpackageProfileBuildsAppImageThenTrainsAotCacheWithMavenPlugins() throws Exception {
+    void leydenJpackageProfileBuildsAppImageThenTrainsAotCacheBeforeFinalInstaller() throws Exception {
         var pom = readAppPom();
         var profile = leydenJpackageProfile(pom);
 
@@ -84,9 +84,9 @@ class JmcFxLauncherPackagingTest {
         assertTrue(pluginIndex(profile, "org.panteleyev", "jpackage-maven-plugin")
                         < pluginIndex(profile, "org.apache.maven.plugins", "maven-antrun-plugin"),
                 "Leyden training must run after the app-image has been generated");
-        var trainExecution = findExecution(antrunPlugin, "train-leyden-aot-cache-and-package-installer");
+        var trainExecution = findExecution(antrunPlugin, "train-leyden-aot-cache");
         assertNotNull(trainExecution);
-        assertEquals("package", childText(trainExecution, "phase"));
+        assertEquals("prepare-package", childText(trainExecution, "phase"));
         assertEquals("run", childText(trainExecution, "goals", "goal"));
         assertEquals("${jmcfx.leyden.app.executable}",
                 trainExecution.getElementsByTagName("exec").item(0).getAttributes()
@@ -118,10 +118,10 @@ class JmcFxLauncherPackagingTest {
                 "javafx.controls");
 
         var jpackagePlugin = findPlugin(profile, "org.panteleyev", "jpackage-maven-plugin");
-        assertNotNull(jpackagePlugin, "Leyden packaging should still use jpackage for app-image output");
+        assertNotNull(jpackagePlugin, "Leyden packaging should use jpackage for app-image and installer output");
         var appImageExecution = findExecution(jpackagePlugin, "create-leyden-app-image");
         assertNotNull(appImageExecution);
-        assertEquals("package", childText(appImageExecution, "phase"));
+        assertEquals("prepare-package", childText(appImageExecution, "phase"));
         assertEquals("APP_IMAGE", childText(appImageExecution, "configuration", "type"));
         assertEquals("${jmcfx.leyden.app.image.dir}",
                 childText(appImageExecution, "configuration", "destination"));
@@ -130,43 +130,36 @@ class JmcFxLauncherPackagingTest {
         assertTrue(appImageExecution.getTextContent().contains("-Djmcfx.leyden.training=true"));
         assertTrue(appImageExecution.getTextContent().contains("-XX:AOTCacheOutput=$APPDIR/jmcfx-startup.aot"));
 
+        var installerExecution = findExecution(jpackagePlugin, "package-leyden-installer");
+        assertNotNull(installerExecution,
+                "final installer packaging should use jpackage-maven-plugin instead of Ant exec argument lists");
+        assertEquals("package", childText(installerExecution, "phase"));
+        assertEquals("${jmcfx.leyden.package.type}", childText(installerExecution, "configuration", "type"));
+        assertEquals("${jmcfx.leyden.app.image}", childText(installerExecution, "configuration", "appImage"));
+        assertEquals("${jmcfx.leyden.package.dir}", childText(installerExecution, "configuration", "destination"));
+
         var pomText = java.nio.file.Files.readString(Path.of("pom.xml"));
         assertFalse(pomText.contains("measure-macos-app-startup"),
                 "formal Leyden packaging must not depend on measurement shell scripts");
     }
 
     @Test
-    void leydenJpackageProfilePackagesMacLinuxAndWindowsAfterTraining() throws Exception {
+    void leydenPostProcessingKeepsOnlyAotTrainingAndMacSigningInAntrun() throws Exception {
         var pom = readAppPom();
         var profile = leydenJpackageProfile(pom);
         var antrunPlugin = findPlugin(profile, "org.apache.maven.plugins", "maven-antrun-plugin");
-        var trainExecution = findExecution(antrunPlugin, "train-leyden-aot-cache-and-package-installer");
+        var trainExecution = findExecution(antrunPlugin, "train-leyden-aot-cache");
 
         var macSign = findTaskByAttribute(trainExecution, "exec", "osfamily", "mac");
         assertNotNull(macSign, "modified macOS app images should be signed before packaging");
         assertEquals("${jmcfx.leyden.sign.executable}", macSign.getAttribute("executable"));
         assertTaskHasArg(macSign, "${jmcfx.leyden.app.image}");
-
-        var macPackage = findTaskByAttribute(trainExecution, "exec", "id", "package-leyden-macos");
-        assertNotNull(macPackage);
-        assertEquals("mac", macPackage.getAttribute("osfamily"));
-        assertTaskHasArg(macPackage, "${jmcfx.leyden.package.type}");
-        assertTaskHasArg(macPackage, "--mac-package-identifier");
-        assertTaskHasArg(macPackage, "com.youngledo.jmcfx");
-
-        var linuxPackage = findTaskByAttribute(trainExecution, "exec", "id", "package-leyden-linux");
-        assertNotNull(linuxPackage);
-        assertEquals("Linux", linuxPackage.getAttribute("os"));
-        assertTaskHasArg(linuxPackage, "${jmcfx.leyden.package.type}");
-        assertTaskHasArg(linuxPackage, "--linux-package-name");
-        assertTaskHasArg(linuxPackage, "jmc-fx");
-
-        var windowsPackage = findTaskByAttribute(trainExecution, "exec", "id", "package-leyden-windows");
-        assertNotNull(windowsPackage);
-        assertEquals("windows", windowsPackage.getAttribute("osfamily"));
-        assertTaskHasArg(windowsPackage, "${jmcfx.leyden.package.type}");
-        assertTaskHasArg(windowsPackage, "--win-menu");
-        assertTaskHasArg(windowsPackage, "--win-shortcut");
+        assertFalse(trainExecution.getTextContent().contains("package-leyden-macos"),
+                "Ant post-processing should not duplicate jpackage installer commands");
+        assertFalse(trainExecution.getTextContent().contains("package-leyden-linux"),
+                "Ant post-processing should not duplicate jpackage installer commands");
+        assertFalse(trainExecution.getTextContent().contains("package-leyden-windows"),
+                "Ant post-processing should not duplicate jpackage installer commands");
     }
 
     @Test
@@ -183,8 +176,7 @@ class JmcFxLauncherPackagingTest {
                 childText(macos, "properties", "jmcfx.leyden.app.config"));
         assertEquals("${jmcfx.leyden.app.image}/Contents/app/jmcfx-startup.aot",
                 childText(macos, "properties", "jmcfx.leyden.aot.cache"));
-        assertEquals("dmg", childText(macos, "properties", "jmcfx.leyden.package.type"));
-        assertEquals("${java.home}/bin/jpackage", childText(macos, "properties", "jmcfx.jpackage.executable"));
+        assertEquals("DMG", childText(macos, "properties", "jmcfx.leyden.package.type"));
         assertEquals("/usr/bin/codesign", childText(macos, "properties", "jmcfx.leyden.sign.executable"));
 
         var linux = profile(pom, "jpackage-classpath-jlink-leyden-linux");
@@ -197,8 +189,7 @@ class JmcFxLauncherPackagingTest {
                 childText(linux, "properties", "jmcfx.leyden.app.config"));
         assertEquals("${jmcfx.leyden.app.image}/lib/app/jmcfx-startup.aot",
                 childText(linux, "properties", "jmcfx.leyden.aot.cache"));
-        assertEquals("deb", childText(linux, "properties", "jmcfx.leyden.package.type"));
-        assertEquals("${java.home}/bin/jpackage", childText(linux, "properties", "jmcfx.jpackage.executable"));
+        assertEquals("DEB", childText(linux, "properties", "jmcfx.leyden.package.type"));
 
         var windows = profile(pom, "jpackage-classpath-jlink-leyden-windows");
         assertEquals("windows", childText(windows, "activation", "os", "family"));
@@ -210,8 +201,7 @@ class JmcFxLauncherPackagingTest {
                 childText(windows, "properties", "jmcfx.leyden.app.config"));
         assertEquals("${jmcfx.leyden.app.image}/app/jmcfx-startup.aot",
                 childText(windows, "properties", "jmcfx.leyden.aot.cache"));
-        assertEquals("msi", childText(windows, "properties", "jmcfx.leyden.package.type"));
-        assertEquals("${java.home}/bin/jpackage.exe", childText(windows, "properties", "jmcfx.jpackage.executable"));
+        assertEquals("MSI", childText(windows, "properties", "jmcfx.leyden.package.type"));
     }
 
     @Test

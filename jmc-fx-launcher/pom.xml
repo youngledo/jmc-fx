@@ -112,6 +112,15 @@
                     <plugin>
                         <groupId>org.apache.maven.plugins</groupId>
                         <artifactId>maven-jar-plugin</artifactId>
+                        <executions>
+                            <execution>
+                                <id>default-jar</id>
+                                <phase>prepare-package</phase>
+                                <goals>
+                                    <goal>jar</goal>
+                                </goals>
+                            </execution>
+                        </executions>
                         <configuration>
                             <outputDirectory>${jmcfx.package.input.dir}</outputDirectory>
                             <archive>
@@ -128,7 +137,7 @@
                         <executions>
                             <execution>
                                 <id>copy-leyden-runtime-dependencies</id>
-                                <phase>package</phase>
+                                <phase>prepare-package</phase>
                                 <goals>
                                     <goal>copy-dependencies</goal>
                                 </goals>
@@ -145,7 +154,7 @@
                         <executions>
                             <execution>
                                 <id>create-leyden-jpackage-runtime</id>
-                                <phase>package</phase>
+                                <phase>prepare-package</phase>
                                 <goals>
                                     <goal>jlink</goal>
                                 </goals>
@@ -180,7 +189,7 @@
                         <executions>
                             <execution>
                                 <id>create-leyden-app-image</id>
-                                <phase>package</phase>
+                                <phase>prepare-package</phase>
                                 <goals>
                                     <goal>jpackage</goal>
                                 </goals>
@@ -211,6 +220,31 @@
                                     <winMenuGroup>JMC FX</winMenuGroup>
                                 </configuration>
                             </execution>
+                            <execution>
+                                <id>package-leyden-installer</id>
+                                <phase>package</phase>
+                                <goals>
+                                    <goal>jpackage</goal>
+                                </goals>
+                                <configuration>
+                                    <name>JMC FX</name>
+                                    <type>${jmcfx.leyden.package.type}</type>
+                                    <appVersion>${jmcfx.package.version}</appVersion>
+                                    <vendor>Youngledo</vendor>
+                                    <description>${project.description}</description>
+                                    <appImage>${jmcfx.leyden.app.image}</appImage>
+                                    <destination>${jmcfx.leyden.package.dir}</destination>
+                                    <removeDestination>true</removeDestination>
+                                    <verbose>true</verbose>
+                                    <macPackageIdentifier>com.youngledo.jmcfx</macPackageIdentifier>
+                                    <macPackageName>JMC FX</macPackageName>
+                                    <linuxPackageName>jmc-fx</linuxPackageName>
+                                    <linuxAppCategory>Development</linuxAppCategory>
+                                    <winMenu>true</winMenu>
+                                    <winShortcut>true</winShortcut>
+                                    <winMenuGroup>JMC FX</winMenuGroup>
+                                </configuration>
+                            </execution>
                         </executions>
                     </plugin>
                     <plugin>
@@ -218,8 +252,8 @@
                         <artifactId>maven-antrun-plugin</artifactId>
                         <executions>
                             <execution>
-                                <id>train-leyden-aot-cache-and-package-installer</id>
-                                <phase>package</phase>
+                                <id>train-leyden-aot-cache</id>
+                                <phase>prepare-package</phase>
                                 <goals>
                                     <goal>run</goal>
                                 </goals>
@@ -245,73 +279,6 @@
                                             <arg value="--deep"/>
                                             <arg value="${jmcfx.leyden.app.image}"/>
                                         </exec>
-                                        <mkdir dir="${jmcfx.leyden.package.dir}"/>
-                                        <exec executable="${jmcfx.jpackage.executable}" osfamily="mac"
-                                              failonerror="true" id="package-leyden-macos">
-                                            <arg value="--name"/>
-                                            <arg value="JMC FX"/>
-                                            <arg value="--type"/>
-                                            <arg value="${jmcfx.leyden.package.type}"/>
-                                            <arg value="--app-version"/>
-                                            <arg value="${jmcfx.package.version}"/>
-                                            <arg value="--vendor"/>
-                                            <arg value="Youngledo"/>
-                                            <arg value="--description"/>
-                                            <arg value="${project.description}"/>
-                                            <arg value="--app-image"/>
-                                            <arg value="${jmcfx.leyden.app.image}"/>
-                                            <arg value="--dest"/>
-                                            <arg value="${jmcfx.leyden.package.dir}"/>
-                                            <arg value="--mac-package-identifier"/>
-                                            <arg value="com.youngledo.jmcfx"/>
-                                            <arg value="--mac-package-name"/>
-                                            <arg value="JMC FX"/>
-                                            <arg value="--verbose"/>
-                                        </exec>
-                                        <exec executable="${jmcfx.jpackage.executable}" os="Linux"
-                                              failonerror="true" id="package-leyden-linux">
-                                            <arg value="--name"/>
-                                            <arg value="JMC FX"/>
-                                            <arg value="--type"/>
-                                            <arg value="${jmcfx.leyden.package.type}"/>
-                                            <arg value="--app-version"/>
-                                            <arg value="${jmcfx.package.version}"/>
-                                            <arg value="--vendor"/>
-                                            <arg value="Youngledo"/>
-                                            <arg value="--description"/>
-                                            <arg value="${project.description}"/>
-                                            <arg value="--app-image"/>
-                                            <arg value="${jmcfx.leyden.app.image}"/>
-                                            <arg value="--dest"/>
-                                            <arg value="${jmcfx.leyden.package.dir}"/>
-                                            <arg value="--linux-package-name"/>
-                                            <arg value="jmc-fx"/>
-                                            <arg value="--linux-app-category"/>
-                                            <arg value="Development"/>
-                                            <arg value="--verbose"/>
-                                        </exec>
-                                        <exec executable="${jmcfx.jpackage.executable}" osfamily="windows"
-                                              failonerror="true" id="package-leyden-windows">
-                                            <arg value="--name"/>
-                                            <arg value="JMC FX"/>
-                                            <arg value="--type"/>
-                                            <arg value="${jmcfx.leyden.package.type}"/>
-                                            <arg value="--app-version"/>
-                                            <arg value="${jmcfx.package.version}"/>
-                                            <arg value="--vendor"/>
-                                            <arg value="Youngledo"/>
-                                            <arg value="--description"/>
-                                            <arg value="${project.description}"/>
-                                            <arg value="--app-image"/>
-                                            <arg value="${jmcfx.leyden.app.image}"/>
-                                            <arg value="--dest"/>
-                                            <arg value="${jmcfx.leyden.package.dir}"/>
-                                            <arg value="--win-menu"/>
-                                            <arg value="--win-shortcut"/>
-                                            <arg value="--win-menu-group"/>
-                                            <arg value="JMC FX"/>
-                                            <arg value="--verbose"/>
-                                        </exec>
                                     </target>
                                 </configuration>
                             </execution>
@@ -332,8 +299,7 @@
                 <jmcfx.leyden.app.executable>${jmcfx.leyden.app.image}/Contents/MacOS/JMC FX</jmcfx.leyden.app.executable>
                 <jmcfx.leyden.app.config>${jmcfx.leyden.app.image}/Contents/app/JMC FX.cfg</jmcfx.leyden.app.config>
                 <jmcfx.leyden.aot.cache>${jmcfx.leyden.app.image}/Contents/app/jmcfx-startup.aot</jmcfx.leyden.aot.cache>
-                <jmcfx.leyden.package.type>dmg</jmcfx.leyden.package.type>
-                <jmcfx.jpackage.executable>${java.home}/bin/jpackage</jmcfx.jpackage.executable>
+                <jmcfx.leyden.package.type>DMG</jmcfx.leyden.package.type>
                 <jmcfx.leyden.sign.executable>/usr/bin/codesign</jmcfx.leyden.sign.executable>
             </properties>
         </profile>
@@ -349,8 +315,7 @@
                 <jmcfx.leyden.app.executable>${jmcfx.leyden.app.image}/bin/JMC FX</jmcfx.leyden.app.executable>
                 <jmcfx.leyden.app.config>${jmcfx.leyden.app.image}/lib/app/JMC FX.cfg</jmcfx.leyden.app.config>
                 <jmcfx.leyden.aot.cache>${jmcfx.leyden.app.image}/lib/app/jmcfx-startup.aot</jmcfx.leyden.aot.cache>
-                <jmcfx.leyden.package.type>deb</jmcfx.leyden.package.type>
-                <jmcfx.jpackage.executable>${java.home}/bin/jpackage</jmcfx.jpackage.executable>
+                <jmcfx.leyden.package.type>DEB</jmcfx.leyden.package.type>
             </properties>
         </profile>
         <profile>
@@ -365,8 +330,7 @@
                 <jmcfx.leyden.app.executable>${jmcfx.leyden.app.image}/JMC FX.exe</jmcfx.leyden.app.executable>
                 <jmcfx.leyden.app.config>${jmcfx.leyden.app.image}/app/JMC FX.cfg</jmcfx.leyden.app.config>
                 <jmcfx.leyden.aot.cache>${jmcfx.leyden.app.image}/app/jmcfx-startup.aot</jmcfx.leyden.aot.cache>
-                <jmcfx.leyden.package.type>msi</jmcfx.leyden.package.type>
-                <jmcfx.jpackage.executable>${java.home}/bin/jpackage.exe</jmcfx.jpackage.executable>
+                <jmcfx.leyden.package.type>MSI</jmcfx.leyden.package.type>
             </properties>
         </profile>
     </profiles>
