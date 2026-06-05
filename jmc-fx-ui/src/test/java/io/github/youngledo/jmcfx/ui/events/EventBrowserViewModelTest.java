@@ -123,7 +123,7 @@ class EventBrowserViewModelTest {
     }
 
     @Test
-    void visibleRangeRequestsWindowWithoutPaginationState() {
+    void visibleRangeStatusShowsWindowBoundariesAndPrefetch() {
         FakeEventQueryService service = new FakeEventQueryService();
         EventBrowserViewModel viewModel = new EventBrowserViewModel(new BrowseEventsUseCase(service), new DirectEventBrowserExecutor());
 
@@ -135,7 +135,7 @@ class EventBrowserViewModelTest {
         assertEquals(40, service.lastWindowRequest().visibleRowCount());
         assertEquals(50, service.lastWindowRequest().prefetchBefore());
         assertEquals(100, service.lastWindowRequest().prefetchAfter());
-        assertEquals("Start row 100, requested 40, returned 1; no filters. Selection: All Events.",
+        assertEquals("All Events: requested rows 101-140; loaded rows 51-51 of 1 (1 rows); no filters; prefetch 50 before / 100 after.",
                 viewModel.statusMessageProperty().get());
     }
 
@@ -154,7 +154,7 @@ class EventBrowserViewModelTest {
         assertEquals(List.of("Text: Thread Start", "Thread: main",
                 "Time: 1970-01-01T00:00:00Z - 1970-01-01T00:00:01Z",
                 "duration > 10 ms"), viewModel.filterChipsProperty());
-        assertEquals("Start row 0, requested 100, returned 1; filtered. Selection: All Events.",
+        assertEquals("All Events: requested rows 1-100; loaded rows 1-1 of 1 (1 rows); filtered; prefetch 50 before / 100 after.",
                 viewModel.statusMessageProperty().get());
     }
 

@@ -25,6 +25,7 @@ import io.github.youngledo.jmcfx.domain.model.EventWindow;
 import io.github.youngledo.jmcfx.domain.model.EventWindowRequest;
 import io.github.youngledo.jmcfx.domain.model.RecordingSummary;
 import io.github.youngledo.jmcfx.ui.i18n.I18n;
+import io.github.youngledo.jmcfx.ui.util.DisplayFormats;
 import io.github.youngledo.jmcfx.ui.util.FxDispatch;
 
 import javafx.application.Platform;
@@ -376,12 +377,26 @@ public class EventBrowserViewModel implements AutoCloseable {
         String filterState = request.filter().active()
                 ? i18n.get("events.status.filter.active")
                 : i18n.get("events.status.filter.inactive");
+        int visibleStart = request.visibleStartRow() + 1;
+        int visibleEnd = request.visibleStartRow() + request.visibleRowCount();
+        int loadedStart = window.rows().isEmpty() ? 0 : window.startRow() + 1;
+        int loadedEnd = window.rows().isEmpty() ? 0 : window.startRow() + window.rows().size();
+        String total = window.exactTotalCount()
+                ? DisplayFormats.formatInteger(window.totalCount())
+                : i18n.get("events.status.total.unknown");
+        String prefetchState = i18n.format("events.status.prefetch",
+                request.prefetchBefore(),
+                request.prefetchAfter());
         return i18n.format("events.status.windowLoaded",
                 selection.label(),
-                request.visibleStartRow(),
-                request.visibleRowCount(),
+                visibleStart,
+                visibleEnd,
+                loadedStart,
+                loadedEnd,
+                total,
                 window.rows().size(),
-                filterState);
+                filterState,
+                prefetchState);
     }
 
     private List<EventColumn> initialColumns(EventTypeSelection selection, List<EventFieldDescriptor> descriptors) {
