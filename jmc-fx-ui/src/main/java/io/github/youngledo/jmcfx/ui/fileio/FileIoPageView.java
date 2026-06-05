@@ -11,6 +11,7 @@ import javafx.scene.control.TableView;
 /// Narrow view handle for the JFR File I/O tabbed page.
 public record FileIoPageView(
         Label titleLabel,
+        Label recordingContextLabel,
         Tab timelineTab,
         Tab durationTab,
         Tab eventLogTab,

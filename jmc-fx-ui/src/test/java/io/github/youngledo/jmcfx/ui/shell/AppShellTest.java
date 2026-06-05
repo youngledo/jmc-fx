@@ -1280,7 +1280,9 @@ class AppShellTest {
         assertTrue(fileIoPaneView.contains("public FileIoPaneView(VBox pane)"));
         assertTrue(fileIoPaneView.contains("public FileIoPageView view()"));
         assertTrue(fileIoPaneView.contains("tab(timelineTab, timelineContainer);"));
-        assertTrue(fileIoPaneView.contains("configureTablePage(pane, titleLabel, tabs);"));
+        assertTrue(fileIoPaneView.contains("private final Label recordingContextLabel = new Label();"));
+        assertTrue(fileIoPaneView.contains("styles(recordingContextLabel, \"detail-panel-meta\")"));
+        assertTrue(fileIoPaneView.contains("configureTablePage(pane, titleLabel, recordingContextLabel, tabs);"));
 
         assertTrue(socketIoPaneView.contains("package io.github.youngledo.jmcfx.ui.socketio;"));
         assertTrue(socketIoPaneView.contains("public final class SocketIoPaneView"));
@@ -2671,6 +2673,7 @@ class AppShellTest {
         assertTrue(fileIoController.contains("public final class FileIoPageController"));
         assertTrue(fileIoController.contains("view.titleLabel().textProperty().bind(i18n.text(\"fileio.title\"))"));
         assertTrue(fileIoController.contains("view.timelineTab().textProperty().bind(i18n.text(\"fileio.tab.timeline\"))"));
+        assertTrue(fileIoController.contains("view.recordingContextLabel().textProperty().bind(recordingContextBinding)"));
         assertTrue(fileIoController.contains("view.histogramTable().setItems(nextViewModel.histogramProperty())"));
         assertTrue(fileIoController.contains("currentViewModel.timelineProperty().removeListener(timelineListener)"));
         assertTrue(fileIoController.contains("public List<TableView<?>> exportTables()"));

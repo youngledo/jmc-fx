@@ -17,6 +17,7 @@ import javafx.scene.layout.VBox;
 public final class FileIoPaneView {
 
     private final Label titleLabel = new Label();
+    private final Label recordingContextLabel = new Label();
     private final TabPane tabs = new TabPane();
     private final Tab timelineTab = tab();
     private final VBox timelineContainer = new VBox();
@@ -31,7 +32,7 @@ public final class FileIoPaneView {
     }
 
     public FileIoPageView view() {
-        return new FileIoPageView(titleLabel, timelineTab, durationTab, eventLogTab,
+        return new FileIoPageView(titleLabel, recordingContextLabel, timelineTab, durationTab, eventLogTab,
                 timelineChart, histogramTable, eventTable);
     }
 
@@ -41,12 +42,13 @@ public final class FileIoPaneView {
         tab(durationTab, histogramTable);
         tab(eventLogTab, eventTable);
         tabs.getTabs().setAll(timelineTab, durationTab, eventLogTab);
-        configureTablePage(pane, titleLabel, tabs);
+        configureTablePage(pane, titleLabel, recordingContextLabel, tabs);
     }
 
     private void configureTablePage(VBox pane, Label title, Node... content) {
         pane.setSpacing(8);
         styles(title, "view-title");
+        styles(recordingContextLabel, "detail-panel-meta");
         pane.getChildren().setAll(title);
         pane.getChildren().addAll(content);
         for (Node node : content) {

@@ -23,7 +23,7 @@ public class FileIOViewModel {
     private final ObservableList<FileIOHistogram> histogram = FXCollections.observableArrayList();
     private final ObservableList<FileIOEvent> events = FXCollections.observableArrayList();
     private final ObjectProperty<ChartDefinition> timeline = new SimpleObjectProperty<>();
-    private RecordingSummary currentRecording;
+    private final ObjectProperty<RecordingSummary> currentRecording = new SimpleObjectProperty<>();
 
     public FileIOViewModel(LoadFileIOUseCase fileIOService) {
         this.fileIOService = fileIOService;
@@ -41,12 +41,16 @@ public class FileIOViewModel {
         return timeline;
     }
 
+    public ObjectProperty<RecordingSummary> currentRecordingProperty() {
+        return currentRecording;
+    }
+
     public void load(RecordingSummary recording) {
-        currentRecording = recording;
-        List<FileIOHistogram> histogramData = fileIOService.loadFileIOHistogram(currentRecording);
-        List<FileIOEvent> eventData = fileIOService.loadFileIOEvents(currentRecording);
+        List<FileIOHistogram> histogramData = fileIOService.loadFileIOHistogram(recording);
+        List<FileIOEvent> eventData = fileIOService.loadFileIOEvents(recording);
         ChartDefinition chart = fileIOService.loadTimeline(recording);
         FxDispatch.run(() -> {
+            currentRecording.set(recording);
             histogram.setAll(histogramData);
             events.setAll(eventData);
             timeline.set(chart);
@@ -54,12 +58,12 @@ public class FileIOViewModel {
     }
 
     private void reloadHistogram() {
-        List<FileIOHistogram> data = fileIOService.loadFileIOHistogram(currentRecording);
+        List<FileIOHistogram> data = fileIOService.loadFileIOHistogram(currentRecording.get());
         histogram.setAll(data);
     }
 
     private void reloadEvents() {
-        List<FileIOEvent> data = fileIOService.loadFileIOEvents(currentRecording);
+        List<FileIOEvent> data = fileIOService.loadFileIOEvents(currentRecording.get());
         events.setAll(data);
     }
 }
