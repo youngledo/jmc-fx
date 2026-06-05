@@ -21,6 +21,7 @@ public class TlabViewModel {
     private final ObservableList<TlabAllocation> allocations = FXCollections.observableArrayList();
     private final ObjectProperty<ChartDefinition> timeline = new SimpleObjectProperty<>();
     private final ObjectProperty<TlabAllocation> selectedAllocation = new SimpleObjectProperty<>();
+    private final ObjectProperty<RecordingSummary> currentRecording = new SimpleObjectProperty<>();
     private final BooleanProperty loading = new SimpleBooleanProperty(false);
     private final BooleanProperty loaded = new SimpleBooleanProperty(false);
 
@@ -38,6 +39,10 @@ public class TlabViewModel {
 
     public ObjectProperty<TlabAllocation> selectedAllocationProperty() {
         return selectedAllocation;
+    }
+
+    public ObjectProperty<RecordingSummary> currentRecordingProperty() {
+        return currentRecording;
     }
 
     public BooleanProperty loadingProperty() {
@@ -63,6 +68,7 @@ public class TlabViewModel {
             throw exception;
         }
         FxDispatch.run(() -> {
+            currentRecording.set(recording);
             allocations.setAll(data);
             timeline.set(chart);
             selectedAllocation.set(null);

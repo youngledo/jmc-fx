@@ -10,6 +10,7 @@ import javafx.scene.control.TableView;
 /// Narrow view handle for the JFR Exceptions data table and timeline page.
 public record ExceptionsPageView(
         Label titleLabel,
+        Label recordingContextLabel,
         Button groupByClassButton,
         Button groupByMessageButton,
         Button groupByClassAndMessageButton,

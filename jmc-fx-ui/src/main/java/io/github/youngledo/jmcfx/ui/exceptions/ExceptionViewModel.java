@@ -23,7 +23,7 @@ public class ExceptionViewModel {
     private final ObservableList<ExceptionSummary> histogram = FXCollections.observableArrayList();
     private final ObjectProperty<ExceptionGrouping> grouping = new SimpleObjectProperty<>(ExceptionGrouping.BY_CLASS);
     private final ObjectProperty<ChartDefinition> timeline = new SimpleObjectProperty<>();
-    private RecordingSummary currentRecording;
+    private final ObjectProperty<RecordingSummary> currentRecording = new SimpleObjectProperty<>();
 
     public ExceptionViewModel(LoadExceptionsUseCase exceptionService) {
         this.exceptionService = exceptionService;
@@ -41,11 +41,15 @@ public class ExceptionViewModel {
         return timeline;
     }
 
+    public ObjectProperty<RecordingSummary> currentRecordingProperty() {
+        return currentRecording;
+    }
+
     public void load(RecordingSummary recording) {
-        currentRecording = recording;
-        List<ExceptionSummary> data = exceptionService.loadHistogram(currentRecording, grouping.get());
+        List<ExceptionSummary> data = exceptionService.loadHistogram(recording, grouping.get());
         ChartDefinition chart = exceptionService.loadTimeline(recording);
         FxDispatch.run(() -> {
+            currentRecording.set(recording);
             histogram.setAll(data);
             timeline.set(chart);
         });
@@ -53,13 +57,13 @@ public class ExceptionViewModel {
 
     public void setGrouping(ExceptionGrouping newGrouping) {
         grouping.set(newGrouping);
-        if (currentRecording != null) {
+        if (currentRecording.get() != null) {
             reloadHistogram();
         }
     }
 
     private void reloadHistogram() {
-        List<ExceptionSummary> data = exceptionService.loadHistogram(currentRecording, grouping.get());
+        List<ExceptionSummary> data = exceptionService.loadHistogram(currentRecording.get(), grouping.get());
         FxDispatch.run(() -> histogram.setAll(data));
     }
 }

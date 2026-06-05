@@ -19,6 +19,7 @@ public class HeapViewModel {
     private final ObservableList<HeapClassHistogram> histogram = FXCollections.observableArrayList();
     private final ObjectProperty<ChartDefinition> timeline = new SimpleObjectProperty<>();
     private final ObjectProperty<HeapClassHistogram> selectedRow = new SimpleObjectProperty<>();
+    private final ObjectProperty<RecordingSummary> currentRecording = new SimpleObjectProperty<>();
 
     public HeapViewModel(LoadHeapUseCase heapService) {
         this.heapService = heapService;
@@ -36,10 +37,15 @@ public class HeapViewModel {
         return selectedRow;
     }
 
+    public ObjectProperty<RecordingSummary> currentRecordingProperty() {
+        return currentRecording;
+    }
+
     public void load(RecordingSummary recording) {
         List<HeapClassHistogram> data = heapService.loadHeapClassHistogram(recording);
         ChartDefinition chart = heapService.loadHeapUsageTimeline(recording);
         FxDispatch.run(() -> {
+            currentRecording.set(recording);
             histogram.setAll(data);
             timeline.set(chart);
             selectedRow.set(null);

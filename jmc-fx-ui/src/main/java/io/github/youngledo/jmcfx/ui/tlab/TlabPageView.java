@@ -9,6 +9,7 @@ import javafx.scene.control.TableView;
 /// Narrow view handle for the JFR TLAB data table and timeline page.
 public record TlabPageView(
         Label titleLabel,
+        Label recordingContextLabel,
         TableView<TlabAllocation> table,
         TimelineChart timelineChart) {
 }

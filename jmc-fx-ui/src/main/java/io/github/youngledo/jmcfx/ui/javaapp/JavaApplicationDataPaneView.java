@@ -25,6 +25,7 @@ import javafx.scene.layout.VBox;
 public final class JavaApplicationDataPaneView {
 
     private final Label exceptionsTitleLabel = new Label();
+    private final Label exceptionsRecordingContextLabel = new Label();
     private final Button exceptionsGroupByClass = new Button();
     private final Button exceptionsGroupByMessage = new Button();
     private final Button exceptionsGroupByClassAndMessage = new Button();
@@ -53,8 +54,9 @@ public final class JavaApplicationDataPaneView {
     }
 
     public ExceptionsPageView exceptionsPage() {
-        return new ExceptionsPageView(exceptionsTitleLabel, exceptionsGroupByClass, exceptionsGroupByMessage,
-                exceptionsGroupByClassAndMessage, exceptionsTable, exceptionsTimelineChart);
+        return new ExceptionsPageView(exceptionsTitleLabel, exceptionsRecordingContextLabel,
+                exceptionsGroupByClass, exceptionsGroupByMessage, exceptionsGroupByClassAndMessage,
+                exceptionsTable, exceptionsTimelineChart);
     }
 
     public ThreadsPageView threadsPage() {
@@ -71,7 +73,9 @@ public final class JavaApplicationDataPaneView {
     private void configure(VBox exceptionsPane, VBox threadsPane, VBox threadHistogramPane,
             VBox securityPane, VBox nativeLibrariesPane, VBox threadDumpsPane) {
         exceptionsTimelineContainer.getChildren().setAll(exceptionsTimelineChart);
+        styles(exceptionsRecordingContextLabel, "detail-panel-meta");
         configureTablePage(exceptionsPane, exceptionsTitleLabel,
+                exceptionsRecordingContextLabel,
                 hbox(8, exceptionsGroupByClass, exceptionsGroupByMessage, exceptionsGroupByClassAndMessage),
                 new SplitPane(exceptionsTable, exceptionsTimelineContainer));
         configureTablePage(threadsPane, threadsTitleLabel, threadsTable);

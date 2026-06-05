@@ -1333,8 +1333,10 @@ class AppShellTest {
         assertTrue(heapPaneView.contains("public final class HeapPaneView"));
         assertTrue(heapPaneView.contains("public HeapPaneView(VBox pane)"));
         assertTrue(heapPaneView.contains("public HeapPageView view()"));
+        assertTrue(heapPaneView.contains("private final Label recordingContextLabel = new Label();"));
+        assertTrue(heapPaneView.contains("styles(recordingContextLabel, \"detail-panel-meta\")"));
         assertTrue(heapPaneView.contains("timelineContainer.getChildren().setAll(timelineChart);"));
-        assertTrue(heapPaneView.contains("configureTablePage(pane, titleLabel, new SplitPane(table, timelineContainer));"));
+        assertTrue(heapPaneView.contains("configureTablePage(pane, titleLabel, recordingContextLabel, new SplitPane(table, timelineContainer));"));
 
         assertTrue(leaksPaneView.contains("package io.github.youngledo.jmcfx.ui.leaks;"));
         assertTrue(leaksPaneView.contains("public final class LeakSuspectsPaneView"));
@@ -1346,8 +1348,10 @@ class AppShellTest {
         assertTrue(tlabPaneView.contains("public final class TlabPaneView"));
         assertTrue(tlabPaneView.contains("public TlabPaneView(VBox pane)"));
         assertTrue(tlabPaneView.contains("public TlabPageView view()"));
+        assertTrue(tlabPaneView.contains("private final Label recordingContextLabel = new Label();"));
+        assertTrue(tlabPaneView.contains("styles(recordingContextLabel, \"detail-panel-meta\")"));
         assertTrue(tlabPaneView.contains("timelineContainer.getChildren().setAll(timelineChart);"));
-        assertTrue(tlabPaneView.contains("configureTablePage(pane, titleLabel, new SplitPane(table, timelineContainer));"));
+        assertTrue(tlabPaneView.contains("configureTablePage(pane, titleLabel, recordingContextLabel, new SplitPane(table, timelineContainer));"));
     }
 
     @Test
@@ -2583,12 +2587,14 @@ class AppShellTest {
         assertTrue(appShellView.contains("ThreadsPageView threadsPage()"));
         assertTrue(appShellView.contains("JavaApplicationDataPagesView javaApplicationDataPages()"));
         assertTrue(exceptionsView.contains("public record ExceptionsPageView("));
+        assertTrue(exceptionsView.contains("Label recordingContextLabel,"));
         assertTrue(threadsView.contains("public record ThreadsPageView("));
         assertTrue(javaAppView.contains("public record JavaApplicationDataPagesView("));
 
         assertTrue(exceptionsController.contains("package io.github.youngledo.jmcfx.ui.exceptions;"));
         assertTrue(exceptionsController.contains("public final class ExceptionsPageController"));
         assertTrue(exceptionsController.contains("view.titleLabel().textProperty().bind(i18n.text(\"exceptions.title\"))"));
+        assertTrue(exceptionsController.contains("view.recordingContextLabel().textProperty().bind(recordingContextBinding)"));
         assertTrue(exceptionsController.contains("view.groupByClassButton().setOnAction(event -> setExceptionGrouping(ExceptionGrouping.BY_CLASS))"));
         assertTrue(exceptionsController.contains("view.table().setItems(nextViewModel.histogramProperty())"));
         assertTrue(exceptionsController.contains("currentViewModel.timelineProperty().removeListener(timelineListener)"));
@@ -2752,10 +2758,12 @@ class AppShellTest {
         assertTrue(heapView.contains("public record HeapPageView("));
         assertTrue(leaksView.contains("public record LeakSuspectsPageView("));
         assertTrue(tlabView.contains("public record TlabPageView("));
+        assertTrue(tlabView.contains("Label recordingContextLabel,"));
 
         assertTrue(heapController.contains("package io.github.youngledo.jmcfx.ui.heap;"));
         assertTrue(heapController.contains("public final class HeapPageController"));
         assertTrue(heapController.contains("view.titleLabel().textProperty().bind(i18n.text(\"heap.title\"))"));
+        assertTrue(heapController.contains("view.recordingContextLabel().textProperty().bind(recordingContextBinding)"));
         assertTrue(heapController.contains("view.table().setItems(nextViewModel.histogramProperty())"));
         assertTrue(heapController.contains("currentViewModel.timelineProperty().removeListener(timelineListener)"));
         assertTrue(heapController.contains("public TableView<HeapClassHistogram> table()"));
@@ -2771,6 +2779,7 @@ class AppShellTest {
         assertTrue(tlabController.contains("package io.github.youngledo.jmcfx.ui.tlab;"));
         assertTrue(tlabController.contains("public final class TlabPageController"));
         assertTrue(tlabController.contains("view.titleLabel().textProperty().bind(i18n.text(\"tlab.title\"))"));
+        assertTrue(tlabController.contains("view.recordingContextLabel().textProperty().bind(recordingContextBinding)"));
         assertTrue(tlabController.contains("view.table().setItems(nextViewModel.allocationsProperty())"));
         assertTrue(tlabController.contains("currentViewModel.timelineProperty().removeListener(timelineListener)"));
         assertTrue(tlabController.contains("currentViewModel.loadingProperty().removeListener(placeholderListener)"));

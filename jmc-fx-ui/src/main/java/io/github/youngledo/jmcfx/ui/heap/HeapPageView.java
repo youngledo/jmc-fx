@@ -9,6 +9,7 @@ import javafx.scene.control.TableView;
 /// Narrow view handle for the JFR Heap data table and timeline page.
 public record HeapPageView(
         Label titleLabel,
+        Label recordingContextLabel,
         TableView<HeapClassHistogram> table,
         TimelineChart timelineChart) {
 }

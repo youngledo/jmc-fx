@@ -1,12 +1,16 @@
 package io.github.youngledo.jmcfx.ui.tlab;
 
+import java.time.ZoneId;
 import java.util.List;
 
 import io.github.youngledo.jmcfx.domain.model.ChartDefinition;
+import io.github.youngledo.jmcfx.domain.model.RecordingSummary;
 import io.github.youngledo.jmcfx.domain.model.TlabAllocation;
 import io.github.youngledo.jmcfx.ui.i18n.I18n;
 import io.github.youngledo.jmcfx.ui.util.DisplayFormats;
 
+import javafx.beans.binding.Bindings;
+import javafx.beans.binding.StringBinding;
 import javafx.beans.property.ReadOnlyStringWrapper;
 import javafx.beans.value.ChangeListener;
 import javafx.collections.FXCollections;
@@ -23,6 +27,7 @@ public final class TlabPageController {
     private final I18n i18n;
     private final ChangeListener<ChartDefinition> timelineListener;
     private final ChangeListener<Boolean> placeholderListener;
+    private StringBinding recordingContextBinding;
     private TlabViewModel viewModel;
 
     public TlabPageController(TlabPageView view, I18n i18n) {
@@ -49,6 +54,12 @@ public final class TlabPageController {
             currentViewModel.loadingProperty().removeListener(placeholderListener);
             currentViewModel.loadedProperty().removeListener(placeholderListener);
         }
+        if (recordingContextBinding != null) {
+            view.recordingContextLabel().textProperty().unbind();
+            recordingContextBinding.dispose();
+            recordingContextBinding = null;
+        }
+        view.recordingContextLabel().setText("");
         view.table().setItems(FXCollections.emptyObservableList());
         view.table().setPlaceholder(emptyTablePlaceholder());
         view.timelineChart().setData(null);
@@ -63,6 +74,11 @@ public final class TlabPageController {
         nextViewModel.loadedProperty().addListener(placeholderListener);
         nextViewModel.timelineProperty().addListener(timelineListener);
         view.timelineChart().setData(nextViewModel.timelineProperty().get());
+        recordingContextBinding = Bindings.createStringBinding(
+                () -> recordingContext(nextViewModel.currentRecordingProperty().get()),
+                nextViewModel.currentRecordingProperty(),
+                i18n.localeProperty());
+        view.recordingContextLabel().textProperty().bind(recordingContextBinding);
     }
 
     private void bindLocalizedText() {
@@ -139,6 +155,17 @@ public final class TlabPageController {
         Region placeholder = new Region();
         placeholder.setManaged(false);
         return placeholder;
+    }
+
+    private String recordingContext(RecordingSummary recording) {
+        if (recording == null) {
+            return "";
+        }
+        ZoneId zone = ZoneId.systemDefault();
+        String start = DisplayFormats.formatTimestamp(recording.startTime(), zone);
+        String end = DisplayFormats.formatTimestamp(recording.endTime(), zone);
+        String duration = DisplayFormats.formatDuration(recording.durationMillis());
+        return i18n.format("tlab.recordingContext", start, end, duration);
     }
 
     private static <T> void useFormattedIntegerCells(TableColumn<T, Number> column) {

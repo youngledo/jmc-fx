@@ -1,12 +1,16 @@
 package io.github.youngledo.jmcfx.ui.heap;
 
+import java.time.ZoneId;
 import java.util.List;
 
 import io.github.youngledo.jmcfx.domain.model.ChartDefinition;
 import io.github.youngledo.jmcfx.domain.model.HeapClassHistogram;
+import io.github.youngledo.jmcfx.domain.model.RecordingSummary;
 import io.github.youngledo.jmcfx.ui.i18n.I18n;
 import io.github.youngledo.jmcfx.ui.util.DisplayFormats;
 
+import javafx.beans.binding.Bindings;
+import javafx.beans.binding.StringBinding;
 import javafx.beans.property.ReadOnlyStringWrapper;
 import javafx.beans.value.ChangeListener;
 import javafx.collections.FXCollections;
@@ -21,6 +25,7 @@ public final class HeapPageController {
     private final HeapPageView view;
     private final I18n i18n;
     private final ChangeListener<ChartDefinition> timelineListener;
+    private StringBinding recordingContextBinding;
     private HeapViewModel viewModel;
 
     public HeapPageController(HeapPageView view, I18n i18n) {
@@ -44,6 +49,12 @@ public final class HeapPageController {
         if (currentViewModel != null) {
             currentViewModel.timelineProperty().removeListener(timelineListener);
         }
+        if (recordingContextBinding != null) {
+            view.recordingContextLabel().textProperty().unbind();
+            recordingContextBinding.dispose();
+            recordingContextBinding = null;
+        }
+        view.recordingContextLabel().setText("");
         view.table().setItems(FXCollections.emptyObservableList());
         view.timelineChart().setData(null);
         viewModel = nextViewModel;
@@ -54,6 +65,11 @@ public final class HeapPageController {
         view.table().getSelectionModel().selectFirst();
         nextViewModel.timelineProperty().addListener(timelineListener);
         view.timelineChart().setData(nextViewModel.timelineProperty().get());
+        recordingContextBinding = Bindings.createStringBinding(
+                () -> recordingContext(nextViewModel.currentRecordingProperty().get()),
+                nextViewModel.currentRecordingProperty(),
+                i18n.localeProperty());
+        view.recordingContextLabel().textProperty().bind(recordingContextBinding);
     }
 
     private void bindLocalizedText() {
@@ -94,6 +110,17 @@ public final class HeapPageController {
         Label label = new Label();
         label.textProperty().bind(i18n.text(key));
         return label;
+    }
+
+    private String recordingContext(RecordingSummary recording) {
+        if (recording == null) {
+            return "";
+        }
+        ZoneId zone = ZoneId.systemDefault();
+        String start = DisplayFormats.formatTimestamp(recording.startTime(), zone);
+        String end = DisplayFormats.formatTimestamp(recording.endTime(), zone);
+        String duration = DisplayFormats.formatDuration(recording.durationMillis());
+        return i18n.format("heap.recordingContext", start, end, duration);
     }
 
     private static <T> void useFormattedIntegerCells(TableColumn<T, Number> column) {

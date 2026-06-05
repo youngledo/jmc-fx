@@ -15,6 +15,7 @@ import javafx.scene.layout.VBox;
 public final class TlabPaneView {
 
     private final Label titleLabel = new Label();
+    private final Label recordingContextLabel = new Label();
     private final TableView<TlabAllocation> table = denseTable();
     private final VBox timelineContainer = new VBox();
     private final TimelineChart timelineChart = new TimelineChart();
@@ -24,17 +25,18 @@ public final class TlabPaneView {
     }
 
     public TlabPageView view() {
-        return new TlabPageView(titleLabel, table, timelineChart);
+        return new TlabPageView(titleLabel, recordingContextLabel, table, timelineChart);
     }
 
     private void configure(VBox pane) {
         timelineContainer.getChildren().setAll(timelineChart);
-        configureTablePage(pane, titleLabel, new SplitPane(table, timelineContainer));
+        configureTablePage(pane, titleLabel, recordingContextLabel, new SplitPane(table, timelineContainer));
     }
 
     private void configureTablePage(VBox pane, Label title, Node... content) {
         pane.setSpacing(8);
         styles(title, "view-title");
+        styles(recordingContextLabel, "detail-panel-meta");
         pane.getChildren().setAll(title);
         pane.getChildren().addAll(content);
         for (Node node : content) {
