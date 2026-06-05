@@ -24,6 +24,7 @@ public class CodeCacheViewModel {
     private final ObservableList<CodeCacheStats> statistics = FXCollections.observableArrayList();
     private final ObjectProperty<ChartDefinition> entriesChart = new SimpleObjectProperty<>();
     private final ObjectProperty<ChartDefinition> sweepChart = new SimpleObjectProperty<>();
+    private final ObjectProperty<RecordingSummary> currentRecording = new SimpleObjectProperty<>();
 
     public CodeCacheViewModel(LoadJvmInternalsUseCase service) {
         this.service = service;
@@ -45,12 +46,17 @@ public class CodeCacheViewModel {
         return sweepChart;
     }
 
+    public ObjectProperty<RecordingSummary> currentRecordingProperty() {
+        return currentRecording;
+    }
+
     public void load(RecordingSummary recording) {
         List<CodeCacheSweep> sweepList = service.loadCodeCacheSweeps(recording);
         List<CodeCacheStats> statsList = service.loadCodeCacheStatistics(recording);
         ChartDefinition entries = service.loadCodeCacheEntriesChart(recording);
         ChartDefinition sweep = service.loadCodeCacheSweepChart(recording);
         FxDispatch.run(() -> {
+            currentRecording.set(recording);
             sweeps.setAll(sweepList);
             statistics.setAll(statsList);
             entriesChart.set(entries);

@@ -16,11 +16,14 @@ import io.github.youngledo.jmcfx.domain.model.GcReferenceStat;
 import io.github.youngledo.jmcfx.domain.model.GcSummary;
 import io.github.youngledo.jmcfx.domain.model.JvmFlag;
 import io.github.youngledo.jmcfx.domain.model.JvmFlagChange;
+import io.github.youngledo.jmcfx.domain.model.RecordingSummary;
 import io.github.youngledo.jmcfx.domain.model.VmOperationEvent;
 import io.github.youngledo.jmcfx.domain.model.VmOperationSummary;
 import io.github.youngledo.jmcfx.ui.i18n.I18n;
 import io.github.youngledo.jmcfx.ui.util.DisplayFormats;
 
+import javafx.beans.binding.Bindings;
+import javafx.beans.binding.StringBinding;
 import javafx.beans.property.ReadOnlyStringWrapper;
 import javafx.beans.value.ChangeListener;
 import javafx.collections.FXCollections;
@@ -39,6 +42,10 @@ public final class JvmInternalsPagesController {
     private final ChangeListener<ChartDefinition> codeCacheEntriesChartListener;
     private final ChangeListener<ChartDefinition> codeCacheSweepChartListener;
     private final ChangeListener<ChartDefinition> classLoadingChartListener;
+    private StringBinding gcDetailsRecordingContextBinding;
+    private StringBinding compilationsRecordingContextBinding;
+    private StringBinding codeCacheRecordingContextBinding;
+    private StringBinding classLoadingRecordingContextBinding;
     private GcDetailsViewModel gcDetailsViewModel;
     private CompilationsViewModel compilationsViewModel;
     private CodeCacheViewModel codeCacheViewModel;
@@ -122,6 +129,12 @@ public final class JvmInternalsPagesController {
             currentViewModel.metaspaceChartProperty().removeListener(metaspaceChartListener);
             currentViewModel.pauseChartProperty().removeListener(pauseChartListener);
         }
+        if (gcDetailsRecordingContextBinding != null) {
+            view.gcDetailsRecordingContextLabel().textProperty().unbind();
+            gcDetailsRecordingContextBinding.dispose();
+            gcDetailsRecordingContextBinding = null;
+        }
+        view.gcDetailsRecordingContextLabel().setText("");
         view.gcHeapChart().setData(null);
         view.gcMetaspaceChart().setData(null);
         view.gcPauseChart().setData(null);
@@ -141,6 +154,11 @@ public final class JvmInternalsPagesController {
         view.gcHeapChart().setData(nextViewModel.heapChartProperty().get());
         view.gcMetaspaceChart().setData(nextViewModel.metaspaceChartProperty().get());
         view.gcPauseChart().setData(nextViewModel.pauseChartProperty().get());
+        gcDetailsRecordingContextBinding = Bindings.createStringBinding(
+                () -> recordingContext(nextViewModel.currentRecordingProperty().get(), "gcDetails.recordingContext"),
+                nextViewModel.currentRecordingProperty(),
+                i18n.localeProperty());
+        view.gcDetailsRecordingContextLabel().textProperty().bind(gcDetailsRecordingContextBinding);
     }
 
     public void bindCompilations(CompilationsViewModel nextViewModel) {
@@ -148,6 +166,12 @@ public final class JvmInternalsPagesController {
         if (currentViewModel != null) {
             currentViewModel.durationChartProperty().removeListener(compilationDurationChartListener);
         }
+        if (compilationsRecordingContextBinding != null) {
+            view.compilationsRecordingContextLabel().textProperty().unbind();
+            compilationsRecordingContextBinding.dispose();
+            compilationsRecordingContextBinding = null;
+        }
+        view.compilationsRecordingContextLabel().setText("");
         view.compilationDurationChart().setData(null);
         view.compilationsTable().setItems(FXCollections.emptyObservableList());
         view.compilationFailuresTable().setItems(FXCollections.emptyObservableList());
@@ -159,6 +183,11 @@ public final class JvmInternalsPagesController {
         view.compilationFailuresTable().setItems(nextViewModel.failures());
         nextViewModel.durationChartProperty().addListener(compilationDurationChartListener);
         view.compilationDurationChart().setData(nextViewModel.durationChartProperty().get());
+        compilationsRecordingContextBinding = Bindings.createStringBinding(
+                () -> recordingContext(nextViewModel.currentRecordingProperty().get(), "compilations.recordingContext"),
+                nextViewModel.currentRecordingProperty(),
+                i18n.localeProperty());
+        view.compilationsRecordingContextLabel().textProperty().bind(compilationsRecordingContextBinding);
     }
 
     public void bindCodeCache(CodeCacheViewModel nextViewModel) {
@@ -167,6 +196,12 @@ public final class JvmInternalsPagesController {
             currentViewModel.entriesChartProperty().removeListener(codeCacheEntriesChartListener);
             currentViewModel.sweepChartProperty().removeListener(codeCacheSweepChartListener);
         }
+        if (codeCacheRecordingContextBinding != null) {
+            view.codeCacheRecordingContextLabel().textProperty().unbind();
+            codeCacheRecordingContextBinding.dispose();
+            codeCacheRecordingContextBinding = null;
+        }
+        view.codeCacheRecordingContextLabel().setText("");
         view.codeCacheEntriesChart().setData(null);
         view.codeCacheSweepChart().setData(null);
         view.codeCacheSweepsTable().setItems(FXCollections.emptyObservableList());
@@ -181,6 +216,11 @@ public final class JvmInternalsPagesController {
         nextViewModel.sweepChartProperty().addListener(codeCacheSweepChartListener);
         view.codeCacheEntriesChart().setData(nextViewModel.entriesChartProperty().get());
         view.codeCacheSweepChart().setData(nextViewModel.sweepChartProperty().get());
+        codeCacheRecordingContextBinding = Bindings.createStringBinding(
+                () -> recordingContext(nextViewModel.currentRecordingProperty().get(), "codeCache.recordingContext"),
+                nextViewModel.currentRecordingProperty(),
+                i18n.localeProperty());
+        view.codeCacheRecordingContextLabel().textProperty().bind(codeCacheRecordingContextBinding);
     }
 
     public void bindClassLoading(ClassLoadingViewModel nextViewModel) {
@@ -188,6 +228,12 @@ public final class JvmInternalsPagesController {
         if (currentViewModel != null) {
             currentViewModel.chartProperty().removeListener(classLoadingChartListener);
         }
+        if (classLoadingRecordingContextBinding != null) {
+            view.classLoadingRecordingContextLabel().textProperty().unbind();
+            classLoadingRecordingContextBinding.dispose();
+            classLoadingRecordingContextBinding = null;
+        }
+        view.classLoadingRecordingContextLabel().setText("");
         view.classLoadingChart().setData(null);
         view.classLoadingHistogramTable().setItems(FXCollections.emptyObservableList());
         view.classLoadingEventsTable().setItems(FXCollections.emptyObservableList());
@@ -201,6 +247,11 @@ public final class JvmInternalsPagesController {
         view.classLoadingStatsTable().setItems(nextViewModel.statistics());
         nextViewModel.chartProperty().addListener(classLoadingChartListener);
         view.classLoadingChart().setData(nextViewModel.chartProperty().get());
+        classLoadingRecordingContextBinding = Bindings.createStringBinding(
+                () -> recordingContext(nextViewModel.currentRecordingProperty().get(), "classLoading.recordingContext"),
+                nextViewModel.currentRecordingProperty(),
+                i18n.localeProperty());
+        view.classLoadingRecordingContextLabel().textProperty().bind(classLoadingRecordingContextBinding);
     }
 
     public void bindVmOperations(VmOperationsViewModel nextViewModel) {
@@ -588,5 +639,16 @@ public final class JvmInternalsPagesController {
         TableColumn<T, String> column = new TableColumn<>();
         column.textProperty().bind(i18n.text(key));
         return column;
+    }
+
+    private String recordingContext(RecordingSummary recording, String key) {
+        if (recording == null) {
+            return "";
+        }
+        ZoneId zone = ZoneId.systemDefault();
+        String start = DisplayFormats.formatTimestamp(recording.startTime(), zone);
+        String end = DisplayFormats.formatTimestamp(recording.endTime(), zone);
+        String duration = DisplayFormats.formatDuration(recording.durationMillis());
+        return i18n.format(key, start, end, duration);
     }
 }

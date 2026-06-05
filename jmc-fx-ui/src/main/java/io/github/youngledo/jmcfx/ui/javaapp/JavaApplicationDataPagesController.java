@@ -5,6 +5,7 @@ import java.util.List;
 
 import io.github.youngledo.jmcfx.domain.model.ChartDefinition;
 import io.github.youngledo.jmcfx.domain.model.NativeLibraryEntry;
+import io.github.youngledo.jmcfx.domain.model.RecordingSummary;
 import io.github.youngledo.jmcfx.domain.model.ThreadDumpEntry;
 import io.github.youngledo.jmcfx.domain.model.ThreadHistogramRow;
 import io.github.youngledo.jmcfx.domain.model.X509CertificateEntry;
@@ -12,6 +13,8 @@ import io.github.youngledo.jmcfx.ui.events.EventsPageController;
 import io.github.youngledo.jmcfx.ui.i18n.I18n;
 import io.github.youngledo.jmcfx.ui.util.DisplayFormats;
 
+import javafx.beans.binding.Bindings;
+import javafx.beans.binding.StringBinding;
 import javafx.beans.property.ReadOnlyStringWrapper;
 import javafx.beans.value.ChangeListener;
 import javafx.collections.FXCollections;
@@ -26,6 +29,7 @@ public final class JavaApplicationDataPagesController {
     private final JavaApplicationDataPagesView view;
     private final I18n i18n;
     private final ChangeListener<ChartDefinition> threadHistogramChartListener;
+    private StringBinding threadHistogramRecordingContextBinding;
     private JavaAppOverviewViewModel threadHistogramViewModel;
     private SecurityViewModel securityViewModel;
     private NativeLibraryViewModel nativeLibraryViewModel;
@@ -62,6 +66,12 @@ public final class JavaApplicationDataPagesController {
         if (currentThreadHistogramViewModel != null) {
             currentThreadHistogramViewModel.chartProperty().removeListener(threadHistogramChartListener);
         }
+        if (threadHistogramRecordingContextBinding != null) {
+            view.threadHistogramRecordingContextLabel().textProperty().unbind();
+            threadHistogramRecordingContextBinding.dispose();
+            threadHistogramRecordingContextBinding = null;
+        }
+        view.threadHistogramRecordingContextLabel().setText("");
         view.threadHistogramChart().setData(null);
         view.threadHistogramTable().setItems(FXCollections.emptyObservableList());
         threadHistogramViewModel = nextViewModel;
@@ -71,6 +81,11 @@ public final class JavaApplicationDataPagesController {
         view.threadHistogramTable().setItems(nextViewModel.histogramRowsProperty());
         nextViewModel.chartProperty().addListener(threadHistogramChartListener);
         view.threadHistogramChart().setData(nextViewModel.chartProperty().get());
+        threadHistogramRecordingContextBinding = Bindings.createStringBinding(
+                () -> recordingContext(nextViewModel.currentRecordingProperty().get()),
+                nextViewModel.currentRecordingProperty(),
+                i18n.localeProperty());
+        view.threadHistogramRecordingContextLabel().textProperty().bind(threadHistogramRecordingContextBinding);
     }
 
     public void bindSecurity(SecurityViewModel nextViewModel) {
@@ -237,6 +252,17 @@ public final class JavaApplicationDataPagesController {
         Label label = new Label();
         label.textProperty().bind(i18n.text(key));
         return label;
+    }
+
+    private String recordingContext(RecordingSummary recording) {
+        if (recording == null) {
+            return "";
+        }
+        ZoneId zone = ZoneId.systemDefault();
+        String start = DisplayFormats.formatTimestamp(recording.startTime(), zone);
+        String end = DisplayFormats.formatTimestamp(recording.endTime(), zone);
+        String duration = DisplayFormats.formatDuration(recording.durationMillis());
+        return i18n.format("threadHistogram.recordingContext", start, end, duration);
     }
 
     private static <T> void useFormattedIntegerCells(TableColumn<T, Number> column) {

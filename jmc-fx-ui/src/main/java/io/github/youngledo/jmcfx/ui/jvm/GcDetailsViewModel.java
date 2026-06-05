@@ -27,6 +27,7 @@ public class GcDetailsViewModel {
     private final ObjectProperty<ChartDefinition> heapChart = new SimpleObjectProperty<>();
     private final ObjectProperty<ChartDefinition> metaspaceChart = new SimpleObjectProperty<>();
     private final ObjectProperty<ChartDefinition> pauseChart = new SimpleObjectProperty<>();
+    private final ObjectProperty<RecordingSummary> currentRecording = new SimpleObjectProperty<>();
 
     public GcDetailsViewModel(LoadJvmInternalsUseCase service) {
         this.service = service;
@@ -56,6 +57,10 @@ public class GcDetailsViewModel {
         return pauseChart;
     }
 
+    public ObjectProperty<RecordingSummary> currentRecordingProperty() {
+        return currentRecording;
+    }
+
     public void load(RecordingSummary recording) {
         List<GcEvent> events = service.loadGcEvents(recording);
         List<GcReferenceStat> refs = service.loadGcReferenceStats(recording);
@@ -64,6 +69,7 @@ public class GcDetailsViewModel {
         ChartDefinition meta = service.loadGcMetaspaceChart(recording);
         ChartDefinition pause = service.loadGcPauseChart(recording);
         FxDispatch.run(() -> {
+            currentRecording.set(recording);
             gcEvents.setAll(events);
             referenceStats.setAll(refs);
             heapSummaries.setAll(heaps);

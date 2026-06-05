@@ -35,6 +35,7 @@ public final class JavaApplicationDataPaneView {
     private final Label threadsTitleLabel = new Label();
     private final TableView<ThreadSummary> threadsTable = denseTable();
     private final Label threadHistogramTitleLabel = new Label();
+    private final Label threadHistogramRecordingContextLabel = new Label();
     private final VBox threadHistogramChartContainer = new VBox();
     private final TimelineChart threadHistogramChart = new TimelineChart();
     private final TableView<ThreadHistogramRow> threadHistogramTable = denseTable();
@@ -64,7 +65,7 @@ public final class JavaApplicationDataPaneView {
     }
 
     public JavaApplicationDataPagesView javaApplicationDataPages() {
-        return new JavaApplicationDataPagesView(threadHistogramTitleLabel,
+        return new JavaApplicationDataPagesView(threadHistogramTitleLabel, threadHistogramRecordingContextLabel,
                 threadHistogramChart, threadHistogramTable,
                 securityTitleLabel, securityTable, nativeLibrariesTitleLabel, nativeLibrariesTable,
                 threadDumpsTitleLabel, threadDumpsTable, threadDumpTextArea);
@@ -80,8 +81,9 @@ public final class JavaApplicationDataPaneView {
                 new SplitPane(exceptionsTable, exceptionsTimelineContainer));
         configureTablePage(threadsPane, threadsTitleLabel, threadsTable);
         threadHistogramChartContainer.getChildren().setAll(threadHistogramChart);
-        configureTablePage(threadHistogramPane, threadHistogramTitleLabel, threadHistogramChartContainer,
-                threadHistogramTable);
+        styles(threadHistogramRecordingContextLabel, "detail-panel-meta");
+        configureTablePage(threadHistogramPane, threadHistogramTitleLabel, threadHistogramRecordingContextLabel,
+                threadHistogramChartContainer, threadHistogramTable);
         configureTablePage(securityPane, securityTitleLabel, securityTable);
         configureTablePage(nativeLibrariesPane, nativeLibrariesTitleLabel, nativeLibrariesTable);
         configureTablePage(threadDumpsPane, threadDumpsTitleLabel, new SplitPane(threadDumpsTable, threadDumpTextArea));

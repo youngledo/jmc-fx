@@ -23,6 +23,7 @@ public class JavaAppOverviewViewModel {
     private final ObservableList<ThreadHistogramRow> histogramRows = FXCollections.observableArrayList();
     private final ObjectProperty<ThreadHistogramRow> selectedRow = new SimpleObjectProperty<>();
     private final ObjectProperty<ChartDefinition> chart = new SimpleObjectProperty<>();
+    private final ObjectProperty<RecordingSummary> currentRecording = new SimpleObjectProperty<>();
 
     public JavaAppOverviewViewModel(LoadJavaApplicationUseCase javaAppService) {
         this.javaAppService = javaAppService;
@@ -40,6 +41,10 @@ public class JavaAppOverviewViewModel {
         return chart;
     }
 
+    public ObjectProperty<RecordingSummary> currentRecordingProperty() {
+        return currentRecording;
+    }
+
     /// Loads thread histogram and chart data for the given recording.
     ///
     /// @param recording the flight recording to analyze
@@ -47,6 +52,7 @@ public class JavaAppOverviewViewModel {
         List<ThreadHistogramRow> rows = javaAppService.loadThreadHistogram(recording);
         ChartDefinition chartDefinition = javaAppService.loadOverviewChart(recording);
         FxDispatch.run(() -> {
+            currentRecording.set(recording);
             histogramRows.setAll(rows);
             selectedRow.set(null);
             chart.set(chartDefinition);

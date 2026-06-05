@@ -25,6 +25,7 @@ public class ClassLoadingViewModel {
     private final ObservableList<ClassloadEvent> events = FXCollections.observableArrayList();
     private final ObservableList<ClassloaderStatistics> statistics = FXCollections.observableArrayList();
     private final ObjectProperty<ChartDefinition> chart = new SimpleObjectProperty<>();
+    private final ObjectProperty<RecordingSummary> currentRecording = new SimpleObjectProperty<>();
 
     public ClassLoadingViewModel(LoadJvmInternalsUseCase service) {
         this.service = service;
@@ -46,12 +47,17 @@ public class ClassLoadingViewModel {
         return chart;
     }
 
+    public ObjectProperty<RecordingSummary> currentRecordingProperty() {
+        return currentRecording;
+    }
+
     public void load(RecordingSummary recording) {
         List<ClassloaderSummary> hist = service.loadClassloaderHistogram(recording);
         List<ClassloadEvent> evts = service.loadClassloadEvents(recording);
         List<ClassloaderStatistics> stats = service.loadClassloaderStatistics(recording);
         ChartDefinition ch = service.loadClassLoadingChart(recording);
         FxDispatch.run(() -> {
+            currentRecording.set(recording);
             histogram.setAll(hist);
             events.setAll(evts);
             statistics.setAll(stats);

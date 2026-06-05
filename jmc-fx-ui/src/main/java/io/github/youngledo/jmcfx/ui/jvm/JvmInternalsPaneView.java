@@ -63,16 +63,20 @@ public final class JvmInternalsPaneView {
     private final Label gcConfigDescriptionLabel = new Label();
     private final Label gcSummaryTitleLabel = new Label();
     private final Label gcDetailsTitleLabel = new Label();
+    private final Label gcDetailsRecordingContextLabel = new Label();
     private final Label gcEventsLabel = new Label();
     private final Label gcReferenceStatsLabel = new Label();
     private final Label gcHeapSummaryLabel = new Label();
     private final Label compilationsTitleLabel = new Label();
+    private final Label compilationsRecordingContextLabel = new Label();
     private final Label compilationEventsLabel = new Label();
     private final Label compilationFailuresLabel = new Label();
     private final Label codeCacheTitleLabel = new Label();
+    private final Label codeCacheRecordingContextLabel = new Label();
     private final Label codeCacheSweepsLabel = new Label();
     private final Label codeCacheStatsLabel = new Label();
     private final Label classLoadingTitleLabel = new Label();
+    private final Label classLoadingRecordingContextLabel = new Label();
     private final Label classLoadingHistogramLabel = new Label();
     private final Label classLoadingEventsLabel = new Label();
     private final Label classLoadingStatsLabel = new Label();
@@ -90,15 +94,17 @@ public final class JvmInternalsPaneView {
     public JvmInternalsPagesView view() {
         return new JvmInternalsPagesView(jvmInfoTitleLabel, jvmFlagsLabel, jvmFlagChangesLabel,
                 jvmFlagsTable, jvmFlagChangesTable, gcConfigTitleLabel, gcConfigDescriptionLabel,
-                gcSummaryTitleLabel, gcSummaryTable, gcDetailsTitleLabel, gcHeapChart, gcMetaspaceChart,
-                gcPauseChart, gcEventsLabel, gcEventsTable, gcReferenceStatsLabel, gcReferenceStatsTable,
-                gcHeapSummaryLabel, gcHeapSummaryTable, compilationsTitleLabel, compilationDurationChart,
-                compilationEventsLabel, compilationsTable, compilationFailuresLabel, compilationFailuresTable,
-                codeCacheTitleLabel, codeCacheEntriesChart, codeCacheSweepChart, codeCacheSweepsLabel,
+                gcSummaryTitleLabel, gcSummaryTable, gcDetailsTitleLabel, gcDetailsRecordingContextLabel,
+                gcHeapChart, gcMetaspaceChart, gcPauseChart, gcEventsLabel, gcEventsTable, gcReferenceStatsLabel,
+                gcReferenceStatsTable, gcHeapSummaryLabel, gcHeapSummaryTable, compilationsTitleLabel,
+                compilationsRecordingContextLabel, compilationDurationChart, compilationEventsLabel,
+                compilationsTable, compilationFailuresLabel, compilationFailuresTable, codeCacheTitleLabel,
+                codeCacheRecordingContextLabel, codeCacheEntriesChart, codeCacheSweepChart, codeCacheSweepsLabel,
                 codeCacheSweepsTable, codeCacheStatsLabel, codeCacheStatsTable, classLoadingTitleLabel,
-                classLoadingChart, classLoadingHistogramLabel, classLoadingHistogramTable, classLoadingEventsLabel,
-                classLoadingEventsTable, classLoadingStatsLabel, classLoadingStatsTable, vmOperationsTitleLabel,
-                vmOperationSummaryLabel, vmOperationSummaryTable, vmOperationEventsLabel, vmOperationEventsTable);
+                classLoadingRecordingContextLabel, classLoadingChart, classLoadingHistogramLabel,
+                classLoadingHistogramTable, classLoadingEventsLabel, classLoadingEventsTable,
+                classLoadingStatsLabel, classLoadingStatsTable, vmOperationsTitleLabel, vmOperationSummaryLabel,
+                vmOperationSummaryTable, vmOperationEventsLabel, vmOperationEventsTable);
     }
 
     private void configure(VBox jvmInfoPane, VBox gcConfigPane, VBox gcSummaryPane,
@@ -112,21 +118,26 @@ public final class JvmInternalsPaneView {
         gcHeapChartContainer.getChildren().setAll(gcHeapChart);
         gcMetaspaceChartContainer.getChildren().setAll(gcMetaspaceChart);
         gcPauseChartContainer.getChildren().setAll(gcPauseChart);
-        configureTablePage(gcDetailsPane, gcDetailsTitleLabel, gcHeapChartContainer, gcMetaspaceChartContainer,
-                gcPauseChartContainer, gcEventsLabel, gcEventsTable, gcReferenceStatsLabel, gcReferenceStatsTable,
-                gcHeapSummaryLabel, gcHeapSummaryTable);
+        styles(gcDetailsRecordingContextLabel, "detail-panel-meta");
+        configureTablePage(gcDetailsPane, gcDetailsTitleLabel, gcDetailsRecordingContextLabel,
+                gcHeapChartContainer, gcMetaspaceChartContainer, gcPauseChartContainer, gcEventsLabel, gcEventsTable,
+                gcReferenceStatsLabel, gcReferenceStatsTable, gcHeapSummaryLabel, gcHeapSummaryTable);
         compilationDurationChartContainer.getChildren().setAll(compilationDurationChart);
-        configureTablePage(compilationsPane, compilationsTitleLabel, compilationDurationChartContainer,
-                compilationEventsLabel, compilationsTable, compilationFailuresLabel, compilationFailuresTable);
+        styles(compilationsRecordingContextLabel, "detail-panel-meta");
+        configureTablePage(compilationsPane, compilationsTitleLabel, compilationsRecordingContextLabel,
+                compilationDurationChartContainer, compilationEventsLabel, compilationsTable, compilationFailuresLabel,
+                compilationFailuresTable);
         codeCacheEntriesChartContainer.getChildren().setAll(codeCacheEntriesChart);
         codeCacheSweepChartContainer.getChildren().setAll(codeCacheSweepChart);
-        configureTablePage(codeCachePane, codeCacheTitleLabel, codeCacheEntriesChartContainer,
-                codeCacheSweepChartContainer, codeCacheSweepsLabel, codeCacheSweepsTable,
+        styles(codeCacheRecordingContextLabel, "detail-panel-meta");
+        configureTablePage(codeCachePane, codeCacheTitleLabel, codeCacheRecordingContextLabel,
+                codeCacheEntriesChartContainer, codeCacheSweepChartContainer, codeCacheSweepsLabel, codeCacheSweepsTable,
                 codeCacheStatsLabel, codeCacheStatsTable);
         classLoadingChartContainer.getChildren().setAll(classLoadingChart);
-        configureTablePage(classLoadingPane, classLoadingTitleLabel, classLoadingChartContainer,
-                classLoadingHistogramLabel, classLoadingHistogramTable, classLoadingEventsLabel,
-                classLoadingEventsTable, classLoadingStatsLabel, classLoadingStatsTable);
+        styles(classLoadingRecordingContextLabel, "detail-panel-meta");
+        configureTablePage(classLoadingPane, classLoadingTitleLabel, classLoadingRecordingContextLabel,
+                classLoadingChartContainer, classLoadingHistogramLabel, classLoadingHistogramTable,
+                classLoadingEventsLabel, classLoadingEventsTable, classLoadingStatsLabel, classLoadingStatsTable);
         configureTablePage(vmOperationsPane, vmOperationsTitleLabel, vmOperationSummaryLabel,
                 vmOperationSummaryTable, vmOperationEventsLabel, vmOperationEventsTable);
     }

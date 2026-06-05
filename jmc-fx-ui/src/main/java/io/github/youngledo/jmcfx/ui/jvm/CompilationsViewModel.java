@@ -22,6 +22,7 @@ public class CompilationsViewModel {
     private final ObservableList<CompilationEvent> compilations = FXCollections.observableArrayList();
     private final ObservableList<CompilationEvent> failures = FXCollections.observableArrayList();
     private final ObjectProperty<ChartDefinition> durationChart = new SimpleObjectProperty<>();
+    private final ObjectProperty<RecordingSummary> currentRecording = new SimpleObjectProperty<>();
 
     public CompilationsViewModel(LoadJvmInternalsUseCase service) {
         this.service = service;
@@ -39,11 +40,16 @@ public class CompilationsViewModel {
         return durationChart;
     }
 
+    public ObjectProperty<RecordingSummary> currentRecordingProperty() {
+        return currentRecording;
+    }
+
     public void load(RecordingSummary recording) {
         List<CompilationEvent> events = service.loadCompilationEvents(recording);
         List<CompilationEvent> failed = service.loadCompilationFailures(recording);
         ChartDefinition chart = service.loadCompilationDurationChart(recording);
         FxDispatch.run(() -> {
+            currentRecording.set(recording);
             compilations.setAll(events);
             failures.setAll(failed);
             durationChart.set(chart);

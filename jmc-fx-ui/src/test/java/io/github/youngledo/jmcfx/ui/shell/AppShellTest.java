@@ -1242,7 +1242,10 @@ class AppShellTest {
         assertTrue(javaApplicationPaneView.contains("public ExceptionsPageView exceptionsPage()"));
         assertTrue(javaApplicationPaneView.contains("public ThreadsPageView threadsPage()"));
         assertTrue(javaApplicationPaneView.contains("public JavaApplicationDataPagesView javaApplicationDataPages()"));
+        assertTrue(javaApplicationPaneView.contains("private final Label threadHistogramRecordingContextLabel = new Label();"));
+        assertTrue(javaApplicationPaneView.contains("styles(threadHistogramRecordingContextLabel, \"detail-panel-meta\")"));
         assertTrue(javaApplicationPaneView.contains("configureTablePage(exceptionsPane, exceptionsTitleLabel"));
+        assertTrue(javaApplicationPaneView.contains("configureTablePage(threadHistogramPane, threadHistogramTitleLabel, threadHistogramRecordingContextLabel,"));
         assertTrue(javaApplicationPaneView.contains("configureTablePage(threadDumpsPane, threadDumpsTitleLabel"));
         assertTrue(javaApplicationPaneView.contains("styles(threadDumpTextArea, \"dump-text-area\")"));
     }
@@ -1389,8 +1392,13 @@ class AppShellTest {
         assertTrue(jvmPaneView.contains("public final class JvmInternalsPaneView"));
         assertTrue(jvmPaneView.contains("public JvmInternalsPaneView(VBox jvmInfoPane,"));
         assertTrue(jvmPaneView.contains("public JvmInternalsPagesView view()"));
+        assertTrue(jvmPaneView.contains("private final Label gcDetailsRecordingContextLabel = new Label();"));
+        assertTrue(jvmPaneView.contains("private final Label compilationsRecordingContextLabel = new Label();"));
+        assertTrue(jvmPaneView.contains("private final Label codeCacheRecordingContextLabel = new Label();"));
+        assertTrue(jvmPaneView.contains("private final Label classLoadingRecordingContextLabel = new Label();"));
+        assertTrue(jvmPaneView.contains("styles(gcDetailsRecordingContextLabel, \"detail-panel-meta\")"));
         assertTrue(jvmPaneView.contains("configureTablePage(jvmInfoPane, jvmInfoTitleLabel"));
-        assertTrue(jvmPaneView.contains("configureTablePage(gcDetailsPane, gcDetailsTitleLabel"));
+        assertTrue(jvmPaneView.contains("configureTablePage(gcDetailsPane, gcDetailsTitleLabel, gcDetailsRecordingContextLabel"));
         assertTrue(jvmPaneView.contains("configureTablePage(vmOperationsPane, vmOperationsTitleLabel"));
 
         assertTrue(g1PaneView.contains("package io.github.youngledo.jmcfx.ui.gc;"));
@@ -2590,6 +2598,7 @@ class AppShellTest {
         assertTrue(exceptionsView.contains("Label recordingContextLabel,"));
         assertTrue(threadsView.contains("public record ThreadsPageView("));
         assertTrue(javaAppView.contains("public record JavaApplicationDataPagesView("));
+        assertTrue(javaAppView.contains("Label threadHistogramRecordingContextLabel,"));
 
         assertTrue(exceptionsController.contains("package io.github.youngledo.jmcfx.ui.exceptions;"));
         assertTrue(exceptionsController.contains("public final class ExceptionsPageController"));
@@ -2609,6 +2618,7 @@ class AppShellTest {
         assertTrue(javaAppController.contains("package io.github.youngledo.jmcfx.ui.javaapp;"));
         assertTrue(javaAppController.contains("public final class JavaApplicationDataPagesController"));
         assertTrue(javaAppController.contains("view.threadHistogramTitleLabel().textProperty().bind(i18n.text(\"threadHistogram.title\"))"));
+        assertTrue(javaAppController.contains("view.threadHistogramRecordingContextLabel().textProperty().bind(threadHistogramRecordingContextBinding)"));
         assertTrue(javaAppController.contains("view.securityTitleLabel().textProperty().bind(i18n.text(\"security.title\"))"));
         assertTrue(javaAppController.contains("view.nativeLibrariesTitleLabel().textProperty().bind(i18n.text(\"nativeLibraries.title\"))"));
         assertTrue(javaAppController.contains("view.threadDumpsTitleLabel().textProperty().bind(i18n.text(\"threadDumps.title\"))"));
@@ -2844,6 +2854,10 @@ class AppShellTest {
         assertTrue(appShellView.contains("G1GcPageView g1GcPage()"));
         assertTrue(appShellView.contains("JavaFxEventsPageView javaFxEventsPage()"));
         assertTrue(jvmView.contains("public record JvmInternalsPagesView("));
+        assertTrue(jvmView.contains("Label gcDetailsRecordingContextLabel,"));
+        assertTrue(jvmView.contains("Label compilationsRecordingContextLabel,"));
+        assertTrue(jvmView.contains("Label codeCacheRecordingContextLabel,"));
+        assertTrue(jvmView.contains("Label classLoadingRecordingContextLabel,"));
         assertTrue(g1View.contains("public record G1GcPageView("));
         assertTrue(javaFxView.contains("public record JavaFxEventsPageView("));
 
@@ -2852,6 +2866,10 @@ class AppShellTest {
         assertTrue(jvmController.contains("public void bindJvmInfo(JvmInfoViewModel nextViewModel)"));
         assertTrue(jvmController.contains("public void bindGcDetails(GcDetailsViewModel nextViewModel)"));
         assertTrue(jvmController.contains("currentViewModel.heapChartProperty().removeListener(heapChartListener)"));
+        assertTrue(jvmController.contains("view.gcDetailsRecordingContextLabel().textProperty().bind(gcDetailsRecordingContextBinding)"));
+        assertTrue(jvmController.contains("view.compilationsRecordingContextLabel().textProperty().bind(compilationsRecordingContextBinding)"));
+        assertTrue(jvmController.contains("view.codeCacheRecordingContextLabel().textProperty().bind(codeCacheRecordingContextBinding)"));
+        assertTrue(jvmController.contains("view.classLoadingRecordingContextLabel().textProperty().bind(classLoadingRecordingContextBinding)"));
         assertTrue(jvmController.contains("public List<TableView<?>> exportTables()"));
 
         assertTrue(g1Controller.contains("package io.github.youngledo.jmcfx.ui.gc;"));

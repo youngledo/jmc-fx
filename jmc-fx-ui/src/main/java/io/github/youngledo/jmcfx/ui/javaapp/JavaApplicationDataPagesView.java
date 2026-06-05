@@ -13,6 +13,7 @@ import javafx.scene.control.TextArea;
 /// Narrow view handle for Java Application data pages owned by the javaapp package.
 public record JavaApplicationDataPagesView(
         Label threadHistogramTitleLabel,
+        Label threadHistogramRecordingContextLabel,
         TimelineChart threadHistogramChart,
         TableView<ThreadHistogramRow> threadHistogramTable,
         Label securityTitleLabel,
