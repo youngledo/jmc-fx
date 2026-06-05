@@ -2883,7 +2883,8 @@ class AppShellTest {
         assertTrue(selection.contains("pages.jvmInternalsPagesController().bindClassLoading("));
         assertTrue(selection.contains("workspace == null ? null : workspace.classLoadingViewModel(),"));
         assertTrue(selection.contains("workspace == null ? null : workspace.selectedTimeRangeProperty())"));
-        assertTrue(selection.contains("pages.jvmInternalsPagesController().bindVmOperations(workspace == null ? null : workspace.vmOperationsViewModel())"));
+        assertTrue(selection.contains("pages.jvmInternalsPagesController().bindVmOperations("));
+        assertTrue(selection.contains("workspace == null ? null : workspace.vmOperationsViewModel(),"));
         assertTrue(registry.contains("jvmInternalsPagesController.exportTables().forEach(installer::install)"));
         assertTrue(registry.contains("g1GcPageController.exportTables().forEach(installer::install)"));
         assertTrue(registry.contains("javaFxEventsPageController.exportTables().forEach(installer::install)"));

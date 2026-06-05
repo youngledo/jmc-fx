@@ -91,6 +91,8 @@ public final class JvmInternalsPaneView {
     private final Label classLoadingEventsLabel = new Label();
     private final Label classLoadingStatsLabel = new Label();
     private final Label vmOperationsTitleLabel = new Label();
+    private final Button vmOperationsClearTimeRangeButton = new Button();
+    private final HBox vmOperationsToolbar = new HBox();
     private final Label vmOperationSummaryLabel = new Label();
     private final Label vmOperationEventsLabel = new Label();
 
@@ -117,8 +119,9 @@ public final class JvmInternalsPaneView {
                 classLoadingRecordingContextLabel, classLoadingClearTimeRangeButton,
                 classLoadingChart, classLoadingHistogramLabel,
                 classLoadingHistogramTable, classLoadingEventsLabel, classLoadingEventsTable,
-                classLoadingStatsLabel, classLoadingStatsTable, vmOperationsTitleLabel, vmOperationSummaryLabel,
-                vmOperationSummaryTable, vmOperationEventsLabel, vmOperationEventsTable);
+                classLoadingStatsLabel, classLoadingStatsTable, vmOperationsTitleLabel,
+                vmOperationsClearTimeRangeButton, vmOperationSummaryLabel, vmOperationSummaryTable,
+                vmOperationEventsLabel, vmOperationEventsTable);
     }
 
     private void configure(VBox jvmInfoPane, VBox gcConfigPane, VBox gcSummaryPane,
@@ -168,7 +171,10 @@ public final class JvmInternalsPaneView {
         configureTablePage(classLoadingPane, classLoadingTitleLabel, classLoadingRecordingContextBar,
                 classLoadingChartContainer, classLoadingHistogramLabel, classLoadingHistogramTable,
                 classLoadingEventsLabel, classLoadingEventsTable, classLoadingStatsLabel, classLoadingStatsTable);
-        configureTablePage(vmOperationsPane, vmOperationsTitleLabel, vmOperationSummaryLabel,
+        vmOperationsToolbar.setSpacing(8);
+        vmOperationsToolbar.getChildren().setAll(vmOperationsClearTimeRangeButton);
+        styles(vmOperationsToolbar, "page-toolbar");
+        configureTablePage(vmOperationsPane, vmOperationsTitleLabel, vmOperationsToolbar, vmOperationSummaryLabel,
                 vmOperationSummaryTable, vmOperationEventsLabel, vmOperationEventsTable);
     }
 

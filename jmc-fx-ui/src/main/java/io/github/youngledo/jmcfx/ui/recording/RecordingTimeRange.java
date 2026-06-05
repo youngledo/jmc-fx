@@ -1,5 +1,7 @@
 package io.github.youngledo.jmcfx.ui.recording;
 
+import java.time.Instant;
+
 /// A workspace-level selected time range for timestamped recording pages.
 public record RecordingTimeRange(long startEpochMillis, long endEpochMillis) {
 
@@ -11,6 +13,10 @@ public record RecordingTimeRange(long startEpochMillis, long endEpochMillis) {
 
     public boolean contains(long epochMillis) {
         return epochMillis >= startEpochMillis && epochMillis <= endEpochMillis;
+    }
+
+    public boolean contains(Instant instant) {
+        return instant != null && contains(instant.toEpochMilli());
     }
 
     public long durationMillis() {

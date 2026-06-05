@@ -8,6 +8,8 @@ import io.github.youngledo.jmcfx.domain.model.GcHeapSummary;
 import io.github.youngledo.jmcfx.domain.model.GcReferenceStat;
 import io.github.youngledo.jmcfx.domain.model.RecordingSummary;
 import io.github.youngledo.jmcfx.application.LoadJvmInternalsUseCase;
+import io.github.youngledo.jmcfx.ui.recording.RecordingTimeRange;
+import io.github.youngledo.jmcfx.ui.recording.RecordingTimeRangeFilters;
 import io.github.youngledo.jmcfx.ui.util.FxDispatch;
 
 import javafx.beans.property.ObjectProperty;
@@ -21,9 +23,11 @@ import javafx.collections.ObservableList;
 public class GcDetailsViewModel {
 
     private final LoadJvmInternalsUseCase service;
+    private final ObservableList<GcEvent> allGcEvents = FXCollections.observableArrayList();
     private final ObservableList<GcEvent> gcEvents = FXCollections.observableArrayList();
     private final ObservableList<GcReferenceStat> referenceStats = FXCollections.observableArrayList();
     private final ObservableList<GcHeapSummary> heapSummaries = FXCollections.observableArrayList();
+    private final ObjectProperty<RecordingTimeRange> timeRange = new SimpleObjectProperty<>();
     private final ObjectProperty<ChartDefinition> heapChart = new SimpleObjectProperty<>();
     private final ObjectProperty<ChartDefinition> metaspaceChart = new SimpleObjectProperty<>();
     private final ObjectProperty<ChartDefinition> pauseChart = new SimpleObjectProperty<>();
@@ -31,10 +35,15 @@ public class GcDetailsViewModel {
 
     public GcDetailsViewModel(LoadJvmInternalsUseCase service) {
         this.service = service;
+        timeRange.addListener((observable, oldValue, newValue) -> applyEventFilter());
     }
 
     public ObservableList<GcEvent> gcEvents() {
         return gcEvents;
+    }
+
+    public ObjectProperty<RecordingTimeRange> timeRangeProperty() {
+        return timeRange;
     }
 
     public ObservableList<GcReferenceStat> referenceStats() {
@@ -70,12 +79,17 @@ public class GcDetailsViewModel {
         ChartDefinition pause = service.loadGcPauseChart(recording);
         FxDispatch.run(() -> {
             currentRecording.set(recording);
-            gcEvents.setAll(events);
+            allGcEvents.setAll(events);
+            applyEventFilter();
             referenceStats.setAll(refs);
             heapSummaries.setAll(heaps);
             heapChart.set(heap);
             metaspaceChart.set(meta);
             pauseChart.set(pause);
         });
+    }
+
+    private void applyEventFilter() {
+        RecordingTimeRangeFilters.apply(gcEvents, allGcEvents, timeRange.get(), GcEvent::startTime);
     }
 }

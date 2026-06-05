@@ -8,6 +8,8 @@ import io.github.youngledo.jmcfx.domain.model.ClassloaderSummary;
 import io.github.youngledo.jmcfx.domain.model.ClassloadEvent;
 import io.github.youngledo.jmcfx.domain.model.RecordingSummary;
 import io.github.youngledo.jmcfx.application.LoadJvmInternalsUseCase;
+import io.github.youngledo.jmcfx.ui.recording.RecordingTimeRange;
+import io.github.youngledo.jmcfx.ui.recording.RecordingTimeRangeFilters;
 import io.github.youngledo.jmcfx.ui.util.FxDispatch;
 
 import javafx.beans.property.ObjectProperty;
@@ -22,13 +24,16 @@ public class ClassLoadingViewModel {
 
     private final LoadJvmInternalsUseCase service;
     private final ObservableList<ClassloaderSummary> histogram = FXCollections.observableArrayList();
+    private final ObservableList<ClassloadEvent> allEvents = FXCollections.observableArrayList();
     private final ObservableList<ClassloadEvent> events = FXCollections.observableArrayList();
     private final ObservableList<ClassloaderStatistics> statistics = FXCollections.observableArrayList();
+    private final ObjectProperty<RecordingTimeRange> timeRange = new SimpleObjectProperty<>();
     private final ObjectProperty<ChartDefinition> chart = new SimpleObjectProperty<>();
     private final ObjectProperty<RecordingSummary> currentRecording = new SimpleObjectProperty<>();
 
     public ClassLoadingViewModel(LoadJvmInternalsUseCase service) {
         this.service = service;
+        timeRange.addListener((observable, oldValue, newValue) -> applyEventFilter());
     }
 
     public ObservableList<ClassloaderSummary> histogram() {
@@ -37,6 +42,10 @@ public class ClassLoadingViewModel {
 
     public ObservableList<ClassloadEvent> events() {
         return events;
+    }
+
+    public ObjectProperty<RecordingTimeRange> timeRangeProperty() {
+        return timeRange;
     }
 
     public ObservableList<ClassloaderStatistics> statistics() {
@@ -59,9 +68,14 @@ public class ClassLoadingViewModel {
         FxDispatch.run(() -> {
             currentRecording.set(recording);
             histogram.setAll(hist);
-            events.setAll(evts);
+            allEvents.setAll(evts);
+            applyEventFilter();
             statistics.setAll(stats);
             chart.set(ch);
         });
+    }
+
+    private void applyEventFilter() {
+        RecordingTimeRangeFilters.apply(events, allEvents, timeRange.get(), ClassloadEvent::startTime);
     }
 }

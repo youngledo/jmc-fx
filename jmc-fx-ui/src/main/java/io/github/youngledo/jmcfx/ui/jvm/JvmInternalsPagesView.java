@@ -71,6 +71,7 @@ public record JvmInternalsPagesView(
         Label classLoadingStatsLabel,
         TableView<ClassloaderStatistics> classLoadingStatsTable,
         Label vmOperationsTitleLabel,
+        Button vmOperationsClearTimeRangeButton,
         Label vmOperationSummaryLabel,
         TableView<VmOperationSummary> vmOperationSummaryTable,
         Label vmOperationEventsLabel,

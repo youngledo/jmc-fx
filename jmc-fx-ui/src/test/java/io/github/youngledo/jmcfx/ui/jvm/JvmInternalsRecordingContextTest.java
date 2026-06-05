@@ -63,11 +63,13 @@ class JvmInternalsRecordingContextTest {
         CompilationsViewModel compilations = new CompilationsViewModel(useCase);
         CodeCacheViewModel codeCache = new CodeCacheViewModel(useCase);
         ClassLoadingViewModel classLoading = new ClassLoadingViewModel(useCase);
+        VmOperationsViewModel vmOperations = new VmOperationsViewModel(useCase);
         RecordingSummary recording = testRecording();
         gc.load(recording);
         compilations.load(recording);
         codeCache.load(recording);
         classLoading.load(recording);
+        vmOperations.load(recording);
 
         JvmInternalsPaneView pane = new JvmInternalsPaneView(
                 new VBox(), new VBox(), new VBox(), new VBox(), new VBox(), new VBox(), new VBox(), new VBox());
@@ -100,11 +102,13 @@ class JvmInternalsRecordingContextTest {
         CompilationsViewModel compilations = new CompilationsViewModel(useCase);
         CodeCacheViewModel codeCache = new CodeCacheViewModel(useCase);
         ClassLoadingViewModel classLoading = new ClassLoadingViewModel(useCase);
+        VmOperationsViewModel vmOperations = new VmOperationsViewModel(useCase);
         RecordingSummary recording = testRecording();
         gc.load(recording);
         compilations.load(recording);
         codeCache.load(recording);
         classLoading.load(recording);
+        vmOperations.load(recording);
 
         JvmInternalsPaneView pane = new JvmInternalsPaneView(
                 new VBox(), new VBox(), new VBox(), new VBox(), new VBox(), new VBox(), new VBox(), new VBox());
@@ -117,6 +121,7 @@ class JvmInternalsRecordingContextTest {
         controller.bindCompilations(compilations, sharedRange);
         controller.bindCodeCache(codeCache, sharedRange);
         controller.bindClassLoading(classLoading, sharedRange);
+        controller.bindVmOperations(vmOperations, sharedRange);
 
         assertEquals(1_600.0, pane.view().gcHeapChart().userSelectedRangeProperty().get().lowerBound());
         assertEquals(1_600.0, pane.view().compilationDurationChart().userSelectedRangeProperty().get().lowerBound());
@@ -126,8 +131,9 @@ class JvmInternalsRecordingContextTest {
         assertTrue(pane.view().compilationsClearTimeRangeButton().isVisible());
         assertTrue(pane.view().codeCacheClearTimeRangeButton().isVisible());
         assertTrue(pane.view().classLoadingClearTimeRangeButton().isVisible());
+        assertTrue(pane.view().vmOperationsClearTimeRangeButton().isVisible());
 
-        pane.view().codeCacheClearTimeRangeButton().fire();
+        pane.view().vmOperationsClearTimeRangeButton().fire();
 
         assertNull(sharedRange.get());
         assertNull(pane.view().gcHeapChart().userSelectedRangeProperty().get());
@@ -138,6 +144,66 @@ class JvmInternalsRecordingContextTest {
         assertFalse(pane.view().compilationsClearTimeRangeButton().isVisible());
         assertFalse(pane.view().codeCacheClearTimeRangeButton().isVisible());
         assertFalse(pane.view().classLoadingClearTimeRangeButton().isVisible());
+        assertFalse(pane.view().vmOperationsClearTimeRangeButton().isVisible());
+    }
+
+    @Test
+    void eventTablesUseSharedTimeRangeForRealRowFiltering() {
+        LoadJvmInternalsUseCase useCase = new LoadJvmInternalsUseCase(new FakeJvmInternalsService());
+        GcDetailsViewModel gc = new GcDetailsViewModel(useCase);
+        CompilationsViewModel compilations = new CompilationsViewModel(useCase);
+        CodeCacheViewModel codeCache = new CodeCacheViewModel(useCase);
+        ClassLoadingViewModel classLoading = new ClassLoadingViewModel(useCase);
+        VmOperationsViewModel vmOperations = new VmOperationsViewModel(useCase);
+        RecordingSummary recording = testRecording();
+        gc.load(recording);
+        compilations.load(recording);
+        codeCache.load(recording);
+        classLoading.load(recording);
+        vmOperations.load(recording);
+
+        JvmInternalsPaneView pane = new JvmInternalsPaneView(
+                new VBox(), new VBox(), new VBox(), new VBox(), new VBox(), new VBox(), new VBox(), new VBox());
+        JvmInternalsPagesController controller = new JvmInternalsPagesController(pane.view(), new I18n(Locale.ENGLISH));
+        controller.configure();
+        SimpleObjectProperty<RecordingTimeRange> sharedRange = new SimpleObjectProperty<>();
+
+        controller.bindGcDetails(gc, sharedRange);
+        controller.bindCompilations(compilations, sharedRange);
+        controller.bindCodeCache(codeCache, sharedRange);
+        controller.bindClassLoading(classLoading, sharedRange);
+        controller.bindVmOperations(vmOperations, sharedRange);
+
+        assertEquals(2, pane.view().gcEventsTable().getItems().size());
+        assertEquals(3, pane.view().compilationsTable().getItems().size());
+        assertEquals(2, pane.view().compilationFailuresTable().getItems().size());
+        assertEquals(2, pane.view().codeCacheSweepsTable().getItems().size());
+        assertEquals(3, pane.view().classLoadingEventsTable().getItems().size());
+        assertEquals(3, pane.view().vmOperationEventsTable().getItems().size());
+
+        sharedRange.set(new RecordingTimeRange(
+                Instant.parse("2026-01-01T00:00:02Z").toEpochMilli(),
+                Instant.parse("2026-01-01T00:00:06Z").toEpochMilli()));
+
+        assertEquals(0, pane.view().gcEventsTable().getItems().size());
+        assertEquals(2, pane.view().compilationsTable().getItems().size());
+        assertEquals(1, pane.view().compilationFailuresTable().getItems().size());
+        assertEquals(1, pane.view().codeCacheSweepsTable().getItems().size());
+        assertEquals(1, pane.view().classLoadingEventsTable().getItems().size());
+        assertEquals(1, pane.view().vmOperationEventsTable().getItems().size());
+        assertEquals(2, pane.view().gcReferenceStatsTable().getItems().size(),
+                "aggregate/reference tables stay unfiltered until the service can recompute them");
+        assertEquals(1, pane.view().codeCacheStatsTable().getItems().size(),
+                "state/statistics tables stay unfiltered until their sampling semantics are defined");
+
+        sharedRange.set(null);
+
+        assertEquals(2, pane.view().gcEventsTable().getItems().size());
+        assertEquals(3, pane.view().compilationsTable().getItems().size());
+        assertEquals(2, pane.view().compilationFailuresTable().getItems().size());
+        assertEquals(2, pane.view().codeCacheSweepsTable().getItems().size());
+        assertEquals(3, pane.view().classLoadingEventsTable().getItems().size());
+        assertEquals(3, pane.view().vmOperationEventsTable().getItems().size());
     }
 
     private RecordingSummary testRecording() {

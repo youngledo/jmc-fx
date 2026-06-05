@@ -54,6 +54,7 @@ public final class JvmInternalsPagesController {
     private CompilationsViewModel compilationsViewModel;
     private CodeCacheViewModel codeCacheViewModel;
     private ClassLoadingViewModel classLoadingViewModel;
+    private VmOperationsViewModel vmOperationsViewModel;
     private RecordingTimeRangeChartBinding gcHeapChartBinding;
     private RecordingTimeRangeChartBinding gcMetaspaceChartBinding;
     private RecordingTimeRangeChartBinding gcPauseChartBinding;
@@ -65,6 +66,7 @@ public final class JvmInternalsPagesController {
     private RecordingTimeRangeClearButtonBinding compilationsClearTimeRangeButtonBinding;
     private RecordingTimeRangeClearButtonBinding codeCacheClearTimeRangeButtonBinding;
     private RecordingTimeRangeClearButtonBinding classLoadingClearTimeRangeButtonBinding;
+    private RecordingTimeRangeClearButtonBinding vmOperationsClearTimeRangeButtonBinding;
 
     public JvmInternalsPagesController(JvmInternalsPagesView view, I18n i18n) {
         this.view = view;
@@ -144,6 +146,7 @@ public final class JvmInternalsPagesController {
     public void bindGcDetails(GcDetailsViewModel nextViewModel, ObjectProperty<RecordingTimeRange> sharedTimeRange) {
         GcDetailsViewModel currentViewModel = gcDetailsViewModel;
         if (currentViewModel != null) {
+            currentViewModel.timeRangeProperty().unbind();
             currentViewModel.heapChartProperty().removeListener(heapChartListener);
             currentViewModel.metaspaceChartProperty().removeListener(metaspaceChartListener);
             currentViewModel.pauseChartProperty().removeListener(pauseChartListener);
@@ -168,6 +171,7 @@ public final class JvmInternalsPagesController {
         if (nextViewModel == null) {
             return;
         }
+        bindTimeRange(nextViewModel.timeRangeProperty(), sharedTimeRange);
         view.gcEventsTable().setItems(nextViewModel.gcEvents());
         view.gcReferenceStatsTable().setItems(nextViewModel.referenceStats());
         view.gcHeapSummaryTable().setItems(nextViewModel.heapSummaries());
@@ -197,6 +201,7 @@ public final class JvmInternalsPagesController {
             ObjectProperty<RecordingTimeRange> sharedTimeRange) {
         CompilationsViewModel currentViewModel = compilationsViewModel;
         if (currentViewModel != null) {
+            currentViewModel.timeRangeProperty().unbind();
             currentViewModel.durationChartProperty().removeListener(compilationDurationChartListener);
         }
         compilationDurationChartBinding = closeBinding(compilationDurationChartBinding);
@@ -214,6 +219,7 @@ public final class JvmInternalsPagesController {
         if (nextViewModel == null) {
             return;
         }
+        bindTimeRange(nextViewModel.timeRangeProperty(), sharedTimeRange);
         view.compilationsTable().setItems(nextViewModel.compilations());
         view.compilationFailuresTable().setItems(nextViewModel.failures());
         nextViewModel.durationChartProperty().addListener(compilationDurationChartListener);
@@ -236,6 +242,7 @@ public final class JvmInternalsPagesController {
     public void bindCodeCache(CodeCacheViewModel nextViewModel, ObjectProperty<RecordingTimeRange> sharedTimeRange) {
         CodeCacheViewModel currentViewModel = codeCacheViewModel;
         if (currentViewModel != null) {
+            currentViewModel.timeRangeProperty().unbind();
             currentViewModel.entriesChartProperty().removeListener(codeCacheEntriesChartListener);
             currentViewModel.sweepChartProperty().removeListener(codeCacheSweepChartListener);
         }
@@ -256,6 +263,7 @@ public final class JvmInternalsPagesController {
         if (nextViewModel == null) {
             return;
         }
+        bindTimeRange(nextViewModel.timeRangeProperty(), sharedTimeRange);
         view.codeCacheSweepsTable().setItems(nextViewModel.sweeps());
         view.codeCacheStatsTable().setItems(nextViewModel.statistics());
         nextViewModel.entriesChartProperty().addListener(codeCacheEntriesChartListener);
@@ -282,6 +290,7 @@ public final class JvmInternalsPagesController {
             ObjectProperty<RecordingTimeRange> sharedTimeRange) {
         ClassLoadingViewModel currentViewModel = classLoadingViewModel;
         if (currentViewModel != null) {
+            currentViewModel.timeRangeProperty().unbind();
             currentViewModel.chartProperty().removeListener(classLoadingChartListener);
         }
         classLoadingChartBinding = closeBinding(classLoadingChartBinding);
@@ -300,6 +309,7 @@ public final class JvmInternalsPagesController {
         if (nextViewModel == null) {
             return;
         }
+        bindTimeRange(nextViewModel.timeRangeProperty(), sharedTimeRange);
         view.classLoadingHistogramTable().setItems(nextViewModel.histogram());
         view.classLoadingEventsTable().setItems(nextViewModel.events());
         view.classLoadingStatsTable().setItems(nextViewModel.statistics());
@@ -367,13 +377,37 @@ public final class JvmInternalsPagesController {
     }
 
     public void bindVmOperations(VmOperationsViewModel nextViewModel) {
+        bindVmOperations(nextViewModel, null);
+    }
+
+    public void bindVmOperations(VmOperationsViewModel nextViewModel,
+            ObjectProperty<RecordingTimeRange> sharedTimeRange) {
+        VmOperationsViewModel currentViewModel = vmOperationsViewModel;
+        if (currentViewModel != null) {
+            currentViewModel.timeRangeProperty().unbind();
+        }
+        vmOperationsClearTimeRangeButtonBinding = closeBinding(vmOperationsClearTimeRangeButtonBinding);
         view.vmOperationSummaryTable().setItems(FXCollections.emptyObservableList());
         view.vmOperationEventsTable().setItems(FXCollections.emptyObservableList());
+        vmOperationsViewModel = nextViewModel;
         if (nextViewModel == null) {
             return;
         }
+        bindTimeRange(nextViewModel.timeRangeProperty(), sharedTimeRange);
+        vmOperationsClearTimeRangeButtonBinding = new RecordingTimeRangeClearButtonBinding(
+                view.vmOperationsClearTimeRangeButton(), i18n, sharedTimeRange);
         view.vmOperationSummaryTable().setItems(nextViewModel.summary());
         view.vmOperationEventsTable().setItems(nextViewModel.events());
+    }
+
+    private static void bindTimeRange(ObjectProperty<RecordingTimeRange> target,
+            ObjectProperty<RecordingTimeRange> source) {
+        target.unbind();
+        if (source == null) {
+            target.set(null);
+            return;
+        }
+        target.bind(source);
     }
 
     private void bindLocalizedText() {

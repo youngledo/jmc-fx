@@ -106,7 +106,9 @@ final class WorkspaceSelectionController {
         pages.jvmInternalsPagesController().bindClassLoading(
                 workspace == null ? null : workspace.classLoadingViewModel(),
                 workspace == null ? null : workspace.selectedTimeRangeProperty());
-        pages.jvmInternalsPagesController().bindVmOperations(workspace == null ? null : workspace.vmOperationsViewModel());
+        pages.jvmInternalsPagesController().bindVmOperations(
+                workspace == null ? null : workspace.vmOperationsViewModel(),
+                workspace == null ? null : workspace.selectedTimeRangeProperty());
         pages.environmentPagesController().bind(workspace == null ? null : workspace.environmentViewModel());
         pages.metadataPageController().bind(workspace == null ? null : workspace.jfrMetadataViewModel());
         pages.advancedJfrPageController().bind(workspace == null ? null : workspace.advancedJfrViewModel());

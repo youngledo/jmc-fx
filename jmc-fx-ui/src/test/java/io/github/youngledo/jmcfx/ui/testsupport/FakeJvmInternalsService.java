@@ -119,12 +119,18 @@ public class FakeJvmInternalsService implements JvmInternalsService {
                 new CompilationEvent(1, "java.lang.String.hashCode()", true, 500, 1024, 256,
                         Instant.parse("2026-01-01T00:00:05Z")),
                 new CompilationEvent(2, "java.util.ArrayList.add()", true, 300, 512, 128,
-                        Instant.parse("2026-01-01T00:00:06Z")));
+                        Instant.parse("2026-01-01T00:00:06Z")),
+                new CompilationEvent(3, "com.example.Late.compile()", true, 700, 2048, 512,
+                        Instant.parse("2026-01-01T00:00:20Z")));
     }
 
     @Override
     public List<CompilationEvent> loadCompilationFailures(RecordingSummary recording) {
-        return List.of();
+        return List.of(
+                new CompilationEvent(4, "com.example.Failed.compile()", false, 900, 0, 0,
+                        Instant.parse("2026-01-01T00:00:06Z")),
+                new CompilationEvent(5, "com.example.LateFailed.compile()", false, 1200, 0, 0,
+                        Instant.parse("2026-01-01T00:00:20Z")));
     }
 
     @Override
@@ -137,7 +143,8 @@ public class FakeJvmInternalsService implements JvmInternalsService {
     @Override
     public List<CodeCacheSweep> loadCodeCacheSweeps(RecordingSummary recording) {
         return List.of(
-                new CodeCacheSweep(Instant.parse("2026-01-01T00:00:02Z"), 1, 100, 5, 50, 3));
+                new CodeCacheSweep(Instant.parse("2026-01-01T00:00:02Z"), 1, 100, 5, 50, 3),
+                new CodeCacheSweep(Instant.parse("2026-01-01T00:00:20Z"), 2, 200, 8, 80, 5));
     }
 
     @Override
@@ -178,7 +185,9 @@ public class FakeJvmInternalsService implements JvmInternalsService {
                 new ClassloadEvent("load", Instant.parse("2026-01-01T00:00:01Z"),
                         "com.example.MyClass", "app", "app", 100),
                 new ClassloadEvent("unload", Instant.parse("2026-01-01T00:00:05Z"),
-                        "com.example.TempClass", "app", "", 0));
+                        "com.example.TempClass", "app", "", 0),
+                new ClassloadEvent("load", Instant.parse("2026-01-01T00:00:20Z"),
+                        "com.example.LateClass", "app", "app", 150));
     }
 
     @Override
@@ -207,6 +216,8 @@ public class FakeJvmInternalsService implements JvmInternalsService {
     public List<VmOperationEvent> loadVmOperationEvents(RecordingSummary recording) {
         return List.of(
                 new VmOperationEvent(Instant.parse("2026-01-01T00:00:01Z"), "GC", true, true, 12000, "GC Thread"),
-                new VmOperationEvent(Instant.parse("2026-01-01T00:00:02Z"), "Deoptimize", false, false, 200, "CompilerThread"));
+                new VmOperationEvent(Instant.parse("2026-01-01T00:00:02Z"), "Deoptimize", false, false, 200, "CompilerThread"),
+                new VmOperationEvent(Instant.parse("2026-01-01T00:00:20Z"), "Late Operation",
+                        false, false, 300, "VM Thread"));
     }
 }
