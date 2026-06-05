@@ -12,6 +12,7 @@ import javafx.scene.control.TableView;
 /// Narrow view handle for the JFR Socket I/O tabbed page.
 public record SocketIoPageView(
         Label titleLabel,
+        Label recordingContextLabel,
         Button groupByHostAndPortButton,
         Button groupByHostButton,
         Button groupByPortButton,

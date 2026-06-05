@@ -19,6 +19,7 @@ import javafx.scene.layout.VBox;
 public final class SocketIoPaneView {
 
     private final Label titleLabel = new Label();
+    private final Label recordingContextLabel = new Label();
     private final HBox groupingBar = new HBox();
     private final Button groupByHostAndPortButton = new Button();
     private final Button groupByHostButton = new Button();
@@ -37,7 +38,7 @@ public final class SocketIoPaneView {
     }
 
     public SocketIoPageView view() {
-        return new SocketIoPageView(titleLabel, groupByHostAndPortButton, groupByHostButton,
+        return new SocketIoPageView(titleLabel, recordingContextLabel, groupByHostAndPortButton, groupByHostButton,
                 groupByPortButton, timelineTab, durationTab, eventLogTab,
                 timelineChart, histogramTable, eventTable);
     }
@@ -51,12 +52,13 @@ public final class SocketIoPaneView {
         tab(durationTab, histogramTable);
         tab(eventLogTab, eventTable);
         tabs.getTabs().setAll(timelineTab, durationTab, eventLogTab);
-        configureTablePage(pane, titleLabel, groupingBar, tabs);
+        configureTablePage(pane, titleLabel, recordingContextLabel, groupingBar, tabs);
     }
 
     private void configureTablePage(VBox pane, Label title, Node... content) {
         pane.setSpacing(8);
         styles(title, "view-title");
+        styles(recordingContextLabel, "detail-panel-meta");
         pane.getChildren().setAll(title);
         pane.getChildren().addAll(content);
         for (Node node : content) {

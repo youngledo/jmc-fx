@@ -1288,8 +1288,10 @@ class AppShellTest {
         assertTrue(socketIoPaneView.contains("public final class SocketIoPaneView"));
         assertTrue(socketIoPaneView.contains("public SocketIoPaneView(VBox pane)"));
         assertTrue(socketIoPaneView.contains("public SocketIoPageView view()"));
+        assertTrue(socketIoPaneView.contains("private final Label recordingContextLabel = new Label();"));
+        assertTrue(socketIoPaneView.contains("styles(recordingContextLabel, \"detail-panel-meta\")"));
         assertTrue(socketIoPaneView.contains("styles(groupingBar, \"socketio-grouping-bar\")"));
-        assertTrue(socketIoPaneView.contains("configureTablePage(pane, titleLabel, groupingBar, tabs);"));
+        assertTrue(socketIoPaneView.contains("configureTablePage(pane, titleLabel, recordingContextLabel, groupingBar, tabs);"));
 
         assertTrue(locksPaneView.contains("package io.github.youngledo.jmcfx.ui.locks;"));
         assertTrue(locksPaneView.contains("public final class LocksPaneView"));
@@ -2681,6 +2683,7 @@ class AppShellTest {
         assertTrue(socketIoController.contains("package io.github.youngledo.jmcfx.ui.socketio;"));
         assertTrue(socketIoController.contains("public final class SocketIoPageController"));
         assertTrue(socketIoController.contains("view.groupByHostAndPortButton().setOnAction(event -> setGrouping(SocketIOGrouping.BY_HOST_AND_PORT))"));
+        assertTrue(socketIoController.contains("view.recordingContextLabel().textProperty().bind(recordingContextBinding)"));
         assertTrue(socketIoController.contains("view.histogramTable().setItems(nextViewModel.histogramProperty())"));
         assertTrue(socketIoController.contains("currentViewModel.timelineProperty().removeListener(timelineListener)"));
         assertTrue(socketIoController.contains("public List<TableView<?>> exportTables()"));

@@ -26,7 +26,7 @@ public class SocketIOViewModel {
     private final ObjectProperty<SocketIOGrouping> grouping =
             new SimpleObjectProperty<>(SocketIOGrouping.BY_HOST_AND_PORT);
     private final ObjectProperty<ChartDefinition> timeline = new SimpleObjectProperty<>();
-    private RecordingSummary currentRecording;
+    private final ObjectProperty<RecordingSummary> currentRecording = new SimpleObjectProperty<>();
 
     public SocketIOViewModel(LoadSocketIOUseCase socketIOService) {
         this.socketIOService = socketIOService;
@@ -48,13 +48,17 @@ public class SocketIOViewModel {
         return timeline;
     }
 
+    public ObjectProperty<RecordingSummary> currentRecordingProperty() {
+        return currentRecording;
+    }
+
     public void load(RecordingSummary recording) {
-        currentRecording = recording;
         List<SocketIOHistogram> histogramData =
-                socketIOService.loadSocketIOHistogram(currentRecording, grouping.get());
-        List<SocketIOEvent> eventData = socketIOService.loadSocketIOEvents(currentRecording);
+                socketIOService.loadSocketIOHistogram(recording, grouping.get());
+        List<SocketIOEvent> eventData = socketIOService.loadSocketIOEvents(recording);
         ChartDefinition chart = socketIOService.loadTimeline(recording);
         FxDispatch.run(() -> {
+            currentRecording.set(recording);
             histogram.setAll(histogramData);
             events.setAll(eventData);
             timeline.set(chart);
@@ -63,19 +67,19 @@ public class SocketIOViewModel {
 
     public void setGrouping(SocketIOGrouping newGrouping) {
         grouping.set(newGrouping);
-        if (currentRecording != null) {
+        if (currentRecording.get() != null) {
             reloadHistogram();
         }
     }
 
     private void reloadHistogram() {
         List<SocketIOHistogram> data =
-                socketIOService.loadSocketIOHistogram(currentRecording, grouping.get());
+                socketIOService.loadSocketIOHistogram(currentRecording.get(), grouping.get());
         FxDispatch.run(() -> histogram.setAll(data));
     }
 
     private void reloadEvents() {
-        List<SocketIOEvent> data = socketIOService.loadSocketIOEvents(currentRecording);
+        List<SocketIOEvent> data = socketIOService.loadSocketIOEvents(currentRecording.get());
         FxDispatch.run(() -> events.setAll(data));
     }
 }
