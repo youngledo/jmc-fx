@@ -19,6 +19,7 @@
         <subproject>jmc-fx-adapter</subproject>
         <subproject>jmc-fx-flamegraph</subproject>
         <subproject>jmc-fx-ui</subproject>
+        <subproject>jmc-fx-leyden-packager-maven-plugin</subproject>
         <subproject>jmc-fx-launcher</subproject>
     </subprojects>
 
@@ -34,6 +35,8 @@
         <ikonli.version>12.3.1</ikonli.version>
         <log4j2.version>2.26.0</log4j2.version>
         <archunit.version>1.4.2</archunit.version>
+        <maven.plugin.api.version>4.0.0-rc-5</maven.plugin.api.version>
+        <maven.plugin.tools.version>4.0.0-beta-2</maven.plugin.tools.version>
 
         <junit.version>5.11.4</junit.version>
     </properties>

@@ -40,8 +40,10 @@ Build the current platform's Leyden-optimized installer with the
 sdk env && ./mvnw -pl jmc-fx-launcher -am -Pjpackage-classpath-jlink-leyden package
 ```
 
-The macOS, Linux, and Windows Leyden profiles are activated automatically by
-Maven according to the current operating system; do not pass them manually. The
+There is one Leyden installer profile. It delegates the packaging workflow to
+the in-repository `jmc-fx-leyden-packager-maven-plugin`, which detects the
+current operating system and derives the platform-specific `jpackage` options,
+installer type, app-image paths, and AOT cache location internally. The
 installer is written to `jmc-fx-launcher/target/jpackage-leyden/`. On macOS, the
 default output is `JMC FX-1.0.0.dmg`.
 
