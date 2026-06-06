@@ -59,14 +59,6 @@ Future work should prioritize:
   interpretation.
 - Avoid forcing global coupling onto pages that only need local selection.
 
-### Event Browser Usability
-
-- Improve raw event browsing for large recordings with better saved filters,
-  reusable column layouts, and clearer paging/window state.
-- Keep large recording handling paged, sliced, or summarized so JavaFX tables do
-  not eagerly load huge datasets.
-- Preserve stable row identity for details and export.
-
 ### HPROF And JOverflow Browsing
 
 - Expand heap dump analysis beyond a single issue table and text report.

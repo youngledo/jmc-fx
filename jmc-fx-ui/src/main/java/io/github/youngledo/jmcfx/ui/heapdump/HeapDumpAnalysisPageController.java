@@ -3,6 +3,7 @@ package io.github.youngledo.jmcfx.ui.heapdump;
 import java.util.List;
 
 import io.github.youngledo.jmcfx.domain.model.HeapDumpIssue;
+import io.github.youngledo.jmcfx.domain.model.HeapDumpIssueCategory;
 import io.github.youngledo.jmcfx.ui.i18n.I18n;
 import io.github.youngledo.jmcfx.ui.util.DisplayFormats;
 
@@ -13,6 +14,7 @@ import javafx.collections.FXCollections;
 import javafx.scene.control.Label;
 import javafx.scene.control.TableCell;
 import javafx.scene.control.TableColumn;
+import javafx.util.StringConverter;
 
 /// Controller for the HPROF Heap Dump Analysis split table/detail page.
 public final class HeapDumpAnalysisPageController {
@@ -23,6 +25,10 @@ public final class HeapDumpAnalysisPageController {
             (observable, oldValue, newValue) -> selectHeapDumpIssue(newValue);
     private final ChangeListener<HeapDumpIssue> heapDumpSelectedIssueListener =
             (observable, oldValue, newValue) -> selectHeapDumpIssueInTable(newValue);
+    private final ChangeListener<HeapDumpIssueCategory> categorySelectionListener =
+            (observable, oldValue, newValue) -> selectHeapDumpCategory(newValue);
+    private final ChangeListener<HeapDumpIssueCategory> selectedCategoryListener =
+            (observable, oldValue, newValue) -> selectCategoryInCombo(newValue);
     private HeapDumpAnalysisViewModel viewModel;
 
     public HeapDumpAnalysisPageController(HeapDumpAnalysisPageView view, I18n i18n) {
@@ -32,6 +38,7 @@ public final class HeapDumpAnalysisPageController {
 
     public void configure() {
         bindLocalizedText();
+        configureCategoryFilter();
         configureIssueTable();
         bind(null);
     }
@@ -41,6 +48,9 @@ public final class HeapDumpAnalysisPageController {
             view.issuesTable().getSelectionModel().selectedItemProperty()
                     .removeListener(heapDumpTableSelectionListener);
             viewModel.selectedIssueProperty().removeListener(heapDumpSelectedIssueListener);
+            view.categoryFilterCombo().getSelectionModel().selectedItemProperty()
+                    .removeListener(categorySelectionListener);
+            viewModel.selectedIssueCategoryProperty().removeListener(selectedCategoryListener);
         }
         view.issueDetailArea().textProperty().unbind();
         view.textReportArea().textProperty().unbind();
@@ -50,6 +60,8 @@ public final class HeapDumpAnalysisPageController {
             view.issueDetailArea().setText(i18n.get("heapDump.detail.empty"));
             view.textReportArea().setText("");
             view.issuesTable().setItems(FXCollections.emptyObservableList());
+            view.categoryFilterCombo().setItems(FXCollections.emptyObservableList());
+            view.categoryFilterCombo().getSelectionModel().clearSelection();
             view.issueDetailTitleLabel().setText("");
             return;
         }
@@ -57,9 +69,13 @@ public final class HeapDumpAnalysisPageController {
         view.issueDetailArea().textProperty().bind(viewModel.selectedIssueDetailsProperty());
         view.textReportArea().textProperty().bind(viewModel.textReportProperty());
         view.issuesTable().setItems(viewModel.issues());
+        view.categoryFilterCombo().setItems(viewModel.issueCategories());
         view.issuesTable().getSelectionModel().selectedItemProperty()
                 .addListener(heapDumpTableSelectionListener);
         viewModel.selectedIssueProperty().addListener(heapDumpSelectedIssueListener);
+        view.categoryFilterCombo().getSelectionModel().selectedItemProperty()
+                .addListener(categorySelectionListener);
+        viewModel.selectedIssueCategoryProperty().addListener(selectedCategoryListener);
         view.issueDetailTitleLabel().textProperty().bind(Bindings.createStringBinding(
                 () -> {
                     HeapDumpIssue issue = viewModel.selectedIssueProperty().get();
@@ -70,8 +86,25 @@ public final class HeapDumpAnalysisPageController {
 
     private void bindLocalizedText() {
         view.titleLabel().textProperty().bind(i18n.text("heapDump.title"));
+        view.categoryFilterCombo().promptTextProperty().bind(i18n.text("heapDump.filter.category"));
+        view.clearCategoryFilterButton().textProperty().bind(i18n.text("heapDump.filter.clear"));
         view.issueDetailTab().textProperty().bind(i18n.text("heapDump.detail.tab"));
         view.textReportTab().textProperty().bind(i18n.text("heapDump.report.tab"));
+    }
+
+    private void configureCategoryFilter() {
+        view.categoryFilterCombo().setConverter(new StringConverter<>() {
+            @Override
+            public String toString(HeapDumpIssueCategory category) {
+                return category == null ? "" : categoryLabel(category);
+            }
+
+            @Override
+            public HeapDumpIssueCategory fromString(String string) {
+                return null;
+            }
+        });
+        view.clearCategoryFilterButton().setOnAction(event -> clearCategoryFilter());
     }
 
     private void configureIssueTable() {
@@ -115,6 +148,32 @@ public final class HeapDumpAnalysisPageController {
 
     private void selectHeapDumpIssueInTable(HeapDumpIssue issue) {
         view.issuesTable().getSelectionModel().select(issue);
+    }
+
+    private void selectHeapDumpCategory(HeapDumpIssueCategory category) {
+        HeapDumpAnalysisViewModel viewModel = this.viewModel;
+        if (viewModel != null) {
+            viewModel.selectIssueCategory(category);
+        }
+    }
+
+    private void selectCategoryInCombo(HeapDumpIssueCategory category) {
+        if (category == null) {
+            view.categoryFilterCombo().getSelectionModel().clearSelection();
+            return;
+        }
+        view.categoryFilterCombo().getSelectionModel().select(category);
+    }
+
+    private void clearCategoryFilter() {
+        HeapDumpAnalysisViewModel viewModel = this.viewModel;
+        if (viewModel != null) {
+            viewModel.selectIssueCategory(null);
+        }
+    }
+
+    private String categoryLabel(HeapDumpIssueCategory category) {
+        return i18n.get("heapDump.category." + category.name());
     }
 
     private Label localizedTablePlaceholder(String key) {

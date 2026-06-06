@@ -95,7 +95,6 @@
 
 .heap-dump-page .page-detail-tabs {
     -fx-min-height: 120px;
-    -fx-pref-height: 220px;
     -fx-padding: 6px 0 0 0;
 }
 

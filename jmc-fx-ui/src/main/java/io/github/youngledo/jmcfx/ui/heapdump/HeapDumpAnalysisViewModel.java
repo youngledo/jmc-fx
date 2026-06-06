@@ -7,6 +7,7 @@ import io.github.youngledo.jmcfx.application.AnalyzeHeapDumpUseCase;
 import io.github.youngledo.jmcfx.domain.model.HeapDumpAnalysisReport;
 import io.github.youngledo.jmcfx.domain.model.HeapDumpAnalysisState;
 import io.github.youngledo.jmcfx.domain.model.HeapDumpIssue;
+import io.github.youngledo.jmcfx.domain.model.HeapDumpIssueCategory;
 import io.github.youngledo.jmcfx.ui.i18n.I18n;
 import io.github.youngledo.jmcfx.ui.util.DisplayFormats;
 import io.github.youngledo.jmcfx.ui.util.FxDispatch;
@@ -29,7 +30,10 @@ public class HeapDumpAnalysisViewModel {
     private final StringProperty statusMessage = new SimpleStringProperty("");
     private final StringProperty summary = new SimpleStringProperty("");
     private final ObjectProperty<HeapDumpAnalysisReport> report = new SimpleObjectProperty<>();
+    private final ObservableList<HeapDumpIssue> allIssues = FXCollections.observableArrayList();
     private final ObservableList<HeapDumpIssue> issues = FXCollections.observableArrayList();
+    private final ObservableList<HeapDumpIssueCategory> issueCategories = FXCollections.observableArrayList();
+    private final ObjectProperty<HeapDumpIssueCategory> selectedIssueCategory = new SimpleObjectProperty<>();
     private final ObjectProperty<HeapDumpIssue> selectedIssue = new SimpleObjectProperty<>();
     private final StringProperty selectedIssueDetails = new SimpleStringProperty("");
     private final StringProperty textReport = new SimpleStringProperty("");
@@ -40,6 +44,7 @@ public class HeapDumpAnalysisViewModel {
         this.i18n = Objects.requireNonNull(i18n, "i18n");
         statusMessage.set(i18n.get("heapDump.status.idle"));
         selectedIssueDetails.set(i18n.get("heapDump.detail.empty"));
+        selectedIssueCategory.addListener((observable, oldValue, newValue) -> applyIssueFilter());
     }
 
     public ObjectProperty<HeapDumpAnalysisState> stateProperty() {
@@ -64,6 +69,14 @@ public class HeapDumpAnalysisViewModel {
 
     public ObservableList<HeapDumpIssue> issues() {
         return issues;
+    }
+
+    public ObservableList<HeapDumpIssueCategory> issueCategories() {
+        return issueCategories;
+    }
+
+    public ObjectProperty<HeapDumpIssueCategory> selectedIssueCategoryProperty() {
+        return selectedIssueCategory;
     }
 
     public ObjectProperty<HeapDumpIssue> selectedIssueProperty() {
@@ -97,6 +110,10 @@ public class HeapDumpAnalysisViewModel {
         });
     }
 
+    public void selectIssueCategory(HeapDumpIssueCategory category) {
+        FxDispatch.run(() -> selectedIssueCategory.set(category));
+    }
+
     public void close() {
         executor.close();
     }
@@ -104,7 +121,12 @@ public class HeapDumpAnalysisViewModel {
     private void applyReport(HeapDumpAnalysisReport nextReport) {
         FxDispatch.run(() -> {
             report.set(nextReport);
-            issues.setAll(nextReport.issues());
+            allIssues.setAll(nextReport.issues());
+            issueCategories.setAll(nextReport.issues().stream()
+                    .map(HeapDumpIssue::category)
+                    .distinct()
+                    .toList());
+            applyIssueFilter();
             textReport.set(nextReport.textReport());
             state.set(HeapDumpAnalysisState.SUCCEEDED);
             statusMessage.set(i18n.format("heapDump.status.succeeded", displayName(nextReport.path())));
@@ -120,10 +142,25 @@ public class HeapDumpAnalysisViewModel {
             statusMessage.set(i18n.format("heapDump.status.failed", message));
             summary.set("");
             report.set(null);
+            allIssues.clear();
             issues.clear();
+            issueCategories.clear();
+            selectedIssueCategory.set(null);
             textReport.set("");
             selectIssue(null);
         });
+    }
+
+    private void applyIssueFilter() {
+        HeapDumpIssueCategory category = selectedIssueCategory.get();
+        if (category == null) {
+            issues.setAll(allIssues);
+        } else {
+            issues.setAll(allIssues.stream()
+                    .filter(issue -> issue.category() == category)
+                    .toList());
+        }
+        selectIssue(issues.isEmpty() ? null : issues.getFirst());
     }
 
     private String formatSummary(HeapDumpAnalysisReport nextReport) {

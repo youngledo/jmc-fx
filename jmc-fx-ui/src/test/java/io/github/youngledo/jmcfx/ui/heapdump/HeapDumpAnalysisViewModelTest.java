@@ -20,6 +20,8 @@ import io.github.youngledo.jmcfx.domain.service.JmcFxException;
 import io.github.youngledo.jmcfx.ui.testsupport.FakeHeapDumpAnalysisService;
 import io.github.youngledo.jmcfx.ui.i18n.I18n;
 
+import javafx.scene.layout.VBox;
+
 class HeapDumpAnalysisViewModelTest {
 
     private final I18n i18n = new I18n(Locale.ENGLISH);
@@ -38,6 +40,34 @@ class HeapDumpAnalysisViewModelTest {
         assertEquals(1, vm.issues().size());
         assertSame(vm.issues().getFirst(), vm.selectedIssueProperty().get());
         assertEquals("raw report", vm.textReportProperty().get());
+    }
+
+    @Test
+    void issueCategoryFilterNarrowsIssuesAndClearsBackToAll() {
+        HeapDumpIssue duplicateString = sampleIssue();
+        HeapDumpIssue arrayWaste = new HeapDumpIssue(HeapDumpIssueCategory.DUPLICATE_ARRAY, "byte[]",
+                256 * 1024, 512 * 1024, 12, 0.6, "duplicate arrays", "root -> array");
+        FakeHeapDumpAnalysisService service = new FakeHeapDumpAnalysisService();
+        service.setReport(new HeapDumpAnalysisReport(Path.of("demo.hprof"), 4096, 2048, 10, 8, 1, 1,
+                List.of(duplicateString, arrayWaste), "raw report"));
+        HeapDumpAnalysisViewModel vm = new HeapDumpAnalysisViewModel(useCase(service),
+                new DirectHeapDumpAnalysisExecutor(), i18n);
+
+        vm.analyze(Path.of("demo.hprof"));
+
+        assertEquals(List.of(HeapDumpIssueCategory.DUPLICATE_STRING, HeapDumpIssueCategory.DUPLICATE_ARRAY),
+                vm.issueCategories());
+        assertEquals(List.of(duplicateString, arrayWaste), vm.issues());
+
+        vm.selectIssueCategory(HeapDumpIssueCategory.DUPLICATE_ARRAY);
+
+        assertEquals(List.of(arrayWaste), vm.issues());
+        assertSame(arrayWaste, vm.selectedIssueProperty().get());
+
+        vm.selectIssueCategory(null);
+
+        assertEquals(List.of(duplicateString, arrayWaste), vm.issues());
+        assertSame(duplicateString, vm.selectedIssueProperty().get());
     }
 
     @Test
@@ -65,6 +95,33 @@ class HeapDumpAnalysisViewModelTest {
         assertSame(issue, vm.selectedIssueProperty().get());
         assertTrue(vm.selectedIssueDetailsProperty().get().contains("duplicate"));
         assertTrue(vm.selectedIssueDetailsProperty().get().contains("512.0 KB"));
+    }
+
+    @Test
+    void controllerCategoryComboFiltersIssueTable() {
+        HeapDumpIssue duplicateString = sampleIssue();
+        HeapDumpIssue arrayWaste = new HeapDumpIssue(HeapDumpIssueCategory.DUPLICATE_ARRAY, "byte[]",
+                256 * 1024, 512 * 1024, 12, 0.6, "duplicate arrays", "root -> array");
+        FakeHeapDumpAnalysisService service = new FakeHeapDumpAnalysisService();
+        service.setReport(new HeapDumpAnalysisReport(Path.of("demo.hprof"), 4096, 2048, 10, 8, 1, 1,
+                List.of(duplicateString, arrayWaste), "raw report"));
+        HeapDumpAnalysisViewModel vm = new HeapDumpAnalysisViewModel(useCase(service),
+                new DirectHeapDumpAnalysisExecutor(), i18n);
+        vm.analyze(Path.of("demo.hprof"));
+        HeapDumpAnalysisPaneView pane = new HeapDumpAnalysisPaneView(new VBox());
+        HeapDumpAnalysisPageController controller = new HeapDumpAnalysisPageController(pane.view(), i18n);
+        controller.configure();
+
+        controller.bind(vm);
+        pane.view().categoryFilterCombo().getSelectionModel().select(HeapDumpIssueCategory.DUPLICATE_ARRAY);
+
+        assertEquals(List.of(arrayWaste), pane.view().issuesTable().getItems());
+        assertSame(arrayWaste, vm.selectedIssueProperty().get());
+
+        pane.view().clearCategoryFilterButton().fire();
+
+        assertEquals(List.of(duplicateString, arrayWaste), pane.view().issuesTable().getItems());
+        assertSame(duplicateString, vm.selectedIssueProperty().get());
     }
 
     private HeapDumpAnalysisReport sampleReport(Path path) {

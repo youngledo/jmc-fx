@@ -1125,7 +1125,7 @@ class AppShellTest {
         assertTrue(heapDumpPaneView.contains("public HeapDumpAnalysisPaneView(VBox pane)"));
         assertTrue(heapDumpPaneView.contains("public HeapDumpAnalysisPageView view()"));
         assertTrue(heapDumpPaneView.contains("styles(pane, \"page\", \"split-table-detail-page\", \"heap-dump-page\")"));
-        assertTrue(heapDumpPaneView.contains("pane.getChildren().setAll(header, content);"));
+        assertTrue(heapDumpPaneView.contains("pane.getChildren().setAll(header, toolbar, content);"));
     }
 
     @Test
@@ -2282,7 +2282,7 @@ class AppShellTest {
         assertTrue(content.contains("-fx-padding: 6px 0 0 0"));
         assertTrue(table.contains("-fx-min-height: 96px"));
         assertTrue(detailTabs.contains("-fx-min-height: 120px"));
-        assertTrue(detailTabs.contains("-fx-pref-height: 220px"));
+        assertFalse(detailTabs.contains("-fx-pref-height: 220px"));
         assertTrue(detailTabs.contains("-fx-padding: 6px 0 0 0"));
         assertTrue(detailPanelTitle.contains("-fx-padding: 4px 0 10px 0"));
         assertTrue(textReport.contains("-fx-padding: 8px"));

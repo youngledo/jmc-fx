@@ -1,15 +1,19 @@
 package io.github.youngledo.jmcfx.ui.heapdump;
 
 import io.github.youngledo.jmcfx.domain.model.HeapDumpIssue;
+import io.github.youngledo.jmcfx.domain.model.HeapDumpIssueCategory;
 
 import javafx.geometry.Orientation;
 import javafx.scene.Node;
+import javafx.scene.control.Button;
+import javafx.scene.control.ComboBox;
 import javafx.scene.control.Label;
 import javafx.scene.control.SplitPane;
 import javafx.scene.control.Tab;
 import javafx.scene.control.TabPane;
 import javafx.scene.control.TableView;
 import javafx.scene.control.TextArea;
+import javafx.scene.layout.HBox;
 import javafx.scene.layout.Priority;
 import javafx.scene.layout.VBox;
 
@@ -17,6 +21,8 @@ import javafx.scene.layout.VBox;
 public final class HeapDumpAnalysisPaneView {
 
     private final Label titleLabel = new Label();
+    private final ComboBox<HeapDumpIssueCategory> categoryFilterCombo = new ComboBox<>();
+    private final Button clearCategoryFilterButton = new Button();
     private final TableView<HeapDumpIssue> issuesTable = denseTable();
     private final TabPane detailsTabs = new TabPane();
     private final Tab issueDetailTab = tab();
@@ -30,7 +36,8 @@ public final class HeapDumpAnalysisPaneView {
     }
 
     public HeapDumpAnalysisPageView view() {
-        return new HeapDumpAnalysisPageView(titleLabel, issuesTable, detailsTabs,
+        return new HeapDumpAnalysisPageView(titleLabel, categoryFilterCombo, clearCategoryFilterButton,
+                issuesTable, detailsTabs,
                 issueDetailTab, textReportTab, issueDetailTitleLabel,
                 issueDetailArea, textReportArea);
     }
@@ -40,6 +47,9 @@ public final class HeapDumpAnalysisPaneView {
         styles(titleLabel, "view-title");
         VBox header = vbox(0, titleLabel);
         styles(header, "page-header");
+        HBox toolbar = hbox(8, categoryFilterCombo, clearCategoryFilterButton);
+        styles(toolbar, "page-toolbar");
+        categoryFilterCombo.setPrefWidth(260);
         styles(issueDetailTitleLabel, "detail-panel-title");
         styles(issueDetailArea, "detail-panel-body");
         styles(textReportArea, "dump-text-area", "detail-panel-body");
@@ -48,13 +58,15 @@ public final class HeapDumpAnalysisPaneView {
         styles(issueDetail, "detail-panel");
         VBox textReport = vbox(0, textReportArea);
         styles(textReport, "detail-panel");
+        VBox.setVgrow(issueDetailArea, Priority.ALWAYS);
+        VBox.setVgrow(textReportArea, Priority.ALWAYS);
         tab(issueDetailTab, issueDetail);
         tab(textReportTab, textReport);
         styles(detailsTabs, "page-detail-tabs");
         detailsTabs.getTabs().setAll(issueDetailTab, textReportTab);
         SplitPane content = verticalSplit(0.62, issuesTable, detailsTabs);
         styles(content, "page-content");
-        pane.getChildren().setAll(header, content);
+        pane.getChildren().setAll(header, toolbar, content);
         VBox.setVgrow(content, Priority.ALWAYS);
     }
 
@@ -67,6 +79,10 @@ public final class HeapDumpAnalysisPaneView {
 
     private static VBox vbox(double spacing, Node... children) {
         return new VBox(spacing, children);
+    }
+
+    private static HBox hbox(double spacing, Node... children) {
+        return new HBox(spacing, children);
     }
 
     private static Tab tab() {
