@@ -30,6 +30,15 @@ final class WorkspaceTabsController {
             }
         });
         viewModel.workspaceTabsProperty().addListener((ListChangeListener<Object>) change -> rebuild());
+        viewModel.selectedWorkspaceProperty().addListener((observable, oldValue, newValue) -> select(
+                newValue, viewModel.selectedHeapDumpWorkspaceProperty().get(),
+                viewModel.selectedLiveJvmWorkspaceProperty().get()));
+        viewModel.selectedHeapDumpWorkspaceProperty().addListener((observable, oldValue, newValue) -> select(
+                viewModel.selectedWorkspaceProperty().get(), newValue,
+                viewModel.selectedLiveJvmWorkspaceProperty().get()));
+        viewModel.selectedLiveJvmWorkspaceProperty().addListener((observable, oldValue, newValue) -> select(
+                viewModel.selectedWorkspaceProperty().get(),
+                viewModel.selectedHeapDumpWorkspaceProperty().get(), newValue));
         rebuild();
     }
 

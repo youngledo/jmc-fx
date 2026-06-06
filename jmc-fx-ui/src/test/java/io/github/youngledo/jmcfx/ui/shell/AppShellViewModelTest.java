@@ -401,10 +401,10 @@ class AppShellViewModelTest {
         viewModel.showSection("home");
 
         assertEquals("home", viewModel.selectedSectionProperty().get());
-        assertEquals(AppWorkspaceKind.RECORDING, viewModel.activeWorkspaceKindProperty().get());
-        assertSame(second, viewModel.selectedWorkspaceProperty().get());
+        assertEquals(AppWorkspaceKind.GLOBAL, viewModel.activeWorkspaceKindProperty().get());
+        assertNull(viewModel.selectedWorkspaceProperty().get());
         assertNull(viewModel.selectedHeapDumpWorkspaceProperty().get());
-        assertEquals("second.jfr", viewModel.currentTargetNameProperty().get());
+        assertEquals("", viewModel.currentTargetNameProperty().get());
 
         viewModel.selectWorkspace(first);
 
@@ -416,8 +416,8 @@ class AppShellViewModelTest {
         viewModel.showSection("settings");
 
         assertEquals("settings", viewModel.selectedSectionProperty().get());
-        assertEquals(AppWorkspaceKind.RECORDING, viewModel.activeWorkspaceKindProperty().get());
-        assertSame(first, viewModel.selectedWorkspaceProperty().get());
+        assertEquals(AppWorkspaceKind.GLOBAL, viewModel.activeWorkspaceKindProperty().get());
+        assertNull(viewModel.selectedWorkspaceProperty().get());
 
         viewModel.selectWorkspace(first);
         viewModel.showSection("analysis");

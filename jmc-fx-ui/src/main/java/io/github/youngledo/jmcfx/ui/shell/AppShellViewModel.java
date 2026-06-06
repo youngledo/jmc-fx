@@ -182,6 +182,15 @@ public class AppShellViewModel {
         if (!sectionAllowedForActiveWorkspace(sectionId)) {
             return;
         }
+        if (HOME_SECTION.equals(sectionId) || SETTINGS_SECTION.equals(sectionId)) {
+            selectedWorkspace.set(null);
+            selectedHeapDumpWorkspace.set(null);
+            selectedLiveJvmWorkspace.set(null);
+            activeWorkspaceKind.set(AppWorkspaceKind.GLOBAL);
+            currentTargetName.set("");
+            selectedSection.set(sectionId);
+            return;
+        }
         RecordingWorkspace workspace = selectedWorkspace.get();
         if (workspace != null && isRecordingSection(sectionId)) {
             workspace.selectedSectionProperty().set(sectionId);
