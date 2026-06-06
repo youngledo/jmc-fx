@@ -404,6 +404,7 @@ class AppShellTest {
         assertTrue(tabs.contains("private final TabPane tabs;"));
         assertTrue(tabs.contains("private boolean updatingTabs;"));
         assertTrue(tabs.contains("void configure()"));
+        assertTrue(tabs.contains("viewModel.selectedLiveJvmWorkspaceProperty().addListener"));
         assertTrue(tabs.contains("void select(RecordingWorkspace recordingWorkspace, HeapDumpWorkspace heapDumpWorkspace,"));
         assertTrue(tabs.contains("static String tabTitleFor(RecordingWorkspace workspace)"));
         assertTrue(tabs.contains("static boolean shouldShowWorkspaceTabs(int recordingWorkspaceCount, int heapDumpWorkspaceCount,"));
@@ -3303,14 +3304,18 @@ void jvmBrowserSupportsDoubleClickConnectAndNoBottomStatus() throws Exception {
         assertTrue(controller.contains("private Tab jvmsAgentTab;"));
         assertTrue(controller.contains("private ComboBox<JmcAgentPreset> jvmsAgentPresetCombo;"));
         assertTrue(controller.contains("private TableView<JmcAgentTransform> jvmsAgentTransformsTable;"));
+        assertTrue(controller.contains("private Label jvmsAgentPresetDescriptionLabel;"));
         assertTrue(controller.contains("private TextArea jvmsAgentConfigurationArea;"));
         assertTrue(controller.contains("private Label jvmsAgentStatusLabel;"));
+        assertTrue(controller.contains("private Label jvmsAgentApplyStatusLabel;"));
         assertTrue(controller.contains("configureJmcAgentManager();"));
         assertTrue(controller.contains("bindJmcAgentManager();"));
         assertTrue(controller.contains("jvmsAgentPresetCombo.setItems(jvmBrowserViewModel.jmcAgentPresetsProperty())"));
         assertTrue(controller.contains("jvmsAgentTransformsTable.setItems(jvmBrowserViewModel.jmcAgentTransformsProperty())"));
+        assertTrue(controller.contains("jvmBrowserViewModel.selectedJmcAgentPresetDescriptionProperty()"));
         assertTrue(controller.contains("jvmsAgentConfigurationArea.textProperty().bindBidirectional("));
         assertTrue(controller.contains("jvmBrowserViewModel.jmcAgentConfigurationProperty()"));
+        assertTrue(controller.contains("jvmBrowserViewModel.jmcAgentApplyStatusMessageProperty()"));
         assertTrue(controller.contains("jvmsRefreshAgentButton.setOnAction(event -> jvmBrowserViewModel.refreshJmcAgent())"));
         assertTrue(controller.contains("jvmsLoadAgentPresetButton.setOnAction(event -> jvmBrowserViewModel.loadSelectedJmcAgentPreset())"));
         assertTrue(controller.contains("jvmsApplyAgentConfigurationButton.setOnAction(event -> jvmBrowserViewModel.applyJmcAgentConfiguration())"));

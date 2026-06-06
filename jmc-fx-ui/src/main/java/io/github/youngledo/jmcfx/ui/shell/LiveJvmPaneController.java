@@ -334,9 +334,11 @@ public final class LiveJvmPaneController {
     private Button jvmsLoadAgentPresetButton;
     private Button jvmsApplyAgentConfigurationButton;
     private TableView<JmcAgentTransform> jvmsAgentTransformsTable;
+    private Label jvmsAgentPresetDescriptionLabel;
     private Label jvmsAgentConfigurationTitleLabel;
     private TextArea jvmsAgentConfigurationArea;
     private Label jvmsAgentStatusLabel;
+    private Label jvmsAgentApplyStatusLabel;
 
     private I18n i18n;
     private JvmBrowserViewModel jvmBrowserViewModel;
@@ -456,9 +458,11 @@ public final class LiveJvmPaneController {
         this.jvmsLoadAgentPresetButton = view.jvmsLoadAgentPresetButton;
         this.jvmsApplyAgentConfigurationButton = view.jvmsApplyAgentConfigurationButton;
         this.jvmsAgentTransformsTable = view.jvmsAgentTransformsTable;
+        this.jvmsAgentPresetDescriptionLabel = view.jvmsAgentPresetDescriptionLabel;
         this.jvmsAgentConfigurationTitleLabel = view.jvmsAgentConfigurationTitleLabel;
         this.jvmsAgentConfigurationArea = view.jvmsAgentConfigurationArea;
         this.jvmsAgentStatusLabel = view.jvmsAgentStatusLabel;
+        this.jvmsAgentApplyStatusLabel = view.jvmsAgentApplyStatusLabel;
     }
 
     void configure(I18n i18n, JvmBrowserViewModel viewModel) {
@@ -961,6 +965,7 @@ public final class LiveJvmPaneController {
             jvmsMonitoringErrorLabel.setManaged(false);
             jvmsAgentPresetCombo.setItems(FXCollections.emptyObservableList());
             jvmsAgentTransformsTable.setItems(FXCollections.emptyObservableList());
+            jvmsAgentPresetDescriptionLabel.setText("");
             jvmsAgentConfigurationArea.setText("");
             jvmsAgentPresetCombo.setDisable(true);
             jvmsRefreshAgentButton.setDisable(true);
@@ -969,6 +974,8 @@ public final class LiveJvmPaneController {
             jvmsAgentConfigurationArea.setDisable(true);
             jvmsAgentStatusLabel.setVisible(false);
             jvmsAgentStatusLabel.setManaged(false);
+            jvmsAgentApplyStatusLabel.setVisible(false);
+            jvmsAgentApplyStatusLabel.setManaged(false);
             jvmsSessionDetailPane.setVisible(false);
             jvmsSessionDetailPane.setManaged(false);
             return;
@@ -1353,6 +1360,11 @@ public final class LiveJvmPaneController {
                 jvmBrowserViewModel.selectedJmcAgentPresetProperty());
         jvmsAgentConfigurationArea.textProperty().bindBidirectional(
                 jvmBrowserViewModel.jmcAgentConfigurationProperty());
+        jvmsAgentPresetDescriptionLabel.textProperty().bind(
+                jvmBrowserViewModel.selectedJmcAgentPresetDescriptionProperty());
+        jvmsAgentPresetDescriptionLabel.visibleProperty().bind(
+                jvmBrowserViewModel.selectedJmcAgentPresetDescriptionProperty().isNotEmpty());
+        jvmsAgentPresetDescriptionLabel.managedProperty().bind(jvmsAgentPresetDescriptionLabel.visibleProperty());
         jvmsAgentStatusLabel.textProperty().bind(Bindings.createStringBinding(
                 () -> jvmBrowserViewModel.jmcAgentErrorProperty().get()
                         ? jvmBrowserViewModel.jmcAgentErrorMessageProperty().get()
@@ -1363,6 +1375,10 @@ public final class LiveJvmPaneController {
         jvmsAgentStatusLabel.visibleProperty().bind(jvmBrowserViewModel.jmcAgentStatusMessageProperty().isNotEmpty()
                 .or(jvmBrowserViewModel.jmcAgentErrorProperty()));
         jvmsAgentStatusLabel.managedProperty().bind(jvmsAgentStatusLabel.visibleProperty());
+        jvmsAgentApplyStatusLabel.textProperty().bind(jvmBrowserViewModel.jmcAgentApplyStatusMessageProperty());
+        jvmsAgentApplyStatusLabel.visibleProperty().bind(
+                jvmBrowserViewModel.jmcAgentApplyStatusMessageProperty().isNotEmpty());
+        jvmsAgentApplyStatusLabel.managedProperty().bind(jvmsAgentApplyStatusLabel.visibleProperty());
 
         jvmsAgentPresetCombo.disableProperty().bind(jvmBrowserViewModel.jmcAgentLoadingProperty()
                 .or(Bindings.isEmpty(jvmBrowserViewModel.jmcAgentPresetsProperty())));

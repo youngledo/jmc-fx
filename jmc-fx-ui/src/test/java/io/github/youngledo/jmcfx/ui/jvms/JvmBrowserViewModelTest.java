@@ -1114,6 +1114,8 @@ class JvmBrowserViewModelTest {
                 viewModel.jmcAgentTransformsProperty());
         assertEquals(List.of(preset), viewModel.jmcAgentPresetsProperty());
         assertEquals(preset, viewModel.selectedJmcAgentPresetProperty().get());
+        assertEquals("Clear probes", viewModel.selectedJmcAgentPresetDescriptionProperty().get());
+        assertEquals("", viewModel.jmcAgentApplyStatusMessageProperty().get());
         assertFalse(viewModel.jmcAgentLoadingProperty().get());
         assertFalse(viewModel.jmcAgentErrorProperty().get());
     }
@@ -1150,6 +1152,7 @@ class JvmBrowserViewModelTest {
         viewModel.loadSelectedJmcAgentPreset();
 
         assertEquals("<jfragent/>", viewModel.jmcAgentConfigurationProperty().get());
+        assertEquals("Loaded preset: Template", viewModel.jmcAgentApplyStatusMessageProperty().get());
     }
 
     @Test
@@ -1172,6 +1175,7 @@ class JvmBrowserViewModelTest {
         assertEquals("<new/>", viewModel.jmcAgentConfigurationProperty().get());
         assertEquals(List.of(new JmcAgentTransform("next", "demo.Next", "call", "()V")),
                 viewModel.jmcAgentTransformsProperty());
+        assertEquals("Applied JMC Agent configuration.", viewModel.jmcAgentApplyStatusMessageProperty().get());
         assertFalse(viewModel.jmcAgentLoadingProperty().get());
         assertFalse(viewModel.jmcAgentErrorProperty().get());
     }

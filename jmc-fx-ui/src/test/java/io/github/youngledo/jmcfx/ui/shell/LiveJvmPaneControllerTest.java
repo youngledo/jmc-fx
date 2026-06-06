@@ -87,8 +87,10 @@ class LiveJvmPaneControllerTest {
         assertEquals("ComboBox", view.jvmsAgentPresetCombo.getClass().getSimpleName());
         assertEquals("TableView", view.jvmsAgentTransformsTable.getClass().getSimpleName());
         assertTrue(view.jvmsAgentTransformsTable.getStyleClass().contains("dense-table"));
+        assertTrue(view.jvmsAgentPresetDescriptionLabel.getStyleClass().contains("event-window-status"));
         assertTrue(view.jvmsAgentConfigurationTitleLabel.getStyleClass().contains("detail-panel-title"));
         assertTrue(view.jvmsAgentConfigurationArea.getStyleClass().contains("detail-panel-body"));
+        assertTrue(view.jvmsAgentApplyStatusLabel.getStyleClass().contains("event-window-status"));
     }
 
     @Test

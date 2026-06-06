@@ -51,14 +51,6 @@ Future work should prioritize:
 
 ## P1 Diagnostic Workflow Depth
 
-### Recording Workflow Context
-
-- Add shared time-range or selection context where recording pages naturally
-  describe the same time window.
-- Start with page pairs where charts and tables clearly need coordinated
-  interpretation.
-- Avoid forcing global coupling onto pages that only need local selection.
-
 ### HPROF And JOverflow Browsing
 
 - Expand heap dump analysis beyond a single issue table and text report.
@@ -74,8 +66,6 @@ Future work should prioritize:
   simultaneous notification sources.
 - If expanded, expose subscription selection, listening state per subscription,
   retained event history, and clear start/stop behavior.
-- Improve JMC Agent workflows with clearer preset preview, capability failures,
-  and applied-configuration feedback.
 - Keep live JVM state explicit and separate from offline recording state.
 
 ## P2 Workbench Usability

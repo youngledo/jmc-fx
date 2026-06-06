@@ -139,9 +139,11 @@ final class LiveJvmPaneView {
     final Button jvmsLoadAgentPresetButton = new Button();
     final Button jvmsApplyAgentConfigurationButton = new Button();
     final TableView<JmcAgentTransform> jvmsAgentTransformsTable = denseTable();
+    final Label jvmsAgentPresetDescriptionLabel = new Label();
     final Label jvmsAgentConfigurationTitleLabel = new Label();
     final TextArea jvmsAgentConfigurationArea = new TextArea();
     final Label jvmsAgentStatusLabel = new Label();
+    final Label jvmsAgentApplyStatusLabel = new Label();
 
     LiveJvmPaneView() {
         root.setId("jvmsPane");
@@ -311,6 +313,8 @@ final class LiveJvmPaneView {
     private void configureAgentTab() {
         VBox content = tabContent();
         jvmsAgentPresetCombo.setPrefWidth(220);
+        addStyle(jvmsAgentPresetDescriptionLabel, "event-window-status");
+        jvmsAgentPresetDescriptionLabel.setWrapText(true);
         VBox configurationPane = new VBox();
         addStyle(configurationPane, "detail-panel");
         addStyle(jvmsAgentConfigurationTitleLabel, "detail-panel-title");
@@ -325,8 +329,11 @@ final class LiveJvmPaneView {
         VBox.setVgrow(split, Priority.ALWAYS);
         addStyle(jvmsAgentStatusLabel, "unavailable-state");
         jvmsAgentStatusLabel.setWrapText(true);
+        addStyle(jvmsAgentApplyStatusLabel, "event-window-status");
+        jvmsAgentApplyStatusLabel.setWrapText(true);
         content.getChildren().setAll(toolbar(jvmsAgentPresetCombo, jvmsRefreshAgentButton,
-                jvmsLoadAgentPresetButton, jvmsApplyAgentConfigurationButton), split, jvmsAgentStatusLabel);
+                jvmsLoadAgentPresetButton, jvmsApplyAgentConfigurationButton),
+                jvmsAgentPresetDescriptionLabel, split, jvmsAgentStatusLabel, jvmsAgentApplyStatusLabel);
         jvmsAgentTab.setContent(content);
     }
 

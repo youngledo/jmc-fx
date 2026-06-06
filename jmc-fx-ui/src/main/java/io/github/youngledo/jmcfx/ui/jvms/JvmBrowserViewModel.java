@@ -123,8 +123,10 @@ public class JvmBrowserViewModel implements AutoCloseable {
     private final StringProperty diagnosticCommandArguments = new SimpleStringProperty("");
     private final StringProperty diagnosticCommandOutput = new SimpleStringProperty("");
     private final StringProperty diagnosticCommandErrorMessage = new SimpleStringProperty("");
+    private final StringProperty selectedJmcAgentPresetDescription = new SimpleStringProperty("");
     private final StringProperty jmcAgentConfiguration = new SimpleStringProperty("");
     private final StringProperty jmcAgentStatusMessage = new SimpleStringProperty("");
+    private final StringProperty jmcAgentApplyStatusMessage = new SimpleStringProperty("");
     private final StringProperty jmcAgentErrorMessage = new SimpleStringProperty("");
     private final StringProperty triggerName = new SimpleStringProperty("");
     private final StringProperty triggerThreshold = new SimpleStringProperty("");
@@ -192,6 +194,7 @@ public class JvmBrowserViewModel implements AutoCloseable {
         this.selectedMBean.addListener((observable, oldValue, newValue) -> loadSelectedMBeanDetails(newValue));
         this.selectedMBeanOperation.addListener((observable, oldValue, newValue) -> clearMBeanOperationResult());
         this.selectedDiagnosticCommand.addListener((observable, oldValue, newValue) -> clearDiagnosticCommandResult());
+        this.selectedJmcAgentPreset.addListener((observable, oldValue, newValue) -> updateSelectedJmcAgentPresetDescription());
         this.selectedJmxAttributeSubscription.addListener((observable, oldValue, newValue) ->
                 loadSamplesForSelection(newValue));
         this.selectedJmxNotificationSubscription.addListener((observable, oldValue, newValue) ->
@@ -378,8 +381,16 @@ public class JvmBrowserViewModel implements AutoCloseable {
         return jmcAgentConfiguration;
     }
 
+    public StringProperty selectedJmcAgentPresetDescriptionProperty() {
+        return selectedJmcAgentPresetDescription;
+    }
+
     public StringProperty jmcAgentStatusMessageProperty() {
         return jmcAgentStatusMessage;
+    }
+
+    public StringProperty jmcAgentApplyStatusMessageProperty() {
+        return jmcAgentApplyStatusMessage;
     }
 
     public StringProperty jmcAgentErrorMessageProperty() {
@@ -830,6 +841,8 @@ public class JvmBrowserViewModel implements AutoCloseable {
             return;
         }
         jmcAgentConfiguration.set(preset.xml());
+        jmcAgentApplyStatusMessage.set("Loaded preset: " + preset.name());
+        clearJmcAgentError();
     }
 
     public void applyJmcAgentConfiguration() {
@@ -853,6 +866,7 @@ public class JvmBrowserViewModel implements AutoCloseable {
                     }
                     applyJmcAgentStatus(status);
                     jmcAgentLoading.set(false);
+                    jmcAgentApplyStatusMessage.set("Applied JMC Agent configuration.");
                     clearJmcAgentError();
                 });
             } catch (RuntimeException exception) {
@@ -1537,6 +1551,7 @@ public class JvmBrowserViewModel implements AutoCloseable {
                     selectedJmcAgentPreset.set(presets.isEmpty() ? null : presets.getFirst());
                     applyJmcAgentStatus(status);
                     jmcAgentLoading.set(false);
+                    jmcAgentApplyStatusMessage.set("");
                     clearJmcAgentError();
                 });
             } catch (RuntimeException exception) {
@@ -1558,6 +1573,11 @@ public class JvmBrowserViewModel implements AutoCloseable {
         jmcAgentStatusMessage.set(status.message());
         jmcAgentConfiguration.set(status.available() ? status.eventProbeXml() : "");
         jmcAgentTransforms.setAll(status.transforms());
+    }
+
+    private void updateSelectedJmcAgentPresetDescription() {
+        JmcAgentPreset preset = selectedJmcAgentPreset.get();
+        selectedJmcAgentPresetDescription.set(preset == null ? "" : preset.description());
     }
 
     private void loadJmxMonitoring(JvmSessionSnapshot snapshot) {
@@ -1880,8 +1900,10 @@ public class JvmBrowserViewModel implements AutoCloseable {
         jmcAgentPresets.clear();
         selectedJmcAgentPreset.set(null);
         jmcAgentTransforms.clear();
+        selectedJmcAgentPresetDescription.set("");
         jmcAgentConfiguration.set("");
         jmcAgentStatusMessage.set("");
+        jmcAgentApplyStatusMessage.set("");
         jmcAgentAvailable.set(false);
         jmcAgentLoading.set(false);
         clearJmcAgentError();
@@ -2057,6 +2079,7 @@ public class JvmBrowserViewModel implements AutoCloseable {
             jmcAgentError.set(true);
             jmcAgentErrorMessage.set(exception.getMessage() == null ? exception.getClass().getSimpleName()
                     : exception.getMessage());
+            jmcAgentApplyStatusMessage.set("");
             jmcAgentLoading.set(false);
         });
     }
