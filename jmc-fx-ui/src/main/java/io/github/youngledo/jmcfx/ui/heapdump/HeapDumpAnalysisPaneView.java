@@ -2,6 +2,7 @@ package io.github.youngledo.jmcfx.ui.heapdump;
 
 import io.github.youngledo.jmcfx.domain.model.HeapDumpIssue;
 import io.github.youngledo.jmcfx.domain.model.HeapDumpIssueCategory;
+import io.github.youngledo.jmcfx.domain.model.HeapDumpObjectGroup;
 
 import javafx.geometry.Orientation;
 import javafx.scene.Node;
@@ -26,9 +27,14 @@ public final class HeapDumpAnalysisPaneView {
     private final TableView<HeapDumpIssue> issuesTable = denseTable();
     private final TabPane detailsTabs = new TabPane();
     private final Tab issueDetailTab = tab();
+    private final Tab objectGroupsTab = tab();
     private final Tab textReportTab = tab();
     private final Label issueDetailTitleLabel = new Label();
     private final TextArea issueDetailArea = textArea();
+    private final TableView<HeapDumpObjectGroup> objectGroupsTable = denseTable();
+    private final Label objectGroupDetailTitleLabel = new Label();
+    private final Label objectGroupMetaLabel = new Label();
+    private final TextArea objectGroupDetailArea = textArea();
     private final TextArea textReportArea = textArea();
 
     public HeapDumpAnalysisPaneView(VBox pane) {
@@ -38,8 +44,9 @@ public final class HeapDumpAnalysisPaneView {
     public HeapDumpAnalysisPageView view() {
         return new HeapDumpAnalysisPageView(titleLabel, categoryFilterCombo, clearCategoryFilterButton,
                 issuesTable, detailsTabs,
-                issueDetailTab, textReportTab, issueDetailTitleLabel,
-                issueDetailArea, textReportArea);
+                issueDetailTab, objectGroupsTab, textReportTab, issueDetailTitleLabel,
+                issueDetailArea, objectGroupsTable, objectGroupDetailTitleLabel,
+                objectGroupMetaLabel, objectGroupDetailArea, textReportArea);
     }
 
     private void configure(VBox pane) {
@@ -52,18 +59,26 @@ public final class HeapDumpAnalysisPaneView {
         categoryFilterCombo.setPrefWidth(260);
         styles(issueDetailTitleLabel, "detail-panel-title");
         styles(issueDetailArea, "detail-panel-body");
+        styles(objectGroupDetailTitleLabel, "detail-panel-title");
+        styles(objectGroupMetaLabel, "detail-panel-meta");
+        styles(objectGroupDetailArea, "detail-panel-body");
         styles(textReportArea, "dump-text-area", "detail-panel-body");
-        readonly(issueDetailArea, textReportArea);
+        readonly(issueDetailArea, objectGroupDetailArea, textReportArea);
         VBox issueDetail = vbox(0, issueDetailTitleLabel, issueDetailArea);
         styles(issueDetail, "detail-panel");
+        VBox objectGroupDetail = vbox(0, objectGroupDetailTitleLabel, objectGroupMetaLabel, objectGroupDetailArea);
+        styles(objectGroupDetail, "detail-panel");
+        SplitPane objectGroupsContent = verticalSplit(0.55, objectGroupsTable, objectGroupDetail);
         VBox textReport = vbox(0, textReportArea);
         styles(textReport, "detail-panel");
         VBox.setVgrow(issueDetailArea, Priority.ALWAYS);
+        VBox.setVgrow(objectGroupDetailArea, Priority.ALWAYS);
         VBox.setVgrow(textReportArea, Priority.ALWAYS);
         tab(issueDetailTab, issueDetail);
+        tab(objectGroupsTab, objectGroupsContent);
         tab(textReportTab, textReport);
         styles(detailsTabs, "page-detail-tabs");
-        detailsTabs.getTabs().setAll(issueDetailTab, textReportTab);
+        detailsTabs.getTabs().setAll(issueDetailTab, objectGroupsTab, textReportTab);
         SplitPane content = verticalSplit(0.62, issuesTable, detailsTabs);
         styles(content, "page-content");
         pane.getChildren().setAll(header, toolbar, content);

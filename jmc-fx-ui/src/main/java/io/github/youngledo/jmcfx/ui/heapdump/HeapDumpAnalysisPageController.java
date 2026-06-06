@@ -4,6 +4,7 @@ import java.util.List;
 
 import io.github.youngledo.jmcfx.domain.model.HeapDumpIssue;
 import io.github.youngledo.jmcfx.domain.model.HeapDumpIssueCategory;
+import io.github.youngledo.jmcfx.domain.model.HeapDumpObjectGroup;
 import io.github.youngledo.jmcfx.ui.i18n.I18n;
 import io.github.youngledo.jmcfx.ui.util.DisplayFormats;
 
@@ -29,6 +30,10 @@ public final class HeapDumpAnalysisPageController {
             (observable, oldValue, newValue) -> selectHeapDumpCategory(newValue);
     private final ChangeListener<HeapDumpIssueCategory> selectedCategoryListener =
             (observable, oldValue, newValue) -> selectCategoryInCombo(newValue);
+    private final ChangeListener<HeapDumpObjectGroup> objectGroupSelectionListener =
+            (observable, oldValue, newValue) -> selectObjectGroup(newValue);
+    private final ChangeListener<HeapDumpObjectGroup> selectedObjectGroupListener =
+            (observable, oldValue, newValue) -> selectObjectGroupInTable(newValue);
     private HeapDumpAnalysisViewModel viewModel;
 
     public HeapDumpAnalysisPageController(HeapDumpAnalysisPageView view, I18n i18n) {
@@ -40,6 +45,7 @@ public final class HeapDumpAnalysisPageController {
         bindLocalizedText();
         configureCategoryFilter();
         configureIssueTable();
+        configureObjectGroupsTable();
         bind(null);
     }
 
@@ -51,17 +57,28 @@ public final class HeapDumpAnalysisPageController {
             view.categoryFilterCombo().getSelectionModel().selectedItemProperty()
                     .removeListener(categorySelectionListener);
             viewModel.selectedIssueCategoryProperty().removeListener(selectedCategoryListener);
+            view.objectGroupsTable().getSelectionModel().selectedItemProperty()
+                    .removeListener(objectGroupSelectionListener);
+            viewModel.selectedObjectGroupProperty().removeListener(selectedObjectGroupListener);
         }
         view.issueDetailArea().textProperty().unbind();
         view.textReportArea().textProperty().unbind();
         view.issueDetailTitleLabel().textProperty().unbind();
+        view.objectGroupDetailTitleLabel().textProperty().unbind();
+        view.objectGroupMetaLabel().textProperty().unbind();
+        view.objectGroupDetailArea().textProperty().unbind();
         if (nextViewModel == null) {
             viewModel = null;
             view.issueDetailArea().setText(i18n.get("heapDump.detail.empty"));
+            view.objectGroupDetailTitleLabel().setText(i18n.get("heapDump.objectGroups.detail.emptyTitle"));
+            view.objectGroupMetaLabel().setText("");
+            view.objectGroupDetailArea().setText(i18n.get("heapDump.objectGroups.detail.empty"));
             view.textReportArea().setText("");
             view.issuesTable().setItems(FXCollections.emptyObservableList());
+            view.objectGroupsTable().setItems(FXCollections.emptyObservableList());
             view.categoryFilterCombo().setItems(FXCollections.emptyObservableList());
             view.categoryFilterCombo().getSelectionModel().clearSelection();
+            view.objectGroupsTable().getSelectionModel().clearSelection();
             view.issueDetailTitleLabel().setText("");
             return;
         }
@@ -69,6 +86,7 @@ public final class HeapDumpAnalysisPageController {
         view.issueDetailArea().textProperty().bind(viewModel.selectedIssueDetailsProperty());
         view.textReportArea().textProperty().bind(viewModel.textReportProperty());
         view.issuesTable().setItems(viewModel.issues());
+        view.objectGroupsTable().setItems(viewModel.objectGroups());
         view.categoryFilterCombo().setItems(viewModel.issueCategories());
         view.issuesTable().getSelectionModel().selectedItemProperty()
                 .addListener(heapDumpTableSelectionListener);
@@ -76,12 +94,27 @@ public final class HeapDumpAnalysisPageController {
         view.categoryFilterCombo().getSelectionModel().selectedItemProperty()
                 .addListener(categorySelectionListener);
         viewModel.selectedIssueCategoryProperty().addListener(selectedCategoryListener);
+        view.objectGroupsTable().getSelectionModel().selectedItemProperty()
+                .addListener(objectGroupSelectionListener);
+        viewModel.selectedObjectGroupProperty().addListener(selectedObjectGroupListener);
         view.issueDetailTitleLabel().textProperty().bind(Bindings.createStringBinding(
                 () -> {
                     HeapDumpIssue issue = viewModel.selectedIssueProperty().get();
                     return issue == null ? "" : issue.subject();
                 },
                 viewModel.selectedIssueProperty()));
+        view.objectGroupDetailTitleLabel().textProperty().bind(Bindings.createStringBinding(
+                () -> {
+                    HeapDumpObjectGroup group = viewModel.selectedObjectGroupProperty().get();
+                    return group == null ? i18n.get("heapDump.objectGroups.detail.emptyTitle") : group.label();
+                },
+                viewModel.selectedObjectGroupProperty(), i18n.localeProperty()));
+        view.objectGroupMetaLabel().textProperty().bind(Bindings.createStringBinding(
+                () -> formatObjectGroupMeta(viewModel.selectedObjectGroupProperty().get()),
+                viewModel.selectedObjectGroupProperty(), i18n.localeProperty()));
+        view.objectGroupDetailArea().textProperty().bind(viewModel.objectGroupStatusProperty());
+        selectHeapDumpIssueInTable(viewModel.selectedIssueProperty().get());
+        selectObjectGroupInTable(viewModel.selectedObjectGroupProperty().get());
     }
 
     private void bindLocalizedText() {
@@ -89,6 +122,7 @@ public final class HeapDumpAnalysisPageController {
         view.categoryFilterCombo().promptTextProperty().bind(i18n.text("heapDump.filter.category"));
         view.clearCategoryFilterButton().textProperty().bind(i18n.text("heapDump.filter.clear"));
         view.issueDetailTab().textProperty().bind(i18n.text("heapDump.detail.tab"));
+        view.objectGroupsTab().textProperty().bind(i18n.text("heapDump.objectGroups.tab"));
         view.textReportTab().textProperty().bind(i18n.text("heapDump.report.tab"));
     }
 
@@ -139,6 +173,33 @@ public final class HeapDumpAnalysisPageController {
                 objectCountCol, scoreCol));
     }
 
+    private void configureObjectGroupsTable() {
+        view.objectGroupsTable().setPlaceholder(localizedTablePlaceholder("heapDump.objectGroups.empty"));
+
+        TableColumn<HeapDumpObjectGroup, String> labelCol = localizedColumn("heapDump.objectGroups.column.label");
+        labelCol.setPrefWidth(420);
+        labelCol.setCellValueFactory(cell -> new ReadOnlyStringWrapper(cell.getValue().label()));
+
+        TableColumn<HeapDumpObjectGroup, String> retainedCol = localizedColumn("heapDump.objectGroups.column.retained");
+        retainedCol.setPrefWidth(130);
+        retainedCol.setCellValueFactory(cell ->
+                new ReadOnlyStringWrapper(DisplayFormats.formatFileSize(cell.getValue().retainedSizeBytes())));
+
+        TableColumn<HeapDumpObjectGroup, String> shallowCol = localizedColumn("heapDump.objectGroups.column.shallow");
+        shallowCol.setPrefWidth(130);
+        shallowCol.setCellValueFactory(cell ->
+                new ReadOnlyStringWrapper(DisplayFormats.formatFileSize(cell.getValue().shallowSizeBytes())));
+
+        TableColumn<HeapDumpObjectGroup, Number> countCol = new TableColumn<>();
+        countCol.textProperty().bind(i18n.text("heapDump.objectGroups.column.count"));
+        countCol.setPrefWidth(110);
+        countCol.setCellValueFactory(cell ->
+                new javafx.beans.property.SimpleLongProperty(cell.getValue().objectCount()));
+        useFormattedIntegerCells(countCol);
+
+        view.objectGroupsTable().getColumns().setAll(List.of(labelCol, retainedCol, shallowCol, countCol));
+    }
+
     private void selectHeapDumpIssue(HeapDumpIssue issue) {
         HeapDumpAnalysisViewModel viewModel = this.viewModel;
         if (viewModel != null) {
@@ -148,6 +209,17 @@ public final class HeapDumpAnalysisPageController {
 
     private void selectHeapDumpIssueInTable(HeapDumpIssue issue) {
         view.issuesTable().getSelectionModel().select(issue);
+    }
+
+    private void selectObjectGroup(HeapDumpObjectGroup group) {
+        HeapDumpAnalysisViewModel viewModel = this.viewModel;
+        if (viewModel != null) {
+            viewModel.selectObjectGroup(group);
+        }
+    }
+
+    private void selectObjectGroupInTable(HeapDumpObjectGroup group) {
+        view.objectGroupsTable().getSelectionModel().select(group);
     }
 
     private void selectHeapDumpCategory(HeapDumpIssueCategory category) {
@@ -174,6 +246,16 @@ public final class HeapDumpAnalysisPageController {
 
     private String categoryLabel(HeapDumpIssueCategory category) {
         return i18n.get("heapDump.category." + category.name());
+    }
+
+    private String formatObjectGroupMeta(HeapDumpObjectGroup group) {
+        if (group == null) {
+            return "";
+        }
+        return i18n.format("heapDump.objectGroups.detail.meta",
+                DisplayFormats.formatInteger(group.objectCount()),
+                DisplayFormats.formatFileSize(group.retainedSizeBytes()),
+                DisplayFormats.formatFileSize(group.shallowSizeBytes()));
     }
 
     private Label localizedTablePlaceholder(String key) {

@@ -583,6 +583,22 @@ class AppShellTest {
     }
 
     @Test
+    void heapDumpBrowsingUsesSharedDetailPanelClassesAndKeepsHomeOnlyOpen() throws Exception {
+        String pane = java.nio.file.Files.readString(java.nio.file.Path.of(
+                "src/main/java/io/github/youngledo/jmcfx/ui/heapdump/HeapDumpAnalysisPaneView.java"));
+
+        assertTrue(pane.contains("\"detail-panel\""));
+        assertTrue(pane.contains("\"detail-panel-title\""));
+        assertTrue(pane.contains("\"detail-panel-body\""));
+        assertTrue(pane.contains("objectGroupsTable"));
+        assertTrue(pane.contains("objectGroupsTab"));
+        assertFalse(pane.contains("\"heap-dump-detail\""));
+        assertFalse(pane.contains("\"analysis-detail\""));
+        assertFalse(pane.contains("openHeapDumpButton"));
+        assertFalse(pane.contains("heapDumpToolbar"));
+    }
+
+    @Test
     void workspaceOpenFlowIsSplitOutOfShellController() throws Exception {
         String shell = java.nio.file.Files.readString(
                 java.nio.file.Path.of("src/main/java/io/github/youngledo/jmcfx/ui/shell/AppShellController.java"));

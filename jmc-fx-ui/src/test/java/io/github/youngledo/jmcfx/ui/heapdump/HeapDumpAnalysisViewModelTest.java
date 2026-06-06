@@ -165,6 +165,34 @@ class HeapDumpAnalysisViewModelTest {
         assertSame(duplicateString, vm.selectedIssueProperty().get());
     }
 
+    @Test
+    void controllerBindsObjectGroupsTableAndDetailTab() {
+        FakeHeapDumpAnalysisService analysisService = new FakeHeapDumpAnalysisService();
+        analysisService.setReport(sampleReport(Path.of("demo.hprof")));
+        FakeHeapDumpBrowsingService browsingService = new FakeHeapDumpBrowsingService();
+        HeapDumpApplicationServices services = new HeapDumpApplicationServices(analysisService, browsingService);
+        HeapDumpAnalysisViewModel vm = new HeapDumpAnalysisViewModel(
+                new AnalyzeHeapDumpUseCase(services),
+                new BrowseHeapDumpObjectGroupsUseCase(services),
+                new LoadHeapDumpObjectGroupDetailUseCase(services),
+                new LoadHeapDumpReferencePathsUseCase(services),
+                new DirectHeapDumpAnalysisExecutor(),
+                i18n);
+        vm.analyze(Path.of("demo.hprof"));
+        HeapDumpAnalysisPaneView pane = new HeapDumpAnalysisPaneView(new VBox());
+        HeapDumpAnalysisPageController controller = new HeapDumpAnalysisPageController(pane.view(), i18n);
+        controller.configure();
+
+        controller.bind(vm);
+
+        assertEquals("Object Groups", pane.view().objectGroupsTab().getText());
+        assertEquals(List.of(browsingService.group), pane.view().objectGroupsTable().getItems());
+        assertSame(browsingService.group, pane.view().objectGroupsTable().getSelectionModel().getSelectedItem());
+        assertEquals("java.lang.String", pane.view().objectGroupDetailTitleLabel().getText());
+        assertTrue(pane.view().objectGroupMetaLabel().getText().contains("Objects: 42"));
+        assertTrue(pane.view().objectGroupDetailArea().getText().contains("not available"));
+    }
+
     private HeapDumpAnalysisReport sampleReport(Path path) {
         return new HeapDumpAnalysisReport(path, 4096, 2048, 10, 8, 1, 1,
                 List.of(sampleIssue()), "raw report");
