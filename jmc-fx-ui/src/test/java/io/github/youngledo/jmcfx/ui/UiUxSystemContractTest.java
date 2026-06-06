@@ -53,6 +53,71 @@ class UiUxSystemContractTest {
         assertTrue(system.contains("Do not keep or introduce parallel detail semantics"));
     }
 
+    @Test
+    void uiUxSystemRequiresExplicitExportScope() throws IOException {
+        String system = Files.readString(Path.of("../docs/ui-ux-system.md"), StandardCharsets.UTF_8);
+
+        assertTrue(system.contains("tables and charts to agree on selected time range")
+                        || system.contains("Tables and charts should agree on selected time range"),
+                "The UI system must document selected time range consistency for exportable views.");
+        assertTrue(system.contains("exports should export the current view or clearly state their scope")
+                        || system.contains("Export actions should export the current view or clearly state their scope"),
+                "The UI system must require export actions to state their scope.");
+    }
+
+    @Test
+    void representativeTablesUseSharedWorkbenchTableSupport() throws IOException {
+        String eventsController = Files.readString(Path.of(
+                "src/main/java/io/github/youngledo/jmcfx/ui/events/EventsPageController.java"), StandardCharsets.UTF_8);
+        String analysisController = Files.readString(Path.of(
+                "src/main/java/io/github/youngledo/jmcfx/ui/analysis/AnalysisPageController.java"), StandardCharsets.UTF_8);
+        String liveJvmController = Files.readString(Path.of(
+                "src/main/java/io/github/youngledo/jmcfx/ui/shell/LiveJvmPaneController.java"), StandardCharsets.UTF_8);
+
+        assertTrue(eventsController.contains("WorkbenchTableSupport.localizedPlaceholder"));
+        assertTrue(analysisController.contains("WorkbenchTableSupport.localizedPlaceholder"));
+        assertTrue(liveJvmController.contains("WorkbenchTableSupport.localizedPlaceholder"));
+        assertFalse(eventsController.contains("setPlaceholder(new Label(i18n.get("));
+        assertFalse(analysisController.contains("setPlaceholder(new Label(i18n.get("));
+    }
+
+    @Test
+    void compactWorkbenchControlsExposeAccessibleText() throws IOException {
+        String messages = Files.readString(Path.of(
+                "src/main/resources/io/github/youngledo/jmcfx/ui/i18n/messages.properties"), StandardCharsets.UTF_8);
+        String messagesZh = Files.readString(Path.of(
+                "src/main/resources/io/github/youngledo/jmcfx/ui/i18n/messages_zh_CN.properties"), StandardCharsets.UTF_8);
+        String liveJvmController = Files.readString(Path.of(
+                "src/main/java/io/github/youngledo/jmcfx/ui/shell/LiveJvmPaneController.java"), StandardCharsets.UTF_8);
+        String profilingController = Files.readString(Path.of(
+                "src/main/java/io/github/youngledo/jmcfx/ui/profiling/ProfilingPageController.java"), StandardCharsets.UTF_8);
+
+        assertTrue(liveJvmController.contains("accessibleTextProperty().bind"));
+        assertTrue(liveJvmController.contains("setTooltip"));
+        assertTrue(profilingController.contains("accessibleTextProperty().bind"));
+        assertTrue(profilingController.contains("setTooltip"));
+        assertTrue(messages.contains("workbench.focus.navigation"));
+        assertTrue(messages.contains("workbench.focus.tabs"));
+        assertTrue(messages.contains("workbench.focus.primary"));
+        assertTrue(messages.contains("workbench.focus.filter"));
+        assertTrue(messagesZh.contains("workbench.focus.navigation"));
+        assertTrue(messagesZh.contains("workbench.focus.tabs"));
+        assertTrue(messagesZh.contains("workbench.focus.primary"));
+        assertTrue(messagesZh.contains("workbench.focus.filter"));
+    }
+
+    @Test
+    void applicationCssDoesNotOverrideStandardControlStates() throws IOException {
+        String css = Files.readString(Path.of("src/main/resources/css/app.css"), StandardCharsets.UTF_8);
+
+        assertFalse(css.contains(".button:focused"));
+        assertFalse(css.contains(".button:selected"));
+        assertFalse(css.contains(".table-view:focused"));
+        assertFalse(css.contains(".tab-pane:focused"));
+        assertFalse(css.contains(".text-field:focused"));
+        assertFalse(css.contains(".combo-box:focused"));
+    }
+
     private static List<Path> uiResourceFiles() throws IOException {
         try (Stream<Path> paths = Files.walk(RESOURCES)) {
             return paths.filter(Files::isRegularFile)

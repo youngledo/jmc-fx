@@ -7,6 +7,12 @@ import io.github.youngledo.jmcfx.application.LiveJvmApplicationServices;
 import io.github.youngledo.jmcfx.application.RecordingApplicationServices;
 import io.github.youngledo.jmcfx.application.RecordingPageUseCases;
 import io.github.youngledo.jmcfx.ui.i18n.I18n;
+import io.github.youngledo.jmcfx.ui.util.WorkbenchFocusSupport;
+import io.github.youngledo.jmcfx.ui.util.WorkbenchFocusTarget;
+
+import javafx.scene.Node;
+import javafx.scene.input.KeyCode;
+import javafx.scene.input.KeyEvent;
 
 final class ShellRuntimeController {
 
@@ -70,10 +76,12 @@ final class ShellRuntimeController {
         workspacePaneVisibilityController = new WorkspacePaneVisibilityController(view, viewModel);
         workspacePaneVisibilityController.configure();
         pageControllerRegistry.installExportMenus(exportMenuInstaller);
+        liveJvmWorkspaceController.installExportMenus(exportMenuInstaller);
         workspaceSelectionController = new WorkspaceSelectionController(viewModel, workspaceTabsController,
                 pageControllerRegistry.workspacePageControllers(), recordingSectionLoader,
                 backgroundWorkController::setVisible);
         workspaceSelectionController.configure();
+        configureWorkbenchAccelerators();
         i18n.localeProperty().addListener((observable, oldValue, newValue) -> pageControllerRegistry.refreshOverviewLocale());
     }
 
@@ -89,5 +97,31 @@ final class ShellRuntimeController {
         if (homePaneController != null) {
             homePaneController.setOpening(opening);
         }
+    }
+
+    private void configureWorkbenchAccelerators() {
+        view.root.addEventFilter(KeyEvent.KEY_PRESSED, event -> {
+            Node focused = view.root.getScene() == null ? null : view.root.getScene().getFocusOwner();
+            if (!WorkbenchFocusSupport.shouldHandleNavigationShortcut(focused, event)) {
+                return;
+            }
+            if (WorkbenchFocusSupport.isCommandShortcut(event, KeyCode.DIGIT1)) {
+                focus(WorkbenchFocusTarget.GLOBAL_NAVIGATION);
+                event.consume();
+            } else if (WorkbenchFocusSupport.isCommandShortcut(event, KeyCode.DIGIT2)) {
+                focus(WorkbenchFocusTarget.WORKSPACE_TABS);
+                event.consume();
+            } else if (WorkbenchFocusSupport.isCommandShortcut(event, KeyCode.DIGIT3)) {
+                focus(WorkbenchFocusTarget.PAGE_PRIMARY);
+                event.consume();
+            } else if (WorkbenchFocusSupport.isCommandShortcut(event, KeyCode.F)) {
+                focus(WorkbenchFocusTarget.PAGE_FILTER);
+                event.consume();
+            }
+        });
+    }
+
+    private void focus(WorkbenchFocusTarget target) {
+        WorkbenchFocusSupport.requestFocusWhenReady(view.focusTarget(target));
     }
 }

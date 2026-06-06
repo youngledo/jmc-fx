@@ -41,4 +41,7 @@ public interface JmxMonitoringRepository {
 
     default void appendNotificationEvent(JmxNotificationEvent event) {
     }
+
+    default void clearNotificationEvents(String subscriptionId) {
+    }
 }

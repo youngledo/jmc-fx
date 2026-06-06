@@ -78,6 +78,12 @@ class CsvExportTest {
         assertEquals("2 selected rows", context.selection());
         assertEquals(TableExportScope.CURRENT_VIEW, context.rowScope());
         assertEquals(TableExportScope.VISIBLE_COLUMNS, context.columnScope());
+        assertEquals("JFR recording / Method Profiling / Hot Methods / demo.jfr / "
+                + "2026-06-06T10:00:00Z..2026-06-06T10:05:00Z / duration > 10 ms / "
+                + "2 selected rows / Current view / Visible columns", context.summary());
+        assertEquals("JFR recording / Method Profiling / Hot Methods / demo.jfr / "
+                + "2026-06-06T10:00:00Z..2026-06-06T10:05:00Z / duration > 10 ms / "
+                + "2 selected rows / 当前视图 / 可见列", context.summary(java.util.Locale.CHINESE));
     }
 
     @Test
@@ -147,6 +153,29 @@ class CsvExportTest {
         assertEquals("TableView", request.context().source());
         assertEquals(TableExportScope.CURRENT_VIEW, request.context().rowScope());
         assertEquals(TableExportScope.VISIBLE_COLUMNS, request.context().columnScope());
+    }
+
+    @Test
+    void currentViewRequestOmitsUnavailableContextInsteadOfInventingScope() {
+        if (!toolkitReady) {
+            return; // Skip on headless CI
+        }
+
+        TableView<String> table = tableWithNameAndCount();
+        TableExportRequest request = TableExportRequests.currentViewRequest(
+                table, "HPROF Heap Dump", "Heap Dump Analysis", "Object Groups",
+                "demo.hprof", null, null, null);
+
+        assertEquals("HPROF Heap Dump", request.context().workspace());
+        assertEquals("Heap Dump Analysis", request.context().page());
+        assertEquals("Object Groups", request.context().table());
+        assertEquals("demo.hprof", request.context().source());
+        assertNull(request.context().timeRange());
+        assertNull(request.context().filter());
+        assertNull(request.context().selection());
+        assertFalse(request.context().summary().contains("time range"));
+        assertTrue(request.context().summary().contains("Current view"));
+        assertTrue(request.context().summary().contains("Visible columns"));
     }
 
     @Test

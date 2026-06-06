@@ -52,6 +52,13 @@ final class ShellLiveJvmWorkspaceController {
         }
     }
 
+    void installExportMenus(ExportMenuInstaller installer) {
+        if (jvmsPaneController == null) {
+            return;
+        }
+        jvmsPaneController.exportRegistrations().forEach(installer::install);
+    }
+
     private JvmBrowserViewModel createJvmBrowserViewModel() {
         if (services.jvmDiscoveryService() == null || services.jmxConnectionService() == null) {
             return null;

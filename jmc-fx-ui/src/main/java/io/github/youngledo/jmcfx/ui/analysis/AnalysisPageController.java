@@ -9,6 +9,7 @@ import io.github.youngledo.jmcfx.ui.i18n.I18n;
 import io.github.youngledo.jmcfx.ui.rules.RuleResultDetail;
 import io.github.youngledo.jmcfx.ui.rules.RuleResultsViewModel;
 import io.github.youngledo.jmcfx.ui.util.DisplayFormats;
+import io.github.youngledo.jmcfx.ui.util.WorkbenchTableSupport;
 
 import javafx.beans.binding.Bindings;
 import javafx.beans.property.ObjectProperty;
@@ -193,9 +194,7 @@ public final class AnalysisPageController {
     }
 
     private Label localizedTablePlaceholder(String key) {
-        Label label = new Label();
-        label.textProperty().bind(i18n.text(key));
-        return label;
+        return WorkbenchTableSupport.localizedPlaceholder(i18n, key);
     }
 
     private TableColumn<RuleResult, String> localizedColumn(String key) {

@@ -367,6 +367,23 @@ class FakeJvmServicesTest {
     }
 
     @Test
+    void fakeJmxMonitoringRepositoryClearsNotificationEventsWithoutDeletingSubscription() {
+        FakeJmxMonitoringRepository repository = new FakeJmxMonitoringRepository();
+        JmxNotificationSubscription notificationSubscription = new JmxNotificationSubscription(
+                "notif-1", "42", "demo:type=Notifier", "Notifier", 2, true, true);
+        JmxNotificationEvent event = new JmxNotificationEvent(
+                "notif-1", Instant.EPOCH, "demo.type", "demo:type=Notifier", 1, "changed", "");
+
+        repository.saveNotificationSubscription(notificationSubscription);
+        repository.appendNotificationEvent(event);
+
+        repository.clearNotificationEvents(notificationSubscription.id());
+
+        assertEquals(List.of(notificationSubscription), repository.findNotificationSubscriptions("42"));
+        assertEquals(List.of(), repository.findNotificationEvents("notif-1"));
+    }
+
+    @Test
     void fakeJmxMonitoringRepositoryKeepsNewestSamplesAndEventsWhenSubscriptionLimitsExist() {
         FakeJmxMonitoringRepository repository = new FakeJmxMonitoringRepository();
         JmxAttributeSubscription attributeSubscription = new JmxAttributeSubscription(

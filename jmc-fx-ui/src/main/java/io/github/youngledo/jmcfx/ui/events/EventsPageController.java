@@ -21,6 +21,7 @@ import io.github.youngledo.jmcfx.domain.model.EventTypeNode;
 import io.github.youngledo.jmcfx.domain.model.EventTypeNodeKind;
 import io.github.youngledo.jmcfx.domain.model.EventTypeSelection;
 import io.github.youngledo.jmcfx.ui.i18n.I18n;
+import io.github.youngledo.jmcfx.ui.util.WorkbenchTableSupport;
 
 import javafx.application.Platform;
 import javafx.beans.property.ReadOnlyStringWrapper;
@@ -527,8 +528,9 @@ public final class EventsPageController {
         return frame.typeName() + "." + frame.methodName() + location;
     }
 
-    private static Region emptyTablePlaceholder() {
-        Region placeholder = new Region();
+    private Region emptyTablePlaceholder() {
+        Region placeholder = WorkbenchTableSupport.localizedPlaceholder(i18n, "events.empty");
+        placeholder.setVisible(false);
         placeholder.setManaged(false);
         return placeholder;
     }

@@ -176,7 +176,7 @@ public class HeapDumpAnalysisViewModel {
 
     public void loadObjectGroups() {
         if (!browsingAvailable()) {
-            FxDispatch.run(() -> objectGroupStatus.set("Heap dump browsing data is not available yet."));
+            FxDispatch.run(() -> objectGroupStatus.set(i18n.get("heapDump.browsing.unavailable")));
             return;
         }
         Path path = currentPath;
@@ -185,7 +185,7 @@ public class HeapDumpAnalysisViewModel {
             return;
         }
         HeapDumpBrowseRequest request = browseRequest(path);
-        FxDispatch.run(() -> objectGroupStatus.set("Loading object groups..."));
+        FxDispatch.run(() -> objectGroupStatus.set(i18n.get("heapDump.objectGroups.loading")));
         executor.execute(() -> browseObjectGroups.browse(request), this::applyObjectGroups, this::applyObjectGroupFailure);
     }
 
@@ -200,7 +200,7 @@ public class HeapDumpAnalysisViewModel {
             return;
         }
         if (!browsingAvailable()) {
-            FxDispatch.run(() -> objectGroupStatus.set("Heap dump browsing data is not available yet."));
+            FxDispatch.run(() -> objectGroupStatus.set(i18n.get("heapDump.browsing.unavailable")));
             return;
         }
         Path path = currentPath;
@@ -209,7 +209,7 @@ public class HeapDumpAnalysisViewModel {
             return;
         }
         HeapDumpBrowseRequest request = browseRequest(path);
-        FxDispatch.run(() -> objectGroupStatus.set("Loading object group details..."));
+        FxDispatch.run(() -> objectGroupStatus.set(i18n.get("heapDump.objectGroups.detail.loading")));
         executor.execute(() -> loadObjectGroupDetail.load(request, group.id()), this::applyObjectGroupDetail,
                 this::applyObjectGroupFailure);
     }
@@ -226,7 +226,7 @@ public class HeapDumpAnalysisViewModel {
         }
         HeapDumpReferencePathRequest request = new HeapDumpReferencePathRequest(path, group.id(),
                 HeapDumpReferenceDirection.INBOUND, 8, DEFAULT_BROWSE_LIMIT, 0, DEFAULT_BROWSE_LIMIT);
-        FxDispatch.run(() -> objectGroupStatus.set("Loading reference paths..."));
+        FxDispatch.run(() -> objectGroupStatus.set(i18n.get("heapDump.referencePaths.loading")));
         executor.execute(() -> loadReferencePaths.load(request), this::applyReferencePaths, this::applyObjectGroupFailure);
     }
 
@@ -288,9 +288,13 @@ public class HeapDumpAnalysisViewModel {
     private void applyObjectGroups(HeapDumpBrowseWindow<HeapDumpObjectGroup> window) {
         FxDispatch.run(() -> {
             objectGroups.setAll(window.rows());
-            objectGroupStatus.set(window.truncated()
-                    ? "Loaded " + window.rows().size() + " object groups; more rows are available."
-                    : "Loaded " + window.rows().size() + " object groups.");
+            if (window.rows().isEmpty() && window.truncated()) {
+                objectGroupStatus.set(i18n.get("heapDump.browsing.unavailable"));
+            } else {
+                objectGroupStatus.set(window.truncated()
+                        ? i18n.format("heapDump.objectGroups.loaded.truncated", window.rows().size())
+                        : i18n.format("heapDump.objectGroups.loaded", window.rows().size()));
+            }
             selectObjectGroup(objectGroups.isEmpty() ? null : objectGroups.getFirst());
         });
     }
@@ -305,9 +309,13 @@ public class HeapDumpAnalysisViewModel {
     private void applyReferencePaths(HeapDumpBrowseWindow<HeapDumpReferencePath> window) {
         FxDispatch.run(() -> {
             referencePaths.setAll(window.rows());
-            objectGroupStatus.set(window.truncated()
-                    ? "Loaded " + window.rows().size() + " reference paths; more rows are available."
-                    : "Loaded " + window.rows().size() + " reference paths.");
+            if (window.rows().isEmpty() && window.truncated()) {
+                objectGroupStatus.set(i18n.get("heapDump.referencePaths.unavailable"));
+            } else {
+                objectGroupStatus.set(window.truncated()
+                        ? i18n.format("heapDump.referencePaths.loaded.truncated", window.rows().size())
+                        : i18n.format("heapDump.referencePaths.loaded", window.rows().size()));
+            }
         });
     }
 

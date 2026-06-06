@@ -556,6 +556,24 @@ class AppShellTest {
     }
 
     @Test
+    void shellRuntimeRegistersWorkbenchKeyboardNavigation() throws Exception {
+        String runtime = shellRuntimeSource();
+        String view = java.nio.file.Files.readString(
+                java.nio.file.Path.of("src/main/java/io/github/youngledo/jmcfx/ui/shell/AppShellView.java"));
+        String css = java.nio.file.Files.readString(java.nio.file.Path.of("src/main/resources/css/app.css"));
+
+        assertTrue(runtime.contains("configureWorkbenchAccelerators();"));
+        assertTrue(runtime.contains("WorkbenchFocusTarget.GLOBAL_NAVIGATION"));
+        assertTrue(runtime.contains("WorkbenchFocusTarget.WORKSPACE_TABS"));
+        assertTrue(runtime.contains("WorkbenchFocusTarget.PAGE_PRIMARY"));
+        assertTrue(runtime.contains("WorkbenchFocusSupport.shouldHandleNavigationShortcut"));
+        assertTrue(runtime.contains("WorkbenchFocusSupport.requestFocusWhenReady"));
+        assertTrue(view.contains("Node focusTarget(WorkbenchFocusTarget target)"));
+        assertFalse(css.contains(".button:focused"));
+        assertFalse(css.contains(".table-view:focused"));
+    }
+
+    @Test
     void exportMenuInstallationIsSplitOutOfShellController() throws Exception {
         String shell = java.nio.file.Files.readString(
                 java.nio.file.Path.of("src/main/java/io/github/youngledo/jmcfx/ui/shell/AppShellController.java"));
@@ -567,8 +585,12 @@ class AppShellTest {
         assertTrue(runtime.contains("private ExportMenuInstaller exportMenuInstaller;"));
         assertTrue(runtime.contains("exportMenuInstaller = new ExportMenuInstaller(view.root, viewModel, i18n);"));
         assertTrue(runtime.contains("pageControllerRegistry.installExportMenus(exportMenuInstaller)"));
+        assertTrue(runtime.contains("liveJvmWorkspaceController.installExportMenus(exportMenuInstaller)"));
         assertTrue(registry.contains("installJfrExport(installer, analysisPageController.table(), "
                 + "\"Automated Analysis\", \"Rule Results\")"));
+        assertTrue(registry.contains("heapDumpAnalysisPageController.exportRegistrations().forEach(installer::install)"));
+        assertTrue(registry.contains("this::selectedRecordingSource"));
+        assertTrue(registry.contains("this::selectedRecordingTimeRange"));
         assertFalse(shell.contains("private void attachExportMenu("));
         assertFalse(shell.contains("CsvExport.export(table, target.toPath())"));
         assertFalse(shell.contains("new MenuItem(i18n.get(\"context.exportCsv\"))"));
@@ -578,10 +600,19 @@ class AppShellTest {
         assertTrue(installer.contains("void install(TableExportRegistration registration)"));
         assertTrue(installer.contains("TableExportRequests.currentView(table, "
                 + "\"Workspace\", \"Current Page\", \"Table\", \"TableView\")"));
-        assertTrue(installer.contains("new MenuItem(i18n.get(\"context.exportCsv\"))"));
+        assertTrue(installer.contains("new MenuItem(exportMenuText(registration.requestSupplier().get()))"));
+        assertTrue(installer.contains("i18n.format(\"context.exportCsvWithScope\", scope)"));
+        assertTrue(installer.contains("exportItem.setDisable(tableIsEmpty(table))"));
+        assertTrue(installer.contains("viewModel.showStatus(i18n.get(\"status.exportNoRows\"))"));
+        assertTrue(installer.contains("menu.setOnShowing(event ->"));
+        assertTrue(installer.contains("exportItem.setDisable(tableIsEmpty(request.table()))"));
+        assertTrue(installer.contains("table.addEventFilter(MouseEvent.MOUSE_PRESSED"));
+        assertTrue(installer.contains("event.getButton() == MouseButton.SECONDARY"));
+        assertTrue(installer.contains("event.consume()"));
         assertTrue(installer.contains("chooser.setTitle(i18n.get(\"fileChooser.saveCsv.title\"))"));
-        assertTrue(installer.contains("CsvExport.export(registration.requestSupplier().get(), target.toPath())"));
-        assertTrue(installer.contains("viewModel.showStatus(i18n.format(\"status.exported\", target.getName()))"));
+        assertTrue(installer.contains("TableExportRequest request = registration.requestSupplier().get()"));
+        assertTrue(installer.contains("CsvExport.export(request, target.toPath())"));
+        assertTrue(installer.contains("viewModel.showStatus(i18n.format(\"status.exportedWithScope\""));
     }
 
     @Test
@@ -594,6 +625,11 @@ class AppShellTest {
         assertTrue(pane.contains("\"detail-panel-body\""));
         assertTrue(pane.contains("objectGroupsTable"));
         assertTrue(pane.contains("objectGroupsTab"));
+        assertTrue(pane.contains("loadReferencePathsButton"));
+        assertTrue(pane.contains("referencePathsTab"));
+        assertTrue(pane.contains("referencePathsTable"));
+        assertTrue(pane.contains("detailsTabs.getTabs().setAll(issueDetailTab, objectGroupsTab, "
+                + "referencePathsTab, textReportTab)"));
         assertFalse(pane.contains("\"heap-dump-detail\""));
         assertFalse(pane.contains("\"analysis-detail\""));
         assertFalse(pane.contains("openHeapDumpButton"));
@@ -898,6 +934,7 @@ class AppShellTest {
         assertTrue(runtime.contains("pageControllerRegistry.configure();"));
         assertTrue(runtime.contains("pageControllerRegistry.workspacePageControllers()"));
         assertTrue(runtime.contains("pageControllerRegistry.installExportMenus(exportMenuInstaller)"));
+        assertTrue(runtime.contains("liveJvmWorkspaceController.installExportMenus(exportMenuInstaller)"));
 
         for (String field : List.of("overviewPageController", "analysisPageController", "eventsPageController",
                 "metadataPageController", "advancedJfrPageController", "heapDumpAnalysisPageController",
@@ -1064,6 +1101,9 @@ class AppShellTest {
         assertTrue(runtime.contains("private ShellLiveJvmWorkspaceController liveJvmWorkspaceController;"));
         assertTrue(runtime.contains("liveJvmWorkspaceController = new ShellLiveJvmWorkspaceController("));
         assertTrue(runtime.contains("liveJvmWorkspaceController.configure();"));
+        assertTrue(runtime.contains("liveJvmWorkspaceController.installExportMenus(exportMenuInstaller);"));
+        assertTrue(liveJvmWorkspace.contains("void installExportMenus(ExportMenuInstaller installer)"));
+        assertTrue(liveJvmWorkspace.contains("jvmsPaneController.exportRegistrations().forEach(installer::install)"));
         assertFalse(shell.contains("private VBox jvmsPaneHost;"));
         assertFalse(shell.contains("private JvmBrowserViewModel jvmBrowserViewModel;"));
         assertFalse(shell.contains("private LiveJvmPaneController jvmsPaneController;"));

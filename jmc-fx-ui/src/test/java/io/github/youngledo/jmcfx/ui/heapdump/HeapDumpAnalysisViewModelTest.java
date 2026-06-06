@@ -8,7 +8,10 @@ import java.nio.file.Path;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Locale;
+import java.util.concurrent.CountDownLatch;
+import java.util.concurrent.TimeUnit;
 
+import org.junit.jupiter.api.BeforeAll;
 import org.junit.jupiter.api.Test;
 
 import io.github.youngledo.jmcfx.application.AnalyzeHeapDumpUseCase;
@@ -26,18 +29,35 @@ import io.github.youngledo.jmcfx.domain.model.HeapDumpIssueCategory;
 import io.github.youngledo.jmcfx.domain.model.HeapDumpObjectGroup;
 import io.github.youngledo.jmcfx.domain.model.HeapDumpObjectGroupDetail;
 import io.github.youngledo.jmcfx.domain.model.HeapDumpObjectGroupKind;
+import io.github.youngledo.jmcfx.domain.model.HeapDumpObjectSummary;
+import io.github.youngledo.jmcfx.domain.model.HeapDumpReferenceEdge;
 import io.github.youngledo.jmcfx.domain.model.HeapDumpReferencePath;
 import io.github.youngledo.jmcfx.domain.model.HeapDumpReferencePathRequest;
 import io.github.youngledo.jmcfx.domain.service.HeapDumpBrowsingService;
 import io.github.youngledo.jmcfx.domain.service.JmcFxException;
 import io.github.youngledo.jmcfx.ui.testsupport.FakeHeapDumpAnalysisService;
 import io.github.youngledo.jmcfx.ui.i18n.I18n;
+import io.github.youngledo.jmcfx.ui.util.TableExportRegistration;
+import io.github.youngledo.jmcfx.ui.util.TableExportRequest;
+import io.github.youngledo.jmcfx.ui.util.TableExportScope;
 
 import javafx.scene.layout.VBox;
+import javafx.application.Platform;
 
 class HeapDumpAnalysisViewModelTest {
 
     private final I18n i18n = new I18n(Locale.ENGLISH);
+
+    @BeforeAll
+    static void initToolkit() throws InterruptedException {
+        try {
+            CountDownLatch latch = new CountDownLatch(1);
+            Platform.startup(latch::countDown);
+            latch.await(5, TimeUnit.SECONDS);
+        } catch (IllegalStateException ignored) {
+            // Toolkit already initialized by another test class.
+        }
+    }
 
     @Test
     void analyzeUpdatesReportAndStatus() {
@@ -135,7 +155,8 @@ class HeapDumpAnalysisViewModelTest {
         assertEquals(List.of(browsingService.group), vm.objectGroups());
         assertSame(browsingService.group, vm.selectedObjectGroupProperty().get());
         assertEquals("group-1", vm.selectedObjectGroupDetailProperty().get().group().id());
-        assertTrue(vm.objectGroupStatusProperty().get().contains("not available"));
+        assertEquals(List.of(browsingService.objectSummary),
+                vm.selectedObjectGroupDetailProperty().get().objects().rows());
     }
 
     @Test
@@ -190,7 +211,94 @@ class HeapDumpAnalysisViewModelTest {
         assertSame(browsingService.group, pane.view().objectGroupsTable().getSelectionModel().getSelectedItem());
         assertEquals("java.lang.String", pane.view().objectGroupDetailTitleLabel().getText());
         assertTrue(pane.view().objectGroupMetaLabel().getText().contains("Objects: 42"));
-        assertTrue(pane.view().objectGroupDetailArea().getText().contains("not available"));
+        assertEquals(List.of(browsingService.objectSummary), pane.view().objectGroupObjectsTable().getItems());
+        assertEquals("Object ID", pane.view().objectGroupObjectsTable().getColumns().getFirst().getText());
+    }
+
+    @Test
+    void controllerLoadsAndDisplaysReferencePathsForSelectedObjectGroup() {
+        FakeHeapDumpAnalysisService analysisService = new FakeHeapDumpAnalysisService();
+        analysisService.setReport(sampleReport(Path.of("demo.hprof")));
+        FakeHeapDumpBrowsingService browsingService = new FakeHeapDumpBrowsingService();
+        HeapDumpApplicationServices services = new HeapDumpApplicationServices(analysisService, browsingService);
+        HeapDumpAnalysisViewModel vm = new HeapDumpAnalysisViewModel(
+                new AnalyzeHeapDumpUseCase(services),
+                new BrowseHeapDumpObjectGroupsUseCase(services),
+                new LoadHeapDumpObjectGroupDetailUseCase(services),
+                new LoadHeapDumpReferencePathsUseCase(services),
+                new DirectHeapDumpAnalysisExecutor(),
+                i18n);
+        vm.analyze(Path.of("demo.hprof"));
+        HeapDumpAnalysisPaneView pane = new HeapDumpAnalysisPaneView(new VBox());
+        HeapDumpAnalysisPageController controller = new HeapDumpAnalysisPageController(pane.view(), i18n);
+        controller.configure();
+        controller.bind(vm);
+
+        pane.view().loadReferencePathsButton().fire();
+
+        assertEquals("Reference Paths", pane.view().referencePathsTab().getText());
+        assertEquals(List.of(browsingService.referencePath), pane.view().referencePathsTable().getItems());
+        assertEquals(1, browsingService.referencePathRequests.size());
+        assertEquals("group-1", browsingService.referencePathRequests.getFirst().selectedObjectId());
+        assertTrue(pane.view().referencePathsTable().getColumns().size() >= 4);
+        assertTrue(pane.view().referencePathsTable().getColumns().getFirst().getText().contains("Selected"));
+        assertTrue(vm.objectGroupStatusProperty().get().contains("reference paths"));
+    }
+
+    @Test
+    void referencePathFallbackReportsUnavailableState() {
+        FakeHeapDumpAnalysisService analysisService = new FakeHeapDumpAnalysisService();
+        analysisService.setReport(sampleReport(Path.of("demo.hprof")));
+        FakeHeapDumpBrowsingService browsingService = new FakeHeapDumpBrowsingService();
+        browsingService.referencePathsAvailable = false;
+        HeapDumpApplicationServices services = new HeapDumpApplicationServices(analysisService, browsingService);
+        HeapDumpAnalysisViewModel vm = new HeapDumpAnalysisViewModel(
+                new AnalyzeHeapDumpUseCase(services),
+                new BrowseHeapDumpObjectGroupsUseCase(services),
+                new LoadHeapDumpObjectGroupDetailUseCase(services),
+                new LoadHeapDumpReferencePathsUseCase(services),
+                new DirectHeapDumpAnalysisExecutor(),
+                i18n);
+
+        vm.analyze(Path.of("demo.hprof"));
+        vm.loadReferencePaths(vm.selectedObjectGroupProperty().get());
+
+        assertTrue(vm.referencePaths().isEmpty());
+        assertTrue(vm.objectGroupStatusProperty().get().contains("not available"));
+    }
+
+    @Test
+    void heapDumpExportRegistrationsDescribeHeapDumpScopeWithoutTimeRange() {
+        FakeHeapDumpAnalysisService analysisService = new FakeHeapDumpAnalysisService();
+        analysisService.setReport(sampleReport(Path.of("demo.hprof")));
+        FakeHeapDumpBrowsingService browsingService = new FakeHeapDumpBrowsingService();
+        HeapDumpApplicationServices services = new HeapDumpApplicationServices(analysisService, browsingService);
+        HeapDumpAnalysisViewModel vm = new HeapDumpAnalysisViewModel(
+                new AnalyzeHeapDumpUseCase(services),
+                new BrowseHeapDumpObjectGroupsUseCase(services),
+                new LoadHeapDumpObjectGroupDetailUseCase(services),
+                new LoadHeapDumpReferencePathsUseCase(services),
+                new DirectHeapDumpAnalysisExecutor(),
+                i18n);
+        vm.analyze(Path.of("demo.hprof"));
+        HeapDumpAnalysisPaneView pane = new HeapDumpAnalysisPaneView(new VBox());
+        HeapDumpAnalysisPageController controller = new HeapDumpAnalysisPageController(pane.view(), i18n);
+        controller.configure();
+        controller.bind(vm);
+
+        List<TableExportRequest> requests = controller.exportRegistrations().stream()
+                .map(TableExportRegistration::requestSupplier)
+                .map(java.util.function.Supplier::get)
+                .toList();
+
+        assertEquals(4, requests.size());
+        assertTrue(requests.stream().allMatch(request -> "HPROF Heap Dump".equals(request.context().workspace())));
+        assertTrue(requests.stream().allMatch(request -> request.context().timeRange() == null));
+        assertTrue(requests.stream().allMatch(request -> TableExportScope.CURRENT_VIEW == request.context().rowScope()));
+        assertTrue(requests.stream().allMatch(request -> TableExportScope.VISIBLE_COLUMNS == request.context().columnScope()));
+        assertTrue(requests.stream().map(request -> request.context().table()).toList()
+                .containsAll(List.of("Issues", "Object Groups", "Object Group Objects", "Reference Paths")));
+        assertEquals("demo.hprof", requests.getFirst().context().source());
     }
 
     private HeapDumpAnalysisReport sampleReport(Path path) {
@@ -210,8 +318,14 @@ class HeapDumpAnalysisViewModelTest {
     private static final class FakeHeapDumpBrowsingService implements HeapDumpBrowsingService {
         private final HeapDumpObjectGroup group = new HeapDumpObjectGroup("group-1", "java.lang.String",
                 HeapDumpObjectGroupKind.CLASS, 42, 1024, 4096, 512, true);
+        private final HeapDumpObjectSummary objectSummary = new HeapDumpObjectSummary("0x1",
+                "java.lang.String", 24, 128, 0, 0, true);
+        private final HeapDumpReferencePath referencePath = new HeapDumpReferencePath("group-1",
+                List.of(new HeapDumpReferenceEdge("root", "group-1", "field.value", "field")), 4096, true);
         private final List<HeapDumpBrowseRequest> browseRequests = new ArrayList<>();
         private final List<String> detailGroupIds = new ArrayList<>();
+        private final List<HeapDumpReferencePathRequest> referencePathRequests = new ArrayList<>();
+        private boolean referencePathsAvailable = true;
 
         @Override
         public HeapDumpBrowseWindow<HeapDumpObjectGroup> browseObjectGroups(HeapDumpBrowseRequest request) {
@@ -223,13 +337,17 @@ class HeapDumpAnalysisViewModelTest {
         public HeapDumpObjectGroupDetail loadObjectGroupDetail(HeapDumpBrowseRequest request, String groupId) {
             detailGroupIds.add(groupId);
             return new HeapDumpObjectGroupDetail(group,
-                    new HeapDumpBrowseWindow<>(List.of(), 0, request.limit(), 0, false),
-                    "Heap dump browsing data is not available yet.");
+                    new HeapDumpBrowseWindow<>(List.of(objectSummary), 0, request.limit(), 1, false),
+                    "");
         }
 
         @Override
         public HeapDumpBrowseWindow<HeapDumpReferencePath> loadReferencePaths(HeapDumpReferencePathRequest request) {
-            return new HeapDumpBrowseWindow<>(List.of(), request.offset(), request.limit(), 0, false);
+            referencePathRequests.add(request);
+            if (!referencePathsAvailable) {
+                return new HeapDumpBrowseWindow<>(List.of(), request.offset(), request.limit(), 0, true);
+            }
+            return new HeapDumpBrowseWindow<>(List.of(referencePath), request.offset(), request.limit(), 1, true);
         }
     }
 }

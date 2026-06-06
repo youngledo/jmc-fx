@@ -85,6 +85,11 @@ public class FakeJmxMonitoringRepository implements JmxMonitoringRepository {
         }
     }
 
+    @Override
+    public void clearNotificationEvents(String subscriptionId) {
+        notificationEvents.remove(subscriptionId);
+    }
+
     private static <T> void trimToNewest(List<T> rows, int maxSize) {
         while (rows.size() > maxSize) {
             rows.removeFirst();

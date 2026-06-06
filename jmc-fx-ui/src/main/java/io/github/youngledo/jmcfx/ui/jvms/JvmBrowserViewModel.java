@@ -31,6 +31,7 @@ import io.github.youngledo.jmcfx.domain.model.JmcAgentStatus;
 import io.github.youngledo.jmcfx.domain.model.JmcAgentTransform;
 import io.github.youngledo.jmcfx.domain.model.JmxAttributeSubscription;
 import io.github.youngledo.jmcfx.domain.model.JmxNotificationEvent;
+import io.github.youngledo.jmcfx.domain.model.JmxNotificationListeningState;
 import io.github.youngledo.jmcfx.domain.model.JmxNotificationSubscription;
 import io.github.youngledo.jmcfx.domain.model.JmxSubscriptionSample;
 import io.github.youngledo.jmcfx.domain.model.JvmCapability;
@@ -95,6 +96,9 @@ public class JvmBrowserViewModel implements AutoCloseable {
     private final ObservableList<JmxSubscriptionSample> jmxSubscriptionSamples = FXCollections.observableArrayList();
     private final ObservableList<JmxNotificationSubscription> jmxNotificationSubscriptions =
             FXCollections.observableArrayList();
+    private final ObservableList<JmxNotificationEvent> retainedJmxNotificationEvents =
+            FXCollections.observableArrayList();
+    private final java.util.Set<NotificationEventKey> liveSessionNotificationEvents = new java.util.HashSet<>();
     private final ObservableList<JmxNotificationEvent> jmxNotificationEvents = FXCollections.observableArrayList();
     private final ObservableList<LiveJvmOverviewMetric> overviewMetrics = FXCollections.observableArrayList();
     private final ObjectProperty<JvmConnection> selectedConnection = new SimpleObjectProperty<>();
@@ -133,6 +137,7 @@ public class JvmBrowserViewModel implements AutoCloseable {
     private final StringProperty triggerName = new SimpleStringProperty("");
     private final StringProperty triggerThreshold = new SimpleStringProperty("");
     private final StringProperty triggerErrorMessage = new SimpleStringProperty("");
+    private final StringProperty jmxNotificationHistoryFilter = new SimpleStringProperty("");
     private final BooleanProperty loading = new SimpleBooleanProperty(false);
     private final BooleanProperty error = new SimpleBooleanProperty(false);
     private final BooleanProperty refreshCompleted = new SimpleBooleanProperty(false);
@@ -201,6 +206,8 @@ public class JvmBrowserViewModel implements AutoCloseable {
                 loadSamplesForSelection(newValue));
         this.selectedJmxNotificationSubscription.addListener((observable, oldValue, newValue) ->
                 loadNotificationEventsForSelection(newValue));
+        this.jmxNotificationHistoryFilter.addListener((observable, oldValue, newValue) ->
+                applyJmxNotificationHistoryFilter());
         this.jmxAttributeSubscriptions.addListener((javafx.collections.ListChangeListener<JmxAttributeSubscription>)
                 change -> rebuildJmxMonitoringSubscriptionRows());
         this.jmxNotificationSubscriptions.addListener((javafx.collections.ListChangeListener<JmxNotificationSubscription>)
@@ -433,6 +440,14 @@ public class JvmBrowserViewModel implements AutoCloseable {
 
     public ObservableList<JmxNotificationEvent> jmxNotificationEventsProperty() {
         return jmxNotificationEvents;
+    }
+
+    public StringProperty jmxNotificationHistoryFilterProperty() {
+        return jmxNotificationHistoryFilter;
+    }
+
+    public String jmxNotificationEventSource(JmxNotificationEvent event) {
+        return liveSessionNotificationEvents.contains(NotificationEventKey.from(event)) ? "Live" : "Retained";
     }
 
     public ObjectProperty<JmxAttributeSubscription> selectedJmxAttributeSubscriptionProperty() {
@@ -1019,6 +1034,7 @@ public class JvmBrowserViewModel implements AutoCloseable {
                         return;
                     }
                     initialEvents.forEach(event -> appendNotificationEvent(subscription, event));
+                    rebuildJmxMonitoringSubscriptionRows();
                     jmxMonitoringLoading.set(false);
                     clearJmxMonitoringError();
                 });
@@ -1045,6 +1061,7 @@ public class JvmBrowserViewModel implements AutoCloseable {
                     if (!isCurrentJmxMonitoringGeneration(generation, snapshot)) {
                         return;
                     }
+                    rebuildJmxMonitoringSubscriptionRows();
                     jmxMonitoringLoading.set(false);
                     clearJmxMonitoringError();
                 });
@@ -1052,6 +1069,21 @@ public class JvmBrowserViewModel implements AutoCloseable {
                 failJmxMonitoring(generation, snapshot, exception);
             }
         });
+    }
+
+    public void clearSelectedJmxNotificationHistory() {
+        JmxNotificationSubscription subscription = selectedJmxNotificationSubscription.get();
+        if (subscription == null) {
+            failJmxMonitoring("Select a JMX notification subscription to clear history.");
+            return;
+        }
+        retainedJmxNotificationEvents.clear();
+        jmxNotificationEvents.clear();
+        if (subscription.persisted() && useCases.monitoring().repositoryAvailable()) {
+            useCases.monitoring().clearNotificationEvents(subscription.id());
+        }
+        clearJmxMonitoringError();
+        updateOverviewPersistenceSummary();
     }
 
     public void addTriggerRule() {
@@ -1636,10 +1668,14 @@ public class JvmBrowserViewModel implements AutoCloseable {
 
     private void loadNotificationEventsForSelection(JmxNotificationSubscription subscription) {
         if (!useCases.monitoring().repositoryAvailable() || subscription == null) {
+            retainedJmxNotificationEvents.clear();
             jmxNotificationEvents.clear();
+            liveSessionNotificationEvents.clear();
             return;
         }
-        jmxNotificationEvents.setAll(useCases.monitoring().findNotificationEvents(subscription.id()));
+        retainedJmxNotificationEvents.setAll(useCases.monitoring().findNotificationEvents(subscription.id()));
+        liveSessionNotificationEvents.clear();
+        applyJmxNotificationHistoryFilter();
     }
 
     private void loadTriggerMetrics(JvmSessionSnapshot snapshot) {
@@ -1939,6 +1975,8 @@ public class JvmBrowserViewModel implements AutoCloseable {
         jmxMonitoringSubscriptions.clear();
         jmxSubscriptionSamples.clear();
         jmxNotificationSubscriptions.clear();
+        retainedJmxNotificationEvents.clear();
+        liveSessionNotificationEvents.clear();
         jmxNotificationEvents.clear();
         selectedJmxAttributeSubscription.set(null);
         selectedJmxNotificationSubscription.set(null);
@@ -1971,13 +2009,70 @@ public class JvmBrowserViewModel implements AutoCloseable {
         if (!Objects.equals(subscription.id(), event.subscriptionId())) {
             return;
         }
+        NotificationEventKey eventKey = NotificationEventKey.from(event);
         if (subscription.persisted() && useCases.monitoring().repositoryAvailable()) {
-            useCases.monitoring().appendNotificationEvent(event);
+            boolean alreadyPersisted = useCases.monitoring().findNotificationEvents(subscription.id()).stream()
+                    .map(NotificationEventKey::from)
+                    .anyMatch(eventKey::equals);
+            if (!alreadyPersisted) {
+                useCases.monitoring().appendNotificationEvent(event);
+            }
         }
         if (selectedJmxNotificationSubscription.get() == subscription) {
-            jmxNotificationEvents.add(event);
-            trimObservableToNewest(jmxNotificationEvents, subscription.maxEvents());
+            liveSessionNotificationEvents.add(eventKey);
+            boolean alreadyVisible = retainedJmxNotificationEvents.stream()
+                    .map(NotificationEventKey::from)
+                    .anyMatch(eventKey::equals);
+            if (!alreadyVisible) {
+                retainedJmxNotificationEvents.add(event);
+            }
+            trimObservableToNewest(retainedJmxNotificationEvents, subscription.maxEvents());
+            applyJmxNotificationHistoryFilter();
         }
+    }
+
+    private record NotificationEventKey(
+            String subscriptionId,
+            java.time.Instant observedAt,
+            String type,
+            String source,
+            long sequenceNumber) {
+
+        static NotificationEventKey from(JmxNotificationEvent event) {
+            Objects.requireNonNull(event, "event");
+            return new NotificationEventKey(
+                    event.subscriptionId(),
+                    event.observedAt(),
+                    event.type(),
+                    event.source(),
+                    event.sequenceNumber());
+        }
+    }
+
+    private void applyJmxNotificationHistoryFilter() {
+        String filter = Objects.requireNonNullElse(jmxNotificationHistoryFilter.get(), "")
+                .trim()
+                .toLowerCase(java.util.Locale.ROOT);
+        if (filter.isBlank()) {
+            jmxNotificationEvents.setAll(retainedJmxNotificationEvents);
+            return;
+        }
+        jmxNotificationEvents.setAll(retainedJmxNotificationEvents.stream()
+                .filter(event -> notificationEventMatches(event, filter))
+                .toList());
+    }
+
+    private static boolean notificationEventMatches(JmxNotificationEvent event, String filter) {
+        return containsIgnoreCase(event.type(), filter)
+                || containsIgnoreCase(event.source(), filter)
+                || containsIgnoreCase(event.message(), filter)
+                || containsIgnoreCase(event.userData(), filter);
+    }
+
+    private static boolean containsIgnoreCase(String value, String filter) {
+        return Objects.requireNonNullElse(value, "")
+                .toLowerCase(java.util.Locale.ROOT)
+                .contains(filter);
     }
 
     private void rebuildJmxMonitoringSubscriptionRows() {
@@ -1986,9 +2081,18 @@ public class JvmBrowserViewModel implements AutoCloseable {
                 .map(JmxMonitoringSubscriptionRow::attribute)
                 .toList());
         rows.addAll(jmxNotificationSubscriptions.stream()
-                .map(JmxMonitoringSubscriptionRow::notification)
+                .map(subscription -> JmxMonitoringSubscriptionRow.notification(
+                        subscription, jmxNotificationListeningState(subscription)))
                 .toList());
         jmxMonitoringSubscriptions.setAll(rows);
+    }
+
+    private JmxNotificationListeningState jmxNotificationListeningState(JmxNotificationSubscription subscription) {
+        JvmSessionSnapshot snapshot = selectedSession.get();
+        if (snapshot == null || subscription == null || !useCases.monitoring().monitoringAvailable()) {
+            return JmxNotificationListeningState.UNAVAILABLE;
+        }
+        return useCases.monitoring().notificationListeningState(snapshot.connection(), subscription);
     }
 
     private static <T> void trimObservableToNewest(ObservableList<T> rows, int maxSize) {
@@ -2124,6 +2228,7 @@ public class JvmBrowserViewModel implements AutoCloseable {
             jmxMonitoringError.set(true);
             jmxMonitoringErrorMessage.set(exception.getMessage() == null ? exception.getClass().getSimpleName()
                     : exception.getMessage());
+            rebuildJmxMonitoringSubscriptionRows();
             jmxMonitoringLoading.set(false);
         });
     }

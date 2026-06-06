@@ -3,6 +3,8 @@ package io.github.youngledo.jmcfx.ui.heapdump;
 import io.github.youngledo.jmcfx.domain.model.HeapDumpIssue;
 import io.github.youngledo.jmcfx.domain.model.HeapDumpIssueCategory;
 import io.github.youngledo.jmcfx.domain.model.HeapDumpObjectGroup;
+import io.github.youngledo.jmcfx.domain.model.HeapDumpObjectSummary;
+import io.github.youngledo.jmcfx.domain.model.HeapDumpReferencePath;
 
 import javafx.geometry.Orientation;
 import javafx.scene.Node;
@@ -28,13 +30,17 @@ public final class HeapDumpAnalysisPaneView {
     private final TabPane detailsTabs = new TabPane();
     private final Tab issueDetailTab = tab();
     private final Tab objectGroupsTab = tab();
+    private final Tab referencePathsTab = tab();
     private final Tab textReportTab = tab();
     private final Label issueDetailTitleLabel = new Label();
     private final TextArea issueDetailArea = textArea();
     private final TableView<HeapDumpObjectGroup> objectGroupsTable = denseTable();
+    private final Button loadReferencePathsButton = new Button();
+    private final TableView<HeapDumpReferencePath> referencePathsTable = denseTable();
     private final Label objectGroupDetailTitleLabel = new Label();
     private final Label objectGroupMetaLabel = new Label();
     private final TextArea objectGroupDetailArea = textArea();
+    private final TableView<HeapDumpObjectSummary> objectGroupObjectsTable = denseTable();
     private final TextArea textReportArea = textArea();
 
     public HeapDumpAnalysisPaneView(VBox pane) {
@@ -44,9 +50,9 @@ public final class HeapDumpAnalysisPaneView {
     public HeapDumpAnalysisPageView view() {
         return new HeapDumpAnalysisPageView(titleLabel, categoryFilterCombo, clearCategoryFilterButton,
                 issuesTable, detailsTabs,
-                issueDetailTab, objectGroupsTab, textReportTab, issueDetailTitleLabel,
-                issueDetailArea, objectGroupsTable, objectGroupDetailTitleLabel,
-                objectGroupMetaLabel, objectGroupDetailArea, textReportArea);
+                issueDetailTab, objectGroupsTab, referencePathsTab, textReportTab, issueDetailTitleLabel,
+                issueDetailArea, objectGroupsTable, loadReferencePathsButton, referencePathsTable, objectGroupDetailTitleLabel,
+                objectGroupMetaLabel, objectGroupDetailArea, objectGroupObjectsTable, textReportArea);
     }
 
     private void configure(VBox pane) {
@@ -66,19 +72,29 @@ public final class HeapDumpAnalysisPaneView {
         readonly(issueDetailArea, objectGroupDetailArea, textReportArea);
         VBox issueDetail = vbox(0, issueDetailTitleLabel, issueDetailArea);
         styles(issueDetail, "detail-panel");
-        VBox objectGroupDetail = vbox(0, objectGroupDetailTitleLabel, objectGroupMetaLabel, objectGroupDetailArea);
+        HBox objectGroupsToolbar = hbox(8, loadReferencePathsButton);
+        styles(objectGroupsToolbar, "page-toolbar");
+        VBox objectGroupDetail = vbox(0, objectGroupDetailTitleLabel, objectGroupMetaLabel,
+                objectGroupDetailArea, objectGroupObjectsTable);
         styles(objectGroupDetail, "detail-panel");
-        SplitPane objectGroupsContent = verticalSplit(0.55, objectGroupsTable, objectGroupDetail);
+        VBox objectGroupsPrimary = vbox(6, objectGroupsToolbar, objectGroupsTable);
+        VBox.setVgrow(objectGroupsTable, Priority.ALWAYS);
+        SplitPane objectGroupsContent = verticalSplit(0.55, objectGroupsPrimary, objectGroupDetail);
+        VBox referencePaths = vbox(0, referencePathsTable);
+        styles(referencePaths, "detail-panel");
         VBox textReport = vbox(0, textReportArea);
         styles(textReport, "detail-panel");
         VBox.setVgrow(issueDetailArea, Priority.ALWAYS);
         VBox.setVgrow(objectGroupDetailArea, Priority.ALWAYS);
+        VBox.setVgrow(objectGroupObjectsTable, Priority.ALWAYS);
+        VBox.setVgrow(referencePathsTable, Priority.ALWAYS);
         VBox.setVgrow(textReportArea, Priority.ALWAYS);
         tab(issueDetailTab, issueDetail);
         tab(objectGroupsTab, objectGroupsContent);
+        tab(referencePathsTab, referencePaths);
         tab(textReportTab, textReport);
         styles(detailsTabs, "page-detail-tabs");
-        detailsTabs.getTabs().setAll(issueDetailTab, objectGroupsTab, textReportTab);
+        detailsTabs.getTabs().setAll(issueDetailTab, objectGroupsTab, referencePathsTab, textReportTab);
         SplitPane content = verticalSplit(0.62, issuesTable, detailsTabs);
         styles(content, "page-content");
         pane.getChildren().setAll(header, toolbar, content);

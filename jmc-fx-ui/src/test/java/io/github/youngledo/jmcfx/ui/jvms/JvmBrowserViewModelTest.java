@@ -41,6 +41,7 @@ import io.github.youngledo.jmcfx.domain.model.JmcAgentStatus;
 import io.github.youngledo.jmcfx.domain.model.JmcAgentTransform;
 import io.github.youngledo.jmcfx.domain.model.JmxAttributeSubscription;
 import io.github.youngledo.jmcfx.domain.model.JmxNotificationEvent;
+import io.github.youngledo.jmcfx.domain.model.JmxNotificationListeningState;
 import io.github.youngledo.jmcfx.domain.model.JmxNotificationSubscription;
 import io.github.youngledo.jmcfx.domain.model.JmxSubscriptionSample;
 import io.github.youngledo.jmcfx.domain.model.LiveMetricDefinition;
@@ -1427,6 +1428,8 @@ class JvmBrowserViewModelTest {
                 viewModel.jmxMonitoringSubscriptionsProperty().getFirst().kind());
         assertEquals(JmxMonitoringSubscriptionRow.Kind.NOTIFICATION,
                 viewModel.jmxMonitoringSubscriptionsProperty().get(1).kind());
+        assertEquals(JmxNotificationListeningState.STOPPED,
+                viewModel.jmxMonitoringSubscriptionsProperty().get(1).listeningState());
         assertEquals(subscription, viewModel.selectedJmxAttributeSubscriptionProperty().get());
         assertNull(viewModel.selectedJmxNotificationSubscriptionProperty().get());
         assertEquals(List.of(sample), viewModel.jmxSubscriptionSamplesProperty());
@@ -1578,8 +1581,39 @@ class JvmBrowserViewModelTest {
         assertEquals(List.of(first, second), viewModel.jmxNotificationEventsProperty());
         assertEquals(List.of(subscription), repository.findNotificationSubscriptions(connected.id()));
         assertEquals(List.of(first, second), repository.findNotificationEvents(subscription.id()));
+        assertEquals(JmxNotificationListeningState.LISTENING,
+                viewModel.jmxMonitoringSubscriptionsProperty().getFirst().listeningState());
         assertFalse(viewModel.jmxMonitoringLoadingProperty().get());
         assertFalse(viewModel.jmxMonitoringErrorProperty().get());
+    }
+
+    @Test
+    void notificationHistoryDistinguishesRetainedRowsFromCurrentLiveRows() {
+        FakeJmxConnectionService jmx = new FakeJmxConnectionService();
+        FakeJmxMonitoringService monitoring = new FakeJmxMonitoringService();
+        FakeJmxMonitoringRepository repository = new FakeJmxMonitoringRepository();
+        JvmBrowserViewModel viewModel = viewModel(new FakeJvmDiscoveryService(), jmx, null, monitoring, repository);
+        JvmConnection connected = connectedWithMBeans(viewModel, jmx);
+        JmxNotificationSubscription subscription = new JmxNotificationSubscription(
+                "notif-1", connected.id(), "demo:type=Notifier", "Notifier", 2, true, true);
+        JmxNotificationEvent retained = new JmxNotificationEvent(
+                "notif-1", Instant.EPOCH, "demo.retained", "source", 1, "retained", "");
+        JmxNotificationEvent live = new JmxNotificationEvent(
+                "notif-1", Instant.EPOCH.plusSeconds(1), "demo.live", "source", 2, "live", "");
+        repository.saveNotificationSubscription(subscription);
+        repository.appendNotificationEvent(retained);
+        monitoring.setNotificationEvents(connected.id(), subscription.id(), List.of(live));
+        viewModel.selectedConnectionProperty().set(connected);
+        viewModel.selectedJmxNotificationSubscriptionProperty().set(subscription);
+
+        assertEquals(List.of(retained), viewModel.jmxNotificationEventsProperty());
+        assertEquals("Retained", viewModel.jmxNotificationEventSource(retained));
+
+        viewModel.startSelectedJmxNotifications();
+
+        assertEquals(List.of(retained, live), viewModel.jmxNotificationEventsProperty());
+        assertEquals("Retained", viewModel.jmxNotificationEventSource(retained));
+        assertEquals("Live", viewModel.jmxNotificationEventSource(live));
     }
 
     @Test
@@ -1602,8 +1636,76 @@ class JvmBrowserViewModelTest {
 
         assertEquals(List.of(subscription.id()), monitoring.stoppedNotificationIds());
         assertEquals(List.of(event), viewModel.jmxNotificationEventsProperty());
+        assertEquals(JmxNotificationListeningState.STOPPED,
+                viewModel.jmxMonitoringSubscriptionsProperty().getFirst().listeningState());
         assertFalse(viewModel.jmxMonitoringLoadingProperty().get());
         assertFalse(viewModel.jmxMonitoringErrorProperty().get());
+    }
+
+    @Test
+    void clearSelectedJmxNotificationHistoryKeepsSubscription() {
+        FakeJmxConnectionService jmx = new FakeJmxConnectionService();
+        FakeJmxMonitoringService monitoring = new FakeJmxMonitoringService();
+        FakeJmxMonitoringRepository repository = new FakeJmxMonitoringRepository();
+        JvmBrowserViewModel viewModel = viewModel(new FakeJvmDiscoveryService(), jmx, null, monitoring, repository);
+        JvmConnection connected = connectedWithMBeans(viewModel, jmx);
+        JmxNotificationSubscription subscription = new JmxNotificationSubscription(
+                "notif-1", connected.id(), "demo:type=Notifier", "Notifier", 2, true, true);
+        JmxNotificationEvent event = new JmxNotificationEvent(
+                "notif-1", Instant.EPOCH, "demo", "source", 1, "message", "");
+        repository.saveNotificationSubscription(subscription);
+        repository.appendNotificationEvent(event);
+        viewModel.selectedConnectionProperty().set(connected);
+        viewModel.selectedJmxNotificationSubscriptionProperty().set(subscription);
+
+        viewModel.clearSelectedJmxNotificationHistory();
+
+        assertEquals(List.of(subscription), repository.findNotificationSubscriptions(connected.id()));
+        assertEquals(List.of(), repository.findNotificationEvents(subscription.id()));
+        assertEquals(List.of(), viewModel.jmxNotificationEventsProperty());
+        assertFalse(viewModel.jmxMonitoringErrorProperty().get());
+    }
+
+    @Test
+    void notificationHistoryFilterMatchesTypeSourceMessageAndUserData() {
+        FakeJmxConnectionService jmx = new FakeJmxConnectionService();
+        FakeJmxMonitoringService monitoring = new FakeJmxMonitoringService();
+        FakeJmxMonitoringRepository repository = new FakeJmxMonitoringRepository();
+        JvmBrowserViewModel viewModel = viewModel(new FakeJvmDiscoveryService(), jmx, null, monitoring, repository);
+        JvmConnection connected = connectedWithMBeans(viewModel, jmx);
+        JmxNotificationSubscription subscription = new JmxNotificationSubscription(
+                "notif-1", connected.id(), "demo:type=Notifier", "Notifier", 4, true, true);
+        JmxNotificationEvent typeMatch = new JmxNotificationEvent(
+                "notif-1", Instant.EPOCH, "memory.threshold", "source-a", 1, "first", "alpha");
+        JmxNotificationEvent sourceMatch = new JmxNotificationEvent(
+                "notif-1", Instant.EPOCH.plusSeconds(1), "other", "gc-source", 2, "second", "beta");
+        JmxNotificationEvent messageMatch = new JmxNotificationEvent(
+                "notif-1", Instant.EPOCH.plusSeconds(2), "other", "source-c", 3, "Thread changed", "gamma");
+        JmxNotificationEvent userDataMatch = new JmxNotificationEvent(
+                "notif-1", Instant.EPOCH.plusSeconds(3), "other", "source-d", 4, "fourth", "payload text");
+        repository.saveNotificationSubscription(subscription);
+        repository.appendNotificationEvent(typeMatch);
+        repository.appendNotificationEvent(sourceMatch);
+        repository.appendNotificationEvent(messageMatch);
+        repository.appendNotificationEvent(userDataMatch);
+        viewModel.selectedConnectionProperty().set(connected);
+        viewModel.selectedJmxNotificationSubscriptionProperty().set(subscription);
+
+        viewModel.jmxNotificationHistoryFilterProperty().set("memory");
+        assertEquals(List.of(typeMatch), viewModel.jmxNotificationEventsProperty());
+
+        viewModel.jmxNotificationHistoryFilterProperty().set("GC-SOURCE");
+        assertEquals(List.of(sourceMatch), viewModel.jmxNotificationEventsProperty());
+
+        viewModel.jmxNotificationHistoryFilterProperty().set("thread");
+        assertEquals(List.of(messageMatch), viewModel.jmxNotificationEventsProperty());
+
+        viewModel.jmxNotificationHistoryFilterProperty().set("payload");
+        assertEquals(List.of(userDataMatch), viewModel.jmxNotificationEventsProperty());
+
+        viewModel.jmxNotificationHistoryFilterProperty().set("");
+        assertEquals(List.of(typeMatch, sourceMatch, messageMatch, userDataMatch),
+                viewModel.jmxNotificationEventsProperty());
     }
 
     @Test

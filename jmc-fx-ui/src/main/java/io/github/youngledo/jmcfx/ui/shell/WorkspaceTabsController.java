@@ -128,4 +128,12 @@ final class WorkspaceTabsController {
             boolean liveJvmWorkspaceOpen) {
         return recordingWorkspaceCount + heapDumpWorkspaceCount > 0 || liveJvmWorkspaceOpen;
     }
+
+    static int nextSelectionIndexAfterClose(int closedIndex, int sizeBeforeClose) {
+        int sizeAfterClose = sizeBeforeClose - 1;
+        if (sizeAfterClose <= 0) {
+            return -1;
+        }
+        return Math.min(Math.max(closedIndex, 0), sizeAfterClose - 1);
+    }
 }

@@ -5,8 +5,13 @@ import java.util.List;
 import io.github.youngledo.jmcfx.domain.model.HeapDumpIssue;
 import io.github.youngledo.jmcfx.domain.model.HeapDumpIssueCategory;
 import io.github.youngledo.jmcfx.domain.model.HeapDumpObjectGroup;
+import io.github.youngledo.jmcfx.domain.model.HeapDumpObjectGroupDetail;
+import io.github.youngledo.jmcfx.domain.model.HeapDumpObjectSummary;
+import io.github.youngledo.jmcfx.domain.model.HeapDumpReferencePath;
 import io.github.youngledo.jmcfx.ui.i18n.I18n;
 import io.github.youngledo.jmcfx.ui.util.DisplayFormats;
+import io.github.youngledo.jmcfx.ui.util.TableExportRegistration;
+import io.github.youngledo.jmcfx.ui.util.TableExportRequests;
 
 import javafx.beans.binding.Bindings;
 import javafx.beans.property.ReadOnlyStringWrapper;
@@ -46,7 +51,49 @@ public final class HeapDumpAnalysisPageController {
         configureCategoryFilter();
         configureIssueTable();
         configureObjectGroupsTable();
+        configureObjectGroupObjectsTable();
+        configureReferencePathsTable();
         bind(null);
+    }
+
+    public List<TableExportRegistration> exportRegistrations() {
+        return List.of(
+                TableExportRequests.currentView(
+                        view.issuesTable(),
+                        "HPROF Heap Dump",
+                        "Heap Dump Analysis",
+                        "Issues",
+                        this::heapDumpSource,
+                        () -> null,
+                        this::issueFilterSummary,
+                        this::issueSelectionSummary),
+                TableExportRequests.currentView(
+                        view.objectGroupsTable(),
+                        "HPROF Heap Dump",
+                        "Heap Dump Analysis",
+                        "Object Groups",
+                        this::heapDumpSource,
+                        () -> null,
+                        () -> null,
+                        this::objectGroupSelectionSummary),
+                TableExportRequests.currentView(
+                        view.objectGroupObjectsTable(),
+                        "HPROF Heap Dump",
+                        "Heap Dump Analysis",
+                        "Object Group Objects",
+                        this::heapDumpSource,
+                        () -> null,
+                        () -> null,
+                        this::objectGroupObjectSelectionSummary),
+                TableExportRequests.currentView(
+                        view.referencePathsTable(),
+                        "HPROF Heap Dump",
+                        "Heap Dump Analysis",
+                        "Reference Paths",
+                        this::heapDumpSource,
+                        () -> null,
+                        () -> null,
+                        this::referencePathSelectionSummary));
     }
 
     public void bind(HeapDumpAnalysisViewModel nextViewModel) {
@@ -63,22 +110,28 @@ public final class HeapDumpAnalysisPageController {
         }
         view.issueDetailArea().textProperty().unbind();
         view.textReportArea().textProperty().unbind();
+        view.loadReferencePathsButton().disableProperty().unbind();
         view.issueDetailTitleLabel().textProperty().unbind();
         view.objectGroupDetailTitleLabel().textProperty().unbind();
         view.objectGroupMetaLabel().textProperty().unbind();
         view.objectGroupDetailArea().textProperty().unbind();
+        view.objectGroupObjectsTable().itemsProperty().unbind();
+        view.objectGroupObjectsTable().setItems(FXCollections.emptyObservableList());
         if (nextViewModel == null) {
             viewModel = null;
             view.issueDetailArea().setText(i18n.get("heapDump.detail.empty"));
             view.objectGroupDetailTitleLabel().setText(i18n.get("heapDump.objectGroups.detail.emptyTitle"));
             view.objectGroupMetaLabel().setText("");
             view.objectGroupDetailArea().setText(i18n.get("heapDump.objectGroups.detail.empty"));
+            view.objectGroupObjectsTable().setItems(FXCollections.emptyObservableList());
             view.textReportArea().setText("");
             view.issuesTable().setItems(FXCollections.emptyObservableList());
             view.objectGroupsTable().setItems(FXCollections.emptyObservableList());
+            view.referencePathsTable().setItems(FXCollections.emptyObservableList());
             view.categoryFilterCombo().setItems(FXCollections.emptyObservableList());
             view.categoryFilterCombo().getSelectionModel().clearSelection();
             view.objectGroupsTable().getSelectionModel().clearSelection();
+            view.loadReferencePathsButton().setDisable(true);
             view.issueDetailTitleLabel().setText("");
             return;
         }
@@ -87,6 +140,7 @@ public final class HeapDumpAnalysisPageController {
         view.textReportArea().textProperty().bind(viewModel.textReportProperty());
         view.issuesTable().setItems(viewModel.issues());
         view.objectGroupsTable().setItems(viewModel.objectGroups());
+        view.referencePathsTable().setItems(viewModel.referencePaths());
         view.categoryFilterCombo().setItems(viewModel.issueCategories());
         view.issuesTable().getSelectionModel().selectedItemProperty()
                 .addListener(heapDumpTableSelectionListener);
@@ -113,6 +167,15 @@ public final class HeapDumpAnalysisPageController {
                 () -> formatObjectGroupMeta(viewModel.selectedObjectGroupProperty().get()),
                 viewModel.selectedObjectGroupProperty(), i18n.localeProperty()));
         view.objectGroupDetailArea().textProperty().bind(viewModel.objectGroupStatusProperty());
+        view.objectGroupObjectsTable().itemsProperty().bind(Bindings.createObjectBinding(
+                () -> {
+                    HeapDumpObjectGroupDetail detail = viewModel.selectedObjectGroupDetailProperty().get();
+                    return detail == null
+                            ? FXCollections.emptyObservableList()
+                            : FXCollections.observableArrayList(detail.objects().rows());
+                },
+                viewModel.selectedObjectGroupDetailProperty()));
+        view.loadReferencePathsButton().disableProperty().bind(viewModel.selectedObjectGroupProperty().isNull());
         selectHeapDumpIssueInTable(viewModel.selectedIssueProperty().get());
         selectObjectGroupInTable(viewModel.selectedObjectGroupProperty().get());
     }
@@ -121,8 +184,10 @@ public final class HeapDumpAnalysisPageController {
         view.titleLabel().textProperty().bind(i18n.text("heapDump.title"));
         view.categoryFilterCombo().promptTextProperty().bind(i18n.text("heapDump.filter.category"));
         view.clearCategoryFilterButton().textProperty().bind(i18n.text("heapDump.filter.clear"));
+        view.loadReferencePathsButton().textProperty().bind(i18n.text("heapDump.referencePaths.load"));
         view.issueDetailTab().textProperty().bind(i18n.text("heapDump.detail.tab"));
         view.objectGroupsTab().textProperty().bind(i18n.text("heapDump.objectGroups.tab"));
+        view.referencePathsTab().textProperty().bind(i18n.text("heapDump.referencePaths.tab"));
         view.textReportTab().textProperty().bind(i18n.text("heapDump.report.tab"));
     }
 
@@ -139,6 +204,7 @@ public final class HeapDumpAnalysisPageController {
             }
         });
         view.clearCategoryFilterButton().setOnAction(event -> clearCategoryFilter());
+        view.loadReferencePathsButton().setOnAction(event -> loadReferencePaths());
     }
 
     private void configureIssueTable() {
@@ -200,6 +266,63 @@ public final class HeapDumpAnalysisPageController {
         view.objectGroupsTable().getColumns().setAll(List.of(labelCol, retainedCol, shallowCol, countCol));
     }
 
+    private void configureObjectGroupObjectsTable() {
+        view.objectGroupObjectsTable().setPlaceholder(localizedTablePlaceholder("heapDump.objectGroups.objects.empty"));
+
+        TableColumn<HeapDumpObjectSummary, String> idCol = localizedColumn("heapDump.objectGroups.objects.column.id");
+        idCol.setPrefWidth(150);
+        idCol.setCellValueFactory(cell -> new ReadOnlyStringWrapper(cell.getValue().id()));
+
+        TableColumn<HeapDumpObjectSummary, String> typeCol =
+                localizedColumn("heapDump.objectGroups.objects.column.type");
+        typeCol.setPrefWidth(360);
+        typeCol.setCellValueFactory(cell -> new ReadOnlyStringWrapper(cell.getValue().typeName()));
+
+        TableColumn<HeapDumpObjectSummary, String> shallowCol =
+                localizedColumn("heapDump.objectGroups.objects.column.shallow");
+        shallowCol.setPrefWidth(130);
+        shallowCol.setCellValueFactory(cell ->
+                new ReadOnlyStringWrapper(DisplayFormats.formatFileSize(cell.getValue().shallowSizeBytes())));
+
+        TableColumn<HeapDumpObjectSummary, String> retainedCol =
+                localizedColumn("heapDump.objectGroups.objects.column.retained");
+        retainedCol.setPrefWidth(130);
+        retainedCol.setCellValueFactory(cell -> new ReadOnlyStringWrapper(
+                cell.getValue().retainedSizeAvailable()
+                        ? DisplayFormats.formatFileSize(cell.getValue().retainedSizeBytes())
+                        : ""));
+
+        view.objectGroupObjectsTable().getColumns().setAll(List.of(idCol, typeCol, shallowCol, retainedCol));
+    }
+
+    private void configureReferencePathsTable() {
+        view.referencePathsTable().setPlaceholder(localizedTablePlaceholder("heapDump.referencePaths.empty"));
+
+        TableColumn<HeapDumpReferencePath, String> selectedCol =
+                localizedColumn("heapDump.referencePaths.column.selected");
+        selectedCol.setPrefWidth(150);
+        selectedCol.setCellValueFactory(cell -> new ReadOnlyStringWrapper(cell.getValue().selectedObjectId()));
+
+        TableColumn<HeapDumpReferencePath, String> retainedCol =
+                localizedColumn("heapDump.referencePaths.column.retained");
+        retainedCol.setPrefWidth(130);
+        retainedCol.setCellValueFactory(cell ->
+                new ReadOnlyStringWrapper(DisplayFormats.formatFileSize(cell.getValue().retainedSizeBytes())));
+
+        TableColumn<HeapDumpReferencePath, String> pathCol =
+                localizedColumn("heapDump.referencePaths.column.path");
+        pathCol.setPrefWidth(420);
+        pathCol.setCellValueFactory(cell -> new ReadOnlyStringWrapper(formatReferencePath(cell.getValue())));
+
+        TableColumn<HeapDumpReferencePath, String> stateCol =
+                localizedColumn("heapDump.referencePaths.column.state");
+        stateCol.setPrefWidth(100);
+        stateCol.setCellValueFactory(cell -> new ReadOnlyStringWrapper(
+                cell.getValue().truncated() ? i18n.get("heapDump.referencePaths.truncated") : ""));
+
+        view.referencePathsTable().getColumns().setAll(List.of(selectedCol, retainedCol, pathCol, stateCol));
+    }
+
     private void selectHeapDumpIssue(HeapDumpIssue issue) {
         HeapDumpAnalysisViewModel viewModel = this.viewModel;
         if (viewModel != null) {
@@ -244,6 +367,13 @@ public final class HeapDumpAnalysisPageController {
         }
     }
 
+    private void loadReferencePaths() {
+        HeapDumpAnalysisViewModel viewModel = this.viewModel;
+        if (viewModel != null) {
+            viewModel.loadReferencePaths(viewModel.selectedObjectGroupProperty().get());
+        }
+    }
+
     private String categoryLabel(HeapDumpIssueCategory category) {
         return i18n.get("heapDump.category." + category.name());
     }
@@ -256,6 +386,51 @@ public final class HeapDumpAnalysisPageController {
                 DisplayFormats.formatInteger(group.objectCount()),
                 DisplayFormats.formatFileSize(group.retainedSizeBytes()),
                 DisplayFormats.formatFileSize(group.shallowSizeBytes()));
+    }
+
+    private String formatReferencePath(HeapDumpReferencePath path) {
+        if (path == null || path.edges().isEmpty()) {
+            return "";
+        }
+        return path.edges().stream()
+                .map(edge -> edge.sourceId() + " --" + edge.label() + "-> " + edge.targetId())
+                .collect(java.util.stream.Collectors.joining(" | "));
+    }
+
+    private String heapDumpSource() {
+        if (viewModel == null || viewModel.heapDumpNameProperty().get().isBlank()) {
+            return "Heap Dump session";
+        }
+        return viewModel.heapDumpNameProperty().get();
+    }
+
+    private String issueFilterSummary() {
+        HeapDumpIssueCategory category = viewModel == null ? null : viewModel.selectedIssueCategoryProperty().get();
+        return category == null ? null : i18n.format("export.scope.categoryFilter", categoryLabel(category));
+    }
+
+    private String issueSelectionSummary() {
+        int selectedCount = view.issuesTable().getSelectionModel().getSelectedItems().size();
+        return selectedRowsSummary(selectedCount);
+    }
+
+    private String objectGroupSelectionSummary() {
+        int selectedCount = view.objectGroupsTable().getSelectionModel().getSelectedItems().size();
+        return selectedRowsSummary(selectedCount);
+    }
+
+    private String objectGroupObjectSelectionSummary() {
+        int selectedCount = view.objectGroupObjectsTable().getSelectionModel().getSelectedItems().size();
+        return selectedRowsSummary(selectedCount);
+    }
+
+    private String referencePathSelectionSummary() {
+        int selectedCount = view.referencePathsTable().getSelectionModel().getSelectedItems().size();
+        return selectedRowsSummary(selectedCount);
+    }
+
+    private String selectedRowsSummary(int selectedCount) {
+        return selectedCount <= 0 ? null : i18n.format("export.scope.selectedRows", selectedCount);
     }
 
     private Label localizedTablePlaceholder(String key) {

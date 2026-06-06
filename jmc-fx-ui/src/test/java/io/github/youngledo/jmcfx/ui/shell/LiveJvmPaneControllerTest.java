@@ -1,16 +1,31 @@
 package io.github.youngledo.jmcfx.ui.shell;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertNull;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 
+import java.util.List;
 import java.util.concurrent.CountDownLatch;
 import java.util.concurrent.TimeUnit;
 
 import org.junit.jupiter.api.Test;
 
+import io.github.youngledo.jmcfx.ui.i18n.I18n;
+import io.github.youngledo.jmcfx.ui.util.TableExportRegistration;
+import io.github.youngledo.jmcfx.ui.util.TableExportRequest;
+import io.github.youngledo.jmcfx.ui.util.TableExportScope;
+
 import javafx.application.Platform;
+import javafx.collections.FXCollections;
+import javafx.scene.Scene;
+import javafx.scene.control.TableColumn;
+import javafx.scene.control.TableView;
+import javafx.scene.input.MouseButton;
+import javafx.scene.input.MouseEvent;
+import javafx.scene.layout.BorderPane;
 import javafx.scene.layout.Priority;
 import javafx.scene.layout.VBox;
+import javafx.stage.Stage;
 
 class LiveJvmPaneControllerTest {
 
@@ -72,11 +87,64 @@ class LiveJvmPaneControllerTest {
         assertEquals("Button", view.jvmsAddNotificationSubscriptionButton.getClass().getSimpleName());
         assertEquals("Button", view.jvmsStartNotificationsButton.getClass().getSimpleName());
         assertEquals("Button", view.jvmsStopNotificationsButton.getClass().getSimpleName());
+        assertEquals("Button", view.jvmsClearNotificationHistoryButton.getClass().getSimpleName());
+        assertEquals("TextField", view.jvmsNotificationHistoryFilterField.getClass().getSimpleName());
         assertEquals("TableView", view.jvmsMonitoringSubscriptionsTable.getClass().getSimpleName());
         assertTrue(view.jvmsMonitoringSubscriptionsTable.getStyleClass().contains("dense-table"));
         assertEquals("LineChart", view.jvmsMonitoringChart.getClass().getSimpleName());
         assertEquals("TableView", view.jvmsMonitoringSamplesTable.getClass().getSimpleName());
         assertEquals("TableView", view.jvmsMonitoringNotificationsTable.getClass().getSimpleName());
+    }
+
+    @Test
+    void liveJvmExportRegistrationsDescribeActiveSessionTablesWithoutTimeRange() {
+        LiveJvmPaneView view = new LiveJvmPaneView();
+        LiveJvmPaneController controller = new LiveJvmPaneController(view);
+
+        List<TableExportRequest> requests = controller.exportRegistrations().stream()
+                .map(TableExportRegistration::requestSupplier)
+                .map(java.util.function.Supplier::get)
+                .toList();
+
+        assertEquals(4, requests.size());
+        assertTrue(requests.stream().allMatch(request -> "Live JVM session".equals(request.context().workspace())));
+        assertTrue(requests.stream().allMatch(request -> TableExportScope.CURRENT_VIEW == request.context().rowScope()));
+        assertTrue(requests.stream().allMatch(request -> TableExportScope.VISIBLE_COLUMNS == request.context().columnScope()));
+        assertTrue(requests.stream().allMatch(request -> request.context().table() != null
+                && !request.context().table().isBlank()));
+        assertNull(requests.getFirst().context().timeRange());
+        assertTrue(requests.stream().map(request -> request.context().table()).toList()
+                .containsAll(List.of("Discovered JVMs", "JMX Monitoring Subscriptions",
+                        "JMX Samples", "JMX Notifications")));
+    }
+
+    @Test
+    void exportContextMenuSecondaryClickDoesNotChangeTableSelection() throws Exception {
+        TableView<String> table = new TableView<>();
+        TableColumn<String, String> column = new TableColumn<>("Name");
+        column.setCellValueFactory(cell -> new javafx.beans.property.ReadOnlyStringWrapper(cell.getValue()));
+        table.getColumns().add(column);
+        table.setItems(FXCollections.observableArrayList("first", "second"));
+        table.getSelectionModel().select(0);
+        AppShellViewModel viewModel = new AppShellViewModel();
+        I18n i18n = new I18n(java.util.Locale.ENGLISH);
+
+        runFxAndWait(() -> {
+            BorderPane root = new BorderPane(table);
+            Stage stage = new Stage();
+            stage.setScene(new Scene(root, 320, 240));
+            new ExportMenuInstaller(root, viewModel, i18n).install(table);
+            stage.show();
+            table.fireEvent(new MouseEvent(MouseEvent.MOUSE_PRESSED,
+                    12, 36, 12, 36,
+                    MouseButton.SECONDARY, 1,
+                    false, false, false, false,
+                    false, false, true, false,
+                    false, false, null));
+            stage.close();
+        });
+
+        assertEquals("first", table.getSelectionModel().getSelectedItem());
     }
 
     @Test
@@ -104,6 +172,8 @@ class LiveJvmPaneControllerTest {
         assertTrue(source.contains("private TableView<JmxMonitoringSubscriptionRow> jvmsMonitoringSubscriptionsTable;"));
         assertTrue(source.contains("jvmBrowserViewModel.jmxMonitoringSubscriptionsProperty()"));
         assertTrue(source.contains("jvmBrowserViewModel.selectJmxMonitoringSubscription(newValue)"));
+        assertTrue(source.contains("localizedColumn(\"jvms.monitoring.subscription.state\")"));
+        assertTrue(source.contains("formatJmxNotificationListeningState"));
         assertTrue(source.contains("private Button jvmsAddNotificationSubscriptionButton;"));
         assertTrue(source.contains(
                 "jvmsAddNotificationSubscriptionButton.setOnAction(event -> addSelectedNotificationSubscription())"));
@@ -111,10 +181,53 @@ class LiveJvmPaneControllerTest {
                 "jvmsStartNotificationsButton.setOnAction(event -> jvmBrowserViewModel.startSelectedJmxNotifications())"));
         assertTrue(source.contains(
                 "jvmsStopNotificationsButton.setOnAction(event -> jvmBrowserViewModel.stopSelectedJmxNotifications())"));
+        assertTrue(source.contains("jvmsClearNotificationHistoryButton.setOnAction"));
+        assertTrue(source.contains("clearSelectedJmxNotificationHistory"));
+        assertTrue(source.contains("jvmsClearNotificationHistoryButton.textProperty().bind(i18n.text(\"jvms.monitoring.clearHistory\"))"));
+        assertTrue(source.contains("jvmsNotificationHistoryFilterField.textProperty().bindBidirectional"));
+        assertTrue(source.contains("jmxNotificationHistoryFilterProperty"));
+        assertTrue(source.contains("jvmsNotificationHistoryFilterField.promptTextProperty().bind(i18n.text(\"jvms.monitoring.filterHistory\"))"));
+        assertTrue(source.contains("java.util.List<TableExportRegistration> exportRegistrations()"));
+        assertTrue(source.contains("\"Live JVM session\""));
+        assertTrue(source.contains("\"JMX Monitoring Subscriptions\""));
+        assertTrue(source.contains("\"JMX Samples\""));
+        assertTrue(source.contains("\"JMX Notifications\""));
+        assertTrue(source.contains("this::notificationFilterSummary"));
+        assertTrue(source.contains("localizedColumn(\"jvms.monitoring.notification.source\")"));
+        assertTrue(source.contains("jmxNotificationEventSource"));
         assertTrue(source.contains("jvmsAgentTab.textProperty().bind(i18n.text(\"jvms.agent.tab\"))"));
     }
 
     private static String source(String path) throws Exception {
         return java.nio.file.Files.readString(java.nio.file.Path.of(path));
+    }
+
+    private static void runFxAndWait(Runnable action) throws InterruptedException {
+        if (Platform.isFxApplicationThread()) {
+            action.run();
+            return;
+        }
+        CountDownLatch latch = new CountDownLatch(1);
+        java.util.concurrent.atomic.AtomicReference<Throwable> failure =
+                new java.util.concurrent.atomic.AtomicReference<>();
+        Platform.runLater(() -> {
+            try {
+                action.run();
+            } catch (Throwable throwable) {
+                failure.set(throwable);
+            } finally {
+                latch.countDown();
+            }
+        });
+        assertTrue(latch.await(5, TimeUnit.SECONDS));
+        if (failure.get() instanceof RuntimeException runtimeException) {
+            throw runtimeException;
+        }
+        if (failure.get() instanceof Error error) {
+            throw error;
+        }
+        if (failure.get() != null) {
+            throw new AssertionError(failure.get());
+        }
     }
 }

@@ -130,6 +130,16 @@ class WorkspaceTabsControllerTest {
         assertSame(liveJvmTab, tabs.getTabs().get(2));
     }
 
+    @Test
+    void selectedClosePolicySelectsNextPreviousThenNone() {
+        assertEquals(1, WorkspaceTabsController.nextSelectionIndexAfterClose(1, 3),
+                "Closing a middle selected tab should select the next tab now at the same index");
+        assertEquals(0, WorkspaceTabsController.nextSelectionIndexAfterClose(1, 2),
+                "Closing the selected last tab should select the previous tab");
+        assertEquals(-1, WorkspaceTabsController.nextSelectionIndexAfterClose(0, 1),
+                "Closing the only selected tab should leave no workspace tab selected");
+    }
+
     private static RecordingWorkspace openRecording(AppShellViewModel viewModel, String fileName) {
         return viewModel.openRecording(
                 new RecordingSummary("rec-" + fileName, Path.of(fileName), fileName,

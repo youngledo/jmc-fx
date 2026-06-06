@@ -144,6 +144,9 @@ import io.github.youngledo.jmcfx.ui.metadata.JfrMetadataViewModel;
 import io.github.youngledo.jmcfx.ui.chart.TimelineChart;
 import io.github.youngledo.jmcfx.ui.util.CsvExport;
 import io.github.youngledo.jmcfx.ui.util.DisplayFormats;
+import io.github.youngledo.jmcfx.ui.util.TableExportRegistration;
+import io.github.youngledo.jmcfx.ui.util.TableExportRequests;
+import io.github.youngledo.jmcfx.ui.util.WorkbenchTableSupport;
 import io.github.youngledo.jmcfx.ui.overview.OverviewViewModel;
 import io.github.youngledo.jmcfx.ui.preferences.AppTheme;
 import io.github.youngledo.jmcfx.ui.profiling.CallGraphDirection;
@@ -324,6 +327,8 @@ public final class LiveJvmPaneController {
     private Button jvmsAddNotificationSubscriptionButton;
     private Button jvmsStartNotificationsButton;
     private Button jvmsStopNotificationsButton;
+    private Button jvmsClearNotificationHistoryButton;
+    private TextField jvmsNotificationHistoryFilterField;
     private TableView<JmxMonitoringSubscriptionRow> jvmsMonitoringSubscriptionsTable;
     private LineChart<Number, Number> jvmsMonitoringChart;
     private TableView<JmxSubscriptionSample> jvmsMonitoringSamplesTable;
@@ -448,6 +453,8 @@ public final class LiveJvmPaneController {
         this.jvmsAddNotificationSubscriptionButton = view.jvmsAddNotificationSubscriptionButton;
         this.jvmsStartNotificationsButton = view.jvmsStartNotificationsButton;
         this.jvmsStopNotificationsButton = view.jvmsStopNotificationsButton;
+        this.jvmsClearNotificationHistoryButton = view.jvmsClearNotificationHistoryButton;
+        this.jvmsNotificationHistoryFilterField = view.jvmsNotificationHistoryFilterField;
         this.jvmsMonitoringSubscriptionsTable = view.jvmsMonitoringSubscriptionsTable;
         this.jvmsMonitoringChart = view.jvmsMonitoringChart;
         this.jvmsMonitoringSamplesTable = view.jvmsMonitoringSamplesTable;
@@ -487,6 +494,46 @@ public final class LiveJvmPaneController {
         }
     }
 
+    java.util.List<TableExportRegistration> exportRegistrations() {
+        return java.util.List.of(
+                TableExportRequests.currentView(
+                        jvmsTable,
+                        "Live JVM session",
+                        "JVM Browser",
+                        "Discovered JVMs",
+                        () -> "JVM discovery",
+                        () -> null,
+                        () -> null,
+                        () -> selectedRowsSummary(jvmsTable)),
+                TableExportRequests.currentView(
+                        jvmsMonitoringSubscriptionsTable,
+                        "Live JVM session",
+                        "Monitoring",
+                        "JMX Monitoring Subscriptions",
+                        this::liveJvmExportSource,
+                        () -> null,
+                        () -> null,
+                        () -> selectedRowsSummary(jvmsMonitoringSubscriptionsTable)),
+                TableExportRequests.currentView(
+                        jvmsMonitoringSamplesTable,
+                        "Live JVM session",
+                        "Monitoring",
+                        "JMX Samples",
+                        this::liveJvmExportSource,
+                        () -> null,
+                        () -> null,
+                        () -> selectedRowsSummary(jvmsMonitoringSamplesTable)),
+                TableExportRequests.currentView(
+                        jvmsMonitoringNotificationsTable,
+                        "Live JVM session",
+                        "Monitoring",
+                        "JMX Notifications",
+                        this::liveJvmExportSource,
+                        () -> null,
+                        this::notificationFilterSummary,
+                        () -> selectedRowsSummary(jvmsMonitoringNotificationsTable)));
+    }
+
     void close() {
         stopLiveJvmOverviewRefreshTimer();
     }
@@ -502,9 +549,7 @@ public final class LiveJvmPaneController {
     }
 
     private Label localizedTablePlaceholder(String key) {
-        Label label = new Label();
-        label.textProperty().bind(i18n.text(key));
-        return label;
+        return WorkbenchTableSupport.localizedPlaceholder(i18n, key);
     }
 
     private <T> TableColumn<T, String> localizedColumn(String key) {
@@ -517,6 +562,26 @@ public final class LiveJvmPaneController {
         Region placeholder = new Region();
         placeholder.setManaged(false);
         return placeholder;
+    }
+
+    private String selectedRowsSummary(TableView<?> table) {
+        int selectedCount = table.getSelectionModel().getSelectedItems().size();
+        return selectedCount <= 0 ? null : i18n.format("export.scope.selectedRows", selectedCount);
+    }
+
+    private String liveJvmExportSource() {
+        JvmConnection selectedConnection = jvmBrowserViewModel == null
+                ? null
+                : jvmBrowserViewModel.selectedConnectionProperty().get();
+        return selectedConnection == null ? "Live JVM session" : selectedConnection.displayName();
+    }
+
+    private String notificationFilterSummary() {
+        if (jvmBrowserViewModel == null) {
+            return null;
+        }
+        String filter = jvmBrowserViewModel.jmxNotificationHistoryFilterProperty().get();
+        return filter == null || filter.isBlank() ? null : i18n.format("export.scope.notificationFilter", filter);
     }
 
     private static boolean canDisconnectJvm(JvmConnection selectedConnection) {
@@ -824,7 +889,14 @@ public final class LiveJvmPaneController {
         detailCol.setPrefWidth(140);
         detailCol.setCellValueFactory(cell -> new ReadOnlyStringWrapper(cell.getValue().detail()));
 
-        jvmsMonitoringSubscriptionsTable.getColumns().setAll(List.of(typeCol, labelCol, targetCol, detailCol));
+        TableColumn<JmxMonitoringSubscriptionRow, String> stateCol =
+                localizedColumn("jvms.monitoring.subscription.state");
+        stateCol.setPrefWidth(140);
+        stateCol.setCellValueFactory(cell -> Bindings.createStringBinding(
+                () -> formatJmxNotificationListeningState(cell.getValue()), i18n.localeProperty()));
+
+        jvmsMonitoringSubscriptionsTable.getColumns().setAll(
+                List.of(typeCol, labelCol, targetCol, detailCol, stateCol));
 
         TableColumn<JmxSubscriptionSample, String> sampleTimeCol =
                 localizedColumn("jvms.monitoring.sample.time");
@@ -860,7 +932,16 @@ public final class LiveJvmPaneController {
         eventMessageCol.setPrefWidth(420);
         eventMessageCol.setCellValueFactory(cell -> new ReadOnlyStringWrapper(cell.getValue().message()));
 
-        jvmsMonitoringNotificationsTable.getColumns().setAll(List.of(eventTimeCol, eventTypeCol, eventMessageCol));
+        TableColumn<JmxNotificationEvent, String> eventSourceCol =
+                localizedColumn("jvms.monitoring.notification.source");
+        eventSourceCol.setPrefWidth(120);
+        eventSourceCol.setCellValueFactory(cell -> new ReadOnlyStringWrapper(
+                jvmBrowserViewModel == null
+                        ? ""
+                        : jvmBrowserViewModel.jmxNotificationEventSource(cell.getValue())));
+
+        jvmsMonitoringNotificationsTable.getColumns().setAll(
+                List.of(eventTimeCol, eventTypeCol, eventMessageCol, eventSourceCol));
     }
 
     private void configureJmcAgentManager() {
@@ -966,6 +1047,8 @@ public final class LiveJvmPaneController {
             jvmsAddNotificationSubscriptionButton.setDisable(true);
             jvmsStartNotificationsButton.setDisable(true);
             jvmsStopNotificationsButton.setDisable(true);
+            jvmsClearNotificationHistoryButton.setDisable(true);
+            jvmsNotificationHistoryFilterField.setDisable(true);
             jvmsMonitoringErrorLabel.setVisible(false);
             jvmsMonitoringErrorLabel.setManaged(false);
             jvmsAgentPresetCombo.setItems(FXCollections.emptyObservableList());
@@ -1108,6 +1191,8 @@ public final class LiveJvmPaneController {
         jvmsAddNotificationSubscriptionButton.setOnAction(event -> addSelectedNotificationSubscription());
         jvmsStartNotificationsButton.setOnAction(event -> jvmBrowserViewModel.startSelectedJmxNotifications());
         jvmsStopNotificationsButton.setOnAction(event -> jvmBrowserViewModel.stopSelectedJmxNotifications());
+        jvmsClearNotificationHistoryButton.setOnAction(
+                event -> jvmBrowserViewModel.clearSelectedJmxNotificationHistory());
         jvmsRefreshAgentButton.setOnAction(event -> jvmBrowserViewModel.refreshJmcAgent());
         jvmsLoadAgentPresetButton.setOnAction(event -> jvmBrowserViewModel.loadSelectedJmcAgentPreset());
         jvmsApplyAgentConfigurationButton.setOnAction(event -> jvmBrowserViewModel.applyJmcAgentConfiguration());
@@ -1325,6 +1410,8 @@ public final class LiveJvmPaneController {
         jvmsMonitoringSubscriptionsTable.setItems(jvmBrowserViewModel.jmxMonitoringSubscriptionsProperty());
         jvmsMonitoringSamplesTable.setItems(jvmBrowserViewModel.jmxSubscriptionSamplesProperty());
         jvmsMonitoringNotificationsTable.setItems(jvmBrowserViewModel.jmxNotificationEventsProperty());
+        jvmsNotificationHistoryFilterField.textProperty().bindBidirectional(
+                jvmBrowserViewModel.jmxNotificationHistoryFilterProperty());
         jvmsMonitoringSubscriptionsTable.getSelectionModel().selectedItemProperty()
                 .addListener((observable, oldValue, newValue) ->
                         jvmBrowserViewModel.selectJmxMonitoringSubscription(newValue));
@@ -1358,6 +1445,13 @@ public final class LiveJvmPaneController {
         jvmsStopNotificationsButton.disableProperty().bind(jvmBrowserViewModel.jmxMonitoringAvailableProperty().not()
                 .or(jvmBrowserViewModel.selectedJmxNotificationSubscriptionProperty().isNull())
                 .or(jvmBrowserViewModel.jmxMonitoringLoadingProperty()));
+        jvmsClearNotificationHistoryButton.disableProperty().bind(
+                jvmBrowserViewModel.jmxMonitoringAvailableProperty().not()
+                        .or(jvmBrowserViewModel.selectedJmxNotificationSubscriptionProperty().isNull())
+                        .or(jvmBrowserViewModel.jmxMonitoringLoadingProperty()));
+        jvmsNotificationHistoryFilterField.disableProperty().bind(
+                jvmBrowserViewModel.jmxMonitoringAvailableProperty().not()
+                        .or(jvmBrowserViewModel.selectedJmxNotificationSubscriptionProperty().isNull()));
     }
 
     private void bindJmcAgentManager() {
@@ -2080,6 +2174,14 @@ public final class LiveJvmPaneController {
                 + row.kind().name().toLowerCase(java.util.Locale.ROOT));
     }
 
+    private String formatJmxNotificationListeningState(JmxMonitoringSubscriptionRow row) {
+        if (row == null || row.listeningState() == null) {
+            return "";
+        }
+        return i18n.get("jvms.monitoring.subscription.state."
+                + row.listeningState().name().toLowerCase(java.util.Locale.ROOT));
+    }
+
     private static String formatTriggerEventValue(TriggerEvent event) {
         if (event == null) {
             return "";
@@ -2107,6 +2209,7 @@ public final class LiveJvmPaneController {
     private void bindLocalizedText() {
         jvmsTitleLabel.textProperty().bind(i18n.text("jvms.title"));
         jvmsRefreshButton.textProperty().bind(i18n.text("jvms.refresh"));
+        bindButtonAccessibility(jvmsRefreshButton, "jvms.refresh");
         jvmsManualUrlField.promptTextProperty().bind(i18n.text("jvms.manualUrlPrompt"));
         jvmsManualUrlHintLabel.textProperty().bind(i18n.text("jvms.manualUrlHint"));
         jvmsManualNameField.promptTextProperty().bind(i18n.text("jvms.manualNamePrompt"));
@@ -2115,6 +2218,11 @@ public final class LiveJvmPaneController {
         jvmsRefreshJdpButton.textProperty().bind(i18n.text("jvms.refreshJdp"));
         jvmsConnectButton.textProperty().bind(i18n.text("jvms.connect"));
         jvmsDisconnectButton.textProperty().bind(i18n.text("jvms.disconnect"));
+        bindButtonAccessibility(jvmsSaveTargetButton, "jvms.saveTarget");
+        bindButtonAccessibility(jvmsRemoveSavedTargetButton, "jvms.removeSavedTarget");
+        bindButtonAccessibility(jvmsRefreshJdpButton, "jvms.refreshJdp");
+        bindButtonAccessibility(jvmsConnectButton, "jvms.connect");
+        bindButtonAccessibility(jvmsDisconnectButton, "jvms.disconnect");
         jvmsOverviewTab.textProperty().bind(i18n.text("jvms.overview.tab"));
         jvmsOverviewPersistenceTitleLabel.textProperty().bind(i18n.text("jvms.overview.persistence.title"));
         jvmsOverviewDashboardTitleLabel.textProperty().bind(i18n.text("jvms.overview.dashboard.title"));
@@ -2134,10 +2242,14 @@ public final class LiveJvmPaneController {
         jvmsAgentTab.textProperty().bind(i18n.text("jvms.agent.tab"));
         jvmsRefreshMBeanButton.textProperty().bind(i18n.text("jvms.mbeans.refresh"));
         jvmsInvokeMBeanOperationButton.textProperty().bind(i18n.text("jvms.mbeans.invoke"));
+        bindButtonAccessibility(jvmsRefreshMBeanButton, "jvms.mbeans.refresh");
+        bindButtonAccessibility(jvmsInvokeMBeanOperationButton, "jvms.mbeans.invoke");
         jvmsMBeanOperationArgumentsField.promptTextProperty().bind(i18n.text("jvms.mbeans.arguments"));
         jvmsDiagnosticArgumentsField.promptTextProperty().bind(i18n.text("jvms.diagnostics.arguments"));
         jvmsExecuteDiagnosticCommandButton.textProperty().bind(i18n.text("jvms.diagnostics.execute"));
         jvmsSaveDiagnosticOutputButton.textProperty().bind(i18n.text("jvms.diagnostics.saveOutput"));
+        bindButtonAccessibility(jvmsExecuteDiagnosticCommandButton, "jvms.diagnostics.execute");
+        bindButtonAccessibility(jvmsSaveDiagnosticOutputButton, "jvms.diagnostics.saveOutput");
         jvmsTriggerNameField.promptTextProperty().bind(i18n.text("jvms.triggers.name"));
         jvmsTriggerMetricCombo.promptTextProperty().bind(i18n.text("jvms.triggers.metric"));
         jvmsTriggerOperatorCombo.promptTextProperty().bind(i18n.text("jvms.triggers.operator"));
@@ -2147,16 +2259,35 @@ public final class LiveJvmPaneController {
         jvmsAddTriggerButton.textProperty().bind(i18n.text("jvms.triggers.add"));
         jvmsRemoveTriggerButton.textProperty().bind(i18n.text("jvms.triggers.remove"));
         jvmsEvaluateTriggersButton.textProperty().bind(i18n.text("jvms.triggers.evaluate"));
+        bindButtonAccessibility(jvmsAddTriggerButton, "jvms.triggers.add");
+        bindButtonAccessibility(jvmsRemoveTriggerButton, "jvms.triggers.remove");
+        bindButtonAccessibility(jvmsEvaluateTriggersButton, "jvms.triggers.evaluate");
         jvmsAddMonitoringSubscriptionButton.textProperty().bind(i18n.text("jvms.monitoring.addSubscription"));
         jvmsSampleSubscriptionButton.textProperty().bind(i18n.text("jvms.monitoring.sampleNow"));
         jvmsAddNotificationSubscriptionButton.textProperty().bind(i18n.text("jvms.monitoring.addNotification"));
         jvmsStartNotificationsButton.textProperty().bind(i18n.text("jvms.monitoring.startNotifications"));
         jvmsStopNotificationsButton.textProperty().bind(i18n.text("jvms.monitoring.stopNotifications"));
+        jvmsClearNotificationHistoryButton.textProperty().bind(i18n.text("jvms.monitoring.clearHistory"));
+        bindButtonAccessibility(jvmsAddMonitoringSubscriptionButton, "jvms.monitoring.addSubscription");
+        bindButtonAccessibility(jvmsSampleSubscriptionButton, "jvms.monitoring.sampleNow");
+        bindButtonAccessibility(jvmsAddNotificationSubscriptionButton, "jvms.monitoring.addNotification");
+        bindButtonAccessibility(jvmsStartNotificationsButton, "jvms.monitoring.startNotifications");
+        bindButtonAccessibility(jvmsStopNotificationsButton, "jvms.monitoring.stopNotifications");
+        bindButtonAccessibility(jvmsClearNotificationHistoryButton, "jvms.monitoring.clearHistory");
+        jvmsNotificationHistoryFilterField.promptTextProperty().bind(i18n.text("jvms.monitoring.filterHistory"));
         jvmsAgentPresetCombo.promptTextProperty().bind(i18n.text("jvms.agent.preset"));
         jvmsRefreshAgentButton.textProperty().bind(i18n.text("jvms.agent.refresh"));
         jvmsLoadAgentPresetButton.textProperty().bind(i18n.text("jvms.agent.loadPreset"));
         jvmsApplyAgentConfigurationButton.textProperty().bind(i18n.text("jvms.agent.apply"));
+        bindButtonAccessibility(jvmsRefreshAgentButton, "jvms.agent.refresh");
+        bindButtonAccessibility(jvmsLoadAgentPresetButton, "jvms.agent.loadPreset");
+        bindButtonAccessibility(jvmsApplyAgentConfigurationButton, "jvms.agent.apply");
         jvmsAgentConfigurationTitleLabel.textProperty().bind(i18n.text("jvms.agent.configuration"));
+    }
+
+    private void bindButtonAccessibility(Button button, String key) {
+        button.setTooltip(i18n.tooltip(key));
+        button.accessibleTextProperty().bind(i18n.text(key));
     }
     private static final class OverviewSequenceTickFormatter extends StringConverter<Number> {
         @Override

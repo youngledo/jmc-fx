@@ -3,6 +3,8 @@ package io.github.youngledo.jmcfx.ui.heapdump;
 import io.github.youngledo.jmcfx.domain.model.HeapDumpIssue;
 import io.github.youngledo.jmcfx.domain.model.HeapDumpIssueCategory;
 import io.github.youngledo.jmcfx.domain.model.HeapDumpObjectGroup;
+import io.github.youngledo.jmcfx.domain.model.HeapDumpObjectSummary;
+import io.github.youngledo.jmcfx.domain.model.HeapDumpReferencePath;
 
 import javafx.scene.control.Button;
 import javafx.scene.control.ComboBox;
@@ -21,12 +23,16 @@ public record HeapDumpAnalysisPageView(
         TabPane detailsTabs,
         Tab issueDetailTab,
         Tab objectGroupsTab,
+        Tab referencePathsTab,
         Tab textReportTab,
         Label issueDetailTitleLabel,
         TextArea issueDetailArea,
         TableView<HeapDumpObjectGroup> objectGroupsTable,
+        Button loadReferencePathsButton,
+        TableView<HeapDumpReferencePath> referencePathsTable,
         Label objectGroupDetailTitleLabel,
         Label objectGroupMetaLabel,
         TextArea objectGroupDetailArea,
+        TableView<HeapDumpObjectSummary> objectGroupObjectsTable,
         TextArea textReportArea) {
 }

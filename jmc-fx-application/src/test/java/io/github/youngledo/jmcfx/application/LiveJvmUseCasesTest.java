@@ -10,6 +10,7 @@ import java.util.List;
 import java.util.function.Consumer;
 
 import io.github.youngledo.jmcfx.domain.model.JmxNotificationEvent;
+import io.github.youngledo.jmcfx.domain.model.JmxNotificationHistoryFilter;
 import io.github.youngledo.jmcfx.domain.model.JmxNotificationListeningState;
 import io.github.youngledo.jmcfx.domain.model.JmxNotificationListeningSummary;
 import io.github.youngledo.jmcfx.domain.model.JmxNotificationSubscription;
@@ -142,6 +143,34 @@ class LiveJvmUseCasesTest {
         assertEquals(3, summary.total());
     }
 
+    @Test
+    void filtersNotificationHistoryByTypeMessageAndTimeWindow() {
+        var repository = new FakeJmxMonitoringRepository();
+        var useCase = new LiveJvmMonitoringUseCase(new FakeJmxMonitoringService(), repository);
+        JmxNotificationEvent matching = new JmxNotificationEvent(
+                "notif-1", Instant.parse("2026-06-06T01:00:00Z"),
+                "memory.threshold", "heap", 1, "Heap high", "");
+        JmxNotificationEvent wrongType = new JmxNotificationEvent(
+                "notif-1", Instant.parse("2026-06-06T01:01:00Z"),
+                "thread.started", "worker", 2, "Heap high", "");
+        JmxNotificationEvent wrongMessage = new JmxNotificationEvent(
+                "notif-1", Instant.parse("2026-06-06T01:02:00Z"),
+                "memory.threshold", "heap", 3, "Metaspace changed", "");
+        JmxNotificationEvent outsideWindow = new JmxNotificationEvent(
+                "notif-1", Instant.parse("2026-06-06T02:00:00Z"),
+                "memory.threshold", "heap", 4, "Heap high", "");
+        repository.appendNotificationEvent(matching);
+        repository.appendNotificationEvent(wrongType);
+        repository.appendNotificationEvent(wrongMessage);
+        repository.appendNotificationEvent(outsideWindow);
+
+        JmxNotificationHistoryFilter filter = new JmxNotificationHistoryFilter(
+                "MEMORY", "heap", Instant.parse("2026-06-06T00:59:00Z"),
+                Instant.parse("2026-06-06T01:30:00Z"));
+
+        assertEquals(List.of(matching), useCase.findNotificationEvents("notif-1", filter));
+    }
+
     private static JvmConnection connectedJvm(String id) {
         return new JvmConnection(id, "Test JVM", "service:jmx:rmi:///jndi/rmi://localhost:0/jmxrmi", true);
     }
@@ -196,6 +225,7 @@ class LiveJvmUseCasesTest {
 
     private static final class FakeJmxMonitoringRepository implements JmxMonitoringRepository {
         private final List<JmxNotificationSubscription> notificationSubscriptions = new ArrayList<>();
+        private final List<JmxNotificationEvent> notificationEvents = new ArrayList<>();
 
         @Override
         public List<JmxNotificationSubscription> findNotificationSubscriptions(String connectionId) {
@@ -208,6 +238,18 @@ class LiveJvmUseCasesTest {
         public void saveNotificationSubscription(JmxNotificationSubscription subscription) {
             notificationSubscriptions.removeIf(saved -> saved.id().equals(subscription.id()));
             notificationSubscriptions.add(subscription);
+        }
+
+        @Override
+        public List<JmxNotificationEvent> findNotificationEvents(String subscriptionId) {
+            return notificationEvents.stream()
+                    .filter(event -> event.subscriptionId().equals(subscriptionId))
+                    .toList();
+        }
+
+        @Override
+        public void appendNotificationEvent(JmxNotificationEvent event) {
+            notificationEvents.add(event);
         }
     }
 

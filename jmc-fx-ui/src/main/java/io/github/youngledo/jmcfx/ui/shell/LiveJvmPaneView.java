@@ -128,6 +128,8 @@ final class LiveJvmPaneView {
     final Button jvmsAddNotificationSubscriptionButton = new Button();
     final Button jvmsStartNotificationsButton = new Button();
     final Button jvmsStopNotificationsButton = new Button();
+    final Button jvmsClearNotificationHistoryButton = new Button();
+    final TextField jvmsNotificationHistoryFilterField = new TextField();
     final TableView<JmxMonitoringSubscriptionRow> jvmsMonitoringSubscriptionsTable = denseTable();
     final LineChart<Number, Number> jvmsMonitoringChart = lineChart(true);
     final TableView<JmxSubscriptionSample> jvmsMonitoringSamplesTable = denseTable();
@@ -305,7 +307,8 @@ final class LiveJvmPaneView {
         addStyle(jvmsMonitoringErrorLabel, "unavailable-state");
         jvmsMonitoringErrorLabel.setWrapText(true);
         content.getChildren().setAll(toolbar(jvmsAddMonitoringSubscriptionButton, jvmsSampleSubscriptionButton,
-                jvmsAddNotificationSubscriptionButton, jvmsStartNotificationsButton, jvmsStopNotificationsButton),
+                jvmsAddNotificationSubscriptionButton, jvmsStartNotificationsButton, jvmsStopNotificationsButton,
+                jvmsClearNotificationHistoryButton, jvmsNotificationHistoryFilterField),
                 split, jvmsMonitoringErrorLabel);
         jvmsMonitoringTab.setContent(content);
     }

@@ -158,6 +158,15 @@ public final class JavaJmxMonitoringRepository implements JmxMonitoringRepositor
         writeRows(indexKey, rowKeyFactory, trimToNewest(events, maxEvents), JavaJmxMonitoringRepository::encode);
     }
 
+    @Override
+    public void clearNotificationEvents(String subscriptionId) {
+        if (subscriptionId == null || subscriptionId.isBlank()) {
+            return;
+        }
+        removeRows(notificationEventIndexPrefix(subscriptionId),
+                rowId -> notificationEventRowKey(subscriptionId, rowId));
+    }
+
     void putRaw(String key, String value) {
         preferences.put(key, value);
     }

@@ -352,6 +352,39 @@ class EventBrowserViewModelTest {
     }
 
     @Test
+    void refreshPreservesSelectedEventWhenRowStillExists() {
+        RecordingEventQueryService service = new RecordingEventQueryService();
+        EventBrowserViewModel viewModel = new EventBrowserViewModel(new BrowseEventsUseCase(service), new DirectEventBrowserExecutor());
+        viewModel.loadRecording(recording());
+        viewModel.selectAllEventTypes();
+        EventRow selected = new EventRow("rec.CPULoad#42", "rec.CPULoad", Instant.EPOCH,
+                "1970-01-01T00:00:00Z", 0, "0 ns", "JVM Periodic Tasks", Map.of("jvmUser", "0.99"));
+
+        viewModel.selectRow(selected);
+        service.extraWindowRow = selected;
+        viewModel.showVisibleRange(0, 100);
+
+        assertEquals("rec.CPULoad#42", viewModel.selectedDetailsProperty().get().eventId());
+        assertEquals("rec.CPULoad#42", service.lastDetailsEventId());
+    }
+
+    @Test
+    void refreshFallsBackToFirstEventWhenSelectedEventDisappears() {
+        RecordingEventQueryService service = new RecordingEventQueryService();
+        EventBrowserViewModel viewModel = new EventBrowserViewModel(new BrowseEventsUseCase(service), new DirectEventBrowserExecutor());
+        viewModel.loadRecording(recording());
+        viewModel.selectAllEventTypes();
+        EventRow selected = new EventRow("rec.CPULoad#42", "rec.CPULoad", Instant.EPOCH,
+                "1970-01-01T00:00:00Z", 0, "0 ns", "JVM Periodic Tasks", Map.of("jvmUser", "0.99"));
+
+        viewModel.selectRow(selected);
+        viewModel.showVisibleRange(0, 100);
+
+        assertEquals("rec.CPULoad#0", viewModel.selectedDetailsProperty().get().eventId());
+        assertEquals("rec.CPULoad#0", service.lastDetailsEventId());
+    }
+
+    @Test
     void addsAndRemovesFieldColumnsForCurrentSession() {
         EventBrowserViewModel viewModel = new EventBrowserViewModel(new BrowseEventsUseCase(new FakeEventQueryService()),
                 new DirectEventBrowserExecutor());
@@ -584,6 +617,7 @@ class EventBrowserViewModelTest {
         private String lastDetailsEventId;
         private boolean failWindows;
         private int windowLoadCount;
+        private EventRow extraWindowRow;
 
         @Override
         public EventQuerySession openSession(RecordingSummary recording) {
@@ -664,7 +698,8 @@ class EventBrowserViewModelTest {
                     : Map.of("jvmUser", "0.12", "machineTotal", "0.42");
             EventRow row = new EventRow(rowEventTypeId + "#0", rowEventTypeId, Instant.EPOCH,
                     "1970-01-01T00:00:00Z", 0, "0 ns", "JVM Periodic Tasks", values);
-            return new EventWindow(request.eventTypeId(), request.loadStartRow(), List.of(row), 1, true,
+            List<EventRow> rows = extraWindowRow == null ? List.of(row) : List.of(row, extraWindowRow);
+            return new EventWindow(request.eventTypeId(), request.loadStartRow(), rows, rows.size(), true,
                     EventLoadState.COMPLETE);
         }
 

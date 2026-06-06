@@ -9,6 +9,7 @@ import java.util.function.Consumer;
 
 import io.github.youngledo.jmcfx.domain.model.JmxAttributeSubscription;
 import io.github.youngledo.jmcfx.domain.model.JmxNotificationEvent;
+import io.github.youngledo.jmcfx.domain.model.JmxNotificationHistoryFilter;
 import io.github.youngledo.jmcfx.domain.model.JmxNotificationListeningState;
 import io.github.youngledo.jmcfx.domain.model.JmxNotificationListeningSummary;
 import io.github.youngledo.jmcfx.domain.model.JmxNotificationSubscription;
@@ -141,8 +142,24 @@ public final class LiveJvmMonitoringUseCase {
         return repository.findNotificationEvents(subscriptionId);
     }
 
+    public List<JmxNotificationEvent> findNotificationEvents(
+            String subscriptionId,
+            JmxNotificationHistoryFilter filter) {
+        List<JmxNotificationEvent> events = findNotificationEvents(subscriptionId);
+        if (filter == null) {
+            return events;
+        }
+        return events.stream()
+                .filter(filter::matches)
+                .toList();
+    }
+
     public void appendNotificationEvent(JmxNotificationEvent event) {
         repository.appendNotificationEvent(event);
+    }
+
+    public void clearNotificationEvents(String subscriptionId) {
+        repository.clearNotificationEvents(subscriptionId);
     }
 
     private JmxNotificationListeningState notificationListeningState(String connectionId, String subscriptionId) {

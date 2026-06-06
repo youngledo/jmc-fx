@@ -65,6 +65,7 @@ public class EventBrowserViewModel implements AutoCloseable {
     private final ObservableList<String> filterChips = FXCollections.observableArrayList();
     private final ObservableList<EventColumn> columns = FXCollections.observableArrayList();
     private final ObservableList<EventRow> rows = FXCollections.observableArrayList();
+    private final StringProperty selectedEventId = new SimpleStringProperty("");
     private final ObjectProperty<EventDetails> selectedDetails = new SimpleObjectProperty<>();
     private final BooleanProperty loading = new SimpleBooleanProperty();
     private final BooleanProperty error = new SimpleBooleanProperty();
@@ -195,13 +196,14 @@ public class EventBrowserViewModel implements AutoCloseable {
         executeRequest(sequence, () -> {
             EventWindowRequest request = windowRequest(selection, startRow, rowCount, PREFETCH_BEFORE, columnFieldIds);
             EventWindow window = session.loadEventWindow(request);
-            EventDetails details = firstDetails(session, window);
+            EventDetails details = restoredOrFirstDetails(session, window);
 
             onFxThread(() -> {
                 if (stale(sequence)) {
                     return;
                 }
                 rows.setAll(window.rows());
+                selectedEventId.set(details == null ? "" : details.eventId());
                 selectedDetails.set(details);
                 loading.set(false);
                 statusMessage.set(windowStatus(window, request, selection));
@@ -268,9 +270,11 @@ public class EventBrowserViewModel implements AutoCloseable {
     public void selectRow(EventRow row) {
         EventBrowserSession session = activeSession;
         if (session == null || row == null) {
+            selectedEventId.set("");
             selectedDetails.set(null);
             return;
         }
+        selectedEventId.set(row.id());
         long sequence = requestSequence.incrementAndGet();
         loading.set(true);
         clearError();
@@ -332,6 +336,7 @@ public class EventBrowserViewModel implements AutoCloseable {
                 columns.setAll(loadedColumns);
                 rows.setAll(window.rows());
                 selectionProperties.set(loadedSelectionProperties);
+                selectedEventId.set(details == null ? "" : details.eventId());
                 selectedDetails.set(details);
                 loading.set(false);
                 statusMessage.set(windowStatus(window, request, selection));
@@ -371,6 +376,19 @@ public class EventBrowserViewModel implements AutoCloseable {
             return null;
         }
         return session.loadEventDetails(window.rows().getFirst().id());
+    }
+
+    private EventDetails restoredOrFirstDetails(EventBrowserSession session, EventWindow window) {
+        if (window == null || window.rows().isEmpty()) {
+            return null;
+        }
+        String eventId = selectedEventId.get();
+        String restoredId = eventId == null || eventId.isBlank() ? null : window.rows().stream()
+                .map(EventRow::id)
+                .filter(eventId::equals)
+                .findFirst()
+                .orElse(null);
+        return session.loadEventDetails(restoredId == null ? window.rows().getFirst().id() : restoredId);
     }
 
     private String windowStatus(EventWindow window, EventWindowRequest request, EventTypeSelection selection) {
@@ -473,6 +491,7 @@ public class EventBrowserViewModel implements AutoCloseable {
         fieldDescriptors.clear();
         columns.clear();
         rows.clear();
+        selectedEventId.set("");
         selectedDetails.set(null);
         selectionProperties.set(null);
     }
@@ -488,6 +507,7 @@ public class EventBrowserViewModel implements AutoCloseable {
         fieldDescriptors.clear();
         columns.clear();
         rows.clear();
+        selectedEventId.set("");
         selectedDetails.set(null);
     }
 

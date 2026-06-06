@@ -216,6 +216,20 @@ class JavaJmxMonitoringRepositoryTest {
     }
 
     @Test
+    void clearsNotificationEventsWithoutDeletingSubscription() {
+        JavaJmxMonitoringRepository repository = JavaJmxMonitoringRepository.inMemory();
+        JmxNotificationSubscription subscription = new JmxNotificationSubscription(
+                "notif-1", "42", "java.lang:type=Memory", "Memory", 2, true, true);
+        repository.saveNotificationSubscription(subscription);
+        repository.appendNotificationEvent(notificationEvent("notif-1", 1));
+
+        repository.clearNotificationEvents("notif-1");
+
+        assertEquals(List.of(subscription), repository.findNotificationSubscriptions("42"));
+        assertTrue(repository.findNotificationEvents("notif-1").isEmpty());
+    }
+
+    @Test
     void returnsImmutableCopies() {
         JavaJmxMonitoringRepository repository = JavaJmxMonitoringRepository.inMemory();
         JmxAttributeSubscription attributeSubscription = new JmxAttributeSubscription(

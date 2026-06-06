@@ -1,5 +1,8 @@
 package io.github.youngledo.jmcfx.ui.shell;
 
+import java.time.Instant;
+import java.time.ZoneId;
+
 import io.github.youngledo.jmcfx.domain.model.RecordingSummary;
 import io.github.youngledo.jmcfx.ui.advanced.AdvancedJfrPageController;
 import io.github.youngledo.jmcfx.ui.analysis.AnalysisPageController;
@@ -22,6 +25,8 @@ import io.github.youngledo.jmcfx.ui.profiling.ProfilingPageController;
 import io.github.youngledo.jmcfx.ui.socketio.SocketIoPageController;
 import io.github.youngledo.jmcfx.ui.threads.ThreadsPageController;
 import io.github.youngledo.jmcfx.ui.tlab.TlabPageController;
+import io.github.youngledo.jmcfx.ui.recording.RecordingTimeRange;
+import io.github.youngledo.jmcfx.ui.util.DisplayFormats;
 import io.github.youngledo.jmcfx.ui.util.TableExportRequests;
 
 final class ShellPageControllerRegistry {
@@ -139,17 +144,26 @@ final class ShellPageControllerRegistry {
         installJfrExports(installer, "Environment", environmentPagesController.exportTables(),
                 "Processes", "Environment Variables", "System Properties", "Recordings", "Active Settings",
                 "Agents", "Constant Pools");
+        heapDumpAnalysisPageController.exportRegistrations().forEach(installer::install);
     }
 
-    private static void installJfrExport(
+    private void installJfrExport(
             ExportMenuInstaller installer,
             javafx.scene.control.TableView<?> table,
             String page,
             String tableName) {
-        installer.install(TableExportRequests.currentView(table, "JFR Recording", page, tableName, "TableView"));
+        installer.install(TableExportRequests.currentView(
+                table,
+                "JFR Recording",
+                page,
+                tableName,
+                this::selectedRecordingSource,
+                this::selectedRecordingTimeRange,
+                () -> null,
+                () -> selectedRowsSummary(table)));
     }
 
-    private static void installJfrExports(
+    private void installJfrExports(
             ExportMenuInstaller installer,
             String page,
             java.util.List<javafx.scene.control.TableView<?>> tables,
@@ -158,6 +172,33 @@ final class ShellPageControllerRegistry {
         for (int index = 0; index < count; index++) {
             installJfrExport(installer, tables.get(index), page, tableNames[index]);
         }
+    }
+
+    private String selectedRecordingSource() {
+        RecordingWorkspace workspace = viewModel.selectedWorkspaceProperty().get();
+        if (workspace == null || workspace.recording() == null || workspace.recording().path() == null) {
+            return "Recording workspace";
+        }
+        return workspace.recording().path().getFileName() == null
+                ? workspace.recording().path().toString()
+                : workspace.recording().path().getFileName().toString();
+    }
+
+    private String selectedRecordingTimeRange() {
+        RecordingWorkspace workspace = viewModel.selectedWorkspaceProperty().get();
+        RecordingTimeRange range = workspace == null ? null : workspace.selectedTimeRangeProperty().get();
+        if (range == null) {
+            return null;
+        }
+        String start = DisplayFormats.formatTimestamp(Instant.ofEpochMilli(range.startEpochMillis()), ZoneId.systemDefault());
+        String end = DisplayFormats.formatTimestamp(Instant.ofEpochMilli(range.endEpochMillis()), ZoneId.systemDefault());
+        String duration = DisplayFormats.formatDuration(range.durationMillis());
+        return i18n.format("export.scope.recordingTimeRange", start, end, duration);
+    }
+
+    private String selectedRowsSummary(javafx.scene.control.TableView<?> table) {
+        int selectedCount = table.getSelectionModel().getSelectedItems().size();
+        return selectedCount <= 0 ? null : i18n.format("export.scope.selectedRows", selectedCount);
     }
 
     void refreshOverviewLocale() {

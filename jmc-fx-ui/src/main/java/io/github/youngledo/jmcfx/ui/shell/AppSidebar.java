@@ -54,6 +54,10 @@ public class AppSidebar extends VBox {
         bindLocalizedText();
     }
 
+    TextField searchField() {
+        return searchField;
+    }
+
     private void bindLocalizedText() {
         if (title != null) {
             title.textProperty().bind(i18n.text("sidebar.brand"));

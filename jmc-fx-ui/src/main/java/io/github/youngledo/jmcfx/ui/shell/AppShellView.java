@@ -38,7 +38,9 @@ import io.github.youngledo.jmcfx.ui.socketio.SocketIoPageView;
 import io.github.youngledo.jmcfx.ui.threads.ThreadsPageView;
 import io.github.youngledo.jmcfx.ui.tlab.TlabPaneView;
 import io.github.youngledo.jmcfx.ui.tlab.TlabPageView;
+import io.github.youngledo.jmcfx.ui.util.WorkbenchFocusTarget;
 
+import javafx.scene.Node;
 import javafx.scene.control.ProgressBar;
 import javafx.scene.control.TabPane;
 import javafx.scene.layout.BorderPane;
@@ -167,5 +169,22 @@ final class AppShellView {
 
     EnvironmentPagesView environmentPages() {
         return environment.view();
+    }
+
+    Node focusTarget(WorkbenchFocusTarget target) {
+        return switch (target) {
+            case GLOBAL_NAVIGATION -> sidebar;
+            case WORKSPACE_TABS -> recordingTabs;
+            case PAGE_PRIMARY -> visibleWorkspacePane();
+            case PAGE_FILTER -> sidebar.searchField();
+            case NONE -> null;
+        };
+    }
+
+    private Node visibleWorkspacePane() {
+        return workspaceStack.getChildren().stream()
+                .filter(Node::isVisible)
+                .findFirst()
+                .orElse(workspaceStack);
     }
 }
