@@ -32,6 +32,7 @@ final class AppNavTree extends TreeView<AppNavItem> {
     private final Map<String, TreeItem<AppNavItem>> pageItems;
     private Consumer<String> navigationHandler = section -> { };
     private I18n i18n;
+    private boolean syncingSelectionFromViewModel;
 
     AppNavTree(I18n i18n) {
         this.i18n = i18n;
@@ -218,6 +219,9 @@ final class AppNavTree extends TreeView<AppNavItem> {
     }
 
     private void navigate(TreeItem<AppNavItem> item) {
+        if (syncingSelectionFromViewModel) {
+            return;
+        }
         if (item == null || item.getValue() == null || !item.getValue().page()) {
             return;
         }
@@ -230,16 +234,21 @@ final class AppNavTree extends TreeView<AppNavItem> {
     }
 
     private void selectSection(String sectionId) {
-        TreeItem<AppNavItem> item = pageItems.get(sectionId);
-        if (item == null) {
-            getSelectionModel().clearSelection();
-            return;
+        syncingSelectionFromViewModel = true;
+        try {
+            TreeItem<AppNavItem> item = pageItems.get(sectionId);
+            if (item == null) {
+                getSelectionModel().clearSelection();
+                return;
+            }
+            if (!item.getValue().visibleIn(activeWorkspaceKind.get())) {
+                getSelectionModel().clearSelection();
+                return;
+            }
+            getSelectionModel().select(item);
+        } finally {
+            syncingSelectionFromViewModel = false;
         }
-        if (!item.getValue().visibleIn(activeWorkspaceKind.get())) {
-            getSelectionModel().clearSelection();
-            return;
-        }
-        getSelectionModel().select(item);
     }
 
     private void updateNavigationContext(AppWorkspaceKind workspaceKind) {
@@ -252,12 +261,17 @@ final class AppNavTree extends TreeView<AppNavItem> {
             case HEAP_DUMP -> heapDumpGroups;
             case LIVE_JVM -> liveJvmGroups;
         };
-        getSelectionModel().clearSelection();
-        setRoot(null);
-        rootItem.getChildren().setAll(groups);
-        rootItem.setExpanded(true);
-        groups.forEach(group -> group.setExpanded(true));
-        setRoot(rootItem);
+        syncingSelectionFromViewModel = true;
+        try {
+            getSelectionModel().clearSelection();
+            setRoot(null);
+            rootItem.getChildren().setAll(groups);
+            rootItem.setExpanded(true);
+            groups.forEach(group -> group.setExpanded(true));
+            setRoot(rootItem);
+        } finally {
+            syncingSelectionFromViewModel = false;
+        }
         selectSection(selectedSectionId);
         refresh();
     }

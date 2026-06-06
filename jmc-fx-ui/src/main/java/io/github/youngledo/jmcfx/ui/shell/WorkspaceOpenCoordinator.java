@@ -1,6 +1,7 @@
 package io.github.youngledo.jmcfx.ui.shell;
 
 import java.nio.file.Path;
+import java.util.function.BiConsumer;
 import java.util.function.Consumer;
 
 import io.github.youngledo.jmcfx.application.HeapDumpApplicationServices;
@@ -29,7 +30,7 @@ final class WorkspaceOpenCoordinator {
     private final OpenHeapDumpWorkspaceUseCase openHeapDumpWorkspace;
     private final I18n i18n;
     private final RecordingOpenExecutor recordingOpenExecutor;
-    private final Consumer<PreparedRecordingWorkspace> recordingWorkspaceConsumer;
+    private final BiConsumer<PreparedRecordingWorkspace, Long> recordingWorkspaceConsumer;
     private final Consumer<Boolean> recordingOpeningConsumer;
     private final Consumer<Boolean> backgroundWorkVisibleConsumer;
     private boolean recordingOpening;
@@ -37,7 +38,7 @@ final class WorkspaceOpenCoordinator {
     WorkspaceOpenCoordinator(BorderPane root, AppShellViewModel viewModel,
             RecordingWorkspaceFactory recordingWorkspaceFactory, HeapDumpApplicationServices heapDumpServices, I18n i18n,
             RecordingOpenExecutor recordingOpenExecutor,
-            Consumer<PreparedRecordingWorkspace> recordingWorkspaceConsumer,
+            BiConsumer<PreparedRecordingWorkspace, Long> recordingWorkspaceConsumer,
             Consumer<Boolean> recordingOpeningConsumer,
             Consumer<Boolean> backgroundWorkVisibleConsumer) {
         this.root = root;
@@ -77,6 +78,7 @@ final class WorkspaceOpenCoordinator {
         if (selectExistingRecordingWorkspace(path)) {
             return;
         }
+        long openRequestGeneration = viewModel.nextOpenGeneration();
         setRecordingOpening(true);
         backgroundWorkVisibleConsumer.accept(true);
         viewModel.showStatus(openingRecordingStatus(i18n, path));
@@ -85,7 +87,10 @@ final class WorkspaceOpenCoordinator {
             try {
                 PreparedRecordingWorkspace preparedWorkspace = prepareRecordingWorkspace(path);
                 onFxThread(() -> {
-                    recordingWorkspaceConsumer.accept(preparedWorkspace);
+                    recordingWorkspaceConsumer.accept(preparedWorkspace, openRequestGeneration);
+                    if (!isSelectedRecording(path)) {
+                        backgroundWorkVisibleConsumer.accept(false);
+                    }
                     finishRecordingOpen();
                 });
             } catch (RuntimeException exception) {
@@ -154,6 +159,12 @@ final class WorkspaceOpenCoordinator {
 
     void finishRecordingOpen() {
         setRecordingOpening(false);
+    }
+
+    private boolean isSelectedRecording(Path path) {
+        RecordingWorkspace workspace = viewModel.selectedWorkspaceProperty().get();
+        return workspace != null && workspace.recording().path().toAbsolutePath().normalize()
+                .equals(path.toAbsolutePath().normalize());
     }
 
     private void showOpenRecordingFailure(RuntimeException exception) {

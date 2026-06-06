@@ -30,15 +30,7 @@ final class WorkspaceTabsController {
             }
         });
         viewModel.workspaceTabsProperty().addListener((ListChangeListener<Object>) change -> rebuild());
-        viewModel.selectedWorkspaceProperty().addListener((observable, oldValue, newValue) -> select(
-                newValue, viewModel.selectedHeapDumpWorkspaceProperty().get(),
-                viewModel.selectedLiveJvmWorkspaceProperty().get()));
-        viewModel.selectedHeapDumpWorkspaceProperty().addListener((observable, oldValue, newValue) -> select(
-                viewModel.selectedWorkspaceProperty().get(), newValue,
-                viewModel.selectedLiveJvmWorkspaceProperty().get()));
-        viewModel.selectedLiveJvmWorkspaceProperty().addListener((observable, oldValue, newValue) -> select(
-                viewModel.selectedWorkspaceProperty().get(),
-                viewModel.selectedHeapDumpWorkspaceProperty().get(), newValue));
+        viewModel.selectedWorkspaceTabProperty().addListener((observable, oldValue, newValue) -> select(newValue));
         rebuild();
     }
 
@@ -46,6 +38,10 @@ final class WorkspaceTabsController {
             LiveJvmWorkspace liveJvmWorkspace) {
         Object workspace = liveJvmWorkspace != null ? liveJvmWorkspace
                 : heapDumpWorkspace != null ? heapDumpWorkspace : recordingWorkspace;
+        select(workspace);
+    }
+
+    void select(Object workspace) {
         if (workspace == null) {
             tabs.getSelectionModel().clearSelection();
             return;
@@ -63,15 +59,13 @@ final class WorkspaceTabsController {
                     .map(this::toWorkspaceTab)
                     .toList();
             tabs.getTabs().setAll(workspaceTabs);
-            boolean showTabs = shouldShowWorkspaceTabs(
-                    viewModel.recordingWorkspacesProperty().size(),
-                    viewModel.heapDumpWorkspacesProperty().size(),
-                    viewModel.liveJvmWorkspaceOpenProperty().get());
+            boolean showTabs = !viewModel.workspaceTabsProperty().isEmpty();
             tabs.setVisible(showTabs);
             tabs.setManaged(showTabs);
-            select(viewModel.selectedWorkspaceProperty().get(),
-                    viewModel.selectedHeapDumpWorkspaceProperty().get(),
-                    viewModel.selectedLiveJvmWorkspaceProperty().get());
+            Object selectedWorkspace = viewModel.selectedWorkspaceTabProperty().get();
+            if (selectedWorkspace != null || tabs.getTabs().isEmpty()) {
+                select(selectedWorkspace);
+            }
         } finally {
             updatingTabs = false;
         }

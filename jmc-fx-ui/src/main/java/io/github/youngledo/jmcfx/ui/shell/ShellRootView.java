@@ -6,6 +6,7 @@ import javafx.scene.control.TabPane;
 import javafx.scene.layout.BorderPane;
 import javafx.scene.layout.HBox;
 import javafx.scene.layout.Priority;
+import javafx.scene.layout.Region;
 import javafx.scene.layout.StackPane;
 import javafx.scene.layout.VBox;
 
@@ -27,6 +28,7 @@ final class ShellRootView {
         styles(workspaceShell, "workspace-shell");
         styles(recordingTabs, "recording-tabs");
         styles(workspaceStack, "work-area");
+        recordingTabs.setMinHeight(Region.USE_PREF_SIZE);
         VBox.setVgrow(workspaceStack, Priority.ALWAYS);
         workspaceShell.getChildren().setAll(recordingTabs, workspaceStack);
         root.setCenter(workspaceShell);

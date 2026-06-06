@@ -31,11 +31,13 @@ import org.xml.sax.SAXException;
 
 import io.github.youngledo.jmcfx.application.AnalyzeRulesUseCase;
 import io.github.youngledo.jmcfx.application.BrowseEventsUseCase;
+import io.github.youngledo.jmcfx.application.HeapDumpApplicationServices;
 import io.github.youngledo.jmcfx.application.LiveJvmApplicationServices;
 import io.github.youngledo.jmcfx.application.RecordingApplicationServices;
 import io.github.youngledo.jmcfx.application.RecordingPageUseCases;
 import io.github.youngledo.jmcfx.ui.util.DisplayFormats;
 import io.github.youngledo.jmcfx.domain.model.EventTypeSelection;
+import io.github.youngledo.jmcfx.domain.model.HeapDumpAnalysisReport;
 import io.github.youngledo.jmcfx.domain.model.JdpJvmAdvertisement;
 import io.github.youngledo.jmcfx.domain.model.JvmConnection;
 import io.github.youngledo.jmcfx.domain.model.JvmConnectionSource;
@@ -52,6 +54,7 @@ import io.github.youngledo.jmcfx.ui.overview.OverviewViewModel;
 import io.github.youngledo.jmcfx.ui.profiling.ProfilingPageController;
 import io.github.youngledo.jmcfx.ui.rules.RuleResultsViewModel;
 import io.github.youngledo.jmcfx.ui.testsupport.FakeEventQueryService;
+import io.github.youngledo.jmcfx.ui.testsupport.FakeHeapDumpAnalysisService;
 import io.github.youngledo.jmcfx.ui.testsupport.FakeJdpDiscoveryService;
 import io.github.youngledo.jmcfx.ui.testsupport.FakeJmxConnectionService;
 import io.github.youngledo.jmcfx.ui.testsupport.FakeJmxMonitoringRepository;
@@ -63,7 +66,9 @@ import io.github.youngledo.jmcfx.ui.testsupport.FakeSavedJvmTargetRepository;
 
 import javafx.application.Platform;
 import javafx.scene.Node;
+import javafx.scene.Scene;
 import javafx.scene.layout.Region;
+import javafx.stage.Stage;
 
 class AppShellTest {
 
@@ -101,6 +106,135 @@ class AppShellTest {
     }
 
     @Test
+    void shellRuntimeKeepsWorkspaceTabsAndVisiblePaneInSyncAcrossMixedOpens() throws Exception {
+        ShellHarness shell = createShellHarness();
+
+        runFx(() -> shell.controller.openRecordingInBackground(Path.of("demo.jfr")));
+        shell.executor.runNextAndWaitForFx();
+        runFx(shell.viewModel::openLiveJvmWorkspace);
+        runFx(() -> shell.viewModel.openHeapDump(new HeapDumpWorkspace(Path.of("demo.hprof"), null)));
+
+        runFx(() -> {
+            assertEquals(3, shell.view.recordingTabs.getTabs().size());
+            assertEquals("demo.hprof", selectedWorkspaceTabTitle(shell.view));
+            assertTrue(shell.view.recordingTabs.isVisible(), "Workspace tabs must stay visible after HPROF opens");
+            assertTrue(shell.view.workspacePanes.heapDumpAnalysisPane.isVisible(), "HPROF pane must be visible");
+            assertFalse(shell.view.workspacePanes.jvmsPaneHost.isVisible(), "JVM pane must not remain visible");
+            assertEquals("heapDumpAnalysis", shell.viewModel.selectedSectionProperty().get());
+        });
+
+        runFx(() -> shell.view.recordingTabs.getSelectionModel().select(0));
+
+        runFx(() -> {
+            assertEquals("demo.jfr", selectedWorkspaceTabTitle(shell.view));
+            assertTrue(shell.view.recordingTabs.isVisible(), "Workspace tabs must stay visible after returning to JFR");
+            assertTrue(shell.view.workspacePanes.analysisPane.isVisible(), "JFR analysis pane must be visible");
+            assertFalse(shell.view.workspacePanes.heapDumpAnalysisPane.isVisible(), "HPROF pane must not remain visible");
+            assertEquals("analysis", shell.viewModel.selectedSectionProperty().get());
+        });
+    }
+
+    @Test
+    void shellStageShowsRecordingTabAfterOpeningJfr() throws Exception {
+        ShellHarness shell = createShellHarness();
+
+        runFx(() -> {
+            Stage stage = new Stage();
+            stage.setScene(new Scene(shell.view.root, 1100, 760));
+            stage.show();
+            shell.stage = stage;
+        });
+        try {
+            runFx(() -> shell.controller.openRecordingInBackground(Path.of("demo.jfr")));
+            shell.executor.runNextAndWaitForFx();
+            runFx(() -> {
+                shell.view.root.applyCss();
+                shell.view.root.layout();
+                javafx.geometry.Bounds bounds = shell.view.recordingTabs.localToScene(
+                        shell.view.recordingTabs.getBoundsInLocal());
+                assertEquals(1, shell.view.recordingTabs.getTabs().size());
+                assertEquals("demo.jfr", selectedWorkspaceTabTitle(shell.view));
+                assertTrue(shell.view.recordingTabs.isVisible(), "Workspace tabs must be logically visible");
+                assertTrue(shell.view.recordingTabs.isManaged(), "Workspace tabs must participate in layout");
+                assertTrue(bounds.getWidth() > 100, "Workspace tabs must have visible scene width");
+                assertTrue(bounds.getHeight() > 20, "Workspace tabs must have visible scene height");
+                assertTrue(shell.view.workspacePanes.analysisPane.isVisible(), "JFR analysis pane must be visible");
+            });
+        } finally {
+            runFx(() -> {
+                if (shell.stage != null) {
+                    shell.stage.close();
+                }
+            });
+        }
+    }
+
+    @Test
+    void shellStageKeepsOnlyCurrentWorkspaceTabVisuallySelectedAcrossJfrHeapDumpAndJvm() throws Exception {
+        ShellHarness shell = createShellHarness();
+
+        runFx(() -> {
+            Stage stage = new Stage();
+            stage.setScene(new Scene(shell.view.root, 1100, 760));
+            stage.show();
+            shell.stage = stage;
+        });
+        try {
+            runFx(() -> shell.controller.openRecordingInBackground(Path.of("app.jfr")));
+            shell.executor.runNextAndWaitForFx();
+            runFx(() -> shell.viewModel.openHeapDump(new HeapDumpWorkspace(Path.of("jmc-fx.hprof"), null)));
+            runFx(shell.viewModel::openLiveJvmWorkspace);
+
+            runFx(() -> {
+                shell.view.root.applyCss();
+                shell.view.root.layout();
+
+                java.util.List<Node> tabNodes = shell.view.recordingTabs.lookupAll(".tab").stream()
+                        .filter(node -> node.getStyleClass().contains("tab"))
+                        .sorted(java.util.Comparator.comparingDouble(node -> node.localToScene(
+                                node.getBoundsInLocal()).getMinX()))
+                        .toList();
+                java.util.List<Node> selectedTabNodes = tabNodes.stream()
+                        .filter(node -> node.getPseudoClassStates().stream()
+                                .anyMatch(pseudoClass -> "selected".equals(pseudoClass.getPseudoClassName())))
+                        .toList();
+
+                assertEquals(3, shell.view.recordingTabs.getTabs().size());
+                assertEquals("JVM", selectedWorkspaceTabTitle(shell.view));
+                assertEquals(3, tabNodes.size(), "Workspace tab header must render one node per workspace tab");
+                assertEquals(1, selectedTabNodes.size(), "Only the current workspace tab should render selected");
+                assertTrue(tabNodes.get(2) == selectedTabNodes.getFirst(),
+                        "The selected visual tab must match the selected JVM workspace");
+            });
+        } finally {
+            runFx(() -> {
+                if (shell.stage != null) {
+                    shell.stage.close();
+                }
+            });
+        }
+    }
+
+    @Test
+    void shellRuntimeKeepsLastOpenedWorkspaceFocusedWhenRecordingCompletesAfterMixedOpens() throws Exception {
+        ShellHarness shell = createShellHarness();
+
+        runFx(() -> shell.controller.openRecordingInBackground(Path.of("demo.jfr")));
+        runFx(shell.viewModel::openLiveJvmWorkspace);
+        runFx(() -> shell.viewModel.openHeapDump(new HeapDumpWorkspace(Path.of("demo.hprof"), null)));
+        shell.executor.runNextAndWaitForFx();
+
+        runFx(() -> {
+            assertEquals(3, shell.view.recordingTabs.getTabs().size());
+            assertEquals("demo.hprof", selectedWorkspaceTabTitle(shell.view));
+            assertTrue(shell.view.recordingTabs.isVisible(), "Workspace tabs must stay visible after JFR completes");
+            assertTrue(shell.view.workspacePanes.heapDumpAnalysisPane.isVisible(), "HPROF pane must keep focus");
+            assertFalse(shell.view.workspacePanes.analysisPane.isVisible(), "JFR pane must not steal focus");
+            assertEquals("heapDumpAnalysis", shell.viewModel.selectedSectionProperty().get());
+        });
+    }
+
+    @Test
     void shellRootFrameIsSplitOutOfAppShellView() throws Exception {
         String appShellView = java.nio.file.Files.readString(
                 java.nio.file.Path.of("src/main/java/io/github/youngledo/jmcfx/ui/shell/AppShellView.java"));
@@ -122,6 +256,7 @@ class AppShellTest {
         assertTrue(rootView.contains("ShellRootView(StackPane workspaceStack)"));
         assertTrue(rootView.contains("void configure(StackPane workspaceStack)"));
         assertTrue(rootView.contains("styles(root, \"enterprise-shell\", \"app-shell\")"));
+        assertTrue(rootView.contains("styles(recordingTabs, \"recording-tabs\")"));
         assertTrue(rootView.contains("workspaceShell.getChildren().setAll(recordingTabs, workspaceStack)"));
     }
 
@@ -404,8 +539,8 @@ class AppShellTest {
         assertTrue(tabs.contains("private final TabPane tabs;"));
         assertTrue(tabs.contains("private boolean updatingTabs;"));
         assertTrue(tabs.contains("void configure()"));
-        assertTrue(tabs.contains("viewModel.selectedLiveJvmWorkspaceProperty().addListener"));
-        assertTrue(tabs.contains("void select(RecordingWorkspace recordingWorkspace, HeapDumpWorkspace heapDumpWorkspace,"));
+        assertTrue(tabs.contains("viewModel.selectedWorkspaceTabProperty().addListener"));
+        assertTrue(tabs.contains("void select(Object workspace)"));
         assertTrue(tabs.contains("static String tabTitleFor(RecordingWorkspace workspace)"));
         assertTrue(tabs.contains("static boolean shouldShowWorkspaceTabs(int recordingWorkspaceCount, int heapDumpWorkspaceCount,"));
     }
@@ -485,14 +620,14 @@ class AppShellTest {
         assertFalse(shell.contains("workspaceOpenCoordinator.finishRecordingOpen();"));
 
         assertTrue(attacher.contains("final class ShellRecordingWorkspaceAttacher"));
-        assertTrue(attacher.contains("void attach(PreparedRecordingWorkspace prepared)"));
+        assertTrue(attacher.contains("void attach(PreparedRecordingWorkspace prepared, long openRequestGeneration)"));
         assertTrue(attacher.contains("prepared.overview().showRecording("));
         assertTrue(attacher.contains("pageControllerRegistry.formatRecordingDetails(prepared.recording())"));
         assertTrue(attacher.contains("viewModel.openRecording(prepared.recording()"));
         assertTrue(attacher.contains("viewModel.showStatus(i18n.format(\"status.openedRecording\""));
 
         assertTrue(coordinator.contains("finishRecordingOpen();"));
-        assertTrue(coordinator.contains("recordingWorkspaceConsumer.accept(preparedWorkspace);"));
+        assertTrue(coordinator.contains("recordingWorkspaceConsumer.accept(preparedWorkspace, openRequestGeneration);"));
     }
 
     @Test
@@ -2247,17 +2382,17 @@ class AppShellTest {
 
 
     @Test
-    void workspaceTabsUseDistinctSelectedIndicator() throws Exception {
+    void workspaceTabsUseDefaultTabPaneSelectionStyling() throws Exception {
         String css = appCss();
-        String selectedTab = cssBlock(css, ".recording-tabs .tab:selected");
-        String selectedTabContainer = cssBlock(css, ".recording-tabs .tab:selected .tab-container");
-        String selectedTabLabel = cssBlock(css, ".recording-tabs .tab:selected .tab-label");
 
-        assertFalse(selectedTab.contains("-fx-border-width"),
-                "Selected workspace tabs must not change tab border size because it can clip adjacent labels");
-        assertTrue(selectedTabContainer.contains("-fx-border-width: 0 0 3px 0"));
-        assertTrue(selectedTabContainer.contains("-fx-border-color: -color-accent-emphasis"));
-        assertTrue(selectedTabLabel.contains("-fx-text-fill: -color-fg-default"));
+        assertFalse(css.contains(".recording-tabs .tab:selected"),
+                "Workspace tabs should use the JavaFX/AtlantaFX selected tab state");
+        assertFalse(css.contains(".recording-tabs .tab .tab-container"),
+                "Workspace tabs should not add custom tab-container indicators");
+        assertFalse(css.contains(".recording-tabs .tab:selected .tab-container"),
+                "Workspace tabs should not override the selected tab-container state");
+        assertFalse(css.contains(".recording-tabs .tab:selected .tab-label"),
+                "Workspace tabs should not override the selected tab-label state");
     }
 
     @Test
@@ -3809,6 +3944,72 @@ void settingsPageContainsThemeSelectorNextToLanguageSelector() {
         return shell.get();
     }
 
+    private static ShellHarness createShellHarness() throws Exception {
+        java.util.concurrent.atomic.AtomicReference<ShellHarness> shell = new java.util.concurrent.atomic.AtomicReference<>();
+        java.util.concurrent.atomic.AtomicReference<Throwable> failure = new java.util.concurrent.atomic.AtomicReference<>();
+        CountDownLatch latch = new CountDownLatch(1);
+        Platform.runLater(() -> {
+            try {
+                AppShellView view = new AppShellView();
+                AppShellViewModel viewModel = new AppShellViewModel();
+                QueueingRecordingOpenExecutor executor = new QueueingRecordingOpenExecutor();
+                AppShellController controller = new AppShellController(view, viewModel,
+                        recordingServices(), emptyLiveJvmServices(), heapDumpServices(), new I18n(Locale.ENGLISH),
+                        executor);
+                controller.initialize();
+                shell.set(new ShellHarness(view, viewModel, controller, executor));
+            } catch (Throwable throwable) {
+                failure.set(throwable);
+            } finally {
+                latch.countDown();
+            }
+        });
+        assertTrue(latch.await(5, TimeUnit.SECONDS));
+        if (failure.get() != null) {
+            throw new AssertionError(failure.get());
+        }
+        return shell.get();
+    }
+
+    private static void runFx(Runnable runnable) throws Exception {
+        java.util.concurrent.atomic.AtomicReference<Throwable> failure = new java.util.concurrent.atomic.AtomicReference<>();
+        CountDownLatch latch = new CountDownLatch(1);
+        Platform.runLater(() -> {
+            try {
+                runnable.run();
+            } catch (Throwable throwable) {
+                failure.set(throwable);
+            } finally {
+                latch.countDown();
+            }
+        });
+        assertTrue(latch.await(5, TimeUnit.SECONDS));
+        if (failure.get() != null) {
+            throw new AssertionError(failure.get());
+        }
+    }
+
+    private static String selectedWorkspaceTabTitle(AppShellView view) {
+        javafx.scene.control.Tab selected = view.recordingTabs.getSelectionModel().getSelectedItem();
+        return selected == null ? "" : selected.getText();
+    }
+
+    private static RecordingApplicationServices recordingServices() {
+        return new RecordingApplicationServices(new FakeRecordingRepository(), new FakeEventQueryService(),
+                new FakeRuleAnalysisService(), null, null, null, null, null, null, null, null, null, null, null, null,
+                null, null, null, null);
+    }
+
+    private static LiveJvmApplicationServices emptyLiveJvmServices() {
+        return new LiveJvmApplicationServices(null, null, null, null, null, null, null, null, null, null, null);
+    }
+
+    private static HeapDumpApplicationServices heapDumpServices() {
+        FakeHeapDumpAnalysisService service = new FakeHeapDumpAnalysisService();
+        service.setReport(new HeapDumpAnalysisReport(Path.of("demo.hprof"), 0, 0, 0, 0, 0, 0, List.of(), ""));
+        return new HeapDumpApplicationServices(service);
+    }
+
     private static RecordingSummary recording(String id, String fileName) {
         return new RecordingSummary(id, Path.of(fileName), fileName,
                 Instant.EPOCH, Instant.EPOCH.plusSeconds(1), 1000, 128);
@@ -3874,6 +4075,44 @@ void settingsPageContainsThemeSelectorNextToLanguageSelector() {
 
         void runNext() {
             tasks.remove().run();
+        }
+
+        void runNextAndWaitForFx() throws Exception {
+            java.util.concurrent.atomic.AtomicReference<Throwable> failure = new java.util.concurrent.atomic.AtomicReference<>();
+            CountDownLatch workerLatch = new CountDownLatch(1);
+            Thread worker = new Thread(() -> {
+                try {
+                    runNext();
+                } catch (Throwable throwable) {
+                    failure.set(throwable);
+                } finally {
+                    workerLatch.countDown();
+                }
+            });
+            worker.start();
+            assertTrue(workerLatch.await(5, TimeUnit.SECONDS));
+            if (failure.get() != null) {
+                throw new AssertionError(failure.get());
+            }
+            CountDownLatch fxLatch = new CountDownLatch(1);
+            Platform.runLater(fxLatch::countDown);
+            assertTrue(fxLatch.await(5, TimeUnit.SECONDS));
+        }
+    }
+
+    private static final class ShellHarness {
+        private final AppShellView view;
+        private final AppShellViewModel viewModel;
+        private final AppShellController controller;
+        private final QueueingRecordingOpenExecutor executor;
+        private Stage stage;
+
+        ShellHarness(AppShellView view, AppShellViewModel viewModel, AppShellController controller,
+                QueueingRecordingOpenExecutor executor) {
+            this.view = view;
+            this.viewModel = viewModel;
+            this.controller = controller;
+            this.executor = executor;
         }
     }
 

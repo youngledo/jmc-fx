@@ -17,7 +17,7 @@ final class ShellRecordingWorkspaceAttacher {
         this.i18n = Objects.requireNonNull(i18n, "i18n");
     }
 
-    void attach(PreparedRecordingWorkspace prepared) {
+    void attach(PreparedRecordingWorkspace prepared, long openRequestGeneration) {
         prepared.overview().showRecording(prepared.recording(),
                 pageControllerRegistry.formatRecordingDetails(prepared.recording()));
         viewModel.openRecording(prepared.recording(), prepared.overview(), prepared.events(), prepared.analysis(),
@@ -27,7 +27,7 @@ final class ShellRecordingWorkspaceAttacher {
                 prepared.compilations(), prepared.codeCache(), prepared.classLoading(), prepared.vmOperations(),
                 prepared.environment(), prepared.javaAppOverview(), prepared.security(), prepared.nativeLibraries(),
                 prepared.threadDumps(), prepared.metadata(), prepared.g1Gc(), prepared.javaFxEvents(),
-                prepared.advancedJfr());
+                prepared.advancedJfr(), openRequestGeneration);
         viewModel.showStatus(i18n.format("status.openedRecording", prepared.recording().name()));
     }
 }

@@ -58,7 +58,6 @@ final class WorkspaceSelectionController {
 
     private void showWorkspace(RecordingWorkspace workspace) {
         loadedWorkspace = null;
-        workspaceTabsController.select(workspace, null, null);
         pages.overviewPageController().bind(workspace == null ? null : workspace.overviewViewModel());
         pages.eventsPageController().bind(workspace == null ? null : workspace.eventBrowserViewModel());
         pages.analysisPageController().bind(workspace == null ? null : workspace.ruleResultsViewModel());
@@ -121,7 +120,6 @@ final class WorkspaceSelectionController {
             pages.heapDumpAnalysisPageController().bind(null);
             return;
         }
-        workspaceTabsController.select(null, workspace, null);
         pages.heapDumpAnalysisPageController().bind(workspace.viewModel());
     }
 
@@ -129,7 +127,6 @@ final class WorkspaceSelectionController {
         if (workspace == null) {
             return;
         }
-        workspaceTabsController.select(null, null, workspace);
     }
 
     void loadSelectedWorkspaceSection() {

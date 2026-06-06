@@ -76,6 +76,7 @@ public class AppShellViewModel {
     private final ObjectProperty<HeapDumpWorkspace> selectedHeapDumpWorkspace = new SimpleObjectProperty<>();
     private final ObjectProperty<LiveJvmWorkspace> liveJvmWorkspace = new SimpleObjectProperty<>();
     private final ObjectProperty<LiveJvmWorkspace> selectedLiveJvmWorkspace = new SimpleObjectProperty<>();
+    private final ObjectProperty<Object> selectedWorkspaceTab = new SimpleObjectProperty<>();
     private final ObjectProperty<AppWorkspaceKind> activeWorkspaceKind =
             new SimpleObjectProperty<>(AppWorkspaceKind.GLOBAL);
     private final StringProperty selectedSection = new SimpleStringProperty("home");
@@ -86,6 +87,7 @@ public class AppShellViewModel {
     private final BooleanProperty liveJvmWorkspaceOpen = new SimpleBooleanProperty(false);
     private final ObjectProperty<LanguageMode> languageMode = new SimpleObjectProperty<>(LanguageMode.SYSTEM);
     private final ObjectProperty<AppTheme> theme = new SimpleObjectProperty<>(AppTheme.SYSTEM);
+    private long openGeneration;
 
     public StringProperty selectedSectionProperty() {
         return selectedSection;
@@ -171,6 +173,10 @@ public class AppShellViewModel {
         return selectedLiveJvmWorkspace;
     }
 
+    public ReadOnlyObjectProperty<Object> selectedWorkspaceTabProperty() {
+        return selectedWorkspaceTab;
+    }
+
     public void showSection(String sectionId) {
         if (!knownSection(sectionId)) {
             return;
@@ -183,12 +189,7 @@ public class AppShellViewModel {
             return;
         }
         if (HOME_SECTION.equals(sectionId) || SETTINGS_SECTION.equals(sectionId)) {
-            selectedWorkspace.set(null);
-            selectedHeapDumpWorkspace.set(null);
-            selectedLiveJvmWorkspace.set(null);
-            activeWorkspaceKind.set(AppWorkspaceKind.GLOBAL);
-            currentTargetName.set("");
-            selectedSection.set(sectionId);
+            selectGlobalSection(sectionId);
             return;
         }
         RecordingWorkspace workspace = selectedWorkspace.get();
@@ -325,6 +326,31 @@ public class AppShellViewModel {
             G1GcViewModel g1GcViewModel,
             JavaFxEventsViewModel javaFxEventsViewModel,
             AdvancedJfrViewModel advancedJfrViewModel) {
+        return openRecording(recording, overview, events, ruleResults, profiling, exceptions, threads,
+                fileio, socketio, locks, heap, leakSuspects, tlab,
+                jvmInfo, gcConfig, gcSummary, gcDetails, compilations, codeCache, classLoading, vmOperations,
+                environment, javaAppOverviewViewModel, securityViewModel, nativeLibraryViewModel, threadDumpViewModel,
+                jfrMetadataViewModel, g1GcViewModel, javaFxEventsViewModel, advancedJfrViewModel, nextOpenGeneration());
+    }
+
+    RecordingWorkspace openRecording(RecordingSummary recording, OverviewViewModel overview,
+            EventBrowserViewModel events, RuleResultsViewModel ruleResults,
+            ProfilingViewModel profiling, ExceptionViewModel exceptions, ThreadViewModel threads,
+            FileIOViewModel fileio, SocketIOViewModel socketio, LockViewModel locks,
+            HeapViewModel heap, LeakSuspectsViewModel leakSuspects, TlabViewModel tlab,
+            JvmInfoViewModel jvmInfo, GcConfigViewModel gcConfig, GcSummaryViewModel gcSummary,
+            GcDetailsViewModel gcDetails, CompilationsViewModel compilations,
+            CodeCacheViewModel codeCache, ClassLoadingViewModel classLoading,
+            VmOperationsViewModel vmOperations, EnvironmentViewModel environment,
+            JavaAppOverviewViewModel javaAppOverviewViewModel,
+            SecurityViewModel securityViewModel,
+            NativeLibraryViewModel nativeLibraryViewModel,
+            ThreadDumpViewModel threadDumpViewModel,
+            JfrMetadataViewModel jfrMetadataViewModel,
+            G1GcViewModel g1GcViewModel,
+            JavaFxEventsViewModel javaFxEventsViewModel,
+            AdvancedJfrViewModel advancedJfrViewModel,
+            long openRequestGeneration) {
         Objects.requireNonNull(recording, "recording");
         Objects.requireNonNull(overview, "overview");
         Objects.requireNonNull(events, "events");
@@ -343,15 +369,23 @@ public class AppShellViewModel {
         workspace.selectedSectionProperty().set(DEFAULT_RECORDING_SECTION);
         recordingWorkspaces.add(workspace);
         workspaceTabs.add(workspace);
-        selectWorkspace(workspace);
-        selectedSection.set(DEFAULT_RECORDING_SECTION);
+        recordingOpen.set(true);
+        if (openRequestGeneration == openGeneration) {
+            selectWorkspace(workspace);
+            selectedSection.set(DEFAULT_RECORDING_SECTION);
+        }
         statusMessage.set("");
         taskSummary.set("");
         return workspace;
     }
 
+    public long nextOpenGeneration() {
+        return ++openGeneration;
+    }
+
     public HeapDumpWorkspace openHeapDump(HeapDumpWorkspace workspace) {
         Objects.requireNonNull(workspace, "workspace");
+        nextOpenGeneration();
         HeapDumpWorkspace existingWorkspace = heapDumpWorkspaceFor(workspace.path());
         if (existingWorkspace != null) {
             workspace.close();
@@ -365,6 +399,7 @@ public class AppShellViewModel {
     }
 
     public void openLiveJvmWorkspace() {
+        nextOpenGeneration();
         if (liveJvmWorkspace.get() == null) {
             LiveJvmWorkspace workspace = new LiveJvmWorkspace("JVM");
             liveJvmWorkspace.set(workspace);
@@ -378,9 +413,9 @@ public class AppShellViewModel {
         if (liveJvmWorkspace.get() == null) {
             return;
         }
-        selectedWorkspace.set(null);
-        selectedHeapDumpWorkspace.set(null);
+        clearSelectedWorkspacesExcept(AppWorkspaceKind.LIVE_JVM);
         selectedLiveJvmWorkspace.set(liveJvmWorkspace.get());
+        selectedWorkspaceTab.set(liveJvmWorkspace.get());
         activeWorkspaceKind.set(AppWorkspaceKind.LIVE_JVM);
         currentTargetName.set(liveJvmWorkspace.get().name());
         selectedSection.set(JVMS_SECTION);
@@ -392,6 +427,7 @@ public class AppShellViewModel {
             return;
         }
         boolean active = selectedLiveJvmWorkspace.get() == workspace;
+        int closedIndex = workspaceTabs.indexOf(workspace);
         workspaceTabs.remove(workspace);
         liveJvmWorkspace.set(null);
         selectedLiveJvmWorkspace.set(null);
@@ -399,18 +435,16 @@ public class AppShellViewModel {
         if (!active) {
             return;
         }
-        activeWorkspaceKind.set(AppWorkspaceKind.GLOBAL);
-        currentTargetName.set("");
-        selectedSection.set(HOME_SECTION);
+        selectNeighborAfterClosing(closedIndex);
     }
 
     public void selectHeapDumpWorkspace(HeapDumpWorkspace workspace) {
         if (workspace == null || !heapDumpWorkspaces.contains(workspace)) {
             return;
         }
-        selectedWorkspace.set(null);
-        selectedLiveJvmWorkspace.set(null);
+        clearSelectedWorkspacesExcept(AppWorkspaceKind.HEAP_DUMP);
         selectedHeapDumpWorkspace.set(workspace);
+        selectedWorkspaceTab.set(workspace);
         activeWorkspaceKind.set(AppWorkspaceKind.HEAP_DUMP);
         currentTargetName.set(workspace.path().getFileName().toString());
         selectedSection.set(HEAP_DUMP_ANALYSIS_SECTION);
@@ -422,30 +456,24 @@ public class AppShellViewModel {
         }
         boolean active = workspace == selectedHeapDumpWorkspace.get();
         int closedIndex = heapDumpWorkspaces.indexOf(workspace);
+        int closedTabIndex = workspaceTabs.indexOf(workspace);
         heapDumpWorkspaces.remove(workspace);
         workspaceTabs.remove(workspace);
         workspace.close();
         if (!active) {
             return;
         }
-        if (heapDumpWorkspaces.isEmpty()) {
-            selectedHeapDumpWorkspace.set(null);
-            activeWorkspaceKind.set(AppWorkspaceKind.GLOBAL);
-            currentTargetName.set("");
-            selectedSection.set(HOME_SECTION);
-            return;
-        }
-        int nextIndex = Math.min(closedIndex, heapDumpWorkspaces.size() - 1);
-        selectHeapDumpWorkspace(heapDumpWorkspaces.get(nextIndex));
+        selectedHeapDumpWorkspace.set(null);
+        selectNeighborAfterClosing(closedTabIndex >= 0 ? closedTabIndex : closedIndex);
     }
 
     public void selectWorkspace(RecordingWorkspace workspace) {
         if (workspace == null || !recordingWorkspaces.contains(workspace)) {
             return;
         }
-        selectedHeapDumpWorkspace.set(null);
-        selectedLiveJvmWorkspace.set(null);
+        clearSelectedWorkspacesExcept(AppWorkspaceKind.RECORDING);
         selectedWorkspace.set(workspace);
+        selectedWorkspaceTab.set(workspace);
         activeWorkspaceKind.set(AppWorkspaceKind.RECORDING);
         recordingOpen.set(true);
         currentTargetName.set(workspace.recording().name());
@@ -476,25 +504,16 @@ public class AppShellViewModel {
         }
         boolean active = workspace == selectedWorkspace.get();
         int closedIndex = recordingWorkspaces.indexOf(workspace);
+        int closedTabIndex = workspaceTabs.indexOf(workspace);
         recordingWorkspaces.remove(workspace);
         workspaceTabs.remove(workspace);
         workspace.close();
+        recordingOpen.set(!recordingWorkspaces.isEmpty());
         if (!active) {
             return;
         }
-        if (recordingWorkspaces.isEmpty()) {
-            selectedWorkspace.set(null);
-            activeWorkspaceKind.set(AppWorkspaceKind.GLOBAL);
-            recordingOpen.set(false);
-            currentTargetName.set("");
-            selectedSection.set(HOME_SECTION);
-            return;
-        }
-        int nextIndex = Math.min(closedIndex, recordingWorkspaces.size() - 1);
-        selectWorkspace(recordingWorkspaces.get(nextIndex));
-        if (isRecordingSection(selectedSection.get())) {
-            selectedSection.set(selectedWorkspace.get().selectedSectionProperty().get());
-        }
+        selectedWorkspace.set(null);
+        selectNeighborAfterClosing(closedTabIndex >= 0 ? closedTabIndex : closedIndex);
     }
 
     public void showStatus(String message) {
@@ -535,6 +554,49 @@ public class AppShellViewModel {
 
     private static Path normalizedPath(Path path) {
         return path.toAbsolutePath().normalize();
+    }
+
+    private void selectNeighborAfterClosing(int closedIndex) {
+        if (workspaceTabs.isEmpty()) {
+            selectGlobalSection(HOME_SECTION);
+            return;
+        }
+        int nextIndex = Math.min(Math.max(closedIndex, 0), workspaceTabs.size() - 1);
+        selectWorkspaceTab(workspaceTabs.get(nextIndex));
+    }
+
+    private void selectWorkspaceTab(Object workspace) {
+        if (workspace instanceof RecordingWorkspace recordingWorkspace) {
+            selectWorkspace(recordingWorkspace);
+            return;
+        }
+        if (workspace instanceof HeapDumpWorkspace heapDumpWorkspace) {
+            selectHeapDumpWorkspace(heapDumpWorkspace);
+            return;
+        }
+        if (workspace instanceof LiveJvmWorkspace) {
+            selectLiveJvmWorkspace();
+        }
+    }
+
+    private void selectGlobalSection(String sectionId) {
+        clearSelectedWorkspacesExcept(AppWorkspaceKind.GLOBAL);
+        selectedWorkspaceTab.set(null);
+        activeWorkspaceKind.set(AppWorkspaceKind.GLOBAL);
+        currentTargetName.set("");
+        selectedSection.set(sectionId);
+    }
+
+    private void clearSelectedWorkspacesExcept(AppWorkspaceKind workspaceKind) {
+        if (workspaceKind != AppWorkspaceKind.RECORDING) {
+            selectedWorkspace.set(null);
+        }
+        if (workspaceKind != AppWorkspaceKind.HEAP_DUMP) {
+            selectedHeapDumpWorkspace.set(null);
+        }
+        if (workspaceKind != AppWorkspaceKind.LIVE_JVM) {
+            selectedLiveJvmWorkspace.set(null);
+        }
     }
 
     private boolean sectionAllowedForActiveWorkspace(String sectionId) {

@@ -341,10 +341,91 @@ class AppShellViewModelTest {
                 recording(), new OverviewViewModel(), eventBrowserViewModel(), ruleResultsViewModel());
 
         assertEquals(List.of(liveJvm, heapDump, recording), viewModel.workspaceTabsProperty());
+        assertSame(recording, viewModel.selectedWorkspaceTabProperty().get());
 
         viewModel.closeHeapDumpWorkspace(heapDump);
 
         assertEquals(List.of(liveJvm, recording), viewModel.workspaceTabsProperty());
+        assertSame(recording, viewModel.selectedWorkspaceTabProperty().get());
+    }
+
+    @Test
+    void completedRecordingDoesNotStealFocusFromLaterOpenedWorkspace() {
+        AppShellViewModel viewModel = new AppShellViewModel();
+        long recordingOpenGeneration = viewModel.nextOpenGeneration();
+        HeapDumpWorkspace heapDump = new HeapDumpWorkspace(Path.of("demo.hprof"), null);
+        viewModel.openHeapDump(heapDump);
+
+        RecordingWorkspace recording = viewModel.openRecording(
+                recording(), new OverviewViewModel(), eventBrowserViewModel(), ruleResultsViewModel(),
+                null, null, null, null, null, null, null, null, null,
+                null, null, null, null, null, null, null, null,
+                null, null, null, null, null, null, null, null,
+                null, recordingOpenGeneration);
+
+        assertEquals(List.of(heapDump, recording), viewModel.workspaceTabsProperty());
+        assertSame(heapDump, viewModel.selectedWorkspaceTabProperty().get());
+        assertSame(heapDump, viewModel.selectedHeapDumpWorkspaceProperty().get());
+        assertNull(viewModel.selectedWorkspaceProperty().get());
+        assertEquals(AppWorkspaceKind.HEAP_DUMP, viewModel.activeWorkspaceKindProperty().get());
+        assertEquals("heapDumpAnalysis", viewModel.selectedSectionProperty().get());
+    }
+
+    @Test
+    void closingActiveRecordingSelectsNextWorkspaceTabAcrossTypes() {
+        AppShellViewModel viewModel = new AppShellViewModel();
+        RecordingWorkspace recording = viewModel.openRecording(
+                recording(), new OverviewViewModel(), eventBrowserViewModel(), ruleResultsViewModel());
+        HeapDumpWorkspace heapDump = new HeapDumpWorkspace(Path.of("demo.hprof"), null);
+        viewModel.openHeapDump(heapDump);
+        viewModel.openLiveJvmWorkspace();
+        viewModel.selectWorkspace(recording);
+
+        viewModel.closeWorkspace(recording);
+
+        assertEquals(List.of(heapDump, viewModel.liveJvmWorkspaceProperty().get()), viewModel.workspaceTabsProperty());
+        assertNull(viewModel.selectedWorkspaceProperty().get());
+        assertSame(heapDump, viewModel.selectedHeapDumpWorkspaceProperty().get());
+        assertEquals(AppWorkspaceKind.HEAP_DUMP, viewModel.activeWorkspaceKindProperty().get());
+        assertEquals("heapDumpAnalysis", viewModel.selectedSectionProperty().get());
+        assertFalse(viewModel.recordingOpenProperty().get());
+    }
+
+    @Test
+    void closingActiveHeapDumpSelectsNextWorkspaceTabAcrossTypes() {
+        AppShellViewModel viewModel = new AppShellViewModel();
+        viewModel.openLiveJvmWorkspace();
+        LiveJvmWorkspace liveJvm = viewModel.liveJvmWorkspaceProperty().get();
+        HeapDumpWorkspace heapDump = new HeapDumpWorkspace(Path.of("demo.hprof"), null);
+        viewModel.openHeapDump(heapDump);
+        RecordingWorkspace recording = viewModel.openRecording(
+                recording(), new OverviewViewModel(), eventBrowserViewModel(), ruleResultsViewModel());
+        viewModel.selectHeapDumpWorkspace(heapDump);
+
+        viewModel.closeHeapDumpWorkspace(heapDump);
+
+        assertEquals(List.of(liveJvm, recording), viewModel.workspaceTabsProperty());
+        assertNull(viewModel.selectedHeapDumpWorkspaceProperty().get());
+        assertSame(recording, viewModel.selectedWorkspaceProperty().get());
+        assertEquals(AppWorkspaceKind.RECORDING, viewModel.activeWorkspaceKindProperty().get());
+        assertEquals("analysis", viewModel.selectedSectionProperty().get());
+    }
+
+    @Test
+    void closingActiveLiveJvmSelectsNextWorkspaceTabAcrossTypes() {
+        AppShellViewModel viewModel = new AppShellViewModel();
+        viewModel.openLiveJvmWorkspace();
+        HeapDumpWorkspace heapDump = new HeapDumpWorkspace(Path.of("demo.hprof"), null);
+        viewModel.openHeapDump(heapDump);
+        viewModel.selectLiveJvmWorkspace();
+
+        viewModel.closeLiveJvmWorkspace();
+
+        assertEquals(List.of(heapDump), viewModel.workspaceTabsProperty());
+        assertNull(viewModel.selectedLiveJvmWorkspaceProperty().get());
+        assertSame(heapDump, viewModel.selectedHeapDumpWorkspaceProperty().get());
+        assertEquals(AppWorkspaceKind.HEAP_DUMP, viewModel.activeWorkspaceKindProperty().get());
+        assertEquals("heapDumpAnalysis", viewModel.selectedSectionProperty().get());
     }
 
     @Test

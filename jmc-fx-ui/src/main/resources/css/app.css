@@ -30,19 +30,6 @@
     -fx-border-color: -color-border-default;
 }
 
-.recording-tabs .tab:selected {
-    -fx-background-color: -color-bg-default;
-}
-
-.recording-tabs .tab:selected .tab-container {
-    -fx-border-width: 0 0 3px 0;
-    -fx-border-color: -color-accent-emphasis;
-}
-
-.recording-tabs .tab:selected .tab-label {
-    -fx-text-fill: -color-fg-default;
-}
-
 .work-area {
     -fx-padding: 18px 20px;
     -fx-background-color: -color-bg-default;

@@ -149,6 +149,25 @@ class AppNavTreeTest {
     }
 
     @Test
+    void boundTreeDoesNotNavigateWhileSynchronizingWorkspaceContext() {
+        AppShellViewModel viewModel = new AppShellViewModel();
+        AppNavTree tree = new AppNavTree(new I18n(Locale.ENGLISH));
+        java.util.List<String> navigatedSections = new java.util.ArrayList<>();
+        tree.bind(viewModel);
+        tree.setNavigationHandler(navigatedSections::add);
+
+        viewModel.openRecording(recording());
+        viewModel.openLiveJvmWorkspace();
+        viewModel.openHeapDump(new HeapDumpWorkspace(Path.of("demo.hprof"), null));
+        viewModel.selectRecordingWorkspaceByPath(Path.of("rec.jfr"));
+
+        assertTrue(navigatedSections.isEmpty(),
+                "Programmatic workspace synchronization must not be treated as user navigation");
+        assertEquals(AppWorkspaceKind.RECORDING, viewModel.activeWorkspaceKindProperty().get());
+        assertEquals("analysis", viewModel.selectedSectionProperty().get());
+    }
+
+    @Test
     void globalContextSearchOnlyExposesGlobalPages() {
         AppNavTree tree = new AppNavTree(new I18n(Locale.ENGLISH));
         tree.setActiveWorkspaceKindForTesting(AppWorkspaceKind.GLOBAL);
