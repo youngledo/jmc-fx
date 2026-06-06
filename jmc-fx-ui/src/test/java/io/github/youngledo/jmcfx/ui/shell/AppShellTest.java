@@ -567,7 +567,8 @@ class AppShellTest {
         assertTrue(runtime.contains("private ExportMenuInstaller exportMenuInstaller;"));
         assertTrue(runtime.contains("exportMenuInstaller = new ExportMenuInstaller(view.root, viewModel, i18n);"));
         assertTrue(runtime.contains("pageControllerRegistry.installExportMenus(exportMenuInstaller)"));
-        assertTrue(registry.contains("installer.install(analysisPageController.table())"));
+        assertTrue(registry.contains("installJfrExport(installer, analysisPageController.table(), "
+                + "\"Automated Analysis\", \"Rule Results\")"));
         assertFalse(shell.contains("private void attachExportMenu("));
         assertFalse(shell.contains("CsvExport.export(table, target.toPath())"));
         assertFalse(shell.contains("new MenuItem(i18n.get(\"context.exportCsv\"))"));
@@ -575,7 +576,8 @@ class AppShellTest {
         assertTrue(installer.contains("final class ExportMenuInstaller"));
         assertTrue(installer.contains("void install(TableView<?> table)"));
         assertTrue(installer.contains("void install(TableExportRegistration registration)"));
-        assertTrue(installer.contains("new TableExportRequest(table, CsvExportOptions.visibleColumns(), null)"));
+        assertTrue(installer.contains("TableExportRequests.currentView(table, "
+                + "\"Workspace\", \"Current Page\", \"Table\", \"TableView\")"));
         assertTrue(installer.contains("new MenuItem(i18n.get(\"context.exportCsv\"))"));
         assertTrue(installer.contains("chooser.setTitle(i18n.get(\"fileChooser.saveCsv.title\"))"));
         assertTrue(installer.contains("CsvExport.export(registration.requestSupplier().get(), target.toPath())"));
@@ -2744,9 +2746,12 @@ class AppShellTest {
         assertTrue(selection.contains("workspace == null ? null : workspace.nativeLibraryViewModel()"));
         assertTrue(selection.contains("pages.javaApplicationDataPagesController().bindThreadDumps("));
         assertTrue(selection.contains("workspace == null ? null : workspace.threadDumpViewModel()"));
-        assertTrue(registry.contains("installer.install(exceptionsPageController.table())"));
-        assertTrue(registry.contains("installer.install(threadsPageController.table())"));
-        assertTrue(registry.contains("javaApplicationDataPagesController.exportTables().forEach(installer::install)"));
+        assertTrue(registry.contains("installJfrExport(installer, exceptionsPageController.table(), "
+                + "\"Exception Events\", \"Exception Histogram\")"));
+        assertTrue(registry.contains("installJfrExport(installer, threadsPageController.table(), "
+                + "\"Thread Activity\", \"Thread Summary\")"));
+        assertTrue(registry.contains("installJfrExports(installer, \"Java Application\", "
+                + "javaApplicationDataPagesController.exportTables()"));
 
         assertFalse(shell.contains("private ExceptionViewModel exceptionViewModel;"));
         assertFalse(shell.contains("private ThreadViewModel threadViewModel;"));
@@ -2847,9 +2852,12 @@ class AppShellTest {
         assertTrue(selection.contains("workspace == null ? null : workspace.socketIOViewModel(),"));
         assertTrue(selection.contains("workspace == null ? null : workspace.selectedTimeRangeProperty())"));
         assertTrue(selection.contains("pages.locksPageController().bind(workspace == null ? null : workspace.lockViewModel())"));
-        assertTrue(registry.contains("fileIoPageController.exportTables().forEach(installer::install)"));
-        assertTrue(registry.contains("socketIoPageController.exportTables().forEach(installer::install)"));
-        assertTrue(registry.contains("locksPageController.exportTables().forEach(installer::install)"));
+        assertTrue(registry.contains("installJfrExports(installer, \"File I/O\", "
+                + "fileIoPageController.exportTables()"));
+        assertTrue(registry.contains("installJfrExports(installer, \"Socket I/O\", "
+                + "socketIoPageController.exportTables()"));
+        assertTrue(registry.contains("installJfrExports(installer, \"Locks\", "
+                + "locksPageController.exportTables()"));
 
         assertFalse(shell.contains("private FileIOViewModel fileIOViewModel;"));
         assertFalse(shell.contains("private SocketIOViewModel socketIOViewModel;"));
@@ -2943,9 +2951,12 @@ class AppShellTest {
         assertTrue(selection.contains("pages.tlabPageController().bind("));
         assertTrue(selection.contains("workspace == null ? null : workspace.tlabViewModel(),"));
         assertTrue(selection.contains("workspace == null ? null : workspace.selectedTimeRangeProperty())"));
-        assertTrue(registry.contains("installer.install(heapPageController.table())"));
-        assertTrue(registry.contains("installer.install(leakSuspectsPageController.table())"));
-        assertTrue(registry.contains("installer.install(tlabPageController.table())"));
+        assertTrue(registry.contains("installJfrExport(installer, heapPageController.table(), "
+                + "\"Heap\", \"Class Histogram\")"));
+        assertTrue(registry.contains("installJfrExport(installer, leakSuspectsPageController.table(), "
+                + "\"Leak Suspects\", \"Leak Candidates\")"));
+        assertTrue(registry.contains("installJfrExport(installer, tlabPageController.table(), "
+                + "\"TLAB Allocations\", \"TLAB Allocations\")"));
 
         assertFalse(shell.contains("private HeapViewModel heapViewModel;"));
         assertFalse(shell.contains("private LeakSuspectsViewModel leaksViewModel;"));
@@ -3049,9 +3060,12 @@ class AppShellTest {
         assertTrue(selection.contains("workspace == null ? null : workspace.selectedTimeRangeProperty())"));
         assertTrue(selection.contains("pages.jvmInternalsPagesController().bindVmOperations("));
         assertTrue(selection.contains("workspace == null ? null : workspace.vmOperationsViewModel(),"));
-        assertTrue(registry.contains("jvmInternalsPagesController.exportTables().forEach(installer::install)"));
-        assertTrue(registry.contains("g1GcPageController.exportTables().forEach(installer::install)"));
-        assertTrue(registry.contains("javaFxEventsPageController.exportTables().forEach(installer::install)"));
+        assertTrue(registry.contains("installJfrExports(installer, \"JVM Internals\", "
+                + "jvmInternalsPagesController.exportTables()"));
+        assertTrue(registry.contains("installJfrExports(installer, \"G1 GC\", "
+                + "g1GcPageController.exportTables()"));
+        assertTrue(registry.contains("installJfrExports(installer, \"JavaFX Events\", "
+                + "javaFxEventsPageController.exportTables()"));
 
         assertFalse(shell.contains("private TableView<JvmFlag> jvmFlagsTable;"));
         assertFalse(shell.contains("private G1GcViewModel g1GcViewModel;"));
@@ -3130,7 +3144,8 @@ class AppShellTest {
         assertTrue(registry.contains("environmentPagesController = new EnvironmentPagesController(view.environmentPages(), i18n);"));
         assertTrue(registry.contains("environmentPagesController.configure();"));
         assertTrue(selection.contains("pages.environmentPagesController().bind(workspace == null ? null : workspace.environmentViewModel())"));
-        assertTrue(registry.contains("environmentPagesController.exportTables().forEach(installer::install);"));
+        assertTrue(registry.contains("installJfrExports(installer, \"Environment\", "
+                + "environmentPagesController.exportTables()"));
         assertTrue(appShellView.contains("EnvironmentPagesView environmentPages()"));
 
         assertFalse(shell.contains("private EnvironmentViewModel environmentViewModel;"));

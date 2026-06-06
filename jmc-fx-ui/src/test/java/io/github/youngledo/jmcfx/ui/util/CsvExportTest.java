@@ -130,6 +130,26 @@ class CsvExportTest {
     }
 
     @Test
+    void currentViewRequestDeclaresVisibleCurrentScope() {
+        if (!toolkitReady) {
+            return; // Skip on headless CI
+        }
+
+        TableView<String> table = tableWithNameAndCount();
+        TableExportRequest request = TableExportRequests.currentViewRequest(
+                table, "JFR Recording", "File I/O", "File I/O Events", "TableView");
+
+        assertEquals(table, request.table());
+        assertEquals(CsvExportOptions.visibleColumns(), request.options());
+        assertEquals("JFR Recording", request.context().workspace());
+        assertEquals("File I/O", request.context().page());
+        assertEquals("File I/O Events", request.context().table());
+        assertEquals("TableView", request.context().source());
+        assertEquals(TableExportScope.CURRENT_VIEW, request.context().rowScope());
+        assertEquals(TableExportScope.VISIBLE_COLUMNS, request.context().columnScope());
+    }
+
+    @Test
     void export_writesHeaderAndRows() throws IOException {
         if (!toolkitReady) {
             return; // Skip on headless CI

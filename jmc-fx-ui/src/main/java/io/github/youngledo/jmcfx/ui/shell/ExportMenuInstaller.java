@@ -2,9 +2,8 @@ package io.github.youngledo.jmcfx.ui.shell;
 
 import io.github.youngledo.jmcfx.ui.i18n.I18n;
 import io.github.youngledo.jmcfx.ui.util.CsvExport;
-import io.github.youngledo.jmcfx.ui.util.CsvExportOptions;
 import io.github.youngledo.jmcfx.ui.util.TableExportRegistration;
-import io.github.youngledo.jmcfx.ui.util.TableExportRequest;
+import io.github.youngledo.jmcfx.ui.util.TableExportRequests;
 
 import javafx.scene.control.ContextMenu;
 import javafx.scene.control.MenuItem;
@@ -25,8 +24,7 @@ final class ExportMenuInstaller {
     }
 
     void install(TableView<?> table) {
-        install(new TableExportRegistration(table,
-                () -> new TableExportRequest(table, CsvExportOptions.visibleColumns(), null)));
+        install(TableExportRequests.currentView(table, "Workspace", "Current Page", "Table", "TableView"));
     }
 
     void install(TableExportRegistration registration) {

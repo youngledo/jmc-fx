@@ -22,6 +22,7 @@ import io.github.youngledo.jmcfx.ui.profiling.ProfilingPageController;
 import io.github.youngledo.jmcfx.ui.socketio.SocketIoPageController;
 import io.github.youngledo.jmcfx.ui.threads.ThreadsPageController;
 import io.github.youngledo.jmcfx.ui.tlab.TlabPageController;
+import io.github.youngledo.jmcfx.ui.util.TableExportRequests;
 
 final class ShellPageControllerRegistry {
 
@@ -111,21 +112,52 @@ final class ShellPageControllerRegistry {
     }
 
     void installExportMenus(ExportMenuInstaller installer) {
-        installer.install(analysisPageController.table());
-        installer.install(profilingPageController.table());
-        installer.install(exceptionsPageController.table());
-        installer.install(threadsPageController.table());
-        fileIoPageController.exportTables().forEach(installer::install);
-        socketIoPageController.exportTables().forEach(installer::install);
-        locksPageController.exportTables().forEach(installer::install);
-        javaApplicationDataPagesController.exportTables().forEach(installer::install);
-        installer.install(heapPageController.table());
-        installer.install(leakSuspectsPageController.table());
-        installer.install(tlabPageController.table());
-        jvmInternalsPagesController.exportTables().forEach(installer::install);
-        g1GcPageController.exportTables().forEach(installer::install);
-        javaFxEventsPageController.exportTables().forEach(installer::install);
-        environmentPagesController.exportTables().forEach(installer::install);
+        installJfrExport(installer, analysisPageController.table(), "Automated Analysis", "Rule Results");
+        installJfrExport(installer, profilingPageController.table(), "Method Profiling", "Hot Methods");
+        installJfrExport(installer, exceptionsPageController.table(), "Exception Events", "Exception Histogram");
+        installJfrExport(installer, threadsPageController.table(), "Thread Activity", "Thread Summary");
+        installJfrExports(installer, "File I/O", fileIoPageController.exportTables(),
+                "File I/O Histogram", "File I/O Events");
+        installJfrExports(installer, "Socket I/O", socketIoPageController.exportTables(),
+                "Socket I/O Histogram", "Socket I/O Events");
+        installJfrExports(installer, "Locks", locksPageController.exportTables(),
+                "Locks By Class", "Locks By Address", "Locks By Thread");
+        installJfrExports(installer, "Java Application", javaApplicationDataPagesController.exportTables(),
+                "Thread Histogram", "Security Certificates", "Native Libraries", "Thread Dumps");
+        installJfrExport(installer, heapPageController.table(), "Heap", "Class Histogram");
+        installJfrExport(installer, leakSuspectsPageController.table(), "Leak Suspects", "Leak Candidates");
+        installJfrExport(installer, tlabPageController.table(), "TLAB Allocations", "TLAB Allocations");
+        installJfrExports(installer, "JVM Internals", jvmInternalsPagesController.exportTables(),
+                "JVM Flags", "JVM Flag Changes", "GC Events", "GC Reference Statistics", "GC Heap Summary",
+                "Compilations", "Compilation Failures",
+                "Code Cache Sweeps", "Code Cache Statistics", "Class Loading Histogram", "Class Loading Events",
+                "Class Loading Statistics", "VM Operation Summary", "VM Operation Events");
+        installJfrExports(installer, "G1 GC", g1GcPageController.exportTables(),
+                "Region Summary", "Region States", "GC Pauses");
+        installJfrExports(installer, "JavaFX Events", javaFxEventsPageController.exportTables(),
+                "Pulse Phases", "Pulse Summary", "Input Events");
+        installJfrExports(installer, "Environment", environmentPagesController.exportTables(),
+                "Processes", "Environment Variables", "System Properties", "Recordings", "Active Settings",
+                "Agents", "Constant Pools");
+    }
+
+    private static void installJfrExport(
+            ExportMenuInstaller installer,
+            javafx.scene.control.TableView<?> table,
+            String page,
+            String tableName) {
+        installer.install(TableExportRequests.currentView(table, "JFR Recording", page, tableName, "TableView"));
+    }
+
+    private static void installJfrExports(
+            ExportMenuInstaller installer,
+            String page,
+            java.util.List<javafx.scene.control.TableView<?>> tables,
+            String... tableNames) {
+        int count = Math.min(tableNames.length, tables.size());
+        for (int index = 0; index < count; index++) {
+            installJfrExport(installer, tables.get(index), page, tableNames[index]);
+        }
     }
 
     void refreshOverviewLocale() {
