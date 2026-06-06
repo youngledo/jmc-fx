@@ -4,7 +4,6 @@ import io.github.youngledo.jmcfx.domain.model.DiagnosticCommandInfo;
 import io.github.youngledo.jmcfx.domain.model.FlightRecordingInfo;
 import io.github.youngledo.jmcfx.domain.model.JmcAgentPreset;
 import io.github.youngledo.jmcfx.domain.model.JmcAgentTransform;
-import io.github.youngledo.jmcfx.domain.model.JmxAttributeSubscription;
 import io.github.youngledo.jmcfx.domain.model.JmxNotificationEvent;
 import io.github.youngledo.jmcfx.domain.model.JmxSubscriptionSample;
 import io.github.youngledo.jmcfx.domain.model.JvmCapabilitySnapshot;
@@ -17,6 +16,7 @@ import io.github.youngledo.jmcfx.domain.model.TriggerActionType;
 import io.github.youngledo.jmcfx.domain.model.TriggerEvent;
 import io.github.youngledo.jmcfx.domain.model.TriggerOperator;
 import io.github.youngledo.jmcfx.domain.model.TriggerRule;
+import io.github.youngledo.jmcfx.ui.jvms.JmxMonitoringSubscriptionRow;
 import io.github.youngledo.jmcfx.ui.jvms.LiveJvmOverviewMetric;
 
 import javafx.geometry.Orientation;
@@ -128,7 +128,7 @@ final class LiveJvmPaneView {
     final Button jvmsAddNotificationSubscriptionButton = new Button();
     final Button jvmsStartNotificationsButton = new Button();
     final Button jvmsStopNotificationsButton = new Button();
-    final TableView<JmxAttributeSubscription> jvmsMonitoringSubscriptionsTable = denseTable();
+    final TableView<JmxMonitoringSubscriptionRow> jvmsMonitoringSubscriptionsTable = denseTable();
     final LineChart<Number, Number> jvmsMonitoringChart = lineChart(true);
     final TableView<JmxSubscriptionSample> jvmsMonitoringSamplesTable = denseTable();
     final TableView<JmxNotificationEvent> jvmsMonitoringNotificationsTable = denseTable();

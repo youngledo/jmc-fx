@@ -101,6 +101,9 @@ class LiveJvmPaneControllerTest {
         assertTrue(source.contains("void configure(I18n i18n, JvmBrowserViewModel viewModel)"));
         assertTrue(source.contains("private final LiveJvmPaneView view;"));
         assertTrue(source.contains("private TableView<JvmConnection> jvmsTable;"));
+        assertTrue(source.contains("private TableView<JmxMonitoringSubscriptionRow> jvmsMonitoringSubscriptionsTable;"));
+        assertTrue(source.contains("jvmBrowserViewModel.jmxMonitoringSubscriptionsProperty()"));
+        assertTrue(source.contains("jvmBrowserViewModel.selectJmxMonitoringSubscription(newValue)"));
         assertTrue(source.contains("private Button jvmsAddNotificationSubscriptionButton;"));
         assertTrue(source.contains(
                 "jvmsAddNotificationSubscriptionButton.setOnAction(event -> addSelectedNotificationSubscription())"));

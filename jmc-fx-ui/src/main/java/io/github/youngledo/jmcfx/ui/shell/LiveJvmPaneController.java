@@ -135,6 +135,7 @@ import io.github.youngledo.jmcfx.ui.jvm.GcSummaryViewModel;
 import io.github.youngledo.jmcfx.ui.jvm.JvmInfoViewModel;
 import io.github.youngledo.jmcfx.ui.jvm.VmOperationsViewModel;
 import io.github.youngledo.jmcfx.ui.jvms.JvmBrowserViewModel;
+import io.github.youngledo.jmcfx.ui.jvms.JmxMonitoringSubscriptionRow;
 import io.github.youngledo.jmcfx.ui.jvms.LiveJvmPersistenceOverview;
 import io.github.youngledo.jmcfx.ui.jvms.LiveJvmOverviewMetric;
 import io.github.youngledo.jmcfx.ui.leaks.LeakSuspectsViewModel;
@@ -323,7 +324,7 @@ public final class LiveJvmPaneController {
     private Button jvmsAddNotificationSubscriptionButton;
     private Button jvmsStartNotificationsButton;
     private Button jvmsStopNotificationsButton;
-    private TableView<JmxAttributeSubscription> jvmsMonitoringSubscriptionsTable;
+    private TableView<JmxMonitoringSubscriptionRow> jvmsMonitoringSubscriptionsTable;
     private LineChart<Number, Number> jvmsMonitoringChart;
     private TableView<JmxSubscriptionSample> jvmsMonitoringSamplesTable;
     private TableView<JmxNotificationEvent> jvmsMonitoringNotificationsTable;
@@ -802,24 +803,28 @@ public final class LiveJvmPaneController {
         jvmsMonitoringNotificationsTable.setPlaceholder(localizedTablePlaceholder("jvms.monitoring.notifications.empty"));
         jvmsMonitoringChart.setCreateSymbols(false);
 
-        TableColumn<JmxAttributeSubscription, String> labelCol =
+        TableColumn<JmxMonitoringSubscriptionRow, String> typeCol =
+                localizedColumn("jvms.monitoring.subscription.type");
+        typeCol.setPrefWidth(120);
+        typeCol.setCellValueFactory(cell -> Bindings.createStringBinding(
+                () -> formatJmxMonitoringSubscriptionKind(cell.getValue()), i18n.localeProperty()));
+
+        TableColumn<JmxMonitoringSubscriptionRow, String> labelCol =
                 localizedColumn("jvms.monitoring.subscription.label");
         labelCol.setPrefWidth(180);
         labelCol.setCellValueFactory(cell -> new ReadOnlyStringWrapper(cell.getValue().label()));
 
-        TableColumn<JmxAttributeSubscription, String> attributeCol =
-                localizedColumn("jvms.monitoring.subscription.attribute");
-        attributeCol.setPrefWidth(340);
-        attributeCol.setCellValueFactory(cell -> new ReadOnlyStringWrapper(
-                cell.getValue().objectName() + " / " + cell.getValue().attributeName()));
+        TableColumn<JmxMonitoringSubscriptionRow, String> targetCol =
+                localizedColumn("jvms.monitoring.subscription.target");
+        targetCol.setPrefWidth(340);
+        targetCol.setCellValueFactory(cell -> new ReadOnlyStringWrapper(cell.getValue().target()));
 
-        TableColumn<JmxAttributeSubscription, String> intervalCol =
-                localizedColumn("jvms.monitoring.subscription.interval");
-        intervalCol.setPrefWidth(120);
-        intervalCol.setCellValueFactory(cell -> new ReadOnlyStringWrapper(
-                cell.getValue().samplingInterval().toSeconds() + "s"));
+        TableColumn<JmxMonitoringSubscriptionRow, String> detailCol =
+                localizedColumn("jvms.monitoring.subscription.detail");
+        detailCol.setPrefWidth(140);
+        detailCol.setCellValueFactory(cell -> new ReadOnlyStringWrapper(cell.getValue().detail()));
 
-        jvmsMonitoringSubscriptionsTable.getColumns().setAll(List.of(labelCol, attributeCol, intervalCol));
+        jvmsMonitoringSubscriptionsTable.getColumns().setAll(List.of(typeCol, labelCol, targetCol, detailCol));
 
         TableColumn<JmxSubscriptionSample, String> sampleTimeCol =
                 localizedColumn("jvms.monitoring.sample.time");
@@ -1317,14 +1322,16 @@ public final class LiveJvmPaneController {
     }
 
     private void bindJmxMonitoring() {
-        jvmsMonitoringSubscriptionsTable.setItems(jvmBrowserViewModel.jmxAttributeSubscriptionsProperty());
+        jvmsMonitoringSubscriptionsTable.setItems(jvmBrowserViewModel.jmxMonitoringSubscriptionsProperty());
         jvmsMonitoringSamplesTable.setItems(jvmBrowserViewModel.jmxSubscriptionSamplesProperty());
         jvmsMonitoringNotificationsTable.setItems(jvmBrowserViewModel.jmxNotificationEventsProperty());
         jvmsMonitoringSubscriptionsTable.getSelectionModel().selectedItemProperty()
                 .addListener((observable, oldValue, newValue) ->
-                        jvmBrowserViewModel.selectedJmxAttributeSubscriptionProperty().set(newValue));
+                        jvmBrowserViewModel.selectJmxMonitoringSubscription(newValue));
         jvmBrowserViewModel.selectedJmxAttributeSubscriptionProperty().addListener((observable, oldValue, newValue) ->
-                jvmsMonitoringSubscriptionsTable.getSelectionModel().select(newValue));
+                selectJmxMonitoringSubscriptionRow());
+        jvmBrowserViewModel.selectedJmxNotificationSubscriptionProperty().addListener((observable, oldValue, newValue) ->
+                selectJmxMonitoringSubscriptionRow());
         jvmBrowserViewModel.jmxSubscriptionSamplesProperty()
                 .addListener((ListChangeListener<JmxSubscriptionSample>) change -> rebuildJmxMonitoringChart());
         jvmBrowserViewModel.selectedJmxAttributeSubscriptionProperty()
@@ -1391,6 +1398,21 @@ public final class LiveJvmPaneController {
         jvmsAgentTransformsTable.disableProperty().bind(jvmBrowserViewModel.jmcAgentAvailableProperty().not());
         jvmsAgentConfigurationArea.disableProperty().bind(jvmBrowserViewModel.jmcAgentAvailableProperty().not()
                 .or(jvmBrowserViewModel.jmcAgentLoadingProperty()));
+    }
+
+    private void selectJmxMonitoringSubscriptionRow() {
+        if (jvmBrowserViewModel == null) {
+            return;
+        }
+        JmxAttributeSubscription selectedAttribute =
+                jvmBrowserViewModel.selectedJmxAttributeSubscriptionProperty().get();
+        var selectedNotification = jvmBrowserViewModel.selectedJmxNotificationSubscriptionProperty().get();
+        JmxMonitoringSubscriptionRow selectedRow = jvmBrowserViewModel.jmxMonitoringSubscriptionsProperty().stream()
+                .filter(row -> selectedAttribute != null && row.attributeSubscription() == selectedAttribute
+                        || selectedNotification != null && row.notificationSubscription() == selectedNotification)
+                .findFirst()
+                .orElse(null);
+        jvmsMonitoringSubscriptionsTable.getSelectionModel().select(selectedRow);
     }
 
     private void rebuildMBeanTree() {
@@ -2048,6 +2070,14 @@ public final class LiveJvmPaneController {
     private String formatTriggerActionType(TriggerActionType actionType) {
         return i18n.get("jvms.triggers.actionType."
                 + actionType.name().toLowerCase(java.util.Locale.ROOT));
+    }
+
+    private String formatJmxMonitoringSubscriptionKind(JmxMonitoringSubscriptionRow row) {
+        if (row == null) {
+            return "";
+        }
+        return i18n.get("jvms.monitoring.subscription.type."
+                + row.kind().name().toLowerCase(java.util.Locale.ROOT));
     }
 
     private static String formatTriggerEventValue(TriggerEvent event) {

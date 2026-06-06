@@ -1422,9 +1422,17 @@ class JvmBrowserViewModelTest {
 
         assertTrue(viewModel.jmxMonitoringAvailableProperty().get());
         assertEquals(List.of(subscription), viewModel.jmxAttributeSubscriptionsProperty());
+        assertEquals(2, viewModel.jmxMonitoringSubscriptionsProperty().size());
+        assertEquals(JmxMonitoringSubscriptionRow.Kind.ATTRIBUTE,
+                viewModel.jmxMonitoringSubscriptionsProperty().getFirst().kind());
+        assertEquals(JmxMonitoringSubscriptionRow.Kind.NOTIFICATION,
+                viewModel.jmxMonitoringSubscriptionsProperty().get(1).kind());
         assertEquals(subscription, viewModel.selectedJmxAttributeSubscriptionProperty().get());
+        assertNull(viewModel.selectedJmxNotificationSubscriptionProperty().get());
         assertEquals(List.of(sample), viewModel.jmxSubscriptionSamplesProperty());
         assertEquals(List.of(notificationSubscription), viewModel.jmxNotificationSubscriptionsProperty());
+        viewModel.selectJmxMonitoringSubscription(viewModel.jmxMonitoringSubscriptionsProperty().get(1));
+        assertNull(viewModel.selectedJmxAttributeSubscriptionProperty().get());
         assertEquals(notificationSubscription, viewModel.selectedJmxNotificationSubscriptionProperty().get());
         assertEquals(List.of(event), viewModel.jmxNotificationEventsProperty());
     }

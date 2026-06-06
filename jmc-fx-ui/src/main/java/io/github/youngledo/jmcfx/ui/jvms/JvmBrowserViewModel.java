@@ -90,6 +90,8 @@ public class JvmBrowserViewModel implements AutoCloseable {
     private final ObservableList<TriggerEvent> triggerEvents = FXCollections.observableArrayList();
     private final ObservableList<JmxAttributeSubscription> jmxAttributeSubscriptions =
             FXCollections.observableArrayList();
+    private final ObservableList<JmxMonitoringSubscriptionRow> jmxMonitoringSubscriptions =
+            FXCollections.observableArrayList();
     private final ObservableList<JmxSubscriptionSample> jmxSubscriptionSamples = FXCollections.observableArrayList();
     private final ObservableList<JmxNotificationSubscription> jmxNotificationSubscriptions =
             FXCollections.observableArrayList();
@@ -199,6 +201,10 @@ public class JvmBrowserViewModel implements AutoCloseable {
                 loadSamplesForSelection(newValue));
         this.selectedJmxNotificationSubscription.addListener((observable, oldValue, newValue) ->
                 loadNotificationEventsForSelection(newValue));
+        this.jmxAttributeSubscriptions.addListener((javafx.collections.ListChangeListener<JmxAttributeSubscription>)
+                change -> rebuildJmxMonitoringSubscriptionRows());
+        this.jmxNotificationSubscriptions.addListener((javafx.collections.ListChangeListener<JmxNotificationSubscription>)
+                change -> rebuildJmxMonitoringSubscriptionRows());
     }
 
     public ObservableList<JvmConnection> connectionsProperty() {
@@ -413,6 +419,10 @@ public class JvmBrowserViewModel implements AutoCloseable {
         return jmxAttributeSubscriptions;
     }
 
+    public ObservableList<JmxMonitoringSubscriptionRow> jmxMonitoringSubscriptionsProperty() {
+        return jmxMonitoringSubscriptions;
+    }
+
     public ObservableList<JmxSubscriptionSample> jmxSubscriptionSamplesProperty() {
         return jmxSubscriptionSamples;
     }
@@ -431,6 +441,16 @@ public class JvmBrowserViewModel implements AutoCloseable {
 
     public ObjectProperty<JmxNotificationSubscription> selectedJmxNotificationSubscriptionProperty() {
         return selectedJmxNotificationSubscription;
+    }
+
+    public void selectJmxMonitoringSubscription(JmxMonitoringSubscriptionRow row) {
+        if (row == null) {
+            selectedJmxAttributeSubscription.set(null);
+            selectedJmxNotificationSubscription.set(null);
+            return;
+        }
+        selectedJmxAttributeSubscription.set(row.attributeSubscription());
+        selectedJmxNotificationSubscription.set(row.notificationSubscription());
     }
 
     public BooleanProperty jmxMonitoringAvailableProperty() {
@@ -898,7 +918,7 @@ public class JvmBrowserViewModel implements AutoCloseable {
                 true,
                 persisted);
         jmxAttributeSubscriptions.add(subscription);
-        selectedJmxAttributeSubscription.set(subscription);
+        selectJmxMonitoringSubscription(JmxMonitoringSubscriptionRow.attribute(subscription));
         if (persisted && useCases.monitoring().repositoryAvailable()) {
             useCases.monitoring().saveAttributeSubscription(subscription);
         }
@@ -925,7 +945,7 @@ public class JvmBrowserViewModel implements AutoCloseable {
                 true,
                 persisted);
         jmxNotificationSubscriptions.add(subscription);
-        selectedJmxNotificationSubscription.set(subscription);
+        selectJmxMonitoringSubscription(JmxMonitoringSubscriptionRow.notification(subscription));
         if (persisted && useCases.monitoring().repositoryAvailable()) {
             useCases.monitoring().saveNotificationSubscription(subscription);
         }
@@ -982,7 +1002,7 @@ public class JvmBrowserViewModel implements AutoCloseable {
         if (!jmxNotificationSubscriptions.contains(subscription)) {
             jmxNotificationSubscriptions.add(subscription);
         }
-        selectedJmxNotificationSubscription.set(subscription);
+        selectJmxMonitoringSubscription(JmxMonitoringSubscriptionRow.notification(subscription));
         if (subscription.persisted() && useCases.monitoring().repositoryAvailable()) {
             useCases.monitoring().saveNotificationSubscription(subscription);
         }
@@ -1593,12 +1613,11 @@ public class JvmBrowserViewModel implements AutoCloseable {
         List<JmxAttributeSubscription> attributeSubscriptions =
                 useCases.monitoring().findAttributeSubscriptions(snapshot.connection().id());
         jmxAttributeSubscriptions.setAll(attributeSubscriptions);
-        selectedJmxAttributeSubscription.set(attributeSubscriptions.isEmpty() ? null : attributeSubscriptions.getFirst());
         List<JmxNotificationSubscription> notificationSubscriptions =
                 useCases.monitoring().findNotificationSubscriptions(snapshot.connection().id());
         jmxNotificationSubscriptions.setAll(notificationSubscriptions);
-        selectedJmxNotificationSubscription.set(notificationSubscriptions.isEmpty()
-                ? null : notificationSubscriptions.getFirst());
+        selectJmxMonitoringSubscription(jmxMonitoringSubscriptions.isEmpty()
+                ? null : jmxMonitoringSubscriptions.getFirst());
         updateOverviewPersistenceSummary();
     }
 
@@ -1917,6 +1936,7 @@ public class JvmBrowserViewModel implements AutoCloseable {
     private void clearJmxMonitoring() {
         nextJmxMonitoringGeneration();
         jmxAttributeSubscriptions.clear();
+        jmxMonitoringSubscriptions.clear();
         jmxSubscriptionSamples.clear();
         jmxNotificationSubscriptions.clear();
         jmxNotificationEvents.clear();
@@ -1958,6 +1978,17 @@ public class JvmBrowserViewModel implements AutoCloseable {
             jmxNotificationEvents.add(event);
             trimObservableToNewest(jmxNotificationEvents, subscription.maxEvents());
         }
+    }
+
+    private void rebuildJmxMonitoringSubscriptionRows() {
+        List<JmxMonitoringSubscriptionRow> rows = new ArrayList<>();
+        rows.addAll(jmxAttributeSubscriptions.stream()
+                .map(JmxMonitoringSubscriptionRow::attribute)
+                .toList());
+        rows.addAll(jmxNotificationSubscriptions.stream()
+                .map(JmxMonitoringSubscriptionRow::notification)
+                .toList());
+        jmxMonitoringSubscriptions.setAll(rows);
     }
 
     private static <T> void trimObservableToNewest(ObservableList<T> rows, int maxSize) {
