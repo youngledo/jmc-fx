@@ -13,6 +13,9 @@ public final class OpenHeapDumpWorkspaceUseCase {
 
     public HeapDumpWorkspacePlan open(Path path) {
         Objects.requireNonNull(path, "path");
-        return new HeapDumpWorkspacePlan(path, new AnalyzeHeapDumpUseCase(services));
+        return new HeapDumpWorkspacePlan(path, new AnalyzeHeapDumpUseCase(services),
+                new BrowseHeapDumpObjectGroupsUseCase(services),
+                new LoadHeapDumpObjectGroupDetailUseCase(services),
+                new LoadHeapDumpReferencePathsUseCase(services));
     }
 }

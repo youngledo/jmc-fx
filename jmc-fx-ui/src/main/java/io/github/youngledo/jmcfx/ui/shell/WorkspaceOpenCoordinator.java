@@ -127,6 +127,7 @@ final class WorkspaceOpenCoordinator {
         viewModel.showTaskSummary(i18n.get("taskSummary.openingHeapDump"));
         HeapDumpWorkspacePlan plan = openHeapDumpWorkspace.open(path);
         HeapDumpAnalysisViewModel nextViewModel = new HeapDumpAnalysisViewModel(plan.analyzeHeapDump(),
+                plan.browseObjectGroups(), plan.loadObjectGroupDetail(), plan.loadReferencePaths(),
                 new VirtualThreadHeapDumpAnalysisExecutor(), i18n);
         HeapDumpWorkspace workspace = new HeapDumpWorkspace(plan.path(), nextViewModel);
         viewModel.openHeapDump(workspace);

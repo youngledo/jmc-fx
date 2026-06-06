@@ -11,6 +11,7 @@ import org.junit.jupiter.api.Test;
 import java.io.IOException;
 import java.nio.file.Files;
 import java.nio.file.Path;
+import java.util.List;
 import java.util.concurrent.CountDownLatch;
 import java.util.concurrent.TimeUnit;
 
@@ -53,6 +54,79 @@ class CsvExportTest {
     @Test
     void escapeCsv_null() {
         assertEquals("", CsvExport.escapeCsv(null));
+    }
+
+    @Test
+    void tableExportContextSummarizesCurrentViewScope() {
+        TableExportContext context = new TableExportContext(
+                "JFR recording",
+                "Method Profiling",
+                "Hot Methods",
+                "demo.jfr",
+                "2026-06-06T10:00:00Z..2026-06-06T10:05:00Z",
+                "duration > 10 ms",
+                "2 selected rows",
+                TableExportScope.CURRENT_VIEW,
+                TableExportScope.VISIBLE_COLUMNS);
+
+        assertEquals("JFR recording", context.workspace());
+        assertEquals("Method Profiling", context.page());
+        assertEquals("Hot Methods", context.table());
+        assertEquals("demo.jfr", context.source());
+        assertEquals("2026-06-06T10:00:00Z..2026-06-06T10:05:00Z", context.timeRange());
+        assertEquals("duration > 10 ms", context.filter());
+        assertEquals("2 selected rows", context.selection());
+        assertEquals(TableExportScope.CURRENT_VIEW, context.rowScope());
+        assertEquals(TableExportScope.VISIBLE_COLUMNS, context.columnScope());
+    }
+
+    @Test
+    void existingExportKeepsHeaderAsFirstLine() throws IOException {
+        if (!toolkitReady) {
+            return; // Skip on headless CI
+        }
+
+        TableView<String> table = tableWithNameAndCount();
+        Path target = Files.createTempFile("jmcfx-existing-export", ".csv");
+        try {
+            CsvExport.export(table, target);
+
+            assertEquals("Name,Count", Files.readAllLines(target).getFirst());
+        } finally {
+            Files.deleteIfExists(target);
+        }
+    }
+
+    @Test
+    void requestExportWritesContextMetadataBeforeRows() throws IOException {
+        if (!toolkitReady) {
+            return; // Skip on headless CI
+        }
+
+        TableView<String> table = tableWithNameAndCount();
+        Path target = Files.createTempFile("jmcfx-context-export", ".csv");
+        TableExportContext context = new TableExportContext(
+                "JFR recording",
+                "Method Profiling",
+                "Hot Methods",
+                "demo.jfr",
+                "all time",
+                "none",
+                "none",
+                TableExportScope.CURRENT_VIEW,
+                TableExportScope.VISIBLE_COLUMNS);
+
+        CsvExport.export(new TableExportRequest(table, CsvExportOptions.visibleColumns(), context), target);
+
+        try {
+            List<String> lines = Files.readAllLines(target);
+            assertEquals("# workspace,JFR recording", lines.get(0));
+            assertEquals("# page,Method Profiling", lines.get(1));
+            assertEquals("# table,Hot Methods", lines.get(2));
+            assertTrue(lines.contains("Name,Count"));
+        } finally {
+            Files.deleteIfExists(target);
+        }
     }
 
     @Test
@@ -109,5 +183,16 @@ class CsvExportTest {
             Files.deleteIfExists(visibleOnly);
             Files.deleteIfExists(allColumns);
         }
+    }
+
+    private static TableView<String> tableWithNameAndCount() {
+        TableView<String> table = new TableView<>();
+        TableColumn<String, String> name = new TableColumn<>("Name");
+        name.setCellValueFactory(data -> new ReadOnlyStringWrapper(data.getValue()));
+        TableColumn<String, String> count = new TableColumn<>("Count");
+        count.setCellValueFactory(data -> new ReadOnlyStringWrapper(String.valueOf(data.getValue().length())));
+        table.getColumns().addAll(name, count);
+        table.setItems(FXCollections.observableArrayList("row1", "row2"));
+        return table;
     }
 }

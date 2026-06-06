@@ -2,6 +2,9 @@ package io.github.youngledo.jmcfx.ui.shell;
 
 import io.github.youngledo.jmcfx.ui.i18n.I18n;
 import io.github.youngledo.jmcfx.ui.util.CsvExport;
+import io.github.youngledo.jmcfx.ui.util.CsvExportOptions;
+import io.github.youngledo.jmcfx.ui.util.TableExportRegistration;
+import io.github.youngledo.jmcfx.ui.util.TableExportRequest;
 
 import javafx.scene.control.ContextMenu;
 import javafx.scene.control.MenuItem;
@@ -22,6 +25,12 @@ final class ExportMenuInstaller {
     }
 
     void install(TableView<?> table) {
+        install(new TableExportRegistration(table,
+                () -> new TableExportRequest(table, CsvExportOptions.visibleColumns(), null)));
+    }
+
+    void install(TableExportRegistration registration) {
+        TableView<?> table = registration.table();
         MenuItem exportItem = new MenuItem(i18n.get("context.exportCsv"));
         exportItem.setOnAction(event -> {
             FileChooser chooser = new FileChooser();
@@ -31,7 +40,7 @@ final class ExportMenuInstaller {
             java.io.File target = chooser.showSaveDialog(root.getScene().getWindow());
             if (target != null) {
                 try {
-                    CsvExport.export(table, target.toPath());
+                    CsvExport.export(registration.requestSupplier().get(), target.toPath());
                     viewModel.showStatus(i18n.format("status.exported", target.getName()));
                 } catch (Exception e) {
                     viewModel.showStatus(i18n.get("status.exportFailed"));

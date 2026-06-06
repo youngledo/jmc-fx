@@ -1,11 +1,21 @@
 package io.github.youngledo.jmcfx.application;
 
+import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertNotNull;
+import static org.junit.jupiter.api.Assertions.assertThrows;
 
+import java.time.Instant;
+import java.util.ArrayList;
 import java.util.List;
+import java.util.function.Consumer;
 
+import io.github.youngledo.jmcfx.domain.model.JmxNotificationEvent;
+import io.github.youngledo.jmcfx.domain.model.JmxNotificationListeningState;
+import io.github.youngledo.jmcfx.domain.model.JmxNotificationListeningSummary;
+import io.github.youngledo.jmcfx.domain.model.JmxNotificationSubscription;
 import io.github.youngledo.jmcfx.domain.model.JvmConnection;
 import io.github.youngledo.jmcfx.domain.model.SavedJvmTarget;
+import io.github.youngledo.jmcfx.domain.service.JmcFxException;
 import io.github.youngledo.jmcfx.domain.service.JdpDiscoveryService;
 import io.github.youngledo.jmcfx.domain.service.JmxConnectionService;
 import io.github.youngledo.jmcfx.domain.service.JmxMonitoringRepository;
@@ -35,6 +45,113 @@ class LiveJvmUseCasesTest {
         assertNotNull(useCases.persistence());
     }
 
+    @Test
+    void persistedEnabledNotificationSubscriptionStartsStoppedUntilRuntimeListenerStarts() {
+        var repository = new FakeJmxMonitoringRepository();
+        var useCase = new LiveJvmMonitoringUseCase(new FakeJmxMonitoringService(), repository);
+        JvmConnection connection = connectedJvm("42");
+        JmxNotificationSubscription subscription = notificationSubscription(connection, "notif-1", true);
+
+        repository.saveNotificationSubscription(subscription);
+
+        assertEquals(JmxNotificationListeningState.STOPPED,
+                useCase.notificationListeningState(connection, subscription));
+    }
+
+    @Test
+    void startAndStopNotificationsExposeRuntimeTransitionStates() {
+        var repository = new FakeJmxMonitoringRepository();
+        var service = new FakeJmxMonitoringService();
+        var useCase = new LiveJvmMonitoringUseCase(service, repository);
+        JvmConnection connection = connectedJvm("42");
+        JmxNotificationSubscription subscription = notificationSubscription(connection, "notif-1", true);
+        repository.saveNotificationSubscription(subscription);
+        service.onStart = () -> assertEquals(JmxNotificationListeningState.STARTING,
+                useCase.notificationListeningState(connection, subscription));
+        service.onStop = () -> assertEquals(JmxNotificationListeningState.STOPPING,
+                useCase.notificationListeningState(connection, subscription));
+
+        useCase.startNotifications(connection, subscription, event -> { });
+
+        assertEquals(JmxNotificationListeningState.LISTENING,
+                useCase.notificationListeningState(connection, subscription));
+
+        useCase.stopNotifications(connection, subscription.id());
+
+        assertEquals(JmxNotificationListeningState.STOPPED,
+                useCase.notificationListeningState(connection, subscription));
+    }
+
+    @Test
+    void failedNotificationStartIsRetainedAsRuntimeState() {
+        var service = new FakeJmxMonitoringService();
+        service.failStart = true;
+        var useCase = new LiveJvmMonitoringUseCase(service, new FakeJmxMonitoringRepository());
+        JvmConnection connection = connectedJvm("42");
+        JmxNotificationSubscription subscription = notificationSubscription(connection, "notif-1", true);
+
+        assertThrows(JmcFxException.class, () -> useCase.startNotifications(connection, subscription, event -> { }));
+
+        assertEquals(JmxNotificationListeningState.FAILED,
+                useCase.notificationListeningState(connection, subscription));
+    }
+
+    @Test
+    void unavailableMonitoringReportsUnavailableNotificationRuntimeState() {
+        var useCase = new LiveJvmMonitoringUseCase(null, new FakeJmxMonitoringRepository());
+        JvmConnection connection = connectedJvm("42");
+        JmxNotificationSubscription subscription = notificationSubscription(connection, "notif-1", true);
+
+        assertEquals(JmxNotificationListeningState.UNAVAILABLE,
+                useCase.notificationListeningState(connection, subscription));
+    }
+
+    @Test
+    void notificationListeningSummaryIsEmptyWhenRepositoryIsUnavailable() {
+        var useCase = new LiveJvmMonitoringUseCase(new FakeJmxMonitoringService(), null);
+
+        JmxNotificationListeningSummary summary = useCase.notificationListeningSummary("42");
+
+        assertEquals(0, summary.total());
+    }
+
+    @Test
+    void notificationListeningSummaryCountsRuntimeStatesForConnection() {
+        var repository = new FakeJmxMonitoringRepository();
+        var service = new FakeJmxMonitoringService();
+        var useCase = new LiveJvmMonitoringUseCase(service, repository);
+        JvmConnection connection = connectedJvm("42");
+        JmxNotificationSubscription listening = notificationSubscription(connection, "notif-1", true);
+        JmxNotificationSubscription stopped = notificationSubscription(connection, "notif-2", true);
+        JmxNotificationSubscription failed = notificationSubscription(connection, "notif-3", true);
+        repository.saveNotificationSubscription(listening);
+        repository.saveNotificationSubscription(stopped);
+        repository.saveNotificationSubscription(failed);
+        useCase.startNotifications(connection, listening, event -> { });
+        service.failStart = true;
+        assertThrows(JmcFxException.class, () -> useCase.startNotifications(connection, failed, event -> { }));
+
+        JmxNotificationListeningSummary summary = useCase.notificationListeningSummary(connection.id());
+
+        assertEquals(1, summary.listening());
+        assertEquals(1, summary.stopped());
+        assertEquals(0, summary.starting());
+        assertEquals(0, summary.stopping());
+        assertEquals(1, summary.failed());
+        assertEquals(0, summary.unavailable());
+        assertEquals(3, summary.total());
+    }
+
+    private static JvmConnection connectedJvm(String id) {
+        return new JvmConnection(id, "Test JVM", "service:jmx:rmi:///jndi/rmi://localhost:0/jmxrmi", true);
+    }
+
+    private static JmxNotificationSubscription notificationSubscription(
+            JvmConnection connection, String id, boolean enabled) {
+        return new JmxNotificationSubscription(
+                id, connection.id(), "java.lang:type=Memory", "Memory", 100, enabled, true);
+    }
+
     private static final class FakeJvmDiscoveryService implements JvmDiscoveryService {
         @Override
         public List<JvmConnection> discoverLocalJvms() {
@@ -54,9 +171,44 @@ class LiveJvmUseCasesTest {
     }
 
     private static final class FakeJmxMonitoringService implements JmxMonitoringService {
+        private Runnable onStart = () -> { };
+        private Runnable onStop = () -> { };
+        private boolean failStart;
+
+        @Override
+        public List<JmxNotificationEvent> startNotifications(
+                JvmConnection connection,
+                JmxNotificationSubscription subscription,
+                Consumer<JmxNotificationEvent> eventSink) {
+            onStart.run();
+            if (failStart) {
+                throw new JmcFxException("start failed");
+            }
+            return List.of(new JmxNotificationEvent(
+                    subscription.id(), Instant.EPOCH, "memory.threshold", "", 1, "", ""));
+        }
+
+        @Override
+        public void stopNotifications(JvmConnection connection, String subscriptionId) {
+            onStop.run();
+        }
     }
 
     private static final class FakeJmxMonitoringRepository implements JmxMonitoringRepository {
+        private final List<JmxNotificationSubscription> notificationSubscriptions = new ArrayList<>();
+
+        @Override
+        public List<JmxNotificationSubscription> findNotificationSubscriptions(String connectionId) {
+            return notificationSubscriptions.stream()
+                    .filter(subscription -> subscription.connectionId().equals(connectionId))
+                    .toList();
+        }
+
+        @Override
+        public void saveNotificationSubscription(JmxNotificationSubscription subscription) {
+            notificationSubscriptions.removeIf(saved -> saved.id().equals(subscription.id()));
+            notificationSubscriptions.add(subscription);
+        }
     }
 
     private static final class FakeSavedJvmTargetRepository implements SavedJvmTargetRepository {

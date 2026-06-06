@@ -10,6 +10,7 @@ import io.github.youngledo.jmcfx.adapter.jmc.JmcFileIOService;
 import io.github.youngledo.jmcfx.adapter.jmc.JmcFlightRecordingService;
 import io.github.youngledo.jmcfx.adapter.jmc.JmcG1GcService;
 import io.github.youngledo.jmcfx.adapter.jmc.JmcHeapDumpAnalysisService;
+import io.github.youngledo.jmcfx.adapter.jmc.JmcHeapDumpBrowsingService;
 import io.github.youngledo.jmcfx.adapter.jmc.JmcHeapService;
 import io.github.youngledo.jmcfx.adapter.jmc.JmcJavaAppService;
 import io.github.youngledo.jmcfx.adapter.jmc.JmcJavaFxEventService;
@@ -61,6 +62,6 @@ final class JmcFxLauncherServicesFactory {
     }
 
     private HeapDumpApplicationServices heapDumpServices() {
-        return new HeapDumpApplicationServices(new JmcHeapDumpAnalysisService());
+        return new HeapDumpApplicationServices(new JmcHeapDumpAnalysisService(), new JmcHeapDumpBrowsingService());
     }
 }

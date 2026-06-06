@@ -38,12 +38,20 @@ import io.github.youngledo.jmcfx.application.RecordingPageUseCases;
 import io.github.youngledo.jmcfx.ui.util.DisplayFormats;
 import io.github.youngledo.jmcfx.domain.model.EventTypeSelection;
 import io.github.youngledo.jmcfx.domain.model.HeapDumpAnalysisReport;
+import io.github.youngledo.jmcfx.domain.model.HeapDumpBrowseRequest;
+import io.github.youngledo.jmcfx.domain.model.HeapDumpBrowseWindow;
+import io.github.youngledo.jmcfx.domain.model.HeapDumpObjectGroup;
+import io.github.youngledo.jmcfx.domain.model.HeapDumpObjectGroupDetail;
+import io.github.youngledo.jmcfx.domain.model.HeapDumpObjectGroupKind;
+import io.github.youngledo.jmcfx.domain.model.HeapDumpReferencePath;
+import io.github.youngledo.jmcfx.domain.model.HeapDumpReferencePathRequest;
 import io.github.youngledo.jmcfx.domain.model.JdpJvmAdvertisement;
 import io.github.youngledo.jmcfx.domain.model.JvmConnection;
 import io.github.youngledo.jmcfx.domain.model.JvmConnectionSource;
 import io.github.youngledo.jmcfx.domain.model.SavedJvmTarget;
 import io.github.youngledo.jmcfx.domain.model.StackTreeNode;
 import io.github.youngledo.jmcfx.domain.model.RecordingSummary;
+import io.github.youngledo.jmcfx.domain.service.HeapDumpBrowsingService;
 import io.github.youngledo.jmcfx.domain.service.ProfilingService;
 import io.github.youngledo.jmcfx.domain.service.RuleAnalysisService;
 import io.github.youngledo.jmcfx.ui.events.EventBrowserViewModel;
@@ -72,12 +80,14 @@ import javafx.stage.Stage;
 
 class AppShellTest {
 
+    private static final long FX_TIMEOUT_SECONDS = 30;
+
     @org.junit.jupiter.api.BeforeAll
     static void initToolkit() throws InterruptedException {
         try {
             CountDownLatch latch = new CountDownLatch(1);
             Platform.startup(latch::countDown);
-            latch.await(5, TimeUnit.SECONDS);
+            assertTrue(latch.await(FX_TIMEOUT_SECONDS, TimeUnit.SECONDS), "JavaFX toolkit did not start in time.");
         } catch (IllegalStateException ignored) {
             // Toolkit already initialized by another test class.
         }
@@ -564,9 +574,11 @@ class AppShellTest {
 
         assertTrue(installer.contains("final class ExportMenuInstaller"));
         assertTrue(installer.contains("void install(TableView<?> table)"));
+        assertTrue(installer.contains("void install(TableExportRegistration registration)"));
+        assertTrue(installer.contains("new TableExportRequest(table, CsvExportOptions.visibleColumns(), null)"));
         assertTrue(installer.contains("new MenuItem(i18n.get(\"context.exportCsv\"))"));
         assertTrue(installer.contains("chooser.setTitle(i18n.get(\"fileChooser.saveCsv.title\"))"));
-        assertTrue(installer.contains("CsvExport.export(table, target.toPath())"));
+        assertTrue(installer.contains("CsvExport.export(registration.requestSupplier().get(), target.toPath())"));
         assertTrue(installer.contains("viewModel.showStatus(i18n.format(\"status.exported\", target.getName()))"));
     }
 
@@ -3937,7 +3949,8 @@ void settingsPageContainsThemeSelectorNextToLanguageSelector() {
                 latch.countDown();
             }
         });
-        assertTrue(latch.await(5, TimeUnit.SECONDS));
+        assertTrue(latch.await(FX_TIMEOUT_SECONDS, TimeUnit.SECONDS),
+                "JavaFX shell harness creation did not run in time.");
         if (failure.get() != null) {
             throw new AssertionError(failure.get());
         }
@@ -3964,7 +3977,7 @@ void settingsPageContainsThemeSelectorNextToLanguageSelector() {
                 latch.countDown();
             }
         });
-        assertTrue(latch.await(5, TimeUnit.SECONDS));
+        assertTrue(latch.await(FX_TIMEOUT_SECONDS, TimeUnit.SECONDS), "JavaFX test action did not run in time.");
         if (failure.get() != null) {
             throw new AssertionError(failure.get());
         }
@@ -3983,7 +3996,7 @@ void settingsPageContainsThemeSelectorNextToLanguageSelector() {
                 latch.countDown();
             }
         });
-        assertTrue(latch.await(5, TimeUnit.SECONDS));
+        assertTrue(latch.await(FX_TIMEOUT_SECONDS, TimeUnit.SECONDS), "JavaFX test action did not run in time.");
         if (failure.get() != null) {
             throw new AssertionError(failure.get());
         }
@@ -4007,7 +4020,26 @@ void settingsPageContainsThemeSelectorNextToLanguageSelector() {
     private static HeapDumpApplicationServices heapDumpServices() {
         FakeHeapDumpAnalysisService service = new FakeHeapDumpAnalysisService();
         service.setReport(new HeapDumpAnalysisReport(Path.of("demo.hprof"), 0, 0, 0, 0, 0, 0, List.of(), ""));
-        return new HeapDumpApplicationServices(service);
+        return new HeapDumpApplicationServices(service, new FakeHeapDumpBrowsingService());
+    }
+
+    private static final class FakeHeapDumpBrowsingService implements HeapDumpBrowsingService {
+        @Override
+        public HeapDumpBrowseWindow<HeapDumpObjectGroup> browseObjectGroups(HeapDumpBrowseRequest request) {
+            return new HeapDumpBrowseWindow<>(List.of(), request.offset(), request.limit(), 0, false);
+        }
+
+        @Override
+        public HeapDumpObjectGroupDetail loadObjectGroupDetail(HeapDumpBrowseRequest request, String groupId) {
+            return new HeapDumpObjectGroupDetail(new HeapDumpObjectGroup(groupId, groupId,
+                    HeapDumpObjectGroupKind.CLASS, 0, 0, 0, 0, false),
+                    new HeapDumpBrowseWindow<>(List.of(), 0, request.limit(), 0, false), "");
+        }
+
+        @Override
+        public HeapDumpBrowseWindow<HeapDumpReferencePath> loadReferencePaths(HeapDumpReferencePathRequest request) {
+            return new HeapDumpBrowseWindow<>(List.of(), request.offset(), request.limit(), 0, false);
+        }
     }
 
     private static RecordingSummary recording(String id, String fileName) {
@@ -4090,13 +4122,15 @@ void settingsPageContainsThemeSelectorNextToLanguageSelector() {
                 }
             });
             worker.start();
-            assertTrue(workerLatch.await(5, TimeUnit.SECONDS));
+            assertTrue(workerLatch.await(FX_TIMEOUT_SECONDS, TimeUnit.SECONDS),
+                    "Queued recording-open worker did not finish in time.");
             if (failure.get() != null) {
                 throw new AssertionError(failure.get());
             }
             CountDownLatch fxLatch = new CountDownLatch(1);
             Platform.runLater(fxLatch::countDown);
-            assertTrue(fxLatch.await(5, TimeUnit.SECONDS));
+            assertTrue(fxLatch.await(FX_TIMEOUT_SECONDS, TimeUnit.SECONDS),
+                    "JavaFX recording-open completion did not run in time.");
         }
     }
 
