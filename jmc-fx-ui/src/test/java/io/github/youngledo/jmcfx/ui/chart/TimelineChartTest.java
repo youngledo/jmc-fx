@@ -12,6 +12,8 @@ import io.github.youngledo.jmcfx.ui.recording.RecordingTimeRange;
 import io.github.youngledo.jmcfx.ui.recording.RecordingTimeRangeChartBinding;
 import javafx.application.Platform;
 import javafx.beans.property.SimpleObjectProperty;
+import javafx.scene.input.KeyCode;
+import javafx.scene.input.KeyEvent;
 import org.junit.jupiter.api.BeforeAll;
 import org.junit.jupiter.api.Test;
 import static org.junit.jupiter.api.Assertions.*;
@@ -246,6 +248,26 @@ class TimelineChartTest {
             chart.setUserSelection(new TimelineChart.AxisRange(1_300, 1_600));
 
             assertEquals(new RecordingTimeRange(1_300_000, 1_600_000), sharedRange.get());
+        }
+    }
+
+    @Test
+    void recordingTimeRangeBindingClearsSharedSelectionWithEscape() {
+        TimelineChart chart = new TimelineChart();
+        ChartDefinition definition = new ChartDefinition("Time", "Value", ChartXAxisType.EPOCH_MILLIS, List.of(
+                new ChartSeries("gc", "GC", ChartSeriesType.LINE,
+                        List.of(new ChartDataPoint(1_000, 1), new ChartDataPoint(2_000, 2)))));
+        SimpleObjectProperty<RecordingTimeRange> sharedRange =
+                new SimpleObjectProperty<>(new RecordingTimeRange(1_200, 1_500));
+
+        try (RecordingTimeRangeChartBinding binding = new RecordingTimeRangeChartBinding(chart, sharedRange)) {
+            binding.setData(definition);
+
+            chart.fireEvent(new KeyEvent(KeyEvent.KEY_PRESSED, "", "", KeyCode.ESCAPE, false, false, false, false));
+
+            assertNull(sharedRange.get());
+            assertNull(chart.userSelectedRangeProperty().get());
+            assertTrue(chart.isFocusTraversable());
         }
     }
 

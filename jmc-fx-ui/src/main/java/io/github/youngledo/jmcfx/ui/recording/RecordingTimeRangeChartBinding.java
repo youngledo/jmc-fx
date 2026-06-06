@@ -8,6 +8,9 @@ import io.github.youngledo.jmcfx.ui.chart.TimelineChart;
 
 import javafx.beans.property.ObjectProperty;
 import javafx.beans.value.ChangeListener;
+import javafx.event.EventHandler;
+import javafx.scene.input.KeyCode;
+import javafx.scene.input.KeyEvent;
 
 /// Synchronizes one timeline chart's brush selection with a recording workspace time range.
 public final class RecordingTimeRangeChartBinding implements AutoCloseable {
@@ -16,6 +19,7 @@ public final class RecordingTimeRangeChartBinding implements AutoCloseable {
     private final ObjectProperty<RecordingTimeRange> timeRange;
     private final ChangeListener<TimelineChart.AxisRange> chartSelectionListener;
     private final ChangeListener<RecordingTimeRange> timeRangeListener;
+    private final EventHandler<KeyEvent> clearSelectionShortcut;
     private ChartXAxisType xAxisType = ChartXAxisType.EPOCH_MILLIS;
     private boolean applyingTimeRange;
 
@@ -24,7 +28,15 @@ public final class RecordingTimeRangeChartBinding implements AutoCloseable {
         this.timeRange = timeRange;
         chartSelectionListener = (observable, oldValue, newValue) -> updateTimeRange(newValue);
         timeRangeListener = (observable, oldValue, newValue) -> applyTimeRange(newValue);
+        clearSelectionShortcut = event -> {
+            if (event.getCode() == KeyCode.ESCAPE && timeRange != null && timeRange.get() != null) {
+                timeRange.set(null);
+                event.consume();
+            }
+        };
         chart.userSelectedRangeProperty().addListener(chartSelectionListener);
+        chart.addEventFilter(KeyEvent.KEY_PRESSED, clearSelectionShortcut);
+        chart.setFocusTraversable(true);
         if (timeRange != null) {
             timeRange.addListener(timeRangeListener);
             applyTimeRange(timeRange.get());
@@ -47,6 +59,7 @@ public final class RecordingTimeRangeChartBinding implements AutoCloseable {
     @Override
     public void close() {
         chart.userSelectedRangeProperty().removeListener(chartSelectionListener);
+        chart.removeEventFilter(KeyEvent.KEY_PRESSED, clearSelectionShortcut);
         if (timeRange != null) {
             timeRange.removeListener(timeRangeListener);
         }
