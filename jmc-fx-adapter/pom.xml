@@ -12,6 +12,10 @@
             <artifactId>jmc-fx-domain</artifactId>
         </dependency>
         <dependency>
+            <groupId>com.fasterxml.jackson.core</groupId>
+            <artifactId>jackson-databind</artifactId>
+        </dependency>
+        <dependency>
             <groupId>org.openjdk.jmc</groupId>
             <artifactId>common</artifactId>
             <version>${jmc.version}</version>

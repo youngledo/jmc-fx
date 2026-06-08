@@ -1,6 +1,8 @@
 module io.github.youngledo.jmcfx.adapter {
+    requires com.fasterxml.jackson.databind;
     requires io.github.youngledo.jmcfx.domain;
     requires java.management;
+    requires java.net.http;
     requires java.prefs;
     requires jdk.attach;
     requires jdk.jfr;
@@ -13,6 +15,8 @@ module io.github.youngledo.jmcfx.adapter {
     requires org.openjdk.jmc.joverflow;
     requires org.openjdk.jmc.rjmx.common;
 
+    exports io.github.youngledo.jmcfx.adapter.ai;
     exports io.github.youngledo.jmcfx.adapter.jmc;
     exports io.github.youngledo.jmcfx.adapter.preferences;
+    exports io.github.youngledo.jmcfx.adapter.preferences.ai;
 }
