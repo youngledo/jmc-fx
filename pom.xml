@@ -33,6 +33,7 @@
         <atlantafx.version>2.0.1</atlantafx.version>
         <ikonli.version>12.3.1</ikonli.version>
         <log4j2.version>2.26.0</log4j2.version>
+        <jackson.version>2.20.1</jackson.version>
         <archunit.version>1.4.2</archunit.version>
         <maven.plugin.api.version>4.0.0-rc-5</maven.plugin.api.version>
         <maven.plugin.tools.version>4.0.0-beta-2</maven.plugin.tools.version>
@@ -53,6 +54,13 @@
                 <groupId>org.apache.logging.log4j</groupId>
                 <artifactId>log4j-bom</artifactId>
                 <version>${log4j2.version}</version>
+                <type>pom</type>
+                <scope>import</scope>
+            </dependency>
+            <dependency>
+                <groupId>com.fasterxml.jackson</groupId>
+                <artifactId>jackson-bom</artifactId>
+                <version>${jackson.version}</version>
                 <type>pom</type>
                 <scope>import</scope>
             </dependency>
