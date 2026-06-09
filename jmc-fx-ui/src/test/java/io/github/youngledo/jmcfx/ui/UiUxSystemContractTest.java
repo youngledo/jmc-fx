@@ -54,6 +54,41 @@ class UiUxSystemContractTest {
     }
 
     @Test
+    void uiUxSystemDocumentsTypographicHierarchy() throws IOException {
+        String system = Files.readString(Path.of("../docs/ui-ux-system.md"), StandardCharsets.UTF_8);
+
+        assertTrue(system.contains("Headings must be visually distinguishable from body text"));
+        assertTrue(system.contains("18 px, bold"));
+        assertTrue(system.contains("14 px, bold"));
+        assertTrue(system.contains("13-14 px, bold"));
+        assertTrue(system.contains("`view-title`"));
+        assertTrue(system.contains("`detail-panel-title`"));
+        assertTrue(system.contains("`detail-panel-meta`"));
+        assertTrue(system.contains("rely on spacing alone"));
+    }
+
+    @Test
+    void sharedApplicationCssDefinesTypographicHierarchy() throws IOException {
+        String css = Files.readString(Path.of("src/main/resources/css/app.css"), StandardCharsets.UTF_8);
+
+        String viewTitle = cssBlock(css, ".view-title");
+        String detailPanelTitle = cssBlock(css, ".detail-panel-title");
+        String detailPanelMeta = cssBlock(css, ".detail-panel-meta");
+        String detailSectionLabel = cssBlock(css, ".detail-section-label");
+        String aiReportSectionTitle = cssBlock(css, ".ai-report-section-title");
+
+        assertTrue(viewTitle.contains("-fx-font-size: 18px"));
+        assertTrue(viewTitle.contains("-fx-font-weight: bold"));
+        assertTrue(detailPanelTitle.contains("-fx-font-size: 14px"));
+        assertTrue(detailPanelTitle.contains("-fx-font-weight: bold"));
+        assertTrue(detailPanelMeta.contains("-fx-text-fill: -color-fg-muted"));
+        assertFalse(detailPanelMeta.contains("-fx-font-weight: bold"));
+        assertTrue(detailSectionLabel.contains("-fx-font-weight: bold"));
+        assertTrue(aiReportSectionTitle.contains("-fx-font-size: 14px"));
+        assertTrue(aiReportSectionTitle.contains("-fx-font-weight: bold"));
+    }
+
+    @Test
     void uiUxSystemRequiresExplicitExportScope() throws IOException {
         String system = Files.readString(Path.of("../docs/ui-ux-system.md"), StandardCharsets.UTF_8);
 
@@ -132,5 +167,17 @@ class UiUxSystemContractTest {
                     .filter(path -> path.toString().endsWith(extension))
                     .toList();
         }
+    }
+
+    private static String cssBlock(String css, String selector) {
+        int selectorStart = css.indexOf("\n" + selector + " {");
+        if (selectorStart < 0 && css.startsWith(selector + " {")) {
+            selectorStart = 0;
+        }
+        assertTrue(selectorStart >= 0, () -> "Missing CSS selector " + selector);
+        int blockStart = css.indexOf('{', selectorStart);
+        int blockEnd = css.indexOf('}', blockStart);
+        assertTrue(blockStart >= 0 && blockEnd > blockStart, () -> "Missing CSS block for " + selector);
+        return css.substring(blockStart + 1, blockEnd);
     }
 }

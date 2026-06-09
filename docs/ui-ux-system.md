@@ -254,6 +254,25 @@ Typography guidance:
 - Use compact section labels inside panels and settings groups.
 - Do not use oversized headings inside technical work surfaces.
 - Keep button text short and action-oriented.
+- Headings must be visually distinguishable from body text. Do not use an
+  unstyled `Label` as a page, panel, section, group, or report title.
+- Use `view-title` for page titles: 18 px, bold. Page titles should be larger
+  than default body text, but still compact enough for a desktop workbench.
+- Use `detail-panel-title` for the selected object or primary title inside a
+  detail panel: 14 px, bold. It must be visually weaker than `view-title`, but
+  stronger than body text.
+- Use compact section-title styles for repeated sections inside reports,
+  metrics, settings groups, and detail bodies: 13-14 px, bold. Section titles
+  must not be larger than `detail-panel-title` unless the section is itself a
+  page-level heading.
+- Use `detail-panel-meta` or equivalent muted metadata styles only for
+  contextual metadata. Metadata must not look like a heading.
+- Body text uses default size and regular weight. If a label names a section,
+  group, or result, style it as a title/section label instead of leaving it as
+  body text.
+- Preserve hierarchy with at least font weight plus one additional cue for
+  page and panel headings, such as size, color, padding, or placement. Do not
+  rely on spacing alone to distinguish titles from ordinary text.
 
 Panels and cards:
 
