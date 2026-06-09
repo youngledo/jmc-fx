@@ -13,6 +13,7 @@ import javafx.scene.control.Label;
 import javafx.scene.control.ProgressIndicator;
 import javafx.scene.control.ScrollPane;
 import javafx.scene.layout.HBox;
+import javafx.scene.layout.Region;
 import javafx.scene.layout.Priority;
 import javafx.scene.layout.VBox;
 import javafx.scene.text.Text;
@@ -20,8 +21,12 @@ import javafx.scene.text.TextFlow;
 import org.commonmark.node.Code;
 import org.commonmark.node.Emphasis;
 import org.commonmark.node.HardLineBreak;
+import org.commonmark.node.Heading;
+import org.commonmark.node.ListItem;
+import org.commonmark.node.Paragraph;
 import org.commonmark.node.SoftLineBreak;
 import org.commonmark.node.StrongEmphasis;
+import org.commonmark.node.ThematicBreak;
 import org.commonmark.parser.Parser;
 
 /// Structured JavaFX report view for AI recording reports.
@@ -31,6 +36,7 @@ public final class AiReportView {
 
     private final ScrollPane scrollPane = new ScrollPane();
     private final VBox content = new VBox(12);
+    private String loadingMessage = "";
 
     public AiReportView() {
         scrollPane.setFitToWidth(true);
@@ -46,27 +52,45 @@ public final class AiReportView {
 
     public void clear() {
         content.getChildren().clear();
+        loadingMessage = "";
     }
 
     public void showLoading(I18n i18n) {
-        content.getChildren().setAll(loadingStatus(i18n.get("analysis.ai.report.generating")));
+        showLoadingMessage(i18n.get("analysis.ai.report.generating"));
+    }
+
+    public void showStreamingResponse(I18n i18n) {
+        showLoadingMessage(i18n.get("analysis.ai.report.receiving"));
     }
 
     public void showUnavailable(I18n i18n) {
+        loadingMessage = "";
         content.getChildren().setAll(status(i18n.get("analysis.ai.report.empty")));
     }
 
     public void showError(String message) {
+        loadingMessage = "";
         Label label = status(message);
         label.getStyleClass().add("ai-report-error");
         content.getChildren().setAll(label);
     }
 
     public void showReport(AiRecordingReport report, I18n i18n) {
+        showReport(report, "", i18n);
+    }
+
+    public void showReport(AiRecordingReport report, String processingTime, I18n i18n) {
+        loadingMessage = "";
         content.getChildren().clear();
         if (report == null) {
             showUnavailable(i18n);
             return;
+        }
+        if (processingTime != null && !processingTime.isBlank()) {
+            Label processed = new Label(i18n.format("analysis.ai.report.processedIn", processingTime));
+            processed.getStyleClass().add("ai-report-meta");
+            content.getChildren().add(processed);
+            content.getChildren().add(markdown("---"));
         }
         appendSection(i18n.get("analysis.ai.report.summary"), markdown(report.summaryMarkdown()));
         if (!report.findings().isEmpty()) {
@@ -166,9 +190,56 @@ public final class AiReportView {
         if (markdown == null || markdown.isBlank()) {
             return null;
         }
+        VBox blocks = new VBox(6);
+        blocks.getStyleClass().addAll("ai-markdown", "ai-markdown-blocks");
+        appendMarkdownBlocks(blocks, MARKDOWN_PARSER.parse(markdown));
+        if (!blocks.getChildren().isEmpty()) {
+            return blocks;
+        }
         TextFlow flow = new TextFlow();
         flow.getStyleClass().add("ai-markdown");
         appendMarkdown(flow, MARKDOWN_PARSER.parse(markdown), false, false);
+        return flow;
+    }
+
+    private void appendMarkdownBlocks(VBox blocks, org.commonmark.node.Node node) {
+        for (org.commonmark.node.Node child = node.getFirstChild(); child != null; child = child.getNext()) {
+            switch (child) {
+                case Heading heading -> blocks.getChildren().add(markdownFlow(heading, "ai-md-heading"));
+                case Paragraph paragraph -> blocks.getChildren().add(markdownFlow(paragraph));
+                case org.commonmark.node.BulletList list -> appendList(blocks, list);
+                case org.commonmark.node.OrderedList list -> appendList(blocks, list);
+                case ThematicBreak ignored -> blocks.getChildren().add(thematicBreak());
+                default -> appendMarkdownBlocks(blocks, child);
+            }
+        }
+    }
+
+    private Region thematicBreak() {
+        Region region = new Region();
+        region.getStyleClass().add("ai-md-thematic-break");
+        return region;
+    }
+
+    private void appendList(VBox blocks, org.commonmark.node.Node list) {
+        for (org.commonmark.node.Node item = list.getFirstChild(); item != null; item = item.getNext()) {
+            if (item instanceof ListItem listItem) {
+                TextFlow flow = markdownFlow(listItem, "ai-md-list-item");
+                if (!flow.getChildren().isEmpty()) {
+                    Text bullet = new Text("• ");
+                    bullet.getStyleClass().add("ai-md-bullet");
+                    flow.getChildren().addFirst(bullet);
+                    blocks.getChildren().add(flow);
+                }
+            }
+        }
+    }
+
+    private TextFlow markdownFlow(org.commonmark.node.Node node, String... styleClasses) {
+        TextFlow flow = new TextFlow();
+        flow.getStyleClass().add("ai-markdown-line");
+        flow.getStyleClass().addAll(styleClasses);
+        appendMarkdown(flow, node, false, false);
         return flow;
     }
 
@@ -224,8 +295,9 @@ public final class AiReportView {
 
     private Node loadingStatus(String value) {
         ProgressIndicator indicator = new ProgressIndicator();
-        indicator.setMaxSize(16, 16);
-        indicator.setPrefSize(16, 16);
+        indicator.setPrefSize(20, 20);
+        indicator.setMinSize(20, 20);
+        indicator.setMaxSize(20, 20);
         Label label = status(value);
         HBox row = new HBox(8, indicator, label);
         row.getStyleClass().add("ai-report-loading");
@@ -246,5 +318,29 @@ public final class AiReportView {
         }
         String line = label.isBlank() ? value : value.isBlank() ? label : label + ": " + value;
         return source.isBlank() ? line : line + " (" + source + ")";
+    }
+
+    private void showLoadingMessage(String message) {
+        if (message.equals(loadingMessage)
+                && content.getChildren().size() == 1
+                && hasStyleClass(content.getChildren().getFirst(), "ai-report-loading")) {
+            return;
+        }
+        loadingMessage = message;
+        content.getChildren().setAll(loadingStatus(message));
+    }
+
+    private static boolean hasStyleClass(Node node, String styleClass) {
+        if (node.getStyleClass().contains(styleClass)) {
+            return true;
+        }
+        if (node instanceof javafx.scene.Parent parent) {
+            for (Node child : parent.getChildrenUnmodifiable()) {
+                if (hasStyleClass(child, styleClass)) {
+                    return true;
+                }
+            }
+        }
+        return false;
     }
 }

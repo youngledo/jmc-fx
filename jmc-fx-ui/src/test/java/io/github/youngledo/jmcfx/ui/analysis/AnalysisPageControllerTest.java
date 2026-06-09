@@ -23,7 +23,9 @@ import io.github.youngledo.jmcfx.domain.model.ai.AiCompletionRequest;
 import io.github.youngledo.jmcfx.domain.model.ai.AiCompletionResponse;
 import io.github.youngledo.jmcfx.domain.model.ai.AiSettings;
 import io.github.youngledo.jmcfx.domain.service.ai.AiCompletionService;
+import io.github.youngledo.jmcfx.domain.service.ai.AiCompletionStreamListener;
 import io.github.youngledo.jmcfx.domain.service.ai.AiSettingsRepository;
+import io.github.youngledo.jmcfx.domain.service.ai.StreamingAiCompletionService;
 import io.github.youngledo.jmcfx.ui.i18n.I18n;
 import io.github.youngledo.jmcfx.ui.i18n.LanguageMode;
 import javafx.application.Platform;
@@ -31,6 +33,7 @@ import javafx.scene.Parent;
 import javafx.scene.Node;
 import javafx.scene.control.ScrollPane;
 import javafx.scene.layout.VBox;
+import javafx.scene.text.Text;
 import org.junit.jupiter.api.Test;
 
 class AnalysisPageControllerTest {
@@ -140,6 +143,42 @@ class AnalysisPageControllerTest {
     }
 
     @Test
+    void showsStreamingProgressWhileAiReportIsGenerating() throws Exception {
+        AnalysisPaneView paneView = new AnalysisPaneView(new VBox());
+        AnalysisPageView view = paneView.view();
+        AnalysisPageController controller = new AnalysisPageController(view, new I18n(Locale.ENGLISH), section -> { });
+        BlockingStreamingCompletionService completionService = new BlockingStreamingCompletionService();
+        RecordingAiAssistantViewModel viewModel = aiViewModel(new FakeAiSettingsRepository(Optional.of(
+                new AiSettings(true, "https://api.openai.com/v1", "gpt-test", 0.2, 4_096, false))),
+                Map.of(AiSettingsUseCase.API_KEY_ENVIRONMENT_VARIABLE, "key"),
+                completionService,
+                command -> Thread.ofVirtual().start(command));
+        controller.configure();
+        controller.bindAi(viewModel);
+        viewModel.setRecording(recording());
+
+        view.aiAnalyzeButton().fire();
+
+        assertTrue(completionService.streamed.await(5, TimeUnit.SECONDS));
+        waitUntil(() -> reportText(view.aiReportView().node()).contains("Receiving AI response"));
+        assertTrue(reportText(view.aiReportView().node()).contains("Receiving AI response"));
+        assertFalse(reportText(view.aiReportView().node()).contains("Received"));
+        assertFalse(reportText(view.aiReportView().node()).contains("characters"));
+        assertFalse(reportText(view.aiReportView().node()).contains("Early AI read"));
+        assertFalse(reportText(view.aiReportView().node()).contains("GC pressure is likely elevated"));
+        assertFalse(reportText(view.aiReportView().node()).contains("summaryMarkdown"));
+        assertTrue(viewModel.analyzingProperty().get());
+
+        completionService.release.countDown();
+
+        waitUntil(() -> reportText(view.aiReportView().node()).contains("completed"));
+        assertTrue(viewModel.reportReadyProperty().get());
+        assertTrue(reportText(view.aiReportView().node()).contains("completed"));
+        assertTrue(reportText(view.aiReportView().node()).contains("Processed in"));
+        assertTrue(view.aiAnalyzeButton().isDisabled());
+    }
+
+    @Test
     void clearsAiReportLoadingStateAfterProviderFailure() throws Exception {
         AnalysisPaneView paneView = new AnalysisPaneView(new VBox());
         AnalysisPageView view = paneView.view();
@@ -163,6 +202,31 @@ class AnalysisPageControllerTest {
         waitUntil(() -> viewModel.errorProperty().get());
         assertFalse(hasStyleClass(view.aiReportView().node(), "ai-report-loading"));
         assertTrue(hasStyleClass(view.aiReportView().node(), "ai-report-error"));
+    }
+
+    @Test
+    void showsAiProviderFailureDetailsOnlyInReportArea() throws Exception {
+        AnalysisPaneView paneView = new AnalysisPaneView(new VBox());
+        AnalysisPageView view = paneView.view();
+        AnalysisPageController controller = new AnalysisPageController(view, new I18n(Locale.ENGLISH), section -> { });
+        BlockingFailureCompletionService completionService = new BlockingFailureCompletionService();
+        RecordingAiAssistantViewModel viewModel = aiViewModel(new FakeAiSettingsRepository(Optional.of(
+                new AiSettings(true, "https://api.openai.com/v1", "gpt-test", 0.2, 4_096, false))),
+                Map.of(AiSettingsUseCase.API_KEY_ENVIRONMENT_VARIABLE, "key"),
+                completionService,
+                command -> Thread.ofVirtual().start(command));
+        controller.configure();
+        controller.bindAi(viewModel);
+        viewModel.setRecording(recording());
+
+        view.aiAnalyzeButton().fire();
+
+        assertTrue(completionService.started.await(5, TimeUnit.SECONDS));
+        completionService.release.countDown();
+        waitUntil(() -> viewModel.errorProperty().get());
+        waitUntil(() -> reportText(view.aiReportView().node()).contains("AI analysis failed: provider failed"));
+
+        assertTrue(reportText(view.aiReportView().node()).contains("AI analysis failed: provider failed"));
     }
 
     private static RecordingAiAssistantViewModel unavailableAiViewModel() {
@@ -257,6 +321,37 @@ class AnalysisPageControllerTest {
         }
     }
 
+    private static final class BlockingStreamingCompletionService implements StreamingAiCompletionService {
+        private final CountDownLatch streamed = new CountDownLatch(1);
+        private final CountDownLatch release = new CountDownLatch(1);
+
+        @Override
+        public AiCompletionResponse complete(AiCompletionRequest request) {
+            throw new UnsupportedOperationException("not used by this test");
+        }
+
+        @Override
+        public AiCompletionResponse completeStreaming(AiCompletionRequest request,
+                AiCompletionStreamListener listener) {
+            listener.onContentDelta("## Early AI read\n\nGC pressure is likely elevated.");
+            streamed.countDown();
+            try {
+                release.await();
+            } catch (InterruptedException exception) {
+                Thread.currentThread().interrupt();
+                throw new IllegalStateException("interrupted", exception);
+            }
+            String jsonBlock = """
+
+                    ```jmcfx-report-json
+                    {"summaryMarkdown":"completed","findings":[],"followUpQuestions":[],"contextLimitations":[]}
+                    ```
+                    """;
+            listener.onContentDelta(jsonBlock);
+            return new AiCompletionResponse("## Early AI read\n\nGC pressure is likely elevated." + jsonBlock);
+        }
+    }
+
     private static void waitUntil(BooleanSupplier condition) throws InterruptedException {
         long deadline = System.nanoTime() + TimeUnit.SECONDS.toNanos(5);
         while (!condition.getAsBoolean() && System.nanoTime() < deadline) {
@@ -280,6 +375,29 @@ class AnalysisPageControllerTest {
             }
         }
         return false;
+    }
+
+    private static String reportText(Node node) {
+        StringBuilder text = new StringBuilder();
+        appendText(node, text);
+        return text.toString();
+    }
+
+    private static void appendText(Node node, StringBuilder text) {
+        if (node instanceof javafx.scene.control.Labeled labeled && labeled.getText() != null) {
+            text.append(labeled.getText()).append('\n');
+        }
+        if (node instanceof Text textNode && textNode.getText() != null) {
+            text.append(textNode.getText()).append('\n');
+        }
+        if (node instanceof ScrollPane scrollPane && scrollPane.getContent() != null) {
+            appendText(scrollPane.getContent(), text);
+        }
+        if (node instanceof Parent parent) {
+            for (Node child : parent.getChildrenUnmodifiable()) {
+                appendText(child, text);
+            }
+        }
     }
 
     @FunctionalInterface

@@ -14,7 +14,7 @@ public record OpenAiCompatibleAiSettings(
     public static final String DEFAULT_MODEL = "";
     public static final double DEFAULT_TEMPERATURE = 0.2;
     public static final int DEFAULT_MAX_OUTPUT_TOKENS = 4_096;
-    public static final Duration DEFAULT_TIMEOUT = Duration.ofSeconds(60);
+    public static final Duration DEFAULT_TIMEOUT = Duration.ofMinutes(5);
 
     public OpenAiCompatibleAiSettings {
         apiKey = apiKey == null ? "" : apiKey.trim();

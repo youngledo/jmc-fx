@@ -2,6 +2,7 @@ package io.github.youngledo.jmcfx.adapter.ai;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
 
+import java.time.Duration;
 import java.util.Map;
 
 import org.junit.jupiter.api.Test;
@@ -31,5 +32,16 @@ class EnvironmentOpenAiCompatibleAiSettingsProviderTest {
         assertEquals("test-key", settings.apiKey());
         assertEquals(OpenAiCompatibleAiSettings.DEFAULT_BASE_URL, settings.baseUrl());
         assertEquals(OpenAiCompatibleAiSettings.DEFAULT_MODEL, settings.model());
+    }
+
+    @Test
+    void loadsRequestTimeoutFromEnvironment() {
+        var provider = new EnvironmentOpenAiCompatibleAiSettingsProvider(Map.of(
+                "OPENAI_API_KEY", "test-key",
+                "OPENAI_TIMEOUT_SECONDS", "300"));
+
+        OpenAiCompatibleAiSettings settings = provider.load();
+
+        assertEquals(Duration.ofSeconds(300), settings.timeout());
     }
 }

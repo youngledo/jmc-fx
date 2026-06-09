@@ -2,12 +2,14 @@ package io.github.youngledo.jmcfx.ui.analysis;
 
 import java.util.List;
 import java.util.Objects;
+import java.util.function.LongSupplier;
 
 import io.github.youngledo.jmcfx.application.ai.AnalyzeRecordingWithAiUseCase;
 import io.github.youngledo.jmcfx.application.ai.AskRecordingAssistantUseCase;
 import io.github.youngledo.jmcfx.application.ai.AiSettingsUseCase;
 import io.github.youngledo.jmcfx.application.ai.BuildRecordingAiContextUseCase;
 import io.github.youngledo.jmcfx.application.ai.RecordingAiContext;
+import io.github.youngledo.jmcfx.application.ai.RecordingAiContextSection;
 import io.github.youngledo.jmcfx.domain.model.RecordingSummary;
 import io.github.youngledo.jmcfx.domain.model.RuleResult;
 import io.github.youngledo.jmcfx.domain.model.ai.AiAssistantAnswer;
@@ -33,6 +35,7 @@ public final class RecordingAiAssistantViewModel implements AutoCloseable {
     private final AiSettingsUseCase aiSettingsUseCase;
     private final RecordingAiAssistantExecutor executor;
     private final RecordingAiReportFormatter reportFormatter;
+    private final LongSupplier nanoTime;
     private final ObservableList<AiFinding> findings = FXCollections.observableArrayList();
     private final ObservableList<AiAssistantAnswer> answers = FXCollections.observableArrayList();
     private final ObjectProperty<AiFinding> selectedFinding = new SimpleObjectProperty<>();
@@ -46,14 +49,17 @@ public final class RecordingAiAssistantViewModel implements AutoCloseable {
     private final BooleanProperty error = new SimpleBooleanProperty();
     private final StringProperty errorMessage = new SimpleStringProperty("");
     private final StringProperty contextPreview = new SimpleStringProperty("");
+    private final StringProperty streamingResponseText = new SimpleStringProperty("");
     private final StringProperty reportText = new SimpleStringProperty("");
     private final StringProperty reportSummary = new SimpleStringProperty("");
+    private final StringProperty reportProcessingTime = new SimpleStringProperty("");
     private final StringProperty contextLimitations = new SimpleStringProperty("");
     private final StringProperty followUpQuestions = new SimpleStringProperty("");
     private final StringProperty questionText = new SimpleStringProperty("");
     private volatile RecordingAiContext context;
     private volatile AiRecordingReport report;
     private volatile RecordingSummary recording;
+    private volatile long analysisStartNanos;
 
     public RecordingAiAssistantViewModel(BuildRecordingAiContextUseCase buildContextUseCase,
             AnalyzeRecordingWithAiUseCase analyzeUseCase,
@@ -61,12 +67,24 @@ public final class RecordingAiAssistantViewModel implements AutoCloseable {
             AiSettingsUseCase aiSettingsUseCase,
             RecordingAiAssistantExecutor executor,
             RecordingAiReportFormatter reportFormatter) {
+        this(buildContextUseCase, analyzeUseCase, askUseCase, aiSettingsUseCase, executor, reportFormatter,
+                System::nanoTime);
+    }
+
+    RecordingAiAssistantViewModel(BuildRecordingAiContextUseCase buildContextUseCase,
+            AnalyzeRecordingWithAiUseCase analyzeUseCase,
+            AskRecordingAssistantUseCase askUseCase,
+            AiSettingsUseCase aiSettingsUseCase,
+            RecordingAiAssistantExecutor executor,
+            RecordingAiReportFormatter reportFormatter,
+            LongSupplier nanoTime) {
         this.buildContextUseCase = buildContextUseCase;
         this.analyzeUseCase = analyzeUseCase;
         this.askUseCase = askUseCase;
         this.aiSettingsUseCase = aiSettingsUseCase;
         this.executor = Objects.requireNonNull(executor, "executor");
         this.reportFormatter = Objects.requireNonNull(reportFormatter, "reportFormatter");
+        this.nanoTime = Objects.requireNonNull(nanoTime, "nanoTime");
         available.set(currentAvailability());
     }
 
@@ -122,12 +140,20 @@ public final class RecordingAiAssistantViewModel implements AutoCloseable {
         return contextPreview;
     }
 
+    public StringProperty streamingResponseTextProperty() {
+        return streamingResponseText;
+    }
+
     public StringProperty reportTextProperty() {
         return reportText;
     }
 
     public StringProperty reportSummaryProperty() {
         return reportSummary;
+    }
+
+    public StringProperty reportProcessingTimeProperty() {
+        return reportProcessingTime;
     }
 
     public StringProperty contextLimitationsProperty() {
@@ -143,6 +169,9 @@ public final class RecordingAiAssistantViewModel implements AutoCloseable {
     }
 
     public void setRecording(RecordingSummary recording) {
+        if (!Objects.equals(this.recording, recording)) {
+            resetForAnalysis();
+        }
         this.recording = recording;
     }
 
@@ -192,6 +221,7 @@ public final class RecordingAiAssistantViewModel implements AutoCloseable {
             return;
         }
         setBusy(true);
+        analysisStartNanos = nanoTime.getAsLong();
         executor.execute(() -> {
             try {
                 RecordingAiContext builtContext = buildContextUseCase.build(currentRecording);
@@ -200,9 +230,10 @@ public final class RecordingAiAssistantViewModel implements AutoCloseable {
                     contextPreview.set(previewText(builtContext));
                     previewReady.set(true);
                     reportText.set("");
+                    streamingResponseText.set("");
                 });
-                AiRecordingReport nextReport = analyzeUseCase.analyzeStreaming(currentRecording, languageTag,
-                        contentDelta -> { });
+                AiRecordingReport nextReport = analyzeUseCase.analyzeStreaming(builtContext, languageTag,
+                        ignored -> { });
                 FxDispatch.run(() -> showReport(nextReport));
             } catch (RuntimeException exception) {
                 showFailure(exception);
@@ -241,7 +272,9 @@ public final class RecordingAiAssistantViewModel implements AutoCloseable {
         reportReady.set(false);
         error.set(false);
         errorMessage.set("");
+        streamingResponseText.set("");
         reportText.set("");
+        reportProcessingTime.set("");
         reportValue.set(null);
         reportSummary.set("");
         contextLimitations.set("");
@@ -290,9 +323,10 @@ public final class RecordingAiAssistantViewModel implements AutoCloseable {
 
     private void showReport(AiRecordingReport nextReport) {
         report = nextReport;
-        reportValue.set(nextReport);
+        streamingResponseText.set("");
         reportText.set(reportFormatter.reportText(nextReport));
         reportSummary.set(reportFormatter.summaryText(nextReport));
+        reportProcessingTime.set(processingTimeText(nanoTime.getAsLong() - analysisStartNanos));
         findings.setAll(nextReport.findings());
         selectedFinding.set(findings.isEmpty() ? null : findings.getFirst());
         contextLimitations.set(join(nextReport.contextLimitations()));
@@ -303,6 +337,7 @@ public final class RecordingAiAssistantViewModel implements AutoCloseable {
         analyzing.set(false);
         error.set(false);
         errorMessage.set("");
+        reportValue.set(nextReport);
     }
 
     private void showFailure(RuntimeException exception) {
@@ -319,6 +354,7 @@ public final class RecordingAiAssistantViewModel implements AutoCloseable {
         text.append("Recording: ").append(context.recording().name()).append('\n');
         text.append("Path: ").append(context.recording().path()).append('\n');
         text.append("Rule results sent: ").append(context.ruleResults().size()).append('\n');
+        text.append("Context sections sent: ").append(context.sections().size()).append('\n');
         appendList(text, "Limitations", context.limitations());
         text.append("\nRule context:\n");
         for (RuleResult result : context.ruleResults()) {
@@ -332,14 +368,8 @@ public final class RecordingAiAssistantViewModel implements AutoCloseable {
                     .append(result.summary())
                     .append('\n');
         }
+        appendSections(text, context.sections());
         return text.toString();
-    }
-
-    private static void appendSection(StringBuilder text, String title, String value) {
-        if (value == null || value.isBlank()) {
-            return;
-        }
-        text.append("\n").append(title).append(":\n").append(value).append('\n');
     }
 
     private static void appendList(StringBuilder text, String title, List<String> values) {
@@ -349,6 +379,24 @@ public final class RecordingAiAssistantViewModel implements AutoCloseable {
         text.append("\n").append(title).append(":\n");
         for (String value : values) {
             text.append("- ").append(value).append('\n');
+        }
+    }
+
+    private static void appendSections(StringBuilder text, List<RecordingAiContextSection> sections) {
+        if (sections == null || sections.isEmpty()) {
+            return;
+        }
+        text.append("\nAdditional context:\n");
+        for (RecordingAiContextSection section : sections) {
+            text.append(section.title())
+                    .append(" (")
+                    .append(section.rows().size())
+                    .append(" of ")
+                    .append(section.totalCount())
+                    .append("):\n");
+            for (String row : section.rows()) {
+                text.append("- ").append(row).append('\n');
+            }
         }
     }
 
@@ -362,6 +410,20 @@ public final class RecordingAiAssistantViewModel implements AutoCloseable {
     private static String message(RuntimeException exception) {
         String message = exception.getMessage();
         return message == null || message.isBlank() ? exception.getClass().getSimpleName() : message;
+    }
+
+    private static String processingTimeText(long elapsedNanos) {
+        long elapsedMillis = Math.max(0, elapsedNanos / 1_000_000L);
+        if (elapsedMillis < 1_000) {
+            return elapsedMillis + "ms";
+        }
+        long elapsedSeconds = Math.max(1, Math.round(elapsedMillis / 1_000.0));
+        if (elapsedSeconds < 60) {
+            return elapsedSeconds + "s";
+        }
+        long minutes = elapsedSeconds / 60;
+        long seconds = elapsedSeconds % 60;
+        return seconds == 0 ? minutes + "m" : minutes + "m " + seconds + "s";
     }
 
     @Override

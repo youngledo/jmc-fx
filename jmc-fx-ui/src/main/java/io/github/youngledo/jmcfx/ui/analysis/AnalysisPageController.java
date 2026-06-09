@@ -11,8 +11,8 @@ import io.github.youngledo.jmcfx.ui.rules.RuleResultsViewModel;
 import io.github.youngledo.jmcfx.ui.util.DisplayFormats;
 import io.github.youngledo.jmcfx.ui.util.WorkbenchTableSupport;
 
-import javafx.beans.binding.Bindings;
 import javafx.beans.InvalidationListener;
+import javafx.beans.binding.Bindings;
 import javafx.beans.value.ChangeListener;
 import javafx.beans.property.ObjectProperty;
 import javafx.beans.property.ReadOnlyStringWrapper;
@@ -93,7 +93,6 @@ public final class AnalysisPageController {
 
     public void bindAi(RecordingAiAssistantViewModel nextViewModel) {
         if (aiViewModel != null) {
-            view.aiStatusLabel().textProperty().unbind();
             if (aiReportListener != null) {
                 aiViewModel.reportProperty().removeListener(aiReportListener);
                 aiReportListener = null;
@@ -107,6 +106,8 @@ public final class AnalysisPageController {
                 aiViewModel.askingProperty().removeListener(aiStateListener);
                 aiViewModel.errorProperty().removeListener(aiStateListener);
                 aiViewModel.errorMessageProperty().removeListener(aiStateListener);
+                aiViewModel.reportReadyProperty().removeListener(aiStateListener);
+                aiViewModel.reportProcessingTimeProperty().removeListener(aiStateListener);
                 aiStateListener = null;
             }
             view.aiAnalyzeButton().disableProperty().unbind();
@@ -115,21 +116,10 @@ public final class AnalysisPageController {
         aiViewModel = nextViewModel;
         view.aiReportView().clear();
         if (nextViewModel == null) {
-            view.aiStatusLabel().setText("AI assistant is unavailable.");
             view.aiReportView().showUnavailable(i18n);
             return;
         }
         nextViewModel.refreshAvailability();
-        view.aiStatusLabel().textProperty().bind(Bindings.createStringBinding(
-                () -> aiStatus(nextViewModel),
-                nextViewModel.availableProperty(),
-                nextViewModel.previewReadyProperty(),
-                nextViewModel.analyzingProperty(),
-                nextViewModel.askingProperty(),
-                nextViewModel.reportReadyProperty(),
-                nextViewModel.errorProperty(),
-                nextViewModel.errorMessageProperty(),
-                i18n.localeProperty()));
         aiReportListener = (observable, oldValue, newValue) -> refreshAiReportView(nextViewModel);
         nextViewModel.reportProperty().addListener(aiReportListener);
         aiLocaleListener = (observable, oldValue, newValue) -> refreshAiReportView(nextViewModel);
@@ -137,12 +127,15 @@ public final class AnalysisPageController {
         refreshAiReportView(nextViewModel);
         view.aiAnalyzeButton().disableProperty().bind(nextViewModel.availableProperty().not()
                 .or(nextViewModel.analyzingProperty())
-                .or(nextViewModel.askingProperty()));
+                .or(nextViewModel.askingProperty())
+                .or(nextViewModel.reportReadyProperty()));
         aiStateListener = observable -> refreshAiReportView(nextViewModel);
         nextViewModel.analyzingProperty().addListener(aiStateListener);
         nextViewModel.askingProperty().addListener(aiStateListener);
         nextViewModel.errorProperty().addListener(aiStateListener);
         nextViewModel.errorMessageProperty().addListener(aiStateListener);
+        nextViewModel.reportReadyProperty().addListener(aiStateListener);
+        nextViewModel.reportProcessingTimeProperty().addListener(aiStateListener);
         bindAiVisibility(nextViewModel);
     }
 
@@ -247,14 +240,14 @@ public final class AnalysisPageController {
             return;
         }
         if (model.analyzingProperty().get() || model.askingProperty().get()) {
-            view.aiReportView().showLoading(i18n);
+            view.aiReportView().showStreamingResponse(i18n);
             return;
         }
         if (model.errorProperty().get()) {
-            view.aiReportView().showError(aiStatus(model));
+            view.aiReportView().showError(aiErrorDetail(model));
             return;
         }
-        view.aiReportView().showReport(model.reportProperty().get(), i18n);
+        view.aiReportView().showReport(model.reportProperty().get(), model.reportProcessingTimeProperty().get(), i18n);
     }
 
     private void bindAiVisibility(RecordingAiAssistantViewModel model) {
@@ -275,23 +268,8 @@ public final class AnalysisPageController {
         }
     }
 
-    private String aiStatus(RecordingAiAssistantViewModel model) {
-        if (!model.availableProperty().get()) {
-            return i18n.get("analysis.ai.unavailable");
-        }
-        if (model.errorProperty().get()) {
-            return i18n.format("analysis.ai.failed", model.errorMessageProperty().get());
-        }
-        if (model.analyzingProperty().get()) {
-            return i18n.get("analysis.ai.analyzing");
-        }
-        if (model.previewReadyProperty().get()) {
-            return i18n.get("analysis.ai.previewReady");
-        }
-        if (model.reportReadyProperty().get()) {
-            return i18n.get("analysis.ai.reportReady");
-        }
-        return i18n.get("analysis.ai.idle");
+    private String aiErrorDetail(RecordingAiAssistantViewModel model) {
+        return i18n.format("analysis.ai.failed", model.errorMessageProperty().get());
     }
 
     private Label analysisPlaceholder(RuleResultsViewModel nextViewModel) {

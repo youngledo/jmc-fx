@@ -44,7 +44,7 @@ public final class OpenAiCompatibleCompletionService implements StreamingAiCompl
         String requestBody = requestBody(settings, request, false);
         var response = transport.post(chatCompletionsUri(settings), headers(settings), requestBody, settings.timeout());
         if (response.statusCode() < 200 || response.statusCode() >= 300) {
-            throw new JmcFxException("AI provider request failed with HTTP " + response.statusCode() + ".");
+            throw new JmcFxException(httpFailureMessage(response));
         }
         return new AiCompletionResponse(extractText(response.body()));
     }
@@ -61,16 +61,32 @@ public final class OpenAiCompatibleCompletionService implements StreamingAiCompl
         }
 
         String requestBody = requestBody(settings, request, true);
-        var response = transport.postStream(chatCompletionsUri(settings), headers(settings), requestBody,
-                settings.timeout(), contentDelta -> {
-                    if (listener != null) {
-                        listener.onContentDelta(contentDelta);
-                    }
-                });
-        if (response.statusCode() < 200 || response.statusCode() >= 300) {
-            throw new JmcFxException("AI provider request failed with HTTP " + response.statusCode() + ".");
+        ProviderResponse providerResponse = streamOrFallback(request, settings, requestBody, listener);
+        if (providerResponse.response().statusCode() < 200 || providerResponse.response().statusCode() >= 300) {
+            throw new JmcFxException(httpFailureMessage(providerResponse.response()));
         }
-        return new AiCompletionResponse(response.body());
+        if (providerResponse.streaming()) {
+            return new AiCompletionResponse(providerResponse.response().body());
+        }
+        return new AiCompletionResponse(extractText(providerResponse.response().body()));
+    }
+
+    private ProviderResponse streamOrFallback(AiCompletionRequest request,
+            OpenAiCompatibleAiSettings settings, String requestBody, AiCompletionStreamListener listener) {
+        try {
+            var response = transport.postStream(chatCompletionsUri(settings), headers(settings), requestBody,
+                    settings.timeout(), contentDelta -> {
+                        if (listener != null) {
+                            listener.onContentDelta(contentDelta);
+                        }
+                    });
+            return new ProviderResponse(response, true);
+        } catch (JmcFxException exception) {
+            String fallbackBody = requestBody(settings, request, false);
+            var response = transport.post(chatCompletionsUri(settings), headers(settings), fallbackBody,
+                    settings.timeout());
+            return new ProviderResponse(response, false);
+        }
     }
 
     private static URI chatCompletionsUri(OpenAiCompatibleAiSettings settings) {
@@ -96,7 +112,7 @@ public final class OpenAiCompatibleCompletionService implements StreamingAiCompl
         var systemMessage = messages.addObject();
         systemMessage.put("role", "system");
         systemMessage.put("content", "You are the JMC FX offline recording assistant. "
-                + "Return only the JSON requested by the user prompt.");
+                + "Follow the response format requested by the user prompt exactly.");
 
         var userMessage = messages.addObject();
         userMessage.put("role", "user");
@@ -120,6 +136,44 @@ public final class OpenAiCompatibleCompletionService implements StreamingAiCompl
         } catch (JsonProcessingException exception) {
             throw new JmcFxException("AI provider returned invalid JSON.", exception);
         }
+    }
+
+    private static String httpFailureMessage(OpenAiCompatibleHttpTransport.HttpResponse response) {
+        String detail = providerErrorDetail(response.body());
+        if (detail.isBlank()) {
+            return "AI provider request failed with HTTP " + response.statusCode() + ".";
+        }
+        return "AI provider request failed with HTTP " + response.statusCode() + ": " + detail + ".";
+    }
+
+    private static String providerErrorDetail(String responseBody) {
+        if (responseBody == null || responseBody.isBlank()) {
+            return "";
+        }
+        try {
+            JsonNode error = MAPPER.readTree(responseBody).path("error");
+            String message = error.path("message").asText("");
+            String type = error.path("type").asText("");
+            String code = error.path("code").asText("");
+            if (message.isBlank()) {
+                return "";
+            }
+            if (!type.isBlank() && !code.isBlank()) {
+                return message + " (" + type + "/" + code + ")";
+            }
+            if (!type.isBlank()) {
+                return message + " (" + type + ")";
+            }
+            if (!code.isBlank()) {
+                return message + " (" + code + ")";
+            }
+            return message;
+        } catch (JsonProcessingException exception) {
+            return "";
+        }
+    }
+
+    private record ProviderResponse(OpenAiCompatibleHttpTransport.HttpResponse response, boolean streaming) {
     }
 
 }

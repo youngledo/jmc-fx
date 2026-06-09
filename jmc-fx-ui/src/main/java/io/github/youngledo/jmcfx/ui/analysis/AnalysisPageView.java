@@ -29,7 +29,6 @@ public record AnalysisPageView(
         Label detailRecommendationCaption,
         TextArea detailRecommendationArea,
         Label aiTitleLabel,
-        Label aiStatusLabel,
         Button aiAnalyzeButton,
         AiReportView aiReportView,
         HBox aiActionBar,

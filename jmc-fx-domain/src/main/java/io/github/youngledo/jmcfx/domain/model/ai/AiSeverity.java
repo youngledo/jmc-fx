@@ -12,8 +12,9 @@ public enum AiSeverity {
         }
         return switch (value.trim().toUpperCase()) {
             case "INFO" -> INFO;
-            case "WARNING", "WARN" -> WARNING;
-            case "CRITICAL", "ERROR" -> CRITICAL;
+            case "提示", "信息", "一般" -> INFO;
+            case "WARNING", "WARN", "警告", "中", "中等" -> WARNING;
+            case "CRITICAL", "ERROR", "严重", "高", "高危", "关键" -> CRITICAL;
             default -> UNKNOWN;
         };
     }

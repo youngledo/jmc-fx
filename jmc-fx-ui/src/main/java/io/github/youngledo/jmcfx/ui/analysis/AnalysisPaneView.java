@@ -36,7 +36,6 @@ public final class AnalysisPaneView {
     private final Label detailRecommendationCaption = new Label();
     private final TextArea detailRecommendationArea = textArea();
     private final Label aiTitleLabel = new Label();
-    private final Label aiStatusLabel = new Label();
     private final Button aiAnalyzeButton = new Button();
     private AiReportView aiReportView;
     private final TabPane detailTabs = new TabPane();
@@ -52,7 +51,7 @@ public final class AnalysisPaneView {
                 showUnavailableCheckBox, table, detailExplanationCaption,
                 detailExplanationArea, detailEvidenceCaption, detailEvidenceArea,
                 detailRecommendationCaption, detailRecommendationArea,
-                aiTitleLabel, aiStatusLabel, aiAnalyzeButton,
+                aiTitleLabel, aiAnalyzeButton,
                 aiReportView, aiActionBar, detailTabs);
     }
 
@@ -94,12 +93,11 @@ public final class AnalysisPaneView {
 
     private Node aiAssistantPanel() {
         styles(aiTitleLabel, "detail-panel-title");
-        styles(aiStatusLabel, "detail-panel-meta");
         aiReportView = new AiReportView();
         aiActionBar = hbox(8, aiAnalyzeButton);
         styles(aiActionBar, "page-toolbar");
         VBox.setVgrow(aiReportView.node(), Priority.ALWAYS);
-        VBox panel = vbox(6, aiTitleLabel, aiStatusLabel, aiActionBar, aiReportView.node());
+        VBox panel = vbox(6, aiTitleLabel, aiActionBar, aiReportView.node());
         styles(panel, "detail-panel", "analysis-ai-panel");
         return panel;
     }

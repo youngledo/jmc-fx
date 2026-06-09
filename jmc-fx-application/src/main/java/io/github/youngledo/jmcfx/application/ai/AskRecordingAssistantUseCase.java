@@ -28,10 +28,13 @@ public final class AskRecordingAssistantUseCase {
                 Language: %s
                 Question: %s
                 Report summary: %s
+                Context:
+                %s
                 Context limitations: %s
                 """.formatted(languageTag == null || languageTag.isBlank() ? "en" : languageTag,
                 question == null ? "" : question,
                 report.summaryMarkdown(),
+                contextText(context),
                 context.limitations());
         var response = completionService.complete(new AiCompletionRequest(context.recording(), languageTag, prompt));
         try {
@@ -39,5 +42,17 @@ public final class AskRecordingAssistantUseCase {
         } catch (IllegalArgumentException e) {
             throw new JmcFxException("AI returned an invalid assistant answer.", e);
         }
+    }
+
+    private static String contextText(RecordingAiContext context) {
+        StringBuilder text = new StringBuilder();
+        text.append("Rule results: ").append(context.ruleResults().size()).append('\n');
+        for (RecordingAiContextSection section : context.sections()) {
+            text.append(section.title()).append(":\n");
+            for (String row : section.rows()) {
+                text.append("- ").append(row).append('\n');
+            }
+        }
+        return text.toString();
     }
 }

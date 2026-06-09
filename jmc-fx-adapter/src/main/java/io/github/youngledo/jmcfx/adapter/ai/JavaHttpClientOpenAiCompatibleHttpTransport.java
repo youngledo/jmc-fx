@@ -31,6 +31,7 @@ final class JavaHttpClientOpenAiCompatibleHttpTransport implements OpenAiCompati
     @Override
     public HttpResponse post(URI uri, Map<String, String> headers, String body, Duration timeout) {
         HttpRequest.Builder builder = HttpRequest.newBuilder(uri)
+                .version(HttpClient.Version.HTTP_1_1)
                 .timeout(timeout)
                 .POST(HttpRequest.BodyPublishers.ofString(body));
         headers.forEach(builder::header);
@@ -49,13 +50,14 @@ final class JavaHttpClientOpenAiCompatibleHttpTransport implements OpenAiCompati
     public HttpResponse postStream(URI uri, Map<String, String> headers, String body, Duration timeout,
             ContentDeltaListener listener) {
         HttpRequest.Builder builder = HttpRequest.newBuilder(uri)
+                .version(HttpClient.Version.HTTP_1_1)
                 .timeout(timeout)
                 .POST(HttpRequest.BodyPublishers.ofString(body));
         headers.forEach(builder::header);
         try {
             var response = httpClient.send(builder.build(), BodyHandlers.ofLines());
             if (response.statusCode() < 200 || response.statusCode() >= 300) {
-                return new HttpResponse(response.statusCode(), "");
+                return new HttpResponse(response.statusCode(), response.body().collect(java.util.stream.Collectors.joining("\n")));
             }
             StringBuilder content = new StringBuilder();
             try (var lines = response.body()) {

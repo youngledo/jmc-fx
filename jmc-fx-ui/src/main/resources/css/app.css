@@ -856,6 +856,8 @@
 }
 .ai-report-loading {
     -fx-alignment: center-left;
+    -fx-min-height: 24px;
+    -fx-pref-height: 24px;
 }
 .ai-report-error {
     -fx-text-fill: -color-danger-fg;
@@ -908,6 +910,9 @@
 .ai-evidence-item {
     -fx-text-fill: -color-fg-muted;
 }
+.ai-report-meta {
+    -fx-text-fill: -color-fg-muted;
+}
 .ai-md-bold {
     -fx-font-weight: bold;
 }
@@ -917,6 +922,26 @@
 .ai-md-code {
     -fx-font-family: monospace;
     -fx-fill: -color-accent-fg;
+}
+.ai-markdown-blocks {
+    -fx-spacing: 6px;
+}
+.ai-md-heading {
+    -fx-font-weight: bold;
+    -fx-font-size: 14px;
+}
+.ai-md-list-item {
+    -fx-padding: 0 0 0 8px;
+}
+.ai-md-bullet {
+    -fx-fill: -color-fg-muted;
+}
+.ai-md-thematic-break {
+    -fx-border-color: -color-border-default transparent transparent transparent;
+    -fx-border-width: 1px 0 0 0;
+    -fx-min-height: 1px;
+    -fx-pref-height: 1px;
+    -fx-max-height: 1px;
 }
 .analysis-ai-panel .list-view {
     -fx-pref-height: 120px;

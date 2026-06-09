@@ -42,6 +42,18 @@ public record RecordingPageUseCases(
 
     public static RecordingPageUseCases from(RecordingApplicationServices services) {
         Objects.requireNonNull(services, "services");
+        BuildRecordingAiContextUseCase buildRecordingAiContext = new BuildRecordingAiContextUseCase(
+                new AnalyzeRulesUseCase(services.ruleAnalysisService()),
+                services.jfrMetadataService(),
+                services.g1GcService(),
+                services.exceptionService(),
+                services.profilingService(),
+                services.threadService(),
+                services.heapService(),
+                services.tlabService(),
+                services.lockService(),
+                services.fileIOService(),
+                services.socketIOService());
         return new RecordingPageUseCases(
                 new OpenRecordingUseCase(services.recordingRepository()),
                 new OpenRecordingWorkspaceUseCase(services),
@@ -68,11 +80,10 @@ public record RecordingPageUseCases(
                 services.aiSettingsRepository() == null
                         ? null
                         : new AiSettingsUseCase(services.aiSettingsRepository()),
-                new BuildRecordingAiContextUseCase(new AnalyzeRulesUseCase(services.ruleAnalysisService())),
+                buildRecordingAiContext,
                 services.aiCompletionService() == null
                         ? null
-                        : new AnalyzeRecordingWithAiUseCase(new AnalyzeRulesUseCase(services.ruleAnalysisService()),
-                                services.aiCompletionService()),
+                        : new AnalyzeRecordingWithAiUseCase(buildRecordingAiContext, services.aiCompletionService()),
                 services.aiCompletionService() == null
                         ? null
                         : new AskRecordingAssistantUseCase(services.aiCompletionService()));

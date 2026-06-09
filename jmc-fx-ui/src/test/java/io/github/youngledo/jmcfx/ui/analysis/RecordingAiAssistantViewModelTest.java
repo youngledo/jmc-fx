@@ -10,12 +10,17 @@ import java.util.List;
 import java.util.Locale;
 import java.util.Map;
 import java.util.Optional;
+import java.util.concurrent.CountDownLatch;
+import java.util.concurrent.TimeUnit;
+import java.util.concurrent.atomic.AtomicLong;
 
 import io.github.youngledo.jmcfx.application.AnalyzeRulesUseCase;
 import io.github.youngledo.jmcfx.application.ai.AnalyzeRecordingWithAiUseCase;
 import io.github.youngledo.jmcfx.application.ai.AskRecordingAssistantUseCase;
 import io.github.youngledo.jmcfx.application.ai.AiSettingsUseCase;
 import io.github.youngledo.jmcfx.application.ai.BuildRecordingAiContextUseCase;
+import io.github.youngledo.jmcfx.domain.model.JfrMetadataEventType;
+import io.github.youngledo.jmcfx.domain.model.JfrMetadataReport;
 import io.github.youngledo.jmcfx.domain.model.RecordingSummary;
 import io.github.youngledo.jmcfx.domain.model.RuleResult;
 import io.github.youngledo.jmcfx.domain.model.Severity;
@@ -42,6 +47,8 @@ class RecordingAiAssistantViewModelTest {
 
         assertTrue(viewModel.previewReadyProperty().get());
         assertTrue(viewModel.contextPreviewProperty().get().contains("Rule results sent: 1"));
+        assertTrue(viewModel.contextPreviewProperty().get().contains("Context sections sent: 1"));
+        assertTrue(viewModel.contextPreviewProperty().get().contains("JFR metadata"));
         assertEquals(0, completionService.calls);
     }
 
@@ -80,6 +87,49 @@ class RecordingAiAssistantViewModelTest {
         assertEquals(1, viewModel.findingsProperty().size());
         assertEquals("Long GC pause", viewModel.findingsProperty().getFirst().title());
         assertEquals("Rule results only.", viewModel.contextLimitationsProperty().get());
+        assertFalse(viewModel.reportProcessingTimeProperty().get().isBlank());
+    }
+
+    @Test
+    void processingTimeStartsWhenAnalysisStartsNotWhenPreviewStarts() {
+        AtomicLong clock = new AtomicLong();
+        AiCompletionService completionService = request -> {
+            clock.addAndGet(TimeUnit.SECONDS.toNanos(10));
+            return new AiCompletionResponse("""
+                    {"summaryMarkdown": "Summary", "findings": [], "followUpQuestions": [], "contextLimitations": []}
+                    """);
+        };
+        RecordingAiAssistantViewModel viewModel = viewModel(completionService,
+                new AiSettingsUseCase(new FakeAiSettingsRepository(Optional.of(
+                        new AiSettings(true, "https://api.openai.com/v1", "model", 0.2, 4_096, false))),
+                        Map.of(AiSettingsUseCase.API_KEY_ENVIRONMENT_VARIABLE, "key")),
+                Runnable::run,
+                clock::get);
+
+        viewModel.preparePreview(recording());
+        clock.addAndGet(TimeUnit.MINUTES.toNanos(2));
+
+        viewModel.analyze("en");
+
+        assertEquals("10s", viewModel.reportProcessingTimeProperty().get());
+    }
+
+    @Test
+    void resetsReportWhenRecordingChanges() {
+        RecordingCompletionService completionService = new RecordingCompletionService();
+        RecordingAiAssistantViewModel viewModel = viewModel(completionService);
+
+        viewModel.setRecording(recording());
+        viewModel.analyze("en");
+
+        assertTrue(viewModel.reportReadyProperty().get());
+
+        viewModel.setRecording(new RecordingSummary("recording-2", Path.of("recording-2.jfr"),
+                "recording-2.jfr", Instant.EPOCH, Instant.EPOCH.plusSeconds(1), 1000, 128));
+
+        assertFalse(viewModel.reportReadyProperty().get());
+        assertEquals("", viewModel.reportProcessingTimeProperty().get());
+        assertEquals(null, viewModel.reportProperty().get());
     }
 
     @Test
@@ -98,6 +148,30 @@ class RecordingAiAssistantViewModelTest {
         assertTrue(viewModel.reportTextProperty().get().contains("Summary"));
         assertTrue(viewModel.reportTextProperty().get().contains("Streamed report"));
         assertFalse(viewModel.reportTextProperty().get().contains("summaryMarkdown"));
+    }
+
+    @Test
+    void keepsStreamingResponseTextHiddenWhileReportIsStillGenerating() throws Exception {
+        BlockingStreamingCompletionService completionService = new BlockingStreamingCompletionService();
+        RecordingAiAssistantViewModel viewModel = viewModel(completionService,
+                new AiSettingsUseCase(new FakeAiSettingsRepository(Optional.of(
+                        new AiSettings(true, "https://api.openai.com/v1", "model", 0.2, 4_096, false))),
+                        Map.of(AiSettingsUseCase.API_KEY_ENVIRONMENT_VARIABLE, "key")),
+                command -> Thread.ofVirtual().start(command));
+        viewModel.setRecording(recording());
+
+        viewModel.analyze("en");
+
+        assertTrue(completionService.streamed.await(5, TimeUnit.SECONDS));
+        assertTrue(viewModel.analyzingProperty().get());
+        assertEquals("", viewModel.streamingResponseTextProperty().get());
+        assertEquals("", viewModel.reportTextProperty().get());
+
+        completionService.release.countDown();
+
+        waitUntil(() -> viewModel.reportReadyProperty().get());
+        assertEquals("", viewModel.streamingResponseTextProperty().get());
+        assertTrue(viewModel.reportTextProperty().get().contains("Completed report"));
     }
 
     @Test
@@ -143,14 +217,31 @@ class RecordingAiAssistantViewModelTest {
 
     private static RecordingAiAssistantViewModel viewModel(AiCompletionService completionService,
             AiSettingsUseCase aiSettingsUseCase) {
+        return viewModel(completionService, aiSettingsUseCase, Runnable::run);
+    }
+
+    private static RecordingAiAssistantViewModel viewModel(AiCompletionService completionService,
+            AiSettingsUseCase aiSettingsUseCase, RecordingAiAssistantExecutor executor) {
+        return viewModel(completionService, aiSettingsUseCase, executor, System::nanoTime);
+    }
+
+    private static RecordingAiAssistantViewModel viewModel(AiCompletionService completionService,
+            AiSettingsUseCase aiSettingsUseCase, RecordingAiAssistantExecutor executor,
+            java.util.function.LongSupplier nanoTime) {
         AnalyzeRulesUseCase rules = new AnalyzeRulesUseCase(ruleService());
+        BuildRecordingAiContextUseCase contextUseCase = new BuildRecordingAiContextUseCase(rules,
+                recording -> new JfrMetadataReport(List.of(new JfrMetadataEventType(
+                        "jdk.ExecutionSample", "Execution Sample", List.of("JDK", "Profiling"),
+                        42, "", List.of()))),
+                null, null, null, null, null, null, null, null, null);
         return new RecordingAiAssistantViewModel(
-                new BuildRecordingAiContextUseCase(rules),
-                new AnalyzeRecordingWithAiUseCase(rules, completionService),
+                contextUseCase,
+                new AnalyzeRecordingWithAiUseCase(contextUseCase, completionService),
                 new AskRecordingAssistantUseCase(completionService),
                 aiSettingsUseCase,
-                Runnable::run,
-                formatter(Locale.ENGLISH));
+                executor,
+                formatter(Locale.ENGLISH),
+                nanoTime);
     }
 
     private static RecordingAiReportFormatter formatter(Locale locale) {
@@ -210,6 +301,52 @@ class RecordingAiAssistantViewModelTest {
             listener.onContentDelta(stripped.substring(midpoint));
             return new AiCompletionResponse(stripped);
         }
+    }
+
+    private static final class BlockingStreamingCompletionService
+            implements StreamingAiCompletionService {
+        private final CountDownLatch streamed = new CountDownLatch(1);
+        private final CountDownLatch release = new CountDownLatch(1);
+
+        @Override
+        public AiCompletionResponse complete(AiCompletionRequest request) {
+            throw new UnsupportedOperationException("not used by this test");
+        }
+
+        @Override
+        public AiCompletionResponse completeStreaming(AiCompletionRequest request,
+                AiCompletionStreamListener listener) {
+            listener.onContentDelta("## partial report");
+            streamed.countDown();
+            try {
+                release.await();
+            } catch (InterruptedException exception) {
+                Thread.currentThread().interrupt();
+                throw new IllegalStateException("interrupted", exception);
+            }
+            String response = """
+                    ## partial report
+
+                    ```jmcfx-report-json
+                    {"summaryMarkdown":"Completed report","findings":[],"followUpQuestions":[],"contextLimitations":[]}
+                    ```
+                    """;
+            listener.onContentDelta(response);
+            return new AiCompletionResponse(response);
+        }
+    }
+
+    private static void waitUntil(BooleanSupplier condition) throws InterruptedException {
+        long deadline = System.nanoTime() + TimeUnit.SECONDS.toNanos(5);
+        while (!condition.getAsBoolean() && System.nanoTime() < deadline) {
+            Thread.sleep(10);
+        }
+        assertTrue(condition.getAsBoolean());
+    }
+
+    @FunctionalInterface
+    private interface BooleanSupplier {
+        boolean getAsBoolean();
     }
 
     private static final class FakeAiSettingsRepository implements AiSettingsRepository {
