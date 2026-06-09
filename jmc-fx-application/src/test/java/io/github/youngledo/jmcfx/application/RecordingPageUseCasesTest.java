@@ -9,10 +9,13 @@ import java.util.List;
 
 import io.github.youngledo.jmcfx.domain.model.RecordingSummary;
 import io.github.youngledo.jmcfx.domain.model.RuleResult;
+import io.github.youngledo.jmcfx.domain.model.ai.AiCompletionRequest;
+import io.github.youngledo.jmcfx.domain.model.ai.AiCompletionResponse;
 import io.github.youngledo.jmcfx.domain.service.EventQueryService;
 import io.github.youngledo.jmcfx.domain.service.EventQuerySession;
 import io.github.youngledo.jmcfx.domain.service.RecordingRepository;
 import io.github.youngledo.jmcfx.domain.service.RuleAnalysisService;
+import io.github.youngledo.jmcfx.domain.service.ai.AiCompletionService;
 import org.junit.jupiter.api.Test;
 
 class RecordingPageUseCasesTest {
@@ -30,7 +33,24 @@ class RecordingPageUseCasesTest {
         assertNotNull(useCases.openRecordingWorkspace());
         assertNotNull(useCases.browseEvents());
         assertNotNull(useCases.analyzeRules());
+        assertNotNull(useCases.buildRecordingAiContext());
         assertSame(useCases.openRecordingWorkspace(), useCases.openRecordingWorkspace());
+    }
+
+    @Test
+    void exposesAiUseCasesWhenCompletionServiceIsConfigured() {
+        RecordingApplicationServices services = new RecordingApplicationServices(
+                new FakeRecordingRepository(),
+                new FakeEventQueryService(),
+                new FakeRuleAnalysisService(),
+                null, null, null, null, null, null, null, null, null,
+                null, null, null, null, null, null, null,
+                new FakeAiCompletionService());
+
+        RecordingPageUseCases useCases = RecordingPageUseCases.from(services);
+
+        assertNotNull(useCases.analyzeRecordingWithAi());
+        assertNotNull(useCases.askRecordingAssistant());
     }
 
     private static final class FakeRecordingRepository implements RecordingRepository {
@@ -52,6 +72,13 @@ class RecordingPageUseCasesTest {
         @Override
         public List<RuleResult> analyze(RecordingSummary recording) {
             return List.of();
+        }
+    }
+
+    private static final class FakeAiCompletionService implements AiCompletionService {
+        @Override
+        public AiCompletionResponse complete(AiCompletionRequest request) {
+            return new AiCompletionResponse("{}");
         }
     }
 }

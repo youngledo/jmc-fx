@@ -57,6 +57,29 @@ class OpenAiCompatibleCompletionServiceTest {
     }
 
     @Test
+    void postsStreamingChatCompletionRequestAndForwardsContentDeltas() throws Exception {
+        FakeTransport transport = new FakeTransport(200, "");
+        transport.streamResponseBody = """
+                {"summaryMarkdown":"ok"}
+                """;
+        var settings = new OpenAiCompatibleAiSettings("test-key", "https://example.test/v1/", "test-model",
+                0.4, 1234, Duration.ofSeconds(7));
+        var service = new OpenAiCompatibleCompletionService(() -> settings, transport);
+        StringBuilder streamedText = new StringBuilder();
+
+        var response = service.completeStreaming(new AiCompletionRequest(recording(), "zh-CN", "Return JSON."),
+                streamedText::append);
+
+        assertEquals("{\"summaryMarkdown\":\"ok\"}", response.text());
+        assertEquals("{\"summaryMarkdown\":\"ok\"}", streamedText.toString());
+        assertEquals(URI.create("https://example.test/v1/chat/completions"), transport.uri);
+        assertEquals(Duration.ofSeconds(7), transport.timeout);
+
+        JsonNode body = MAPPER.readTree(transport.body);
+        assertEquals(true, body.path("stream").asBoolean());
+    }
+
+    @Test
     void rejectsMissingApiKeyBeforeSendingRequest() {
         FakeTransport transport = new FakeTransport(200, "{}");
         var service = new OpenAiCompatibleCompletionService(OpenAiCompatibleAiSettings::defaults, transport);
@@ -130,6 +153,7 @@ class OpenAiCompatibleCompletionServiceTest {
 
         private final int statusCode;
         private final String responseBody;
+        private String streamResponseBody;
         private URI uri;
         private Map<String, String> headers;
         private String body;
@@ -147,6 +171,20 @@ class OpenAiCompatibleCompletionServiceTest {
             this.body = body;
             this.timeout = timeout;
             return new HttpResponse(statusCode, responseBody);
+        }
+
+        @Override
+        public HttpResponse postStream(URI uri, Map<String, String> headers, String body, Duration timeout,
+                ContentDeltaListener listener) {
+            this.uri = uri;
+            this.headers = Map.copyOf(headers);
+            this.body = body;
+            this.timeout = timeout;
+            streamResponseBody = streamResponseBody.strip();
+            if (listener != null) {
+                listener.onContentDelta(streamResponseBody);
+            }
+            return new HttpResponse(statusCode, streamResponseBody);
         }
     }
 }

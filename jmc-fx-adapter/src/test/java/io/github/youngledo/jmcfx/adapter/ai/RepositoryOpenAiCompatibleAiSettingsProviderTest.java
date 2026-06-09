@@ -55,6 +55,21 @@ class RepositoryOpenAiCompatibleAiSettingsProviderTest {
         assertEquals(fallback, provider.load());
     }
 
+    @Test
+    void disabledSavedSettingsSuppressApiKey() {
+        var repository = new FakeAiSettingsRepository(Optional.of(new AiSettings(
+                false, "https://saved.test/v1", "saved-model", 0.6, 2_000, false)));
+        var fallback = new OpenAiCompatibleAiSettings("env-key", "https://env.test/v1", "env-model",
+                0.2, 4_096, Duration.ofSeconds(9));
+        var provider = new RepositoryOpenAiCompatibleAiSettingsProvider(repository, () -> fallback);
+
+        OpenAiCompatibleAiSettings settings = provider.load();
+
+        assertEquals("", settings.apiKey());
+        assertEquals("https://saved.test/v1", settings.baseUrl());
+        assertEquals("saved-model", settings.model());
+    }
+
     private static final class FakeAiSettingsRepository implements AiSettingsRepository {
 
         private Optional<AiSettings> settings;

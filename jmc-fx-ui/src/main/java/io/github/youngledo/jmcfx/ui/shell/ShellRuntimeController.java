@@ -19,6 +19,7 @@ final class ShellRuntimeController {
     private final AppShellView view;
     private final AppShellViewModel viewModel;
     private final I18n i18n;
+    private final RecordingPageUseCases recordingUseCases;
     private final RecordingSectionLoader recordingSectionLoader;
     private final ShellBackgroundWorkController backgroundWorkController;
     private HomePaneController homePaneController;
@@ -40,8 +41,9 @@ final class ShellRuntimeController {
         this.viewModel = viewModel;
         this.i18n = i18n;
         this.backgroundWorkController = new ShellBackgroundWorkController(view.progressBar);
+        this.recordingUseCases = RecordingPageUseCases.from(recordingServices);
         RecordingWorkspaceFactory recordingWorkspaceFactory =
-                new RecordingWorkspaceFactory(RecordingPageUseCases.from(recordingServices), i18n);
+                new RecordingWorkspaceFactory(recordingUseCases, i18n);
         this.recordingSectionLoader = new RecordingSectionLoader(recordingOpenExecutor, i18n,
                 backgroundWorkController::setVisible, viewModel::showTaskSummary, backgroundWorkController::onFxThread);
         this.pageControllerRegistry = new ShellPageControllerRegistry(view, viewModel, i18n);
@@ -65,7 +67,8 @@ final class ShellRuntimeController {
         homePaneController = new HomePaneController(view.home, i18n, workspaceOpenCoordinator::openRecording,
                 workspaceOpenCoordinator::showOpenHeapDumpChooser, viewModel::openLiveJvmWorkspace);
         homePaneController.configure();
-        settingsPaneController = new SettingsPaneController(view.settings, viewModel, i18n);
+        settingsPaneController = new SettingsPaneController(view.settings, viewModel, i18n,
+                recordingUseCases.aiSettings());
         settingsPaneController.configure();
         pageControllerRegistry.configure();
         workspaceTabsController = new WorkspaceTabsController(view.recordingTabs, viewModel);

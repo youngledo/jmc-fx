@@ -27,7 +27,7 @@ final class ShellRecordingWorkspaceAttacher {
                 prepared.compilations(), prepared.codeCache(), prepared.classLoading(), prepared.vmOperations(),
                 prepared.environment(), prepared.javaAppOverview(), prepared.security(), prepared.nativeLibraries(),
                 prepared.threadDumps(), prepared.metadata(), prepared.g1Gc(), prepared.javaFxEvents(),
-                prepared.advancedJfr(), openRequestGeneration);
+                prepared.advancedJfr(), prepared.aiAssistant(), openRequestGeneration);
         viewModel.showStatus(i18n.format("status.openedRecording", prepared.recording().name()));
     }
 }

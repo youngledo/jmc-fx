@@ -61,6 +61,7 @@ final class WorkspaceSelectionController {
         pages.overviewPageController().bind(workspace == null ? null : workspace.overviewViewModel());
         pages.eventsPageController().bind(workspace == null ? null : workspace.eventBrowserViewModel());
         pages.analysisPageController().bind(workspace == null ? null : workspace.ruleResultsViewModel());
+        pages.analysisPageController().bindAi(workspace == null ? null : workspace.aiAssistantViewModel());
         pages.profilingPageController().bind(workspace == null ? null : workspace.profilingViewModel());
         pages.exceptionsPageController().bind(
                 workspace == null ? null : workspace.exceptionViewModel(),
@@ -146,6 +147,9 @@ final class WorkspaceSelectionController {
     }
 
     void loadWorkspaceSection(RecordingWorkspace workspace, String sectionId) {
+        if ("analysis".equals(sectionId)) {
+            pages.analysisPageController().refreshAiAvailability();
+        }
         recordingSectionLoader.load(workspace, sectionId);
     }
 }

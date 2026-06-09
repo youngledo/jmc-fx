@@ -1,9 +1,14 @@
 package io.github.youngledo.jmcfx.ui.shell;
 
 import javafx.scene.Node;
+import javafx.scene.control.Button;
+import javafx.scene.control.CheckBox;
 import javafx.scene.control.Label;
 import javafx.scene.control.RadioButton;
+import javafx.scene.control.Spinner;
+import javafx.scene.control.TextField;
 import javafx.scene.control.ToggleGroup;
+import javafx.scene.layout.GridPane;
 import javafx.scene.layout.HBox;
 import javafx.scene.layout.VBox;
 
@@ -21,6 +26,19 @@ final class SettingsPaneView {
     final RadioButton themeFollowSystemRadio = new RadioButton();
     final RadioButton themeLightRadio = new RadioButton();
     final RadioButton themeDarkRadio = new RadioButton();
+    final Label aiLabel = new Label();
+    final CheckBox aiEnabledCheckBox = new CheckBox();
+    final Label aiApiKeyStatusLabel = new Label();
+    final Label aiBaseUrlLabel = new Label();
+    final TextField aiBaseUrlField = new TextField();
+    final Label aiModelLabel = new Label();
+    final TextField aiModelField = new TextField();
+    final Label aiTemperatureLabel = new Label();
+    final Spinner<Double> aiTemperatureSpinner = new Spinner<>();
+    final Label aiMaxOutputTokensLabel = new Label();
+    final Spinner<Integer> aiMaxOutputTokensSpinner = new Spinner<>();
+    final Button aiSaveButton = new Button();
+    final Button aiResetButton = new Button();
 
     SettingsPaneView() {
         configure();
@@ -31,6 +49,8 @@ final class SettingsPaneView {
         styles(titleLabel, "view-title");
         styles(languageLabel, "detail-title");
         styles(themeLabel, "detail-title");
+        styles(aiLabel, "detail-title");
+        styles(aiApiKeyStatusLabel, "detail-panel-meta");
         languageFollowSystemRadio.setToggleGroup(languageToggleGroup);
         languageEnglishRadio.setToggleGroup(languageToggleGroup);
         languageChineseRadio.setToggleGroup(languageToggleGroup);
@@ -41,7 +61,26 @@ final class SettingsPaneView {
                 hbox(24, languageFollowSystemRadio, languageEnglishRadio, languageChineseRadio));
         VBox themeGroup = vbox(16, themeLabel,
                 hbox(24, themeFollowSystemRadio, themeLightRadio, themeDarkRadio));
-        pane.getChildren().setAll(titleLabel, languageGroup, themeGroup);
+        VBox aiGroup = vbox(10, aiLabel, aiEnabledCheckBox, aiApiKeyStatusLabel, aiForm(),
+                hbox(8, aiSaveButton, aiResetButton));
+        styles(aiGroup, "settings-form-group");
+        pane.getChildren().setAll(titleLabel, languageGroup, themeGroup, aiGroup);
+    }
+
+    private GridPane aiForm() {
+        aiBaseUrlField.setPrefColumnCount(36);
+        aiModelField.setPrefColumnCount(28);
+        aiTemperatureSpinner.setEditable(true);
+        aiMaxOutputTokensSpinner.setEditable(true);
+        GridPane grid = new GridPane();
+        grid.setHgap(10);
+        grid.setVgap(8);
+        grid.getStyleClass().add("settings-form-grid");
+        grid.addRow(0, aiBaseUrlLabel, aiBaseUrlField);
+        grid.addRow(1, aiModelLabel, aiModelField);
+        grid.addRow(2, aiTemperatureLabel, aiTemperatureSpinner);
+        grid.addRow(3, aiMaxOutputTokensLabel, aiMaxOutputTokensSpinner);
+        return grid;
     }
 
     private static VBox vbox(double spacing, Node... children) {

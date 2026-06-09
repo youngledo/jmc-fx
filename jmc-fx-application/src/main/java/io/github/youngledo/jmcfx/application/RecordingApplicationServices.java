@@ -19,6 +19,8 @@ import io.github.youngledo.jmcfx.domain.service.RuleAnalysisService;
 import io.github.youngledo.jmcfx.domain.service.SocketIOService;
 import io.github.youngledo.jmcfx.domain.service.ThreadService;
 import io.github.youngledo.jmcfx.domain.service.TlabService;
+import io.github.youngledo.jmcfx.domain.service.ai.AiCompletionService;
+import io.github.youngledo.jmcfx.domain.service.ai.AiSettingsRepository;
 
 public record RecordingApplicationServices(
         RecordingRepository recordingRepository,
@@ -39,5 +41,60 @@ public record RecordingApplicationServices(
         JfrMetadataService jfrMetadataService,
         G1GcService g1GcService,
         JavaFxEventService javaFxEventService,
-        AdvancedJfrAnalysisService advancedJfrAnalysisService) {
+        AdvancedJfrAnalysisService advancedJfrAnalysisService,
+        AiCompletionService aiCompletionService,
+        AiSettingsRepository aiSettingsRepository) {
+
+    public RecordingApplicationServices(RecordingRepository recordingRepository,
+            EventQueryService eventQueryService,
+            RuleAnalysisService ruleAnalysisService,
+            ProfilingService profilingService,
+            ExceptionService exceptionService,
+            ThreadService threadService,
+            FileIOService fileIOService,
+            SocketIOService socketIOService,
+            LockService lockService,
+            HeapService heapService,
+            LeakSuspectsService leakSuspectsService,
+            TlabService tlabService,
+            JvmInternalsService jvmInternalsService,
+            EnvironmentService environmentService,
+            JavaAppService javaAppService,
+            JfrMetadataService jfrMetadataService,
+            G1GcService g1GcService,
+            JavaFxEventService javaFxEventService,
+            AdvancedJfrAnalysisService advancedJfrAnalysisService) {
+        this(recordingRepository, eventQueryService, ruleAnalysisService, profilingService,
+                exceptionService, threadService, fileIOService, socketIOService, lockService,
+                heapService, leakSuspectsService, tlabService, jvmInternalsService, environmentService,
+                javaAppService, jfrMetadataService, g1GcService, javaFxEventService,
+                advancedJfrAnalysisService, null, null);
+    }
+
+    public RecordingApplicationServices(RecordingRepository recordingRepository,
+            EventQueryService eventQueryService,
+            RuleAnalysisService ruleAnalysisService,
+            ProfilingService profilingService,
+            ExceptionService exceptionService,
+            ThreadService threadService,
+            FileIOService fileIOService,
+            SocketIOService socketIOService,
+            LockService lockService,
+            HeapService heapService,
+            LeakSuspectsService leakSuspectsService,
+            TlabService tlabService,
+            JvmInternalsService jvmInternalsService,
+            EnvironmentService environmentService,
+            JavaAppService javaAppService,
+            JfrMetadataService jfrMetadataService,
+            G1GcService g1GcService,
+            JavaFxEventService javaFxEventService,
+            AdvancedJfrAnalysisService advancedJfrAnalysisService,
+            AiCompletionService aiCompletionService) {
+        this(recordingRepository, eventQueryService, ruleAnalysisService, profilingService,
+                exceptionService, threadService, fileIOService, socketIOService, lockService,
+                heapService, leakSuspectsService, tlabService, jvmInternalsService, environmentService,
+                javaAppService, jfrMetadataService, g1GcService, javaFxEventService,
+                advancedJfrAnalysisService, aiCompletionService, null);
+    }
 }

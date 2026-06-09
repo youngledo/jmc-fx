@@ -12,6 +12,8 @@ import io.github.youngledo.jmcfx.ui.util.DisplayFormats;
 import io.github.youngledo.jmcfx.ui.util.WorkbenchTableSupport;
 
 import javafx.beans.binding.Bindings;
+import javafx.beans.InvalidationListener;
+import javafx.beans.value.ChangeListener;
 import javafx.beans.property.ObjectProperty;
 import javafx.beans.property.ReadOnlyStringWrapper;
 import javafx.beans.property.SimpleObjectProperty;
@@ -31,7 +33,11 @@ public final class AnalysisPageController {
     private final I18n i18n;
     private final Consumer<String> relatedPageNavigator;
     private RuleResultsViewModel viewModel;
+    private RecordingAiAssistantViewModel aiViewModel;
     private ObjectProperty<Integer> minimumScoreBinding;
+    private ChangeListener<io.github.youngledo.jmcfx.domain.model.ai.AiRecordingReport> aiReportListener;
+    private ChangeListener<java.util.Locale> aiLocaleListener;
+    private InvalidationListener aiStateListener;
 
     public AnalysisPageController(AnalysisPageView view, I18n i18n, Consumer<String> relatedPageNavigator) {
         this.view = view;
@@ -42,6 +48,7 @@ public final class AnalysisPageController {
     public void configure() {
         bindLocalizedText();
         configureTable();
+        configureAiAssistant();
     }
 
     public void bind(RuleResultsViewModel nextViewModel) {
@@ -84,6 +91,67 @@ public final class AnalysisPageController {
         view.table().getSelectionModel().selectFirst();
     }
 
+    public void bindAi(RecordingAiAssistantViewModel nextViewModel) {
+        if (aiViewModel != null) {
+            view.aiStatusLabel().textProperty().unbind();
+            if (aiReportListener != null) {
+                aiViewModel.reportProperty().removeListener(aiReportListener);
+                aiReportListener = null;
+            }
+            if (aiLocaleListener != null) {
+                i18n.localeProperty().removeListener(aiLocaleListener);
+                aiLocaleListener = null;
+            }
+            if (aiStateListener != null) {
+                aiViewModel.analyzingProperty().removeListener(aiStateListener);
+                aiViewModel.askingProperty().removeListener(aiStateListener);
+                aiViewModel.errorProperty().removeListener(aiStateListener);
+                aiViewModel.errorMessageProperty().removeListener(aiStateListener);
+                aiStateListener = null;
+            }
+            view.aiAnalyzeButton().disableProperty().unbind();
+            unbindAiVisibility();
+        }
+        aiViewModel = nextViewModel;
+        view.aiReportView().clear();
+        if (nextViewModel == null) {
+            view.aiStatusLabel().setText("AI assistant is unavailable.");
+            view.aiReportView().showUnavailable(i18n);
+            return;
+        }
+        nextViewModel.refreshAvailability();
+        view.aiStatusLabel().textProperty().bind(Bindings.createStringBinding(
+                () -> aiStatus(nextViewModel),
+                nextViewModel.availableProperty(),
+                nextViewModel.previewReadyProperty(),
+                nextViewModel.analyzingProperty(),
+                nextViewModel.askingProperty(),
+                nextViewModel.reportReadyProperty(),
+                nextViewModel.errorProperty(),
+                nextViewModel.errorMessageProperty(),
+                i18n.localeProperty()));
+        aiReportListener = (observable, oldValue, newValue) -> refreshAiReportView(nextViewModel);
+        nextViewModel.reportProperty().addListener(aiReportListener);
+        aiLocaleListener = (observable, oldValue, newValue) -> refreshAiReportView(nextViewModel);
+        i18n.localeProperty().addListener(aiLocaleListener);
+        refreshAiReportView(nextViewModel);
+        view.aiAnalyzeButton().disableProperty().bind(nextViewModel.availableProperty().not()
+                .or(nextViewModel.analyzingProperty())
+                .or(nextViewModel.askingProperty()));
+        aiStateListener = observable -> refreshAiReportView(nextViewModel);
+        nextViewModel.analyzingProperty().addListener(aiStateListener);
+        nextViewModel.askingProperty().addListener(aiStateListener);
+        nextViewModel.errorProperty().addListener(aiStateListener);
+        nextViewModel.errorMessageProperty().addListener(aiStateListener);
+        bindAiVisibility(nextViewModel);
+    }
+
+    public void refreshAiAvailability() {
+        if (aiViewModel != null) {
+            aiViewModel.refreshAvailability();
+        }
+    }
+
     public TableView<RuleResult> table() {
         return view.table();
     }
@@ -98,6 +166,10 @@ public final class AnalysisPageController {
         view.detailExplanationCaption().textProperty().bind(i18n.text("analysis.detail.explanation"));
         view.detailEvidenceCaption().textProperty().bind(i18n.text("analysis.detail.evidence"));
         view.detailRecommendationCaption().textProperty().bind(i18n.text("analysis.detail.recommendation"));
+        view.detailTabs().getTabs().get(0).textProperty().bind(i18n.text("analysis.detail.rulesTab"));
+        view.detailTabs().getTabs().get(1).textProperty().bind(i18n.text("analysis.ai.tab"));
+        view.aiTitleLabel().textProperty().bind(i18n.text("analysis.ai.title"));
+        view.aiAnalyzeButton().textProperty().bind(i18n.text("analysis.ai.analyze"));
     }
 
     private void configureTable() {
@@ -160,6 +232,68 @@ public final class AnalysisPageController {
         });
     }
 
+    private void configureAiAssistant() {
+        view.aiAnalyzeButton().setOnAction(event -> {
+            if (aiViewModel != null) {
+                aiViewModel.resetForAnalysis();
+                aiViewModel.analyze(i18n.localeProperty().get().toLanguageTag());
+            }
+        });
+    }
+
+    private void refreshAiReportView(RecordingAiAssistantViewModel model) {
+        if (model == null || !model.availableProperty().get()) {
+            view.aiReportView().showUnavailable(i18n);
+            return;
+        }
+        if (model.analyzingProperty().get() || model.askingProperty().get()) {
+            view.aiReportView().showLoading(i18n);
+            return;
+        }
+        if (model.errorProperty().get()) {
+            view.aiReportView().showError(aiStatus(model));
+            return;
+        }
+        view.aiReportView().showReport(model.reportProperty().get(), i18n);
+    }
+
+    private void bindAiVisibility(RecordingAiAssistantViewModel model) {
+        view.aiAnalyzeButton().visibleProperty().bind(model.availableProperty());
+        view.aiAnalyzeButton().managedProperty().bind(model.availableProperty());
+        view.aiReportView().node().visibleProperty().bind(model.availableProperty());
+        view.aiReportView().node().managedProperty().bind(model.availableProperty());
+    }
+
+    private void unbindAiVisibility() {
+        for (javafx.scene.Node node : List.of(
+                view.aiAnalyzeButton(),
+                view.aiReportView().node())) {
+            node.visibleProperty().unbind();
+            node.managedProperty().unbind();
+            node.setVisible(true);
+            node.setManaged(true);
+        }
+    }
+
+    private String aiStatus(RecordingAiAssistantViewModel model) {
+        if (!model.availableProperty().get()) {
+            return i18n.get("analysis.ai.unavailable");
+        }
+        if (model.errorProperty().get()) {
+            return i18n.format("analysis.ai.failed", model.errorMessageProperty().get());
+        }
+        if (model.analyzingProperty().get()) {
+            return i18n.get("analysis.ai.analyzing");
+        }
+        if (model.previewReadyProperty().get()) {
+            return i18n.get("analysis.ai.previewReady");
+        }
+        if (model.reportReadyProperty().get()) {
+            return i18n.get("analysis.ai.reportReady");
+        }
+        return i18n.get("analysis.ai.idle");
+    }
+
     private Label analysisPlaceholder(RuleResultsViewModel nextViewModel) {
         if (nextViewModel.loadingProperty().get()) {
             return localizedTablePlaceholder("analysis.loading");
@@ -212,4 +346,5 @@ public final class AnalysisPageController {
             }
         });
     }
+
 }

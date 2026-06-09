@@ -42,6 +42,7 @@ public class RuleResultsViewModel {
     private final BooleanProperty loaded = new SimpleBooleanProperty(false);
     private final BooleanProperty error = new SimpleBooleanProperty(false);
     private final StringProperty errorMessage = new SimpleStringProperty("");
+    private RecordingSummary recording;
 
     public RuleResultsViewModel(AnalyzeRulesUseCase analyzeRules) {
         this.analyzeRules = java.util.Objects.requireNonNull(analyzeRules, "analyzeRules");
@@ -114,7 +115,12 @@ public class RuleResultsViewModel {
         return errorMessage;
     }
 
+    public RecordingSummary recording() {
+        return recording;
+    }
+
     public void analyze(RecordingSummary recording) {
+        this.recording = recording;
         FxDispatch.run(() -> {
             loading.set(true);
             loaded.set(false);

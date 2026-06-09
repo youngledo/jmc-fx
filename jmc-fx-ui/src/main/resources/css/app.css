@@ -49,6 +49,15 @@
     -fx-alignment: center-left;
 }
 
+.settings-form-group {
+    -fx-spacing: 10px;
+}
+
+.settings-form-grid {
+    -fx-hgap: 10px;
+    -fx-vgap: 8px;
+}
+
 .split-table-detail-page {
     -fx-spacing: 12px;
 }
@@ -828,6 +837,89 @@
 }
 .detail-panel-body {
     -fx-text-fill: -color-fg-default;
+}
+.analysis-ai-panel {
+    -fx-spacing: 6px;
+}
+.analysis-ai-panel .text-area {
+    -fx-pref-row-count: 4;
+}
+.ai-report-scroll {
+    -fx-background-color: transparent;
+    -fx-background: transparent;
+}
+.ai-report-scroll > .viewport {
+    -fx-background-color: transparent;
+}
+.ai-report {
+    -fx-spacing: 12px;
+}
+.ai-report-loading {
+    -fx-alignment: center-left;
+}
+.ai-report-error {
+    -fx-text-fill: -color-danger-fg;
+}
+.ai-report-section-title {
+    -fx-font-weight: bold;
+    -fx-font-size: 14px;
+    -fx-text-fill: -color-fg-default;
+}
+.ai-report-small-title {
+    -fx-font-weight: bold;
+    -fx-text-fill: -color-fg-muted;
+}
+.ai-finding {
+    -fx-padding: 8px;
+    -fx-border-color: -color-border-default;
+    -fx-border-radius: 6px;
+    -fx-background-radius: 6px;
+}
+.ai-finding-header {
+    -fx-alignment: center-left;
+}
+.ai-finding-title {
+    -fx-font-weight: bold;
+}
+.ai-severity {
+    -fx-padding: 2px 6px;
+    -fx-border-radius: 999px;
+    -fx-background-radius: 999px;
+    -fx-font-size: 11px;
+}
+.ai-severity-info {
+    -fx-background-color: -color-accent-subtle;
+    -fx-text-fill: -color-accent-fg;
+}
+.ai-severity-warning {
+    -fx-background-color: -color-neutral-muted;
+    -fx-text-fill: -color-warning-fg;
+}
+.ai-severity-critical {
+    -fx-background-color: -color-danger-subtle;
+    -fx-text-fill: -color-danger-fg;
+}
+.ai-severity-unknown {
+    -fx-background-color: -color-neutral-muted;
+    -fx-text-fill: -color-fg-muted;
+}
+.ai-confidence,
+.ai-related-page,
+.ai-evidence-item {
+    -fx-text-fill: -color-fg-muted;
+}
+.ai-md-bold {
+    -fx-font-weight: bold;
+}
+.ai-md-italic {
+    -fx-font-style: italic;
+}
+.ai-md-code {
+    -fx-font-family: monospace;
+    -fx-fill: -color-accent-fg;
+}
+.analysis-ai-panel .list-view {
+    -fx-pref-height: 120px;
 }
 
 .exception-grouping-bar {

@@ -1,6 +1,7 @@
 package io.github.youngledo.jmcfx.ui.shell;
 
 import io.github.youngledo.jmcfx.domain.model.RecordingSummary;
+import io.github.youngledo.jmcfx.ui.analysis.RecordingAiAssistantViewModel;
 import io.github.youngledo.jmcfx.ui.advanced.AdvancedJfrViewModel;
 import io.github.youngledo.jmcfx.ui.environment.EnvironmentViewModel;
 import io.github.youngledo.jmcfx.ui.events.EventBrowserViewModel;
@@ -61,5 +62,6 @@ record PreparedRecordingWorkspace(
         JfrMetadataViewModel metadata,
         G1GcViewModel g1Gc,
         JavaFxEventsViewModel javaFxEvents,
-        AdvancedJfrViewModel advancedJfr) {
+        AdvancedJfrViewModel advancedJfr,
+        RecordingAiAssistantViewModel aiAssistant) {
 }

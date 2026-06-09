@@ -8,6 +8,7 @@ import java.util.Map;
 import java.util.Set;
 
 import io.github.youngledo.jmcfx.domain.model.RecordingSummary;
+import io.github.youngledo.jmcfx.ui.analysis.RecordingAiAssistantViewModel;
 import io.github.youngledo.jmcfx.ui.advanced.AdvancedJfrViewModel;
 import io.github.youngledo.jmcfx.ui.events.EventBrowserViewModel;
 import io.github.youngledo.jmcfx.ui.environment.EnvironmentViewModel;
@@ -84,6 +85,7 @@ public final class RecordingWorkspace {
     private final G1GcViewModel g1GcViewModel;
     private final JavaFxEventsViewModel javaFxEventsViewModel;
     private final AdvancedJfrViewModel advancedJfrViewModel;
+    private final RecordingAiAssistantViewModel aiAssistantViewModel;
 
     public RecordingWorkspace(RecordingSummary recording, OverviewViewModel overviewViewModel,
             EventBrowserViewModel eventBrowserViewModel, RuleResultsViewModel ruleResultsViewModel,
@@ -202,6 +204,42 @@ public final class RecordingWorkspace {
             G1GcViewModel g1GcViewModel,
             JavaFxEventsViewModel javaFxEventsViewModel,
             AdvancedJfrViewModel advancedJfrViewModel) {
+        this(recording, overviewViewModel, eventBrowserViewModel, ruleResultsViewModel,
+                profilingViewModel, exceptionViewModel, threadViewModel, fileIOViewModel,
+                socketIOViewModel, lockViewModel, heapViewModel, leakSuspectsViewModel,
+                tlabViewModel, jvmInfoViewModel, gcConfigViewModel, gcSummaryViewModel,
+                gcDetailsViewModel, compilationsViewModel, codeCacheViewModel,
+                classLoadingViewModel, vmOperationsViewModel, environmentViewModel,
+                javaAppOverviewViewModel, securityViewModel, nativeLibraryViewModel,
+                threadDumpViewModel, jfrMetadataViewModel, g1GcViewModel, javaFxEventsViewModel,
+                advancedJfrViewModel, null);
+    }
+
+    public RecordingWorkspace(RecordingSummary recording, OverviewViewModel overviewViewModel,
+            EventBrowserViewModel eventBrowserViewModel, RuleResultsViewModel ruleResultsViewModel,
+            ProfilingViewModel profilingViewModel, ExceptionViewModel exceptionViewModel,
+            ThreadViewModel threadViewModel, FileIOViewModel fileIOViewModel,
+            SocketIOViewModel socketIOViewModel, LockViewModel lockViewModel,
+            HeapViewModel heapViewModel, LeakSuspectsViewModel leakSuspectsViewModel,
+            TlabViewModel tlabViewModel,
+            JvmInfoViewModel jvmInfoViewModel,
+            GcConfigViewModel gcConfigViewModel,
+            GcSummaryViewModel gcSummaryViewModel,
+            GcDetailsViewModel gcDetailsViewModel,
+            CompilationsViewModel compilationsViewModel,
+            CodeCacheViewModel codeCacheViewModel,
+            ClassLoadingViewModel classLoadingViewModel,
+            VmOperationsViewModel vmOperationsViewModel,
+            EnvironmentViewModel environmentViewModel,
+            JavaAppOverviewViewModel javaAppOverviewViewModel,
+            SecurityViewModel securityViewModel,
+            NativeLibraryViewModel nativeLibraryViewModel,
+            ThreadDumpViewModel threadDumpViewModel,
+            JfrMetadataViewModel jfrMetadataViewModel,
+            G1GcViewModel g1GcViewModel,
+            JavaFxEventsViewModel javaFxEventsViewModel,
+            AdvancedJfrViewModel advancedJfrViewModel,
+            RecordingAiAssistantViewModel aiAssistantViewModel) {
         this.recording = Objects.requireNonNull(recording, "recording");
         this.overviewViewModel = Objects.requireNonNull(overviewViewModel, "overviewViewModel");
         this.eventBrowserViewModel = Objects.requireNonNull(eventBrowserViewModel, "eventBrowserViewModel");
@@ -232,6 +270,7 @@ public final class RecordingWorkspace {
         this.g1GcViewModel = g1GcViewModel;
         this.javaFxEventsViewModel = javaFxEventsViewModel;
         this.advancedJfrViewModel = advancedJfrViewModel;
+        this.aiAssistantViewModel = aiAssistantViewModel;
     }
 
     public String id() {
@@ -440,7 +479,14 @@ public final class RecordingWorkspace {
         return advancedJfrViewModel;
     }
 
+    public RecordingAiAssistantViewModel aiAssistantViewModel() {
+        return aiAssistantViewModel;
+    }
+
     public void close() {
         eventBrowserViewModel.close();
+        if (aiAssistantViewModel != null) {
+            aiAssistantViewModel.close();
+        }
     }
 }

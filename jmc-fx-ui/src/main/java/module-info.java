@@ -7,6 +7,7 @@ module io.github.youngledo.jmcfx.ui {
     requires javafx.base;
     requires javafx.controls;
     requires javafx.graphics;
+    requires org.commonmark;
     requires org.apache.logging.log4j;
     requires org.kordamp.ikonli.core;
     requires org.kordamp.ikonli.javafx;

@@ -5,6 +5,9 @@ import java.util.Objects;
 
 import io.github.youngledo.jmcfx.application.RecordingPageUseCases;
 import io.github.youngledo.jmcfx.application.RecordingWorkspacePlan;
+import io.github.youngledo.jmcfx.ui.analysis.RecordingAiAssistantViewModel;
+import io.github.youngledo.jmcfx.ui.analysis.RecordingAiReportFormatter;
+import io.github.youngledo.jmcfx.ui.analysis.VirtualThreadRecordingAiAssistantExecutor;
 import io.github.youngledo.jmcfx.ui.advanced.AdvancedJfrViewModel;
 import io.github.youngledo.jmcfx.ui.environment.EnvironmentViewModel;
 import io.github.youngledo.jmcfx.ui.events.EventBrowserViewModel;
@@ -99,9 +102,17 @@ final class RecordingWorkspaceFactory {
                 ? new JfrMetadataViewModel(useCases.jfrMetadata()) : null;
         AdvancedJfrViewModel advancedJfr = plan.hasAdvancedJfrAnalysis()
                 ? new AdvancedJfrViewModel(useCases.advancedJfr()) : null;
+        RecordingAiAssistantViewModel aiAssistant = new RecordingAiAssistantViewModel(
+                useCases.buildRecordingAiContext(),
+                useCases.analyzeRecordingWithAi(),
+                useCases.askRecordingAssistant(),
+                useCases.aiSettings(),
+                new VirtualThreadRecordingAiAssistantExecutor(),
+                new RecordingAiReportFormatter(i18n));
+        aiAssistant.setRecording(plan.recording());
         return new PreparedRecordingWorkspace(plan.recording(), overview, events, analysis, profiling, exceptions, threads,
                 fileio, socketio, locks, heap, leakSuspects, tlab, jvmInfo, gcConfig, gcSummary, gcDetails,
                 compilationsVm, codeCache, classLoading, vmOperations, environment, javaAppOverview, security,
-                nativeLibraries, threadDumps, metadata, g1Gc, javaFxEvents, advancedJfr);
+                nativeLibraries, threadDumps, metadata, g1Gc, javaFxEvents, advancedJfr, aiAssistant);
     }
 }

@@ -1,5 +1,8 @@
 package io.github.youngledo.jmcfx.launcher;
 
+import io.github.youngledo.jmcfx.adapter.ai.EnvironmentOpenAiCompatibleAiSettingsProvider;
+import io.github.youngledo.jmcfx.adapter.ai.OpenAiCompatibleCompletionService;
+import io.github.youngledo.jmcfx.adapter.ai.RepositoryOpenAiCompatibleAiSettingsProvider;
 import io.github.youngledo.jmcfx.adapter.jmc.JmcAdvancedJfrAnalysisService;
 import io.github.youngledo.jmcfx.adapter.jmc.JmcAgentManagerService;
 import io.github.youngledo.jmcfx.adapter.jmc.JmcDiagnosticCommandService;
@@ -32,6 +35,7 @@ import io.github.youngledo.jmcfx.adapter.jmc.JmcThreadService;
 import io.github.youngledo.jmcfx.adapter.jmc.JmcTlabService;
 import io.github.youngledo.jmcfx.adapter.preferences.JavaJmxMonitoringRepository;
 import io.github.youngledo.jmcfx.adapter.preferences.JavaSavedJvmTargetRepository;
+import io.github.youngledo.jmcfx.adapter.preferences.ai.JavaAiSettingsRepository;
 import io.github.youngledo.jmcfx.application.HeapDumpApplicationServices;
 import io.github.youngledo.jmcfx.application.LiveJvmApplicationServices;
 import io.github.youngledo.jmcfx.application.RecordingApplicationServices;
@@ -44,13 +48,17 @@ final class JmcFxLauncherServicesFactory {
     }
 
     private RecordingApplicationServices recordingServices() {
+        JavaAiSettingsRepository aiSettingsRepository = new JavaAiSettingsRepository();
         return new RecordingApplicationServices(new JmcRecordingRepository(),
                 new JmcEventQueryService(), new JmcRuleAnalysisService(), new JmcProfilingService(),
                 new JmcExceptionService(), new JmcThreadService(), new JmcFileIOService(), new JmcSocketIOService(),
                 new JmcLockService(), new JmcHeapService(), new JmcLeakSuspectsService(), new JmcTlabService(),
                 new JmcJvmInternalsService(), new JmcEnvironmentService(), new JmcJavaAppService(),
                 new JmcJfrMetadataService(), new JmcG1GcService(), new JmcJavaFxEventService(),
-                new JmcAdvancedJfrAnalysisService());
+                new JmcAdvancedJfrAnalysisService(),
+                new OpenAiCompatibleCompletionService(new RepositoryOpenAiCompatibleAiSettingsProvider(
+                        aiSettingsRepository, new EnvironmentOpenAiCompatibleAiSettingsProvider())),
+                aiSettingsRepository);
     }
 
     private LiveJvmApplicationServices liveJvmServices(JmcJmxConnectionService jmxConnectionService) {

@@ -31,7 +31,7 @@ public final class RepositoryOpenAiCompatibleAiSettingsProvider implements OpenA
     private static OpenAiCompatibleAiSettings merge(AiSettings settings,
             OpenAiCompatibleAiSettings fallbackSettings) {
         return new OpenAiCompatibleAiSettings(
-                fallbackSettings.apiKey(),
+                settings.enabled() ? fallbackSettings.apiKey() : "",
                 settings.baseUrl().isBlank() ? fallbackSettings.baseUrl() : settings.baseUrl(),
                 settings.model().isBlank() ? fallbackSettings.model() : settings.model(),
                 settings.temperature(),

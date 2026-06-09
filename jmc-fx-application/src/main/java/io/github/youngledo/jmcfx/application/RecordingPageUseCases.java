@@ -2,6 +2,11 @@ package io.github.youngledo.jmcfx.application;
 
 import java.util.Objects;
 
+import io.github.youngledo.jmcfx.application.ai.AnalyzeRecordingWithAiUseCase;
+import io.github.youngledo.jmcfx.application.ai.AskRecordingAssistantUseCase;
+import io.github.youngledo.jmcfx.application.ai.AiSettingsUseCase;
+import io.github.youngledo.jmcfx.application.ai.BuildRecordingAiContextUseCase;
+
 public record RecordingPageUseCases(
         OpenRecordingUseCase openRecording,
         OpenRecordingWorkspaceUseCase openRecordingWorkspace,
@@ -22,7 +27,11 @@ public record RecordingPageUseCases(
         LoadJfrMetadataUseCase jfrMetadata,
         LoadG1GcUseCase g1Gc,
         LoadJavaFxEventsUseCase javaFxEvents,
-        LoadAdvancedJfrUseCase advancedJfr) {
+        LoadAdvancedJfrUseCase advancedJfr,
+        AiSettingsUseCase aiSettings,
+        BuildRecordingAiContextUseCase buildRecordingAiContext,
+        AnalyzeRecordingWithAiUseCase analyzeRecordingWithAi,
+        AskRecordingAssistantUseCase askRecordingAssistant) {
 
     public RecordingPageUseCases {
         Objects.requireNonNull(openRecording, "openRecording");
@@ -55,6 +64,17 @@ public record RecordingPageUseCases(
                 services.javaFxEventService() == null ? null : new LoadJavaFxEventsUseCase(services.javaFxEventService()),
                 services.advancedJfrAnalysisService() == null
                         ? null
-                        : new LoadAdvancedJfrUseCase(services.advancedJfrAnalysisService()));
+                        : new LoadAdvancedJfrUseCase(services.advancedJfrAnalysisService()),
+                services.aiSettingsRepository() == null
+                        ? null
+                        : new AiSettingsUseCase(services.aiSettingsRepository()),
+                new BuildRecordingAiContextUseCase(new AnalyzeRulesUseCase(services.ruleAnalysisService())),
+                services.aiCompletionService() == null
+                        ? null
+                        : new AnalyzeRecordingWithAiUseCase(new AnalyzeRulesUseCase(services.ruleAnalysisService()),
+                                services.aiCompletionService()),
+                services.aiCompletionService() == null
+                        ? null
+                        : new AskRecordingAssistantUseCase(services.aiCompletionService()));
     }
 }

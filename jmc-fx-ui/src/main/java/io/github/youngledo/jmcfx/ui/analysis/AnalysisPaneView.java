@@ -4,10 +4,13 @@ import io.github.youngledo.jmcfx.domain.model.RuleResult;
 
 import javafx.geometry.Orientation;
 import javafx.scene.Node;
+import javafx.scene.control.Button;
 import javafx.scene.control.CheckBox;
 import javafx.scene.control.Label;
 import javafx.scene.control.Spinner;
 import javafx.scene.control.SplitPane;
+import javafx.scene.control.Tab;
+import javafx.scene.control.TabPane;
 import javafx.scene.control.TableView;
 import javafx.scene.control.TextArea;
 import javafx.scene.control.TextField;
@@ -32,6 +35,12 @@ public final class AnalysisPaneView {
     private final TextArea detailEvidenceArea = textArea();
     private final Label detailRecommendationCaption = new Label();
     private final TextArea detailRecommendationArea = textArea();
+    private final Label aiTitleLabel = new Label();
+    private final Label aiStatusLabel = new Label();
+    private final Button aiAnalyzeButton = new Button();
+    private AiReportView aiReportView;
+    private final TabPane detailTabs = new TabPane();
+    private HBox aiActionBar;
 
     public AnalysisPaneView(VBox pane) {
         configure(pane);
@@ -42,7 +51,9 @@ public final class AnalysisPaneView {
                 minimumScoreSpinner, showOkCheckBox, showIgnoredCheckBox,
                 showUnavailableCheckBox, table, detailExplanationCaption,
                 detailExplanationArea, detailEvidenceCaption, detailEvidenceArea,
-                detailRecommendationCaption, detailRecommendationArea);
+                detailRecommendationCaption, detailRecommendationArea,
+                aiTitleLabel, aiStatusLabel, aiAnalyzeButton,
+                aiReportView, aiActionBar, detailTabs);
     }
 
     private void configure(VBox pane) {
@@ -59,15 +70,38 @@ public final class AnalysisPaneView {
         styles(detailExplanationArea, "detail-panel-body");
         styles(detailEvidenceArea, "detail-panel-body");
         styles(detailRecommendationArea, "detail-panel-body");
-        VBox details = vbox(6, detailExplanationCaption, detailExplanationArea,
+        VBox ruleDetails = vbox(6, detailExplanationCaption, detailExplanationArea,
                 detailEvidenceCaption, detailEvidenceArea,
                 detailRecommendationCaption, detailRecommendationArea);
-        styles(details, "detail-panel");
-        SplitPane split = new SplitPane(table, details);
+        styles(ruleDetails, "detail-panel");
+        Node aiAssistant = aiAssistantPanel();
+        Tab rulesTab = new Tab();
+        rulesTab.textProperty().set("Rules");
+        rulesTab.setClosable(false);
+        rulesTab.setContent(ruleDetails);
+        Tab aiTab = new Tab();
+        aiTab.textProperty().set("AI");
+        aiTab.setClosable(false);
+        aiTab.setContent(aiAssistant);
+        detailTabs.getTabs().setAll(rulesTab, aiTab);
+        styles(detailTabs, "page-detail-tabs");
+        SplitPane split = new SplitPane(table, detailTabs);
         split.setOrientation(Orientation.VERTICAL);
         split.setDividerPositions(0.6);
         VBox.setVgrow(split, Priority.ALWAYS);
         pane.getChildren().setAll(titleLabel, filterBar, split);
+    }
+
+    private Node aiAssistantPanel() {
+        styles(aiTitleLabel, "detail-panel-title");
+        styles(aiStatusLabel, "detail-panel-meta");
+        aiReportView = new AiReportView();
+        aiActionBar = hbox(8, aiAnalyzeButton);
+        styles(aiActionBar, "page-toolbar");
+        VBox.setVgrow(aiReportView.node(), Priority.ALWAYS);
+        VBox panel = vbox(6, aiTitleLabel, aiStatusLabel, aiActionBar, aiReportView.node());
+        styles(panel, "detail-panel", "analysis-ai-panel");
+        return panel;
     }
 
     private static VBox vbox(double spacing, Node... children) {

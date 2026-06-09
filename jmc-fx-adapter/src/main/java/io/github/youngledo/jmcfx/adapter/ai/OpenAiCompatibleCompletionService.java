@@ -1,7 +1,6 @@
 package io.github.youngledo.jmcfx.adapter.ai;
 
 import java.net.URI;
-import java.util.List;
 import java.util.Map;
 import java.util.Objects;
 
@@ -11,9 +10,10 @@ import com.fasterxml.jackson.databind.ObjectMapper;
 import io.github.youngledo.jmcfx.domain.model.ai.AiCompletionRequest;
 import io.github.youngledo.jmcfx.domain.model.ai.AiCompletionResponse;
 import io.github.youngledo.jmcfx.domain.service.JmcFxException;
-import io.github.youngledo.jmcfx.domain.service.ai.AiCompletionService;
+import io.github.youngledo.jmcfx.domain.service.ai.AiCompletionStreamListener;
+import io.github.youngledo.jmcfx.domain.service.ai.StreamingAiCompletionService;
 
-public final class OpenAiCompatibleCompletionService implements AiCompletionService {
+public final class OpenAiCompatibleCompletionService implements StreamingAiCompletionService {
 
     private static final ObjectMapper MAPPER = new ObjectMapper();
 
@@ -41,12 +41,36 @@ public final class OpenAiCompatibleCompletionService implements AiCompletionServ
             throw new JmcFxException("AI provider model is not configured.");
         }
 
-        String requestBody = requestBody(settings, request);
+        String requestBody = requestBody(settings, request, false);
         var response = transport.post(chatCompletionsUri(settings), headers(settings), requestBody, settings.timeout());
         if (response.statusCode() < 200 || response.statusCode() >= 300) {
             throw new JmcFxException("AI provider request failed with HTTP " + response.statusCode() + ".");
         }
         return new AiCompletionResponse(extractText(response.body()));
+    }
+
+    @Override
+    public AiCompletionResponse completeStreaming(AiCompletionRequest request, AiCompletionStreamListener listener) {
+        Objects.requireNonNull(request, "request");
+        OpenAiCompatibleAiSettings settings = settingsProvider.load();
+        if (settings.apiKey().isBlank()) {
+            throw new JmcFxException("AI provider API key is not configured.");
+        }
+        if (settings.model().isBlank()) {
+            throw new JmcFxException("AI provider model is not configured.");
+        }
+
+        String requestBody = requestBody(settings, request, true);
+        var response = transport.postStream(chatCompletionsUri(settings), headers(settings), requestBody,
+                settings.timeout(), contentDelta -> {
+                    if (listener != null) {
+                        listener.onContentDelta(contentDelta);
+                    }
+                });
+        if (response.statusCode() < 200 || response.statusCode() >= 300) {
+            throw new JmcFxException("AI provider request failed with HTTP " + response.statusCode() + ".");
+        }
+        return new AiCompletionResponse(response.body());
     }
 
     private static URI chatCompletionsUri(OpenAiCompatibleAiSettings settings) {
@@ -60,16 +84,24 @@ public final class OpenAiCompatibleCompletionService implements AiCompletionServ
                 "Accept", "application/json");
     }
 
-    private static String requestBody(OpenAiCompatibleAiSettings settings, AiCompletionRequest request) {
-        var body = new ChatCompletionRequest(
-                settings.model(),
-                List.of(
-                        new ChatMessage("system", "You are the JMC FX offline recording assistant. "
-                                + "Return only the JSON requested by the user prompt."),
-                        new ChatMessage("user", request.prompt())),
-                settings.temperature(),
-                settings.maxOutputTokens(),
-                false);
+    private static String requestBody(OpenAiCompatibleAiSettings settings, AiCompletionRequest request,
+            boolean stream) {
+        var body = MAPPER.createObjectNode();
+        body.put("model", settings.model());
+        body.put("temperature", settings.temperature());
+        body.put("max_completion_tokens", settings.maxOutputTokens());
+        body.put("stream", stream);
+
+        var messages = body.putArray("messages");
+        var systemMessage = messages.addObject();
+        systemMessage.put("role", "system");
+        systemMessage.put("content", "You are the JMC FX offline recording assistant. "
+                + "Return only the JSON requested by the user prompt.");
+
+        var userMessage = messages.addObject();
+        userMessage.put("role", "user");
+        userMessage.put("content", request.prompt());
+
         try {
             return MAPPER.writeValueAsString(body);
         } catch (JsonProcessingException exception) {
@@ -90,17 +122,4 @@ public final class OpenAiCompatibleCompletionService implements AiCompletionServ
         }
     }
 
-    private record ChatCompletionRequest(
-            String model,
-            List<ChatMessage> messages,
-            double temperature,
-            int max_completion_tokens,
-            boolean stream) {
-    }
-
-    private record ChatMessage(String role, String content) {
-        private ChatMessage {
-            content = content == null ? "" : content;
-        }
-    }
 }

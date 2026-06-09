@@ -19,6 +19,8 @@ import io.github.youngledo.jmcfx.domain.model.RecordingSummary;
 import io.github.youngledo.jmcfx.domain.model.RuleResult;
 import io.github.youngledo.jmcfx.domain.model.Severity;
 import io.github.youngledo.jmcfx.domain.service.ai.AiCompletionService;
+import io.github.youngledo.jmcfx.domain.service.ai.AiCompletionStreamListener;
+import io.github.youngledo.jmcfx.domain.service.ai.StreamingAiCompletionService;
 import io.github.youngledo.jmcfx.domain.service.JmcFxException;
 import org.junit.jupiter.api.Test;
 
@@ -138,6 +140,23 @@ class AnalyzeRecordingWithAiUseCaseTest {
     }
 
     @Test
+    void streamsAiReportContentBeforeParsingFinalJson() {
+        StreamingRecordingCompletionService completionService = new StreamingRecordingCompletionService("""
+                {"summaryMarkdown":"Streamed report","findings":[],"followUpQuestions":[],"contextLimitations":[]}
+                """);
+        var useCase = new AnalyzeRecordingWithAiUseCase(new AnalyzeRulesUseCase(ignored -> List.of()),
+                completionService);
+        StringBuilder streamedText = new StringBuilder();
+
+        AiRecordingReport report = useCase.analyzeStreaming(recording(), "en", streamedText::append);
+
+        assertEquals("Streamed report", report.summaryMarkdown());
+        assertEquals("""
+                {"summaryMarkdown":"Streamed report","findings":[],"followUpQuestions":[],"contextLimitations":[]}
+                """.strip(), streamedText.toString());
+    }
+
+    @Test
     void buildsPreviewableRecordingAiContextFromRules() {
         List<RuleResult> rules = IntStream.rangeClosed(1, 25)
                 .mapToObj(index -> new RuleResult(
@@ -201,6 +220,28 @@ class AnalyzeRecordingWithAiUseCaseTest {
         @Override
         public AiCompletionResponse complete(AiCompletionRequest request) {
             lastRequest = request;
+            return new AiCompletionResponse(responseText);
+        }
+    }
+
+    private static final class StreamingRecordingCompletionService implements StreamingAiCompletionService {
+        private final String responseText;
+
+        StreamingRecordingCompletionService(String responseText) {
+            this.responseText = responseText.strip();
+        }
+
+        @Override
+        public AiCompletionResponse complete(AiCompletionRequest request) {
+            return new AiCompletionResponse(responseText);
+        }
+
+        @Override
+        public AiCompletionResponse completeStreaming(AiCompletionRequest request,
+                AiCompletionStreamListener listener) {
+            int midpoint = responseText.length() / 2;
+            listener.onContentDelta(responseText.substring(0, midpoint));
+            listener.onContentDelta(responseText.substring(midpoint));
             return new AiCompletionResponse(responseText);
         }
     }

@@ -482,10 +482,10 @@ class AppShellViewModelTest {
         viewModel.showSection("home");
 
         assertEquals("home", viewModel.selectedSectionProperty().get());
-        assertEquals(AppWorkspaceKind.GLOBAL, viewModel.activeWorkspaceKindProperty().get());
-        assertNull(viewModel.selectedWorkspaceProperty().get());
+        assertEquals(AppWorkspaceKind.RECORDING, viewModel.activeWorkspaceKindProperty().get());
+        assertSame(second, viewModel.selectedWorkspaceProperty().get());
         assertNull(viewModel.selectedHeapDumpWorkspaceProperty().get());
-        assertEquals("", viewModel.currentTargetNameProperty().get());
+        assertEquals("second.jfr", viewModel.currentTargetNameProperty().get());
 
         viewModel.selectWorkspace(first);
 
@@ -497,14 +497,34 @@ class AppShellViewModelTest {
         viewModel.showSection("settings");
 
         assertEquals("settings", viewModel.selectedSectionProperty().get());
-        assertEquals(AppWorkspaceKind.GLOBAL, viewModel.activeWorkspaceKindProperty().get());
-        assertNull(viewModel.selectedWorkspaceProperty().get());
+        assertEquals(AppWorkspaceKind.RECORDING, viewModel.activeWorkspaceKindProperty().get());
+        assertSame(first, viewModel.selectedWorkspaceProperty().get());
 
         viewModel.selectWorkspace(first);
         viewModel.showSection("analysis");
 
         assertEquals("analysis", viewModel.selectedSectionProperty().get());
         assertEquals("analysis", first.selectedSectionProperty().get());
+    }
+
+    @Test
+    void globalPagesKeepWorkspaceNavigationContext() {
+        AppShellViewModel viewModel = new AppShellViewModel();
+        RecordingWorkspace recording = viewModel.openRecording(
+                recording(), new OverviewViewModel(), eventBrowserViewModel(), ruleResultsViewModel());
+
+        viewModel.showSection("settings");
+
+        assertEquals("settings", viewModel.selectedSectionProperty().get());
+        assertEquals(AppWorkspaceKind.RECORDING, viewModel.activeWorkspaceKindProperty().get());
+        assertSame(recording, viewModel.selectedWorkspaceProperty().get());
+        assertSame(recording, viewModel.selectedWorkspaceTabProperty().get());
+
+        viewModel.showSection("home");
+
+        assertEquals("home", viewModel.selectedSectionProperty().get());
+        assertEquals(AppWorkspaceKind.RECORDING, viewModel.activeWorkspaceKindProperty().get());
+        assertSame(recording, viewModel.selectedWorkspaceProperty().get());
     }
 
     @Test
