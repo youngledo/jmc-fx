@@ -3910,7 +3910,7 @@ void settingsPageContainsThemeSelectorNextToLanguageSelector() {
     }
 
     @Test
-    void sectionLoadingIsQueuedOnRecordingExecutor() {
+    void sectionLoadingIsQueuedOnRecordingExecutor() throws Exception {
         QueueingRecordingOpenExecutor executor = new QueueingRecordingOpenExecutor();
         AtomicInteger analysisCalls = new AtomicInteger();
         PreparedRecordingWorkspace prepared = prepareRecordingWorkspace(recording -> {
@@ -3932,13 +3932,13 @@ void settingsPageContainsThemeSelectorNextToLanguageSelector() {
         assertEquals(1, executor.queuedTaskCount());
         assertEquals(0, analysisCalls.get());
 
-        executor.runNext();
+        executor.runNextAndWaitForFx();
 
         assertEquals(1, analysisCalls.get());
     }
 
     @Test
-    void queuedSectionLoadingRunsOnlyLatestRequestedHeavySection() {
+    void queuedSectionLoadingRunsOnlyLatestRequestedHeavySection() throws Exception {
         QueueingRecordingOpenExecutor executor = new QueueingRecordingOpenExecutor();
         AtomicInteger analysisCalls = new AtomicInteger();
         AtomicInteger profilingCalls = new AtomicInteger();
@@ -3961,15 +3961,15 @@ void settingsPageContainsThemeSelectorNextToLanguageSelector() {
 
         assertEquals(2, executor.queuedTaskCount());
 
-        executor.runNext();
-        executor.runNext();
+        executor.runNextAndWaitForFx();
+        executor.runNextAndWaitForFx();
 
         assertEquals(0, analysisCalls.get());
         assertEquals(1, profilingCalls.get());
     }
 
     @Test
-    void queuedSectionLoadingIsSkippedWhenUserNavigatesToLightSection() {
+    void queuedSectionLoadingIsSkippedWhenUserNavigatesToLightSection() throws Exception {
         QueueingRecordingOpenExecutor executor = new QueueingRecordingOpenExecutor();
         AtomicInteger analysisCalls = new AtomicInteger();
         PreparedRecordingWorkspace prepared = prepareRecordingWorkspace(recording -> {
@@ -3991,7 +3991,7 @@ void settingsPageContainsThemeSelectorNextToLanguageSelector() {
 
         assertEquals(1, executor.queuedTaskCount());
 
-        executor.runNext();
+        executor.runNextAndWaitForFx();
 
         assertEquals(0, analysisCalls.get());
     }

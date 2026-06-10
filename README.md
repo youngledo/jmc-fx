@@ -83,6 +83,31 @@ Override it for releases with:
 sdk env && ./mvnw -pl jmc-fx-launcher -am org.openjfx:javafx-maven-plugin:0.0.8:run
 ```
 
+## AI Assistant
+
+JMC FX includes an AI assistant for opened `.jfr` recordings. Open a recording,
+go to the Analysis page, switch to the AI tab, and choose `Analyze with AI` to
+generate a structured diagnostic report.
+
+The assistant uses an OpenAI-compatible chat completions endpoint. Configure it
+from Settings -> AI:
+
+- Enable the AI assistant.
+- Set the provider base URL, model, temperature, and maximum output tokens.
+- Provide `OPENAI_API_KEY` in the process environment before launching JMC FX.
+
+JMC FX does not display or save the API key. The AI request is manually
+triggered, recording-scoped, and built from deterministic analysis summaries
+such as rule results, metadata, GC, exceptions, profiling, threads, heap,
+allocation, locks, and I/O summaries. The raw `.jfr` file is not uploaded.
+
+The generated report includes a summary, findings, evidence, limitations, and
+follow-up questions. Findings can include related-page links; choosing one
+navigates to the relevant recording analysis page so the evidence can be
+inspected in the normal JMC FX workflow. If the provider fails, times out, or
+returns an invalid response, the error is contained inside the AI panel and does
+not affect the rest of the recording pages.
+
 ## Legal Notice
 
 JMC FX is an independent project and is not affiliated with, endorsed by, or sponsored by Oracle or the OpenJDK project.

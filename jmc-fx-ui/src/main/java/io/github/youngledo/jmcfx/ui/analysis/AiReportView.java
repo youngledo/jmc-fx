@@ -1,6 +1,7 @@
 package io.github.youngledo.jmcfx.ui.analysis;
 
 import java.util.List;
+import java.util.function.Consumer;
 
 import io.github.youngledo.jmcfx.domain.model.ai.AiEvidence;
 import io.github.youngledo.jmcfx.domain.model.ai.AiFinding;
@@ -9,6 +10,7 @@ import io.github.youngledo.jmcfx.domain.model.ai.AiSeverity;
 import io.github.youngledo.jmcfx.ui.i18n.I18n;
 import javafx.geometry.Insets;
 import javafx.scene.Node;
+import javafx.scene.control.Hyperlink;
 import javafx.scene.control.Label;
 import javafx.scene.control.ProgressIndicator;
 import javafx.scene.control.ScrollPane;
@@ -76,10 +78,15 @@ public final class AiReportView {
     }
 
     public void showReport(AiRecordingReport report, I18n i18n) {
-        showReport(report, "", i18n);
+        showReport(report, "", i18n, null);
     }
 
     public void showReport(AiRecordingReport report, String processingTime, I18n i18n) {
+        showReport(report, processingTime, i18n, null);
+    }
+
+    public void showReport(AiRecordingReport report, String processingTime, I18n i18n,
+            Consumer<String> relatedPageNavigator) {
         loadingMessage = "";
         content.getChildren().clear();
         if (report == null) {
@@ -98,7 +105,7 @@ public final class AiReportView {
             VBox findings = new VBox(10);
             findings.getChildren().add(title);
             for (AiFinding finding : report.findings()) {
-                findings.getChildren().add(findingNode(finding, i18n));
+                findings.getChildren().add(findingNode(finding, i18n, relatedPageNavigator));
             }
             content.getChildren().add(findings);
         }
@@ -106,7 +113,7 @@ public final class AiReportView {
         appendListSection(i18n.get("analysis.ai.report.followUpQuestions"), report.followUpQuestions());
     }
 
-    private Node findingNode(AiFinding finding, I18n i18n) {
+    private Node findingNode(AiFinding finding, I18n i18n, Consumer<String> relatedPageNavigator) {
         VBox box = new VBox(6);
         box.getStyleClass().add("ai-finding");
 
@@ -127,18 +134,34 @@ public final class AiReportView {
         if (recommendation != null) {
             box.getChildren().add(recommendation);
         }
-        if (!finding.relatedPageId().isBlank()) {
-            Label page = new Label(i18n.format("analysis.ai.report.relatedPageValue", finding.relatedPageId()));
-            page.getStyleClass().add("ai-related-page");
-            box.getChildren().add(page);
-        }
+        Node relatedPage = finding.relatedPageId().isBlank()
+                ? null : relatedPageNode(finding.relatedPageId(), i18n, relatedPageNavigator);
         appendEvidence(box, finding.evidence(), i18n);
         Node limitations = markdown(finding.limitationsMarkdown());
         if (limitations != null) {
             VBox limitationBox = new VBox(4, smallTitle(i18n.get("analysis.ai.report.limitations")), limitations);
             box.getChildren().add(limitationBox);
         }
+        if (relatedPage != null) {
+            box.getChildren().add(relatedPage);
+        }
         return box;
+    }
+
+    private Node relatedPageNode(String relatedPageId, I18n i18n, Consumer<String> relatedPageNavigator) {
+        String text = i18n.format("analysis.ai.report.relatedPageValue", relatedPageId);
+        if (relatedPageNavigator == null) {
+            Label label = new Label(text);
+            label.getStyleClass().add("ai-related-page");
+            return label;
+        }
+        Hyperlink link = new Hyperlink(text);
+        link.getStyleClass().add("ai-related-page");
+        link.setOnAction(event -> {
+            relatedPageNavigator.accept(relatedPageId);
+            link.setVisited(false);
+        });
+        return link;
     }
 
     private void appendEvidence(VBox parent, List<AiEvidence> evidence, I18n i18n) {

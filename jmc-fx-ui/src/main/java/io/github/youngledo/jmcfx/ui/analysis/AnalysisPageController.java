@@ -247,7 +247,8 @@ public final class AnalysisPageController {
             view.aiReportView().showError(aiErrorDetail(model));
             return;
         }
-        view.aiReportView().showReport(model.reportProperty().get(), model.reportProcessingTimeProperty().get(), i18n);
+        view.aiReportView().showReport(model.reportProperty().get(), model.reportProcessingTimeProperty().get(), i18n,
+                this::openAiRelatedPage);
     }
 
     private void bindAiVisibility(RecordingAiAssistantViewModel model) {
@@ -302,6 +303,12 @@ public final class AnalysisPageController {
         RuleResultDetail detail = RuleResultDetail.from(result);
         if (detail != null && detail.hasRelatedPage()) {
             relatedPageNavigator.accept(detail.relatedPageId());
+        }
+    }
+
+    private void openAiRelatedPage(String relatedPageId) {
+        if (relatedPageId != null && !relatedPageId.isBlank()) {
+            relatedPageNavigator.accept(relatedPageId);
         }
     }
 

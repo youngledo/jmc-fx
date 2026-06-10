@@ -31,6 +31,7 @@ import io.github.youngledo.jmcfx.ui.i18n.LanguageMode;
 import javafx.application.Platform;
 import javafx.scene.Parent;
 import javafx.scene.Node;
+import javafx.scene.control.Hyperlink;
 import javafx.scene.control.ScrollPane;
 import javafx.scene.layout.VBox;
 import javafx.scene.text.Text;
@@ -183,23 +184,18 @@ class AnalysisPageControllerTest {
         AnalysisPaneView paneView = new AnalysisPaneView(new VBox());
         AnalysisPageView view = paneView.view();
         AnalysisPageController controller = new AnalysisPageController(view, new I18n(Locale.ENGLISH), section -> { });
-        BlockingFailureCompletionService completionService = new BlockingFailureCompletionService();
+        FailingCompletionService completionService = new FailingCompletionService();
         RecordingAiAssistantViewModel viewModel = aiViewModel(new FakeAiSettingsRepository(Optional.of(
                 new AiSettings(true, "https://api.openai.com/v1", "gpt-test", 0.2, 4_096, false))),
                 Map.of(AiSettingsUseCase.API_KEY_ENVIRONMENT_VARIABLE, "key"),
-                completionService,
-                command -> Thread.ofVirtual().start(command));
+                completionService);
         controller.configure();
         controller.bindAi(viewModel);
         viewModel.setRecording(recording());
 
         view.aiAnalyzeButton().fire();
 
-        assertTrue(completionService.started.await(5, TimeUnit.SECONDS));
-        waitUntil(() -> hasStyleClass(view.aiReportView().node(), "ai-report-loading"));
-        completionService.release.countDown();
-
-        waitUntil(() -> viewModel.errorProperty().get());
+        waitUntil(() -> hasStyleClass(view.aiReportView().node(), "ai-report-error"));
         assertFalse(hasStyleClass(view.aiReportView().node(), "ai-report-loading"));
         assertTrue(hasStyleClass(view.aiReportView().node(), "ai-report-error"));
     }
@@ -227,6 +223,46 @@ class AnalysisPageControllerTest {
         waitUntil(() -> reportText(view.aiReportView().node()).contains("AI analysis failed: provider failed"));
 
         assertTrue(reportText(view.aiReportView().node()).contains("AI analysis failed: provider failed"));
+    }
+
+    @Test
+    void navigatesFromAiFindingRelatedPageLink() {
+        AnalysisPaneView paneView = new AnalysisPaneView(new VBox());
+        AnalysisPageView view = paneView.view();
+        AtomicReference<String> navigated = new AtomicReference<>();
+        AnalysisPageController controller = new AnalysisPageController(view, new I18n(Locale.ENGLISH),
+                navigated::set);
+        RecordingCompletionService completionService = new RecordingCompletionService("""
+                {
+                  "summaryMarkdown":"Report",
+                  "findings":[{
+                    "title":"Exception spike",
+                    "severity":"warning",
+                    "confidence":0.8,
+                    "relatedPageId":"exceptions",
+                    "recommendedNextStepMarkdown":"Inspect exceptions.",
+                    "limitationsMarkdown":"",
+                    "evidence":[]
+                  }],
+                  "followUpQuestions":[],
+                  "contextLimitations":[]
+                }
+                """);
+        RecordingAiAssistantViewModel viewModel = aiViewModel(new FakeAiSettingsRepository(Optional.of(
+                new AiSettings(true, "https://api.openai.com/v1", "gpt-test", 0.2, 4_096, false))),
+                Map.of(AiSettingsUseCase.API_KEY_ENVIRONMENT_VARIABLE, "key"),
+                completionService);
+        controller.configure();
+        controller.bindAi(viewModel);
+        viewModel.setRecording(recording());
+
+        view.aiAnalyzeButton().fire();
+
+        Hyperlink link = (Hyperlink) firstNodeOfType(view.aiReportView().node(), Hyperlink.class);
+        assertTrue(link != null);
+        link.fire();
+
+        assertEquals("exceptions", navigated.get());
     }
 
     private static RecordingAiAssistantViewModel unavailableAiViewModel() {
@@ -321,6 +357,13 @@ class AnalysisPageControllerTest {
         }
     }
 
+    private static final class FailingCompletionService implements AiCompletionService {
+        @Override
+        public AiCompletionResponse complete(AiCompletionRequest request) {
+            throw new IllegalStateException("provider failed");
+        }
+    }
+
     private static final class BlockingStreamingCompletionService implements StreamingAiCompletionService {
         private final CountDownLatch streamed = new CountDownLatch(1);
         private final CountDownLatch release = new CountDownLatch(1);
@@ -349,6 +392,19 @@ class AnalysisPageControllerTest {
                     """;
             listener.onContentDelta(jsonBlock);
             return new AiCompletionResponse("## Early AI read\n\nGC pressure is likely elevated." + jsonBlock);
+        }
+    }
+
+    private static final class RecordingCompletionService implements AiCompletionService {
+        private final String response;
+
+        private RecordingCompletionService(String response) {
+            this.response = response;
+        }
+
+        @Override
+        public AiCompletionResponse complete(AiCompletionRequest request) {
+            return new AiCompletionResponse(response);
         }
     }
 
@@ -381,6 +437,24 @@ class AnalysisPageControllerTest {
         StringBuilder text = new StringBuilder();
         appendText(node, text);
         return text.toString();
+    }
+
+    private static Node firstNodeOfType(Node node, Class<? extends Node> type) {
+        if (type.isInstance(node)) {
+            return node;
+        }
+        if (node instanceof ScrollPane scrollPane && scrollPane.getContent() != null) {
+            return firstNodeOfType(scrollPane.getContent(), type);
+        }
+        if (node instanceof Parent parent) {
+            for (Node child : parent.getChildrenUnmodifiable()) {
+                Node match = firstNodeOfType(child, type);
+                if (match != null) {
+                    return match;
+                }
+            }
+        }
+        return null;
     }
 
     private static void appendText(Node node, StringBuilder text) {

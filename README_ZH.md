@@ -58,6 +58,20 @@ Leyden 打包被有意放在显式 profile 后面，而不是放进默认构建�
 sdk env && ./mvnw -pl jmc-fx-launcher -am org.openjfx:javafx-maven-plugin:0.0.8:run
 ```
 
+## AI 助手
+
+JMC FX 已内置面向 `.jfr` 录制文件的 AI 助手。打开录制文件后，进入“分析”页面，切换到 AI 标签页，点击“使用AI分析”即可生成结构化诊断报告。
+
+该助手使用 OpenAI 兼容的 chat completions 接口。在“设置 -> AI”中配置：
+
+- 启用 AI 助手。
+- 设置 provider Base URL、模型、Temperature 和最大输出 Token。
+- 启动 JMC FX 前，在进程环境中提供 `OPENAI_API_KEY`。
+
+JMC FX 不会显示或保存 API Key。AI 请求只会在用户手动触发后发起，并且作用域限定在当前录制文件。发送给 provider 的内容来自确定性的分析摘要，例如规则结果、元数据、GC、异常、Profiling、线程、堆、分配、锁竞争和 I/O 摘要。原始 `.jfr` 文件不会被上传。
+
+生成的报告包含摘要、发现、证据、限制和后续问题。发现中可以包含相关页面链接；点击后会跳转到对应的录制分析页面，方便继续在 JMC FX 的常规工作流中核对证据。如果 provider 失败、超时或返回无效响应，错误会限制在 AI 面板内，不会影响其它录制页面。
+
 ## 法律声明
 
 JMC FX 是一个独立项目，与 Oracle 或 OpenJDK 项目不存在从属、认可、背书或赞助关系。

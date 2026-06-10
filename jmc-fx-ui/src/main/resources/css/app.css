@@ -906,8 +906,13 @@
     -fx-text-fill: -color-fg-muted;
 }
 .ai-confidence,
-.ai-related-page,
 .ai-evidence-item {
+    -fx-text-fill: -color-fg-muted;
+}
+.ai-related-page {
+    -fx-padding: 0;
+}
+Label.ai-related-page {
     -fx-text-fill: -color-fg-muted;
 }
 .ai-report-meta {
