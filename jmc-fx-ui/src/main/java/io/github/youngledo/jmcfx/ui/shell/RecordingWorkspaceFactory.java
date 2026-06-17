@@ -55,7 +55,7 @@ final class RecordingWorkspaceFactory {
         OverviewViewModel overview = new OverviewViewModel();
         EventBrowserViewModel events = new EventBrowserViewModel(useCases.browseEvents(),
                 new VirtualThreadEventBrowserExecutor(), i18n);
-        RuleResultsViewModel analysis = new RuleResultsViewModel(useCases.analyzeRules());
+        RuleResultsViewModel analysis = new RuleResultsViewModel(useCases.analyzeRules(), useCases.diagnosticFindings());
         ProfilingViewModel profiling = plan.hasProfiling()
                 ? new ProfilingViewModel(useCases.profiling()) : null;
         ExceptionViewModel exceptions = plan.hasExceptions()
@@ -113,6 +113,6 @@ final class RecordingWorkspaceFactory {
         return new PreparedRecordingWorkspace(plan.recording(), overview, events, analysis, profiling, exceptions, threads,
                 fileio, socketio, locks, heap, leakSuspects, tlab, jvmInfo, gcConfig, gcSummary, gcDetails,
                 compilationsVm, codeCache, classLoading, vmOperations, environment, javaAppOverview, security,
-                nativeLibraries, threadDumps, metadata, g1Gc, javaFxEvents, advancedJfr, aiAssistant);
+                nativeLibraries, threadDumps, metadata, g1Gc, javaFxEvents, advancedJfr, aiAssistant, null);
     }
 }

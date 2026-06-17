@@ -3,10 +3,9 @@ package io.github.youngledo.jmcfx.ui.analysis;
 import java.util.List;
 import java.util.function.Consumer;
 
-import io.github.youngledo.jmcfx.domain.model.RuleResult;
+import io.github.youngledo.jmcfx.domain.model.DiagnosticFinding;
 import io.github.youngledo.jmcfx.domain.model.Severity;
 import io.github.youngledo.jmcfx.ui.i18n.I18n;
-import io.github.youngledo.jmcfx.ui.rules.RuleResultDetail;
 import io.github.youngledo.jmcfx.ui.rules.RuleResultsViewModel;
 import io.github.youngledo.jmcfx.ui.util.DisplayFormats;
 import io.github.youngledo.jmcfx.ui.util.WorkbenchTableSupport;
@@ -35,6 +34,7 @@ public final class AnalysisPageController {
     private RuleResultsViewModel viewModel;
     private RecordingAiAssistantViewModel aiViewModel;
     private ObjectProperty<Integer> minimumScoreBinding;
+    private ChangeListener<DiagnosticFindingDetail> findingDetailListener;
     private ChangeListener<io.github.youngledo.jmcfx.domain.model.ai.AiRecordingReport> aiReportListener;
     private ChangeListener<java.util.Locale> aiLocaleListener;
     private InvalidationListener aiStateListener;
@@ -52,6 +52,9 @@ public final class AnalysisPageController {
     }
 
     public void bind(RuleResultsViewModel nextViewModel) {
+        view.findingsSummaryLabel().textProperty().unbind();
+        view.highestSeverityLabel().textProperty().unbind();
+        view.ruleAnalysisStatusLabel().textProperty().unbind();
         view.table().placeholderProperty().unbind();
         view.table().setItems(FXCollections.emptyObservableList());
         if (viewModel != null) {
@@ -66,13 +69,18 @@ public final class AnalysisPageController {
                     viewModel.showIgnoredResultsProperty());
             view.showUnavailableCheckBox().selectedProperty().unbindBidirectional(
                     viewModel.showUnavailableResultsProperty());
+            if (findingDetailListener != null) {
+                viewModel.selectedFindingDetailProperty().removeListener(findingDetailListener);
+                findingDetailListener = null;
+            }
         }
         showDetail(null);
         viewModel = nextViewModel;
         if (nextViewModel == null) {
+            updateAiStatusLabel();
             return;
         }
-        view.table().setItems(nextViewModel.resultsProperty());
+        view.table().setItems(nextViewModel.findingsProperty());
         view.searchField().textProperty().bindBidirectional(nextViewModel.searchTextProperty());
         minimumScoreBinding = nextViewModel.minimumScoreProperty().asObject();
         view.minimumScoreSpinner().getValueFactory().valueProperty().bindBidirectional(
@@ -88,6 +96,24 @@ public final class AnalysisPageController {
                 nextViewModel.errorProperty(),
                 nextViewModel.errorMessageProperty(),
                 i18n.localeProperty()));
+        view.findingsSummaryLabel().textProperty().bind(Bindings.createStringBinding(
+                () -> i18n.format("analysis.findings.summary", nextViewModel.findingsProperty().size()),
+                nextViewModel.findingsProperty(),
+                i18n.localeProperty()));
+        view.highestSeverityLabel().textProperty().bind(Bindings.createStringBinding(
+                () -> i18n.format("analysis.findings.highestSeverity", highestSeverity(nextViewModel)),
+                nextViewModel.findingsProperty(),
+                i18n.localeProperty()));
+        view.ruleAnalysisStatusLabel().textProperty().bind(Bindings.createStringBinding(
+                () -> i18n.format("analysis.findings.rules.status", ruleAnalysisStatus(nextViewModel)),
+                nextViewModel.loadingProperty(),
+                nextViewModel.loadedProperty(),
+                nextViewModel.errorProperty(),
+                i18n.localeProperty()));
+        findingDetailListener = (observable, oldValue, newValue) -> showDetail(newValue);
+        nextViewModel.selectedFindingDetailProperty().addListener(findingDetailListener);
+        showDetail(nextViewModel.selectedFindingDetailProperty().get());
+        updateAiStatusLabel();
         view.table().getSelectionModel().selectFirst();
     }
 
@@ -117,19 +143,30 @@ public final class AnalysisPageController {
         view.aiReportView().clear();
         if (nextViewModel == null) {
             view.aiReportView().showUnavailable(i18n);
+            updateAiStatusLabel();
             return;
         }
         nextViewModel.refreshAvailability();
-        aiReportListener = (observable, oldValue, newValue) -> refreshAiReportView(nextViewModel);
+        aiReportListener = (observable, oldValue, newValue) -> {
+            updateDiagnosticFindingsFromAiReport(newValue);
+            refreshAiReportView(nextViewModel);
+        };
         nextViewModel.reportProperty().addListener(aiReportListener);
-        aiLocaleListener = (observable, oldValue, newValue) -> refreshAiReportView(nextViewModel);
+        aiLocaleListener = (observable, oldValue, newValue) -> {
+            refreshAiReportView(nextViewModel);
+            updateAiStatusLabel();
+        };
         i18n.localeProperty().addListener(aiLocaleListener);
+        updateDiagnosticFindingsFromAiReport(nextViewModel.reportProperty().get());
         refreshAiReportView(nextViewModel);
         view.aiAnalyzeButton().disableProperty().bind(nextViewModel.availableProperty().not()
                 .or(nextViewModel.analyzingProperty())
                 .or(nextViewModel.askingProperty())
                 .or(nextViewModel.reportReadyProperty()));
-        aiStateListener = observable -> refreshAiReportView(nextViewModel);
+        aiStateListener = observable -> {
+            refreshAiReportView(nextViewModel);
+            updateAiStatusLabel();
+        };
         nextViewModel.analyzingProperty().addListener(aiStateListener);
         nextViewModel.askingProperty().addListener(aiStateListener);
         nextViewModel.errorProperty().addListener(aiStateListener);
@@ -137,6 +174,7 @@ public final class AnalysisPageController {
         nextViewModel.reportReadyProperty().addListener(aiStateListener);
         nextViewModel.reportProcessingTimeProperty().addListener(aiStateListener);
         bindAiVisibility(nextViewModel);
+        updateAiStatusLabel();
     }
 
     public void refreshAiAvailability() {
@@ -145,7 +183,7 @@ public final class AnalysisPageController {
         }
     }
 
-    public TableView<RuleResult> table() {
+    public TableView<DiagnosticFinding> table() {
         return view.table();
     }
 
@@ -157,8 +195,7 @@ public final class AnalysisPageController {
         view.showIgnoredCheckBox().textProperty().bind(i18n.text("analysis.filter.showIgnored"));
         view.showUnavailableCheckBox().textProperty().bind(i18n.text("analysis.filter.showUnavailable"));
         view.detailExplanationCaption().textProperty().bind(i18n.text("analysis.detail.explanation"));
-        view.detailEvidenceCaption().textProperty().bind(i18n.text("analysis.detail.evidence"));
-        view.detailRecommendationCaption().textProperty().bind(i18n.text("analysis.detail.recommendation"));
+        view.detailRecommendationCaption().textProperty().bind(i18n.text("analysis.detail.solution"));
         view.detailTabs().getTabs().get(0).textProperty().bind(i18n.text("analysis.detail.rulesTab"));
         view.detailTabs().getTabs().get(1).textProperty().bind(i18n.text("analysis.ai.tab"));
         view.aiTitleLabel().textProperty().bind(i18n.text("analysis.ai.title"));
@@ -170,50 +207,46 @@ public final class AnalysisPageController {
         view.minimumScoreSpinner().setValueFactory(
                 new SpinnerValueFactory.IntegerSpinnerValueFactory(-3, 100, 0));
 
-        TableColumn<RuleResult, Severity> severityCol = new TableColumn<>();
+        TableColumn<DiagnosticFinding, Severity> severityCol = new TableColumn<>();
         severityCol.textProperty().bind(i18n.text("analysis.column.severity"));
-        severityCol.setPrefWidth(80);
+        severityCol.setPrefWidth(90);
         severityCol.setId("severity");
         severityCol.setCellValueFactory(cell -> new SimpleObjectProperty<>(cell.getValue().severity()));
         severityCol.setCellFactory(col -> new AnalysisSeverityCell<>());
 
-        TableColumn<RuleResult, Number> scoreCol = new TableColumn<>();
+        TableColumn<DiagnosticFinding, String> sourceCol = localizedColumn("analysis.column.source");
+        sourceCol.setPrefWidth(90);
+        sourceCol.setId("source");
+        sourceCol.setCellValueFactory(cell -> new ReadOnlyStringWrapper(
+                i18n.get("analysis.source." + cell.getValue().source().name().toLowerCase(java.util.Locale.ROOT))));
+
+        TableColumn<DiagnosticFinding, Number> scoreCol = new TableColumn<>();
         scoreCol.textProperty().bind(i18n.text("analysis.column.score"));
         scoreCol.setPrefWidth(72);
         scoreCol.setId("score");
         scoreCol.setCellValueFactory(cell -> new javafx.beans.property.SimpleIntegerProperty(cell.getValue().score()));
         useFormattedIntegerCells(scoreCol);
 
-        TableColumn<RuleResult, String> pageCol = localizedColumn("analysis.column.rulePage");
-        pageCol.setPrefWidth(140);
-        pageCol.setId("rulePage");
-        pageCol.setCellValueFactory(cell -> new ReadOnlyStringWrapper(cell.getValue().topic()));
+        TableColumn<DiagnosticFinding, String> findingCol = localizedColumn("analysis.column.finding");
+        findingCol.setPrefWidth(300);
+        findingCol.setId("finding");
+        findingCol.setCellValueFactory(cell -> new ReadOnlyStringWrapper(cell.getValue().title()));
 
-        TableColumn<RuleResult, String> resultIdCol = localizedColumn("analysis.column.resultId");
-        resultIdCol.setPrefWidth(180);
-        resultIdCol.setId("resultId");
-        resultIdCol.setCellValueFactory(cell -> new ReadOnlyStringWrapper(cell.getValue().id()));
-
-        TableColumn<RuleResult, String> nameCol = localizedColumn("analysis.column.name");
-        nameCol.setPrefWidth(280);
-        nameCol.setId("rule");
-        nameCol.setCellValueFactory(cell -> new ReadOnlyStringWrapper(cell.getValue().name()));
-
-        TableColumn<RuleResult, String> summaryCol = localizedColumn("analysis.column.summary");
+        TableColumn<DiagnosticFinding, String> summaryCol = localizedColumn("analysis.column.summary");
         summaryCol.setPrefWidth(520);
         summaryCol.setId("summary");
         summaryCol.setCellValueFactory(cell -> new ReadOnlyStringWrapper(cell.getValue().summary()));
 
-        view.table().getColumns().setAll(List.of(severityCol, scoreCol, pageCol, resultIdCol, nameCol, summaryCol));
+        view.table().getColumns().setAll(List.of(severityCol, sourceCol, scoreCol, findingCol, summaryCol));
         view.table().getSelectionModel().selectedItemProperty()
                 .addListener((obs, old, val) -> {
                     if (viewModel != null) {
-                        viewModel.selectedResultProperty().set(val);
+                        viewModel.selectedFindingProperty().set(val);
                     }
-                    showDetail(val);
+                    showDetail(DiagnosticFindingDetail.from(val));
                 });
         view.table().setRowFactory(table -> {
-            TableRow<RuleResult> row = new TableRow<>();
+            TableRow<DiagnosticFinding> row = new TableRow<>();
             row.setOnMouseClicked(event -> {
                 if (event.getButton() == MouseButton.PRIMARY
                         && event.getClickCount() == 2
@@ -251,6 +284,31 @@ public final class AnalysisPageController {
                 this::openAiRelatedPage);
     }
 
+    private void updateDiagnosticFindingsFromAiReport(
+            io.github.youngledo.jmcfx.domain.model.ai.AiRecordingReport report) {
+        if (viewModel != null) {
+            viewModel.updateAiReport(report);
+        }
+    }
+
+    private void updateAiStatusLabel() {
+        if (aiViewModel == null || !aiViewModel.availableProperty().get()) {
+            view.aiStatusLabel().setText(i18n.get("analysis.findings.ai.unavailable"));
+            return;
+        }
+        if (aiViewModel.analyzingProperty().get() || aiViewModel.askingProperty().get()) {
+            view.aiStatusLabel().setText(i18n.get("analysis.findings.ai.running"));
+            return;
+        }
+        if (aiViewModel.errorProperty().get()) {
+            view.aiStatusLabel().setText(i18n.get("analysis.findings.ai.failed"));
+            return;
+        }
+        view.aiStatusLabel().setText(aiViewModel.reportReadyProperty().get()
+                ? i18n.get("analysis.findings.ai.ready")
+                : i18n.get("analysis.findings.ai.notConfigured"));
+    }
+
     private void bindAiVisibility(RecordingAiAssistantViewModel model) {
         view.aiAnalyzeButton().visibleProperty().bind(model.availableProperty());
         view.aiAnalyzeButton().managedProperty().bind(model.availableProperty());
@@ -286,24 +344,33 @@ public final class AnalysisPageController {
                 ? "analysis.empty" : "analysis.loading");
     }
 
-    private void showDetail(RuleResult result) {
-        RuleResultDetail detail = RuleResultDetail.from(result);
+    private void showDetail(DiagnosticFindingDetail detail) {
         if (detail == null) {
-            view.detailExplanationArea().setText("");
-            view.detailEvidenceArea().setText("");
-            view.detailRecommendationArea().setText("");
+            view.detailTitleLabel().setText(i18n.get("analysis.detail.noSelection"));
+            view.detailMetaLabel().setText("");
+            setDetailText(view.detailExplanationArea(), "");
+            setDetailText(view.detailRecommendationArea(), "");
             return;
         }
-        view.detailExplanationArea().setText(detail.explanation());
-        view.detailEvidenceArea().setText(detail.evidence());
-        view.detailRecommendationArea().setText(detail.recommendation());
+        view.detailTitleLabel().setText(detail.title());
+        view.detailMetaLabel().setText(detail.meta());
+        setDetailText(view.detailExplanationArea(), detail.explanation());
+        setDetailText(view.detailRecommendationArea(), detail.recommendation());
     }
 
-    private void openRelatedPage(RuleResult result) {
-        RuleResultDetail detail = RuleResultDetail.from(result);
+    private static void setDetailText(Label label, String text) {
+        label.setText(text == null ? "" : text);
+    }
+
+    private void openRelatedPage(DiagnosticFinding finding) {
+        DiagnosticFindingDetail detail = DiagnosticFindingDetail.from(finding);
         if (detail != null && detail.hasRelatedPage()) {
             relatedPageNavigator.accept(detail.relatedPageId());
         }
+    }
+
+    void openSelectedFindingForTest() {
+        openRelatedPage(view.table().getSelectionModel().getSelectedItem());
     }
 
     private void openAiRelatedPage(String relatedPageId) {
@@ -316,10 +383,43 @@ public final class AnalysisPageController {
         return WorkbenchTableSupport.localizedPlaceholder(i18n, key);
     }
 
-    private TableColumn<RuleResult, String> localizedColumn(String key) {
-        TableColumn<RuleResult, String> column = new TableColumn<>();
+    private TableColumn<DiagnosticFinding, String> localizedColumn(String key) {
+        TableColumn<DiagnosticFinding, String> column = new TableColumn<>();
         column.textProperty().bind(i18n.text(key));
         return column;
+    }
+
+    private static String highestSeverity(RuleResultsViewModel model) {
+        return model.findingsProperty().stream()
+                .map(DiagnosticFinding::severity)
+                .max(java.util.Comparator.comparingInt(AnalysisPageController::severityRank))
+                .map(Enum::name)
+                .orElse("UNKNOWN");
+    }
+
+    private String ruleAnalysisStatus(RuleResultsViewModel model) {
+        if (model.errorProperty().get()) {
+            return i18n.get("analysis.findings.rules.failed");
+        }
+        if (model.loadingProperty().get()) {
+            return i18n.get("analysis.findings.rules.running");
+        }
+        if (model.loadedProperty().get()) {
+            return i18n.get("analysis.findings.rules.ready");
+        }
+        return i18n.get("analysis.findings.rules.pending");
+    }
+
+    private static int severityRank(Severity severity) {
+        return switch (severity) {
+            case CRITICAL -> 6;
+            case WARNING -> 5;
+            case INFO -> 4;
+            case UNKNOWN -> 3;
+            case OK -> 2;
+            case UNAVAILABLE -> 1;
+            case IGNORED -> 0;
+        };
     }
 
     private static <T> void useFormattedIntegerCells(TableColumn<T, Number> column) {

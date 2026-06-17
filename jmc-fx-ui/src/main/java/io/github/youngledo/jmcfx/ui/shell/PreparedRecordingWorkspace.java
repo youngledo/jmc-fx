@@ -14,6 +14,7 @@ import io.github.youngledo.jmcfx.ui.javaapp.NativeLibraryViewModel;
 import io.github.youngledo.jmcfx.ui.javaapp.SecurityViewModel;
 import io.github.youngledo.jmcfx.ui.javaapp.ThreadDumpViewModel;
 import io.github.youngledo.jmcfx.ui.jfx.JavaFxEventsViewModel;
+import io.github.youngledo.jmcfx.ui.jvms.LiveFlightRecordingOrigin;
 import io.github.youngledo.jmcfx.ui.jvm.ClassLoadingViewModel;
 import io.github.youngledo.jmcfx.ui.jvm.CodeCacheViewModel;
 import io.github.youngledo.jmcfx.ui.jvm.CompilationsViewModel;
@@ -63,5 +64,16 @@ record PreparedRecordingWorkspace(
         G1GcViewModel g1Gc,
         JavaFxEventsViewModel javaFxEvents,
         AdvancedJfrViewModel advancedJfr,
-        RecordingAiAssistantViewModel aiAssistant) {
+        RecordingAiAssistantViewModel aiAssistant,
+        LiveFlightRecordingOrigin liveOrigin) {
+
+    PreparedRecordingWorkspace withLiveOrigin(LiveFlightRecordingOrigin origin) {
+        if (origin == null) {
+            return this;
+        }
+        return new PreparedRecordingWorkspace(recording, overview, events, analysis, profiling, exceptions, threads,
+                fileio, socketio, locks, heap, leakSuspects, tlab, jvmInfo, gcConfig, gcSummary, gcDetails,
+                compilations, codeCache, classLoading, vmOperations, environment, javaAppOverview, security,
+                nativeLibraries, threadDumps, metadata, g1Gc, javaFxEvents, advancedJfr, aiAssistant, origin);
+    }
 }

@@ -4,6 +4,7 @@ import java.time.Instant;
 import java.time.ZoneId;
 
 import io.github.youngledo.jmcfx.domain.model.RecordingSummary;
+import io.github.youngledo.jmcfx.ui.jvms.LiveFlightRecordingOrigin;
 import io.github.youngledo.jmcfx.ui.advanced.AdvancedJfrPageController;
 import io.github.youngledo.jmcfx.ui.analysis.AnalysisPageController;
 import io.github.youngledo.jmcfx.ui.environment.EnvironmentPagesController;
@@ -117,7 +118,8 @@ final class ShellPageControllerRegistry {
     }
 
     void installExportMenus(ExportMenuInstaller installer) {
-        installJfrExport(installer, analysisPageController.table(), "Automated Analysis", "Rule Results");
+        installJfrExport(installer, analysisPageController.table(), "Automated Analysis",
+                "Automated Analysis Results");
         installJfrExport(installer, profilingPageController.table(), "Method Profiling", "Hot Methods");
         installJfrExport(installer, exceptionsPageController.table(), "Exception Events", "Exception Histogram");
         installJfrExport(installer, threadsPageController.table(), "Thread Activity", "Thread Summary");
@@ -207,5 +209,9 @@ final class ShellPageControllerRegistry {
 
     String formatRecordingDetails(RecordingSummary recording) {
         return overviewPageController.formatRecordingDetails(recording);
+    }
+
+    String formatLiveOriginDetails(LiveFlightRecordingOrigin origin) {
+        return origin == null ? "" : overviewPageController.formatLiveOriginDetails(origin);
     }
 }

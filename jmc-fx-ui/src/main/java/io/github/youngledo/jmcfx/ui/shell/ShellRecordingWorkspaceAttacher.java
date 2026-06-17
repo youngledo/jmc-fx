@@ -19,7 +19,9 @@ final class ShellRecordingWorkspaceAttacher {
 
     void attach(PreparedRecordingWorkspace prepared, long openRequestGeneration) {
         prepared.overview().showRecording(prepared.recording(),
-                pageControllerRegistry.formatRecordingDetails(prepared.recording()));
+                pageControllerRegistry.formatRecordingDetails(prepared.recording()),
+                prepared.liveOrigin(),
+                pageControllerRegistry.formatLiveOriginDetails(prepared.liveOrigin()));
         viewModel.openRecording(prepared.recording(), prepared.overview(), prepared.events(), prepared.analysis(),
                 prepared.profiling(), prepared.exceptions(), prepared.threads(), prepared.fileio(),
                 prepared.socketio(), prepared.locks(), prepared.heap(), prepared.leakSuspects(), prepared.tlab(),
@@ -27,7 +29,7 @@ final class ShellRecordingWorkspaceAttacher {
                 prepared.compilations(), prepared.codeCache(), prepared.classLoading(), prepared.vmOperations(),
                 prepared.environment(), prepared.javaAppOverview(), prepared.security(), prepared.nativeLibraries(),
                 prepared.threadDumps(), prepared.metadata(), prepared.g1Gc(), prepared.javaFxEvents(),
-                prepared.advancedJfr(), prepared.aiAssistant(), openRequestGeneration);
+                prepared.advancedJfr(), prepared.aiAssistant(), prepared.liveOrigin(), openRequestGeneration);
         viewModel.showStatus(i18n.format("status.openedRecording", prepared.recording().name()));
     }
 }

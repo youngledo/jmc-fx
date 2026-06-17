@@ -36,6 +36,18 @@ class AiReportViewTest {
     }
 
     @Test
+    void reportContentUsesVerticalScrollPaneForLongResults() {
+        AiReportView view = new AiReportView();
+
+        assertTrue(view.node() instanceof ScrollPane);
+        ScrollPane scrollPane = (ScrollPane) view.node();
+        assertTrue(scrollPane.isFitToWidth());
+        assertTrue(scrollPane.getHbarPolicy() == ScrollPane.ScrollBarPolicy.NEVER);
+        assertTrue(scrollPane.getVbarPolicy() == ScrollPane.ScrollBarPolicy.AS_NEEDED);
+        assertTrue(scrollPane.getMaxHeight() >= Double.MAX_VALUE);
+    }
+
+    @Test
     void rendersFinalReportMarkdownAsBlockContent() {
         AiReportView view = new AiReportView();
 

@@ -77,7 +77,7 @@ public class JvmBrowserViewModel implements AutoCloseable {
     private final LiveJvmUseCases useCases;
     private final JvmBrowserExecutor executor;
     private final Consumer<Runnable> fxRunner;
-    private final Consumer<Path> savedRecordingHandler;
+    private final Consumer<SavedFlightRecording> savedRecordingHandler;
     private final ObservableList<JvmConnection> connections = FXCollections.observableArrayList();
     private final ObservableList<FlightRecordingInfo> flightRecordings = FXCollections.observableArrayList();
     private final ObservableList<MBeanNode> mbeanTree = FXCollections.observableArrayList();
@@ -185,14 +185,14 @@ public class JvmBrowserViewModel implements AutoCloseable {
 
     public JvmBrowserViewModel(LiveJvmApplicationServices services) {
         this(LiveJvmUseCases.from(services), new VirtualThreadJvmBrowserExecutor(),
-                javafx.application.Platform::runLater, path -> { });
+                javafx.application.Platform::runLater, savedRecording -> { });
     }
 
     public JvmBrowserViewModel(
             LiveJvmUseCases useCases,
             JvmBrowserExecutor executor,
             Consumer<Runnable> fxRunner,
-            Consumer<Path> savedRecordingHandler) {
+            Consumer<SavedFlightRecording> savedRecordingHandler) {
         this.useCases = Objects.requireNonNull(useCases, "useCases");
         this.executor = Objects.requireNonNull(executor, "executor");
         this.fxRunner = Objects.requireNonNull(fxRunner, "fxRunner");
@@ -757,6 +757,7 @@ public class JvmBrowserViewModel implements AutoCloseable {
         executor.execute(() -> {
             try {
                 JvmConnection liveConnection = liveConnectionFor(selectedConnection);
+                LiveFlightRecordingOrigin origin = LiveFlightRecordingOrigin.from(liveConnection, selectedRecording);
                 Path saved = useCases.recording().stopAndSaveRecording(new FlightRecordingStopRequest(
                         liveConnection, selectedRecording.id(), destinationFile));
                 sessionStartedRecordings.remove(selectedRecording.id());
@@ -766,7 +767,7 @@ public class JvmBrowserViewModel implements AutoCloseable {
                     selectedFlightRecording.set(updated.isEmpty() ? null : updated.getFirst());
                     recordingStatusMessage.set("");
                     recordingLoading.set(false);
-                    savedRecordingHandler.accept(saved);
+                    savedRecordingHandler.accept(new SavedFlightRecording(saved, origin));
                 });
             } catch (RuntimeException exception) {
                 failRecording(exception);

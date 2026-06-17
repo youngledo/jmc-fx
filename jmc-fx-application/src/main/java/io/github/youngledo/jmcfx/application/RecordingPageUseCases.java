@@ -12,6 +12,7 @@ public record RecordingPageUseCases(
         OpenRecordingWorkspaceUseCase openRecordingWorkspace,
         BrowseEventsUseCase browseEvents,
         AnalyzeRulesUseCase analyzeRules,
+        DiagnosticFindingsUseCase diagnosticFindings,
         LoadProfilingUseCase profiling,
         LoadExceptionsUseCase exceptions,
         LoadThreadsUseCase threads,
@@ -38,6 +39,7 @@ public record RecordingPageUseCases(
         Objects.requireNonNull(openRecordingWorkspace, "openRecordingWorkspace");
         Objects.requireNonNull(browseEvents, "browseEvents");
         Objects.requireNonNull(analyzeRules, "analyzeRules");
+        Objects.requireNonNull(diagnosticFindings, "diagnosticFindings");
     }
 
     public static RecordingPageUseCases from(RecordingApplicationServices services) {
@@ -59,6 +61,7 @@ public record RecordingPageUseCases(
                 new OpenRecordingWorkspaceUseCase(services),
                 new BrowseEventsUseCase(services.eventQueryService()),
                 new AnalyzeRulesUseCase(services.ruleAnalysisService()),
+                new DiagnosticFindingsUseCase(),
                 services.profilingService() == null ? null : new LoadProfilingUseCase(services.profilingService()),
                 services.exceptionService() == null ? null : new LoadExceptionsUseCase(services.exceptionService()),
                 services.threadService() == null ? null : new LoadThreadsUseCase(services.threadService()),

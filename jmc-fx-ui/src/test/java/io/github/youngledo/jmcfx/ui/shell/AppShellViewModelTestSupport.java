@@ -5,6 +5,7 @@ import java.time.Instant;
 
 import io.github.youngledo.jmcfx.application.AnalyzeRulesUseCase;
 import io.github.youngledo.jmcfx.application.BrowseEventsUseCase;
+import io.github.youngledo.jmcfx.application.DiagnosticFindingsUseCase;
 import io.github.youngledo.jmcfx.domain.model.RecordingSummary;
 import io.github.youngledo.jmcfx.domain.service.EventQueryService;
 import io.github.youngledo.jmcfx.domain.service.EventQuerySession;
@@ -34,7 +35,7 @@ final class AppShellViewModelTestSupport {
     }
 
     static RuleResultsViewModel ruleResultsViewModel() {
-        return new RuleResultsViewModel(AnalyzeRulesUseCase.empty());
+        return new RuleResultsViewModel(AnalyzeRulesUseCase.empty(), new DiagnosticFindingsUseCase());
     }
 
     private static final class EmptyEventQueryService implements EventQueryService {

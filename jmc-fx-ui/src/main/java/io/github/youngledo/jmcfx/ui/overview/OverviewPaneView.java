@@ -12,6 +12,9 @@ public final class OverviewPaneView {
     private final Label titleLabel = new Label();
     private final Label recordingNameLabel = new Label();
     private final Label recordingDetailsLabel = new Label();
+    private final VBox liveOriginPane = new VBox();
+    private final Label liveOriginTitleLabel = new Label();
+    private final Label liveOriginDetailsLabel = new Label();
     private final Label analysisTitleLabel = new Label();
     private final Label analysisStatusLabel = new Label();
     private final Label jvmsTitleLabel = new Label();
@@ -23,6 +26,7 @@ public final class OverviewPaneView {
 
     public OverviewPageView view() {
         return new OverviewPageView(titleLabel, recordingNameLabel, recordingDetailsLabel,
+                liveOriginPane, liveOriginTitleLabel, liveOriginDetailsLabel,
                 analysisTitleLabel, analysisStatusLabel, jvmsTitleLabel, jvmStatusLabel);
     }
 
@@ -30,13 +34,17 @@ public final class OverviewPaneView {
         pane.setSpacing(12);
         styles(titleLabel, "view-title");
         styles(recordingNameLabel, "detail-title");
+        styles(liveOriginTitleLabel, "detail-title");
         styles(analysisTitleLabel, "detail-title");
         styles(jvmsTitleLabel, "detail-title");
         styles(analysisStatusLabel, "unavailable-state");
         styles(jvmStatusLabel, "unavailable-state");
-        wrap(recordingDetailsLabel, analysisStatusLabel, jvmStatusLabel);
+        wrap(recordingDetailsLabel, liveOriginDetailsLabel, analysisStatusLabel, jvmStatusLabel);
         VBox recording = vbox(6, recordingNameLabel, recordingDetailsLabel);
         styles(recording, "summary-panel");
+        liveOriginPane.setSpacing(6);
+        liveOriginPane.getChildren().setAll(liveOriginTitleLabel, liveOriginDetailsLabel);
+        styles(liveOriginPane, "summary-panel");
         VBox analysis = vbox(6, analysisTitleLabel, analysisStatusLabel);
         styles(analysis, "summary-panel");
         VBox jvms = vbox(6, jvmsTitleLabel, jvmStatusLabel);
@@ -44,7 +52,7 @@ public final class OverviewPaneView {
         HBox row = hbox(12, analysis, jvms);
         HBox.setHgrow(analysis, Priority.ALWAYS);
         HBox.setHgrow(jvms, Priority.ALWAYS);
-        pane.getChildren().setAll(titleLabel, recording, row);
+        pane.getChildren().setAll(titleLabel, recording, liveOriginPane, row);
     }
 
     private static VBox vbox(double spacing, Node... children) {

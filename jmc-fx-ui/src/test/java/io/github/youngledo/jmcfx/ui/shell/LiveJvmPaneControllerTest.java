@@ -33,10 +33,14 @@ class LiveJvmPaneControllerTest {
     static void initToolkit() throws InterruptedException {
         try {
             CountDownLatch latch = new CountDownLatch(1);
-            Platform.startup(latch::countDown);
+            Platform.startup(() -> {
+                Platform.setImplicitExit(false);
+                latch.countDown();
+            });
             latch.await(5, TimeUnit.SECONDS);
         } catch (IllegalStateException ignored) {
             // Toolkit already initialized by another test class.
+            Platform.setImplicitExit(false);
         }
     }
 

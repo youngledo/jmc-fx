@@ -35,6 +35,7 @@ import io.github.youngledo.jmcfx.ui.javaapp.NativeLibraryViewModel;
 import io.github.youngledo.jmcfx.ui.javaapp.SecurityViewModel;
 import io.github.youngledo.jmcfx.ui.javaapp.ThreadDumpViewModel;
 import io.github.youngledo.jmcfx.ui.jfx.JavaFxEventsViewModel;
+import io.github.youngledo.jmcfx.ui.jvms.LiveFlightRecordingOrigin;
 import io.github.youngledo.jmcfx.ui.jvm.VmOperationsViewModel;
 import io.github.youngledo.jmcfx.ui.metadata.JfrMetadataViewModel;
 import io.github.youngledo.jmcfx.ui.tlab.TlabViewModel;
@@ -50,6 +51,7 @@ public final class RecordingWorkspace {
 
     private final String id = UUID.randomUUID().toString();
     private final RecordingSummary recording;
+    private final LiveFlightRecordingOrigin liveOrigin;
     private final StringProperty selectedSection = new SimpleStringProperty("analysis");
     private final ObjectProperty<RecordingTimeRange> selectedTimeRange = new SimpleObjectProperty<>();
     private final Set<String> loadedSections = new HashSet<>();
@@ -240,7 +242,45 @@ public final class RecordingWorkspace {
             JavaFxEventsViewModel javaFxEventsViewModel,
             AdvancedJfrViewModel advancedJfrViewModel,
             RecordingAiAssistantViewModel aiAssistantViewModel) {
+        this(recording, overviewViewModel, eventBrowserViewModel, ruleResultsViewModel,
+                profilingViewModel, exceptionViewModel, threadViewModel, fileIOViewModel,
+                socketIOViewModel, lockViewModel, heapViewModel, leakSuspectsViewModel,
+                tlabViewModel, jvmInfoViewModel, gcConfigViewModel, gcSummaryViewModel,
+                gcDetailsViewModel, compilationsViewModel, codeCacheViewModel,
+                classLoadingViewModel, vmOperationsViewModel, environmentViewModel,
+                javaAppOverviewViewModel, securityViewModel, nativeLibraryViewModel,
+                threadDumpViewModel, jfrMetadataViewModel, g1GcViewModel, javaFxEventsViewModel,
+                advancedJfrViewModel, aiAssistantViewModel, null);
+    }
+
+    public RecordingWorkspace(RecordingSummary recording, OverviewViewModel overviewViewModel,
+            EventBrowserViewModel eventBrowserViewModel, RuleResultsViewModel ruleResultsViewModel,
+            ProfilingViewModel profilingViewModel, ExceptionViewModel exceptionViewModel,
+            ThreadViewModel threadViewModel, FileIOViewModel fileIOViewModel,
+            SocketIOViewModel socketIOViewModel, LockViewModel lockViewModel,
+            HeapViewModel heapViewModel, LeakSuspectsViewModel leakSuspectsViewModel,
+            TlabViewModel tlabViewModel,
+            JvmInfoViewModel jvmInfoViewModel,
+            GcConfigViewModel gcConfigViewModel,
+            GcSummaryViewModel gcSummaryViewModel,
+            GcDetailsViewModel gcDetailsViewModel,
+            CompilationsViewModel compilationsViewModel,
+            CodeCacheViewModel codeCacheViewModel,
+            ClassLoadingViewModel classLoadingViewModel,
+            VmOperationsViewModel vmOperationsViewModel,
+            EnvironmentViewModel environmentViewModel,
+            JavaAppOverviewViewModel javaAppOverviewViewModel,
+            SecurityViewModel securityViewModel,
+            NativeLibraryViewModel nativeLibraryViewModel,
+            ThreadDumpViewModel threadDumpViewModel,
+            JfrMetadataViewModel jfrMetadataViewModel,
+            G1GcViewModel g1GcViewModel,
+            JavaFxEventsViewModel javaFxEventsViewModel,
+            AdvancedJfrViewModel advancedJfrViewModel,
+            RecordingAiAssistantViewModel aiAssistantViewModel,
+            LiveFlightRecordingOrigin liveOrigin) {
         this.recording = Objects.requireNonNull(recording, "recording");
+        this.liveOrigin = liveOrigin;
         this.overviewViewModel = Objects.requireNonNull(overviewViewModel, "overviewViewModel");
         this.eventBrowserViewModel = Objects.requireNonNull(eventBrowserViewModel, "eventBrowserViewModel");
         this.ruleResultsViewModel = Objects.requireNonNull(ruleResultsViewModel, "ruleResultsViewModel");
@@ -279,6 +319,10 @@ public final class RecordingWorkspace {
 
     public RecordingSummary recording() {
         return recording;
+    }
+
+    public LiveFlightRecordingOrigin liveOrigin() {
+        return liveOrigin;
     }
 
     public StringProperty selectedSectionProperty() {

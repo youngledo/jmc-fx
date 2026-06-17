@@ -11,9 +11,14 @@ import java.util.List;
 import org.junit.jupiter.api.Test;
 
 import io.github.youngledo.jmcfx.application.AnalyzeRulesUseCase;
+import io.github.youngledo.jmcfx.application.DiagnosticFindingsUseCase;
+import io.github.youngledo.jmcfx.domain.model.DiagnosticFindingSource;
 import io.github.youngledo.jmcfx.domain.model.RecordingSummary;
 import io.github.youngledo.jmcfx.domain.model.RuleResult;
 import io.github.youngledo.jmcfx.domain.model.Severity;
+import io.github.youngledo.jmcfx.domain.model.ai.AiFinding;
+import io.github.youngledo.jmcfx.domain.model.ai.AiRecordingReport;
+import io.github.youngledo.jmcfx.domain.model.ai.AiSeverity;
 import io.github.youngledo.jmcfx.ui.testsupport.FakeRuleAnalysisService;
 
 class RuleResultsViewModelTest {
@@ -22,7 +27,7 @@ class RuleResultsViewModelTest {
     void analyzesRecordingAndSelectsFirstResult() {
         FakeRuleAnalysisService service = new FakeRuleAnalysisService();
         service.addResult(new RuleResult("r1", "Rule 1", Severity.WARNING, 50, "Memory", "Summary", "Explanation"));
-        RuleResultsViewModel viewModel = new RuleResultsViewModel(new AnalyzeRulesUseCase(service));
+        RuleResultsViewModel viewModel = viewModel(service);
         RecordingSummary recording = new RecordingSummary("rec", Path.of("rec.jfr"), "rec.jfr",
                 Instant.EPOCH, Instant.EPOCH.plusSeconds(1), 1000, 128);
 
@@ -41,7 +46,7 @@ class RuleResultsViewModelTest {
         service.addResult(new RuleResult("r1", "Rule 1", Severity.WARNING, 50, "Memory", "Summary", "Explanation"));
         service.addResult(new RuleResult("r2", "Rule 2", Severity.CRITICAL, 90, "Threads", "Blocked",
                 "Thread contention", "Blocked for 2 s", "Inspect contended locks", "locks"));
-        RuleResultsViewModel viewModel = new RuleResultsViewModel(new AnalyzeRulesUseCase(service));
+        RuleResultsViewModel viewModel = viewModel(service);
         RecordingSummary recording = new RecordingSummary("rec", Path.of("rec.jfr"), "rec.jfr",
                 Instant.EPOCH, Instant.EPOCH.plusSeconds(1), 1000, 128);
 
@@ -65,7 +70,7 @@ class RuleResultsViewModelTest {
         FakeRuleAnalysisService service = new FakeRuleAnalysisService();
         service.addResult(new RuleResult("r1", "Rule 1", Severity.CRITICAL, 90, "Threads", "Blocked summary",
                 "<p>Thread contention</p>", "<p>Blocked for 2 s</p>", "<p>Inspect contended locks</p>", "locks"));
-        RuleResultsViewModel viewModel = new RuleResultsViewModel(new AnalyzeRulesUseCase(service));
+        RuleResultsViewModel viewModel = viewModel(service);
         RecordingSummary recording = new RecordingSummary("rec", Path.of("rec.jfr"), "rec.jfr",
                 Instant.EPOCH, Instant.EPOCH.plusSeconds(1), 1000, 128);
 
@@ -99,7 +104,7 @@ class RuleResultsViewModelTest {
                 "Disabled by preferences", "Enable rule to evaluate"));
         service.addResult(new RuleResult("unavailable", "Unavailable Rule", Severity.UNAVAILABLE, -1, "Events",
                 "Required events missing", "Record required events"));
-        RuleResultsViewModel viewModel = new RuleResultsViewModel(new AnalyzeRulesUseCase(service));
+        RuleResultsViewModel viewModel = viewModel(service);
         RecordingSummary recording = new RecordingSummary("rec", Path.of("rec.jfr"), "rec.jfr",
                 Instant.EPOCH, Instant.EPOCH.plusSeconds(1), 1000, 128);
 
@@ -121,9 +126,51 @@ class RuleResultsViewModelTest {
     }
 
     @Test
+    void filtersVisibleDiagnosticFindingsWithAnalysisControls() {
+        FakeRuleAnalysisService service = new FakeRuleAnalysisService();
+        service.addResult(new RuleResult("ok", "OK Rule", Severity.OK, 0, "General", "Everything is fine",
+                "No action needed"));
+        service.addResult(new RuleResult("info", "Info Rule", Severity.INFO, 25, "General", "Small signal",
+                "Inspect if relevant"));
+        service.addResult(new RuleResult("warning", "Allocation Rule", Severity.WARNING, 75, "Memory",
+                "High allocation", "Review allocation pressure"));
+        service.addResult(new RuleResult("ignored", "Ignored Rule", Severity.IGNORED, -3, "Rules",
+                "Disabled by preferences", "Enable rule to evaluate"));
+        service.addResult(new RuleResult("unavailable", "Unavailable Rule", Severity.UNAVAILABLE, -1, "Events",
+                "Required events missing", "Record required events"));
+        RuleResultsViewModel viewModel = viewModel(service);
+
+        viewModel.analyze(recording());
+        viewModel.updateAiReport(new AiRecordingReport("", List.of(
+                new AiFinding("AI allocation finding", AiSeverity.WARNING, 0.82,
+                        "memory", "Inspect allocations.", "AI evidence mentions allocations", List.of())),
+                List.of(), List.of()));
+
+        assertEquals(List.of("rule:warning", "ai:0", "rule:info"), findingIds(viewModel));
+
+        viewModel.minimumScoreProperty().set(80);
+        assertEquals(List.of("ai:0"), findingIds(viewModel));
+        assertEquals("ai:0", viewModel.selectedFindingProperty().get().id());
+
+        viewModel.searchTextProperty().set("allocation");
+        assertEquals(List.of("ai:0"), findingIds(viewModel));
+
+        viewModel.minimumScoreProperty().set(50);
+        assertEquals(List.of("rule:warning", "ai:0"), findingIds(viewModel));
+
+        viewModel.showOkResultsProperty().set(true);
+        viewModel.showIgnoredResultsProperty().set(true);
+        viewModel.showUnavailableResultsProperty().set(true);
+        viewModel.searchTextProperty().set("");
+        assertEquals(List.of("rule:warning", "ai:0", "rule:ok", "rule:unavailable", "rule:ignored"),
+                findingIds(viewModel));
+    }
+
+    @Test
     void loadingStateIsVisibleWhileAnalysisRuns() {
         LoadingProbeRuleAnalysisService service = new LoadingProbeRuleAnalysisService();
-        RuleResultsViewModel viewModel = new RuleResultsViewModel(new AnalyzeRulesUseCase(service));
+        RuleResultsViewModel viewModel = new RuleResultsViewModel(
+                new AnalyzeRulesUseCase(service), new DiagnosticFindingsUseCase());
         service.viewModel = viewModel;
         RecordingSummary recording = new RecordingSummary("rec", Path.of("rec.jfr"), "rec.jfr",
                 Instant.EPOCH, Instant.EPOCH.plusSeconds(1), 1000, 128);
@@ -143,7 +190,7 @@ class RuleResultsViewModelTest {
                 throw new IllegalStateException("Rules failed");
             }
         };
-        RuleResultsViewModel viewModel = new RuleResultsViewModel(new AnalyzeRulesUseCase(service));
+        RuleResultsViewModel viewModel = viewModel(service);
         RecordingSummary recording = new RecordingSummary("rec", Path.of("rec.jfr"), "rec.jfr",
                 Instant.EPOCH, Instant.EPOCH.plusSeconds(1), 1000, 128);
 
@@ -157,6 +204,39 @@ class RuleResultsViewModelTest {
         assertFalse(viewModel.loadedProperty().get());
         assertTrue(viewModel.errorProperty().get());
         assertEquals("Rules failed", viewModel.errorMessageProperty().get());
+    }
+
+    @Test
+    void exposesDiagnosticFindingsForLoadedRuleResults() {
+        FakeRuleAnalysisService service = new FakeRuleAnalysisService();
+        service.addResult(new RuleResult("gc", "GC Pressure", Severity.WARNING, 70, "GC",
+                "GC pressure is elevated.", "Explanation", "Evidence", "Inspect GC.", "gcDetails"));
+        RuleResultsViewModel viewModel = viewModel(service);
+
+        viewModel.analyze(recording());
+
+        assertEquals(1, viewModel.findingsProperty().size());
+        assertEquals("rule:gc", viewModel.findingsProperty().getFirst().id());
+        assertEquals("GC Pressure", viewModel.selectedFindingDetailProperty().get().title());
+        assertEquals("gcDetails", viewModel.selectedFindingDetailProperty().get().relatedPageId());
+    }
+
+    @Test
+    void mergesAiReportFindingsWithoutCallingAiAutomatically() {
+        FakeRuleAnalysisService service = new FakeRuleAnalysisService();
+        service.addResult(new RuleResult("threads", "Thread Activity", Severity.INFO, 20, "Threads",
+                "Thread activity was recorded.", "", "", "", "threads"));
+        RuleResultsViewModel viewModel = viewModel(service);
+        viewModel.analyze(recording());
+
+        viewModel.updateAiReport(new AiRecordingReport("", List.of(
+                new AiFinding("Blocked threads look suspicious", AiSeverity.CRITICAL, 0.88,
+                        "threads", "Inspect thread states.", "", List.of())),
+                List.of(), List.of()));
+
+        assertEquals(2, viewModel.findingsProperty().size());
+        assertEquals(DiagnosticFindingSource.AI, viewModel.findingsProperty().getFirst().source());
+        assertEquals("threads", viewModel.selectedFindingDetailProperty().get().relatedPageId());
     }
 
     private static final class LoadingProbeRuleAnalysisService
@@ -177,5 +257,20 @@ class RuleResultsViewModelTest {
         return viewModel.resultsProperty().stream()
                 .map(RuleResult::id)
                 .toList();
+    }
+
+    private static List<String> findingIds(RuleResultsViewModel viewModel) {
+        return viewModel.findingsProperty().stream()
+                .map(finding -> finding.id())
+                .toList();
+    }
+
+    private static RuleResultsViewModel viewModel(FakeRuleAnalysisService service) {
+        return new RuleResultsViewModel(new AnalyzeRulesUseCase(service), new DiagnosticFindingsUseCase());
+    }
+
+    private static RecordingSummary recording() {
+        return new RecordingSummary("rec", Path.of("rec.jfr"), "rec.jfr",
+                Instant.EPOCH, Instant.EPOCH.plusSeconds(1), 1000, 128);
     }
 }

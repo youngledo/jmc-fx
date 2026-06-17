@@ -6,6 +6,12 @@
 
 JMC FX 是一个独立的 JavaFX 桌面应用，目标是重建 JDK Mission Control 的用户界面，同时复用 [JMC](https://github.com/openjdk/jmc) core/headless 库。
 
+## 产品方向
+
+JMC FX 不是对 Eclipse RCP/SWT 版 JDK Mission Control 的逐像素克隆，也不是 AI 优先的聊天式诊断工具。本项目的目标是在保留 JMC 兼容诊断概念的基础上，构建一个 JavaFX 原生、带诊断引导的新一代 JVM 诊断工作台。
+
+熟悉的概念仍然保留：JFR 录制文件、自动规则分析、事件浏览、JVM 发现、MBeans、Diagnostic Commands 和 Flight Recorder 控制。JavaFX 用来现代化桌面体验，包括高密度分析页面、清晰的状态反馈、主题集成、可导出的表格以及响应式后台任务。诊断引导是产品级差异化：JMC FX 应帮助用户看到重要发现、核对证据、在相关页面之间跳转，并把 AI 作为可选的解释增强层，而不是用 AI 取代确定性分析。
+
 ## 环境要求
 
 - JDK 26

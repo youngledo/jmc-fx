@@ -687,7 +687,7 @@ class JvmBrowserViewModelTest {
     void stopAndSaveRecordingPublishesSavedFileForOpening() {
         FakeFlightRecordingService recordings = new FakeFlightRecordingService();
         FakeJmxConnectionService jmx = new FakeJmxConnectionService();
-        List<Path> opened = new ArrayList<>();
+        List<SavedFlightRecording> opened = new ArrayList<>();
         JvmBrowserViewModel viewModel = new JvmBrowserViewModel(useCases(new FakeJvmDiscoveryService(), jmx,
                 recordings, null, null, null, null, null, null, null, null), new DirectJvmBrowserExecutor(),
                 Runnable::run, opened::add);
@@ -696,7 +696,18 @@ class JvmBrowserViewModelTest {
 
         viewModel.stopAndSaveSelectedFlightRecording(Path.of("target/live-capture.jfr"));
 
-        assertEquals(List.of(Path.of("target/live-capture.jfr")), opened);
+        assertEquals(List.of(Path.of("target/live-capture.jfr")), opened.stream()
+                .map(SavedFlightRecording::path)
+                .toList());
+        LiveFlightRecordingOrigin origin = opened.getFirst().origin();
+        assertEquals("42", origin.connectionId());
+        assertEquals("demo.Main", origin.displayName());
+        assertEquals("service:jmx:local://42", origin.connectionUrl());
+        assertEquals(JvmConnectionSource.LOCAL, origin.source());
+        assertEquals("42", origin.pid());
+        assertEquals("26.0.1", origin.javaVersion());
+        assertEquals(100, origin.recordingId());
+        assertEquals("Existing", origin.recordingName());
         assertEquals(100, recordings.lastStopRequest().recordingId());
         assertEquals("", viewModel.recordingStatusMessageProperty().get());
     }

@@ -1,12 +1,12 @@
 package io.github.youngledo.jmcfx.ui.shell;
 
-import java.nio.file.Path;
 import java.util.function.Consumer;
 
 import io.github.youngledo.jmcfx.application.LiveJvmApplicationServices;
 import io.github.youngledo.jmcfx.application.LiveJvmUseCases;
 import io.github.youngledo.jmcfx.ui.i18n.I18n;
 import io.github.youngledo.jmcfx.ui.jvms.JvmBrowserViewModel;
+import io.github.youngledo.jmcfx.ui.jvms.SavedFlightRecording;
 
 import javafx.application.Platform;
 import javafx.scene.layout.Priority;
@@ -19,12 +19,12 @@ final class ShellLiveJvmWorkspaceController {
     private final LiveJvmApplicationServices services;
     private final I18n i18n;
     private final ShellLifecycleController lifecycleController;
-    private final Consumer<Path> recordingOpenHandler;
+    private final Consumer<SavedFlightRecording> recordingOpenHandler;
     private JvmBrowserViewModel jvmBrowserViewModel;
     private LiveJvmPaneController jvmsPaneController;
 
     ShellLiveJvmWorkspaceController(AppShellView view, AppShellViewModel viewModel, LiveJvmApplicationServices services, I18n i18n,
-            ShellLifecycleController lifecycleController, Consumer<Path> recordingOpenHandler) {
+            ShellLifecycleController lifecycleController, Consumer<SavedFlightRecording> recordingOpenHandler) {
         this.view = view;
         this.viewModel = viewModel;
         this.services = services;

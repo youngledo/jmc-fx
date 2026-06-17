@@ -7,6 +7,7 @@ import io.github.youngledo.jmcfx.application.LiveJvmApplicationServices;
 import io.github.youngledo.jmcfx.application.RecordingApplicationServices;
 import io.github.youngledo.jmcfx.application.RecordingPageUseCases;
 import io.github.youngledo.jmcfx.ui.i18n.I18n;
+import io.github.youngledo.jmcfx.ui.jvms.SavedFlightRecording;
 import io.github.youngledo.jmcfx.ui.util.WorkbenchFocusSupport;
 import io.github.youngledo.jmcfx.ui.util.WorkbenchFocusTarget;
 
@@ -54,7 +55,7 @@ final class ShellRuntimeController {
                 this::setRecordingOpening, backgroundWorkController::setVisible);
         this.shellLifecycleController = new ShellLifecycleController(viewModel, recordingOpenExecutor);
         this.liveJvmWorkspaceController = new ShellLiveJvmWorkspaceController(view, viewModel, liveJvmServices, i18n,
-                shellLifecycleController, this::openRecordingInBackground);
+                shellLifecycleController, this::openSavedFlightRecordingInBackground);
         this.heapDumpWorkspaceController = new ShellHeapDumpWorkspaceController(heapDumpServices, i18n,
                 shellLifecycleController);
     }
@@ -94,6 +95,10 @@ final class ShellRuntimeController {
 
     void openRecordingInBackground(Path path) {
         workspaceOpenCoordinator.openRecordingInBackground(path);
+    }
+
+    void openSavedFlightRecordingInBackground(SavedFlightRecording recording) {
+        workspaceOpenCoordinator.openRecordingInBackground(recording.path(), recording.origin());
     }
 
     private void setRecordingOpening(boolean opening) {

@@ -20,7 +20,9 @@ class JmcFxModuleBoundaryTest {
 
         assertEquals(
                 Set.of(
+                        "exports io.github.youngledo.jmcfx.domain.model.ai;",
                         "exports io.github.youngledo.jmcfx.domain.model;",
+                        "exports io.github.youngledo.jmcfx.domain.service.ai;",
                         "exports io.github.youngledo.jmcfx.domain.service;"),
                 exportedStatements(descriptor));
         assertFalse(descriptor.contains("javafx."), "domain must not depend on JavaFX");
@@ -49,7 +51,11 @@ class JmcFxModuleBoundaryTest {
     void applicationModuleStaysUseCaseOnly() throws Exception {
         var descriptor = moduleInfo("../jmc-fx-application");
 
-        assertEquals(Set.of("exports io.github.youngledo.jmcfx.application;"), exportedStatements(descriptor));
+        assertEquals(
+                Set.of(
+                        "exports io.github.youngledo.jmcfx.application;",
+                        "exports io.github.youngledo.jmcfx.application.ai;"),
+                exportedStatements(descriptor));
         assertTrue(descriptor.contains("requires io.github.youngledo.jmcfx.domain;"));
         assertFalse(descriptor.contains("io.github.youngledo.jmcfx.adapter"), "application must not require adapters");
         assertFalse(descriptor.contains("io.github.youngledo.jmcfx.ui"), "application must not require UI");
@@ -65,8 +71,10 @@ class JmcFxModuleBoundaryTest {
 
         assertEquals(
                 Set.of(
+                        "exports io.github.youngledo.jmcfx.adapter.ai;",
                         "exports io.github.youngledo.jmcfx.adapter.jmc;",
-                        "exports io.github.youngledo.jmcfx.adapter.preferences;"),
+                        "exports io.github.youngledo.jmcfx.adapter.preferences;",
+                        "exports io.github.youngledo.jmcfx.adapter.preferences.ai;"),
                 exportedStatements(descriptor));
         assertTrue(descriptor.contains("requires io.github.youngledo.jmcfx.domain;"));
         assertTrue(descriptor.contains("requires java.prefs;"));

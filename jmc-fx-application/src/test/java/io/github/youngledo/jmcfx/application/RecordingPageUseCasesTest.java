@@ -33,6 +33,7 @@ class RecordingPageUseCasesTest {
         assertNotNull(useCases.openRecordingWorkspace());
         assertNotNull(useCases.browseEvents());
         assertNotNull(useCases.analyzeRules());
+        assertNotNull(useCases.diagnosticFindings());
         assertNotNull(useCases.buildRecordingAiContext());
         assertSame(useCases.openRecordingWorkspace(), useCases.openRecordingWorkspace());
     }

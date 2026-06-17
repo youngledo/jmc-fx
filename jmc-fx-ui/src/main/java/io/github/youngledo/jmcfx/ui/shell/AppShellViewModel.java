@@ -7,6 +7,7 @@ import java.util.Optional;
 
 import io.github.youngledo.jmcfx.application.AnalyzeRulesUseCase;
 import io.github.youngledo.jmcfx.application.BrowseEventsUseCase;
+import io.github.youngledo.jmcfx.application.DiagnosticFindingsUseCase;
 import io.github.youngledo.jmcfx.domain.model.RecordingSummary;
 import io.github.youngledo.jmcfx.ui.analysis.RecordingAiAssistantViewModel;
 import io.github.youngledo.jmcfx.ui.advanced.AdvancedJfrViewModel;
@@ -22,6 +23,7 @@ import io.github.youngledo.jmcfx.ui.javaapp.NativeLibraryViewModel;
 import io.github.youngledo.jmcfx.ui.javaapp.SecurityViewModel;
 import io.github.youngledo.jmcfx.ui.javaapp.ThreadDumpViewModel;
 import io.github.youngledo.jmcfx.ui.jfx.JavaFxEventsViewModel;
+import io.github.youngledo.jmcfx.ui.jvms.LiveFlightRecordingOrigin;
 import io.github.youngledo.jmcfx.ui.jvm.ClassLoadingViewModel;
 import io.github.youngledo.jmcfx.ui.jvm.CodeCacheViewModel;
 import io.github.youngledo.jmcfx.ui.jvm.CompilationsViewModel;
@@ -203,7 +205,7 @@ public class AppShellViewModel {
     public RecordingWorkspace openRecording(RecordingSummary recording) {
         return openRecording(recording, new OverviewViewModel(),
                 new EventBrowserViewModel(BrowseEventsUseCase.unavailable()),
-                new RuleResultsViewModel(AnalyzeRulesUseCase.empty()),
+                new RuleResultsViewModel(AnalyzeRulesUseCase.empty(), new DiagnosticFindingsUseCase()),
                 null, null, null, null, null, null, null, null, null, null,
                 null, null, null, null, null, null, null, null, null,
                 null, null, null, null);
@@ -405,6 +407,32 @@ public class AppShellViewModel {
             AdvancedJfrViewModel advancedJfrViewModel,
             RecordingAiAssistantViewModel aiAssistantViewModel,
             long openRequestGeneration) {
+        return openRecording(recording, overview, events, ruleResults, profiling, exceptions, threads, fileio, socketio,
+                locks, heap, leakSuspects, tlab, jvmInfo, gcConfig, gcSummary, gcDetails, compilations, codeCache,
+                classLoading, vmOperations, environment, javaAppOverviewViewModel, securityViewModel,
+                nativeLibraryViewModel, threadDumpViewModel, jfrMetadataViewModel, g1GcViewModel,
+                javaFxEventsViewModel, advancedJfrViewModel, aiAssistantViewModel, null, openRequestGeneration);
+    }
+
+    public RecordingWorkspace openRecording(RecordingSummary recording, OverviewViewModel overview,
+            EventBrowserViewModel events, RuleResultsViewModel ruleResults,
+            ProfilingViewModel profiling, ExceptionViewModel exceptions, ThreadViewModel threads,
+            FileIOViewModel fileio, SocketIOViewModel socketio, LockViewModel locks, HeapViewModel heap,
+            LeakSuspectsViewModel leakSuspects, TlabViewModel tlab, JvmInfoViewModel jvmInfo,
+            GcConfigViewModel gcConfig, GcSummaryViewModel gcSummary, GcDetailsViewModel gcDetails,
+            CompilationsViewModel compilations, CodeCacheViewModel codeCache, ClassLoadingViewModel classLoading,
+            VmOperationsViewModel vmOperations, EnvironmentViewModel environment,
+            JavaAppOverviewViewModel javaAppOverviewViewModel,
+            SecurityViewModel securityViewModel,
+            NativeLibraryViewModel nativeLibraryViewModel,
+            ThreadDumpViewModel threadDumpViewModel,
+            JfrMetadataViewModel jfrMetadataViewModel,
+            G1GcViewModel g1GcViewModel,
+            JavaFxEventsViewModel javaFxEventsViewModel,
+            AdvancedJfrViewModel advancedJfrViewModel,
+            RecordingAiAssistantViewModel aiAssistantViewModel,
+            LiveFlightRecordingOrigin liveOrigin,
+            long openRequestGeneration) {
         Objects.requireNonNull(recording, "recording");
         Objects.requireNonNull(overview, "overview");
         Objects.requireNonNull(events, "events");
@@ -423,7 +451,7 @@ public class AppShellViewModel {
                 jvmInfo, gcConfig, gcSummary, gcDetails, compilations, codeCache, classLoading, vmOperations,
                 environment, javaAppOverviewViewModel, securityViewModel, nativeLibraryViewModel, threadDumpViewModel,
                 jfrMetadataViewModel, g1GcViewModel, javaFxEventsViewModel, advancedJfrViewModel,
-                aiAssistantViewModel);
+                aiAssistantViewModel, liveOrigin);
         workspace.selectedSectionProperty().set(DEFAULT_RECORDING_SECTION);
         recordingWorkspaces.add(workspace);
         workspaceTabs.add(workspace);
@@ -646,6 +674,12 @@ public class AppShellViewModel {
     }
 
     private void showGlobalPage(String sectionId) {
+        if (activeWorkspaceKind.get() == AppWorkspaceKind.LIVE_JVM) {
+            clearSelectedWorkspacesExcept(AppWorkspaceKind.GLOBAL);
+            selectedWorkspaceTab.set(null);
+            activeWorkspaceKind.set(AppWorkspaceKind.GLOBAL);
+            currentTargetName.set("");
+        }
         selectedSection.set(sectionId);
     }
 

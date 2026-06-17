@@ -42,6 +42,9 @@ public final class AiReportView {
 
     public AiReportView() {
         scrollPane.setFitToWidth(true);
+        scrollPane.setHbarPolicy(ScrollPane.ScrollBarPolicy.NEVER);
+        scrollPane.setVbarPolicy(ScrollPane.ScrollBarPolicy.AS_NEEDED);
+        scrollPane.setMaxHeight(Double.MAX_VALUE);
         scrollPane.setContent(content);
         scrollPane.getStyleClass().add("ai-report-scroll");
         content.getStyleClass().add("ai-report");

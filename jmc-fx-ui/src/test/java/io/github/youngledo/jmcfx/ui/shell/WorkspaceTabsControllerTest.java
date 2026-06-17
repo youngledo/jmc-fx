@@ -15,6 +15,7 @@ import org.junit.jupiter.api.Test;
 
 import io.github.youngledo.jmcfx.application.AnalyzeRulesUseCase;
 import io.github.youngledo.jmcfx.application.BrowseEventsUseCase;
+import io.github.youngledo.jmcfx.application.DiagnosticFindingsUseCase;
 import io.github.youngledo.jmcfx.domain.model.RecordingSummary;
 import io.github.youngledo.jmcfx.ui.events.EventBrowserViewModel;
 import io.github.youngledo.jmcfx.ui.overview.OverviewViewModel;
@@ -146,6 +147,6 @@ class WorkspaceTabsControllerTest {
                         Instant.EPOCH, Instant.EPOCH.plusSeconds(1), 1000, 128),
                 new OverviewViewModel(),
                 new EventBrowserViewModel(BrowseEventsUseCase.unavailable()),
-                new RuleResultsViewModel(AnalyzeRulesUseCase.empty()));
+                new RuleResultsViewModel(AnalyzeRulesUseCase.empty(), new DiagnosticFindingsUseCase()));
     }
 }

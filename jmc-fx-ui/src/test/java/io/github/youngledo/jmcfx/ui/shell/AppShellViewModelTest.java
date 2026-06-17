@@ -16,6 +16,7 @@ import org.junit.jupiter.api.Test;
 
 import io.github.youngledo.jmcfx.application.AnalyzeRulesUseCase;
 import io.github.youngledo.jmcfx.application.BrowseEventsUseCase;
+import io.github.youngledo.jmcfx.application.DiagnosticFindingsUseCase;
 import io.github.youngledo.jmcfx.application.LoadG1GcUseCase;
 import io.github.youngledo.jmcfx.application.LoadJavaFxEventsUseCase;
 import io.github.youngledo.jmcfx.domain.model.RecordingSummary;
@@ -716,7 +717,7 @@ class AppShellViewModelTest {
     }
 
     private static RuleResultsViewModel ruleResultsViewModel() {
-        return new RuleResultsViewModel(AnalyzeRulesUseCase.empty());
+        return new RuleResultsViewModel(AnalyzeRulesUseCase.empty(), new DiagnosticFindingsUseCase());
     }
 
     private static final class EmptyEventQueryService implements EventQueryService {

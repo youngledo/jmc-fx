@@ -11,6 +11,7 @@ import io.github.youngledo.jmcfx.domain.model.HeapDumpAnalysisState;
 import io.github.youngledo.jmcfx.ui.heapdump.HeapDumpAnalysisViewModel;
 import io.github.youngledo.jmcfx.ui.heapdump.VirtualThreadHeapDumpAnalysisExecutor;
 import io.github.youngledo.jmcfx.ui.i18n.I18n;
+import io.github.youngledo.jmcfx.ui.jvms.LiveFlightRecordingOrigin;
 
 import javafx.application.Platform;
 import javafx.scene.layout.BorderPane;
@@ -75,6 +76,10 @@ final class WorkspaceOpenCoordinator {
     }
 
     void openRecordingInBackground(Path path) {
+        openRecordingInBackground(path, null);
+    }
+
+    void openRecordingInBackground(Path path, LiveFlightRecordingOrigin origin) {
         if (selectExistingRecordingWorkspace(path)) {
             return;
         }
@@ -86,8 +91,9 @@ final class WorkspaceOpenCoordinator {
         recordingOpenExecutor.execute(() -> {
             try {
                 PreparedRecordingWorkspace preparedWorkspace = prepareRecordingWorkspace(path);
+                PreparedRecordingWorkspace workspaceToAttach = preparedWorkspace.withLiveOrigin(origin);
                 onFxThread(() -> {
-                    recordingWorkspaceConsumer.accept(preparedWorkspace, openRequestGeneration);
+                    recordingWorkspaceConsumer.accept(workspaceToAttach, openRequestGeneration);
                     if (!isSelectedRecording(path)) {
                         backgroundWorkVisibleConsumer.accept(false);
                     }

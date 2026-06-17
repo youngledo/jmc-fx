@@ -31,6 +31,7 @@ import org.xml.sax.SAXException;
 
 import io.github.youngledo.jmcfx.application.AnalyzeRulesUseCase;
 import io.github.youngledo.jmcfx.application.BrowseEventsUseCase;
+import io.github.youngledo.jmcfx.application.DiagnosticFindingsUseCase;
 import io.github.youngledo.jmcfx.application.HeapDumpApplicationServices;
 import io.github.youngledo.jmcfx.application.LiveJvmApplicationServices;
 import io.github.youngledo.jmcfx.application.RecordingApplicationServices;
@@ -51,6 +52,7 @@ import io.github.youngledo.jmcfx.domain.model.JvmConnectionSource;
 import io.github.youngledo.jmcfx.domain.model.SavedJvmTarget;
 import io.github.youngledo.jmcfx.domain.model.StackTreeNode;
 import io.github.youngledo.jmcfx.domain.model.RecordingSummary;
+import io.github.youngledo.jmcfx.ui.jvms.LiveFlightRecordingOrigin;
 import io.github.youngledo.jmcfx.domain.service.HeapDumpBrowsingService;
 import io.github.youngledo.jmcfx.domain.service.ProfilingService;
 import io.github.youngledo.jmcfx.domain.service.RuleAnalysisService;
@@ -86,10 +88,14 @@ class AppShellTest {
     static void initToolkit() throws InterruptedException {
         try {
             CountDownLatch latch = new CountDownLatch(1);
-            Platform.startup(latch::countDown);
+            Platform.startup(() -> {
+                Platform.setImplicitExit(false);
+                latch.countDown();
+            });
             assertTrue(latch.await(FX_TIMEOUT_SECONDS, TimeUnit.SECONDS), "JavaFX toolkit did not start in time.");
         } catch (IllegalStateException ignored) {
             // Toolkit already initialized by another test class.
+            Platform.setImplicitExit(false);
         }
     }
 
@@ -118,30 +124,33 @@ class AppShellTest {
     @Test
     void shellRuntimeKeepsWorkspaceTabsAndVisiblePaneInSyncAcrossMixedOpens() throws Exception {
         ShellHarness shell = createShellHarness();
+        try {
+            runFx(() -> shell.controller.openRecordingInBackground(Path.of("demo.jfr")));
+            shell.executor.runNextAndWaitForFx();
+            runFx(shell.viewModel::openLiveJvmWorkspace);
+            runFx(() -> shell.viewModel.openHeapDump(new HeapDumpWorkspace(Path.of("demo.hprof"), null)));
 
-        runFx(() -> shell.controller.openRecordingInBackground(Path.of("demo.jfr")));
-        shell.executor.runNextAndWaitForFx();
-        runFx(shell.viewModel::openLiveJvmWorkspace);
-        runFx(() -> shell.viewModel.openHeapDump(new HeapDumpWorkspace(Path.of("demo.hprof"), null)));
+            runFx(() -> {
+                assertEquals(3, shell.view.recordingTabs.getTabs().size());
+                assertEquals("demo.hprof", selectedWorkspaceTabTitle(shell.view));
+                assertTrue(shell.view.recordingTabs.isVisible(), "Workspace tabs must stay visible after HPROF opens");
+                assertTrue(shell.view.workspacePanes.heapDumpAnalysisPane.isVisible(), "HPROF pane must be visible");
+                assertFalse(shell.view.workspacePanes.jvmsPaneHost.isVisible(), "JVM pane must not remain visible");
+                assertEquals("heapDumpAnalysis", shell.viewModel.selectedSectionProperty().get());
+            });
 
-        runFx(() -> {
-            assertEquals(3, shell.view.recordingTabs.getTabs().size());
-            assertEquals("demo.hprof", selectedWorkspaceTabTitle(shell.view));
-            assertTrue(shell.view.recordingTabs.isVisible(), "Workspace tabs must stay visible after HPROF opens");
-            assertTrue(shell.view.workspacePanes.heapDumpAnalysisPane.isVisible(), "HPROF pane must be visible");
-            assertFalse(shell.view.workspacePanes.jvmsPaneHost.isVisible(), "JVM pane must not remain visible");
-            assertEquals("heapDumpAnalysis", shell.viewModel.selectedSectionProperty().get());
-        });
+            runFx(() -> shell.view.recordingTabs.getSelectionModel().select(0));
 
-        runFx(() -> shell.view.recordingTabs.getSelectionModel().select(0));
-
-        runFx(() -> {
-            assertEquals("demo.jfr", selectedWorkspaceTabTitle(shell.view));
-            assertTrue(shell.view.recordingTabs.isVisible(), "Workspace tabs must stay visible after returning to JFR");
-            assertTrue(shell.view.workspacePanes.analysisPane.isVisible(), "JFR analysis pane must be visible");
-            assertFalse(shell.view.workspacePanes.heapDumpAnalysisPane.isVisible(), "HPROF pane must not remain visible");
-            assertEquals("analysis", shell.viewModel.selectedSectionProperty().get());
-        });
+            runFx(() -> {
+                assertEquals("demo.jfr", selectedWorkspaceTabTitle(shell.view));
+                assertTrue(shell.view.recordingTabs.isVisible(), "Workspace tabs must stay visible after returning to JFR");
+                assertTrue(shell.view.workspacePanes.analysisPane.isVisible(), "JFR analysis pane must be visible");
+                assertFalse(shell.view.workspacePanes.heapDumpAnalysisPane.isVisible(), "HPROF pane must not remain visible");
+                assertEquals("analysis", shell.viewModel.selectedSectionProperty().get());
+            });
+        } finally {
+            shell.close();
+        }
     }
 
     @Test
@@ -176,6 +185,7 @@ class AppShellTest {
                     shell.stage.close();
                 }
             });
+            shell.close();
         }
     }
 
@@ -222,26 +232,30 @@ class AppShellTest {
                     shell.stage.close();
                 }
             });
+            shell.close();
         }
     }
 
     @Test
     void shellRuntimeKeepsLastOpenedWorkspaceFocusedWhenRecordingCompletesAfterMixedOpens() throws Exception {
         ShellHarness shell = createShellHarness();
+        try {
+            runFx(() -> shell.controller.openRecordingInBackground(Path.of("demo.jfr")));
+            runFx(shell.viewModel::openLiveJvmWorkspace);
+            runFx(() -> shell.viewModel.openHeapDump(new HeapDumpWorkspace(Path.of("demo.hprof"), null)));
+            shell.executor.runNextAndWaitForFx();
 
-        runFx(() -> shell.controller.openRecordingInBackground(Path.of("demo.jfr")));
-        runFx(shell.viewModel::openLiveJvmWorkspace);
-        runFx(() -> shell.viewModel.openHeapDump(new HeapDumpWorkspace(Path.of("demo.hprof"), null)));
-        shell.executor.runNextAndWaitForFx();
-
-        runFx(() -> {
-            assertEquals(3, shell.view.recordingTabs.getTabs().size());
-            assertEquals("demo.hprof", selectedWorkspaceTabTitle(shell.view));
-            assertTrue(shell.view.recordingTabs.isVisible(), "Workspace tabs must stay visible after JFR completes");
-            assertTrue(shell.view.workspacePanes.heapDumpAnalysisPane.isVisible(), "HPROF pane must keep focus");
-            assertFalse(shell.view.workspacePanes.analysisPane.isVisible(), "JFR pane must not steal focus");
-            assertEquals("heapDumpAnalysis", shell.viewModel.selectedSectionProperty().get());
-        });
+            runFx(() -> {
+                assertEquals(3, shell.view.recordingTabs.getTabs().size());
+                assertEquals("demo.hprof", selectedWorkspaceTabTitle(shell.view));
+                assertTrue(shell.view.recordingTabs.isVisible(), "Workspace tabs must stay visible after JFR completes");
+                assertTrue(shell.view.workspacePanes.heapDumpAnalysisPane.isVisible(), "HPROF pane must keep focus");
+                assertFalse(shell.view.workspacePanes.analysisPane.isVisible(), "JFR pane must not steal focus");
+                assertEquals("heapDumpAnalysis", shell.viewModel.selectedSectionProperty().get());
+            });
+        } finally {
+            shell.close();
+        }
     }
 
     @Test
@@ -410,8 +424,9 @@ class AppShellTest {
                 java.nio.file.Path.of("src/main/java/io/github/youngledo/jmcfx/ui/shell/PreparedRecordingWorkspace.java"));
 
         assertTrue(runtime.contains("private final RecordingSectionLoader recordingSectionLoader;"));
+        assertTrue(runtime.contains("this.recordingUseCases = RecordingPageUseCases.from(recordingServices);"));
         assertTrue(runtime.contains("RecordingWorkspaceFactory recordingWorkspaceFactory ="));
-        assertTrue(runtime.contains("new RecordingWorkspaceFactory(RecordingPageUseCases.from(recordingServices), i18n)"));
+        assertTrue(runtime.contains("new RecordingWorkspaceFactory(recordingUseCases, i18n)"));
         assertFalse(shell.contains("record PreparedRecordingWorkspace("),
                 "The prepared recording workspace data carrier belongs in its own source file");
         assertFalse(shell.contains("private void loadWorkspaceSectionNow("),
@@ -587,7 +602,8 @@ class AppShellTest {
         assertTrue(runtime.contains("pageControllerRegistry.installExportMenus(exportMenuInstaller)"));
         assertTrue(runtime.contains("liveJvmWorkspaceController.installExportMenus(exportMenuInstaller)"));
         assertTrue(registry.contains("installJfrExport(installer, analysisPageController.table(), "
-                + "\"Automated Analysis\", \"Rule Results\")"));
+                + "\"Automated Analysis\","));
+        assertTrue(registry.contains("\"Automated Analysis Results\")"));
         assertTrue(registry.contains("heapDumpAnalysisPageController.exportRegistrations().forEach(installer::install)"));
         assertTrue(registry.contains("this::selectedRecordingSource"));
         assertTrue(registry.contains("this::selectedRecordingTimeRange"));
@@ -689,11 +705,13 @@ class AppShellTest {
         assertTrue(attacher.contains("void attach(PreparedRecordingWorkspace prepared, long openRequestGeneration)"));
         assertTrue(attacher.contains("prepared.overview().showRecording("));
         assertTrue(attacher.contains("pageControllerRegistry.formatRecordingDetails(prepared.recording())"));
+        assertTrue(attacher.contains("pageControllerRegistry.formatLiveOriginDetails(prepared.liveOrigin())"));
         assertTrue(attacher.contains("viewModel.openRecording(prepared.recording()"));
         assertTrue(attacher.contains("viewModel.showStatus(i18n.format(\"status.openedRecording\""));
 
         assertTrue(coordinator.contains("finishRecordingOpen();"));
-        assertTrue(coordinator.contains("recordingWorkspaceConsumer.accept(preparedWorkspace, openRequestGeneration);"));
+        assertTrue(coordinator.contains("PreparedRecordingWorkspace workspaceToAttach = preparedWorkspace.withLiveOrigin(origin);"));
+        assertTrue(coordinator.contains("recordingWorkspaceConsumer.accept(workspaceToAttach, openRequestGeneration);"));
     }
 
     @Test
@@ -869,8 +887,9 @@ class AppShellTest {
         assertFalse(shell.contains("this.sidebar = view.sidebar;"));
         assertTrue(shell.contains("return view.root;"));
         assertTrue(runtime.contains("view.sidebar.bind(viewModel);"));
+        assertTrue(runtime.contains("this.recordingUseCases = RecordingPageUseCases.from(recordingServices);"));
         assertTrue(runtime.contains("RecordingWorkspaceFactory recordingWorkspaceFactory ="));
-        assertTrue(runtime.contains("new RecordingWorkspaceFactory(RecordingPageUseCases.from(recordingServices), i18n)"));
+        assertTrue(runtime.contains("new RecordingWorkspaceFactory(recordingUseCases, i18n)"));
         assertTrue(runtime.contains("ShellRecordingWorkspaceAttacher recordingWorkspaceAttacher ="));
         assertTrue(runtime.contains("new ShellRecordingWorkspaceAttacher(viewModel, pageControllerRegistry, i18n)"));
     }
@@ -1208,15 +1227,18 @@ class AppShellTest {
 
         assertTrue(controller.contains("package io.github.youngledo.jmcfx.ui.analysis;"));
         assertTrue(controller.contains("class AnalysisPageController"));
-        assertTrue(controller.contains("TableColumn<RuleResult, Severity>"));
+        assertTrue(controller.contains("TableColumn<DiagnosticFinding, Severity>"));
         assertTrue(controller.contains("new AnalysisSeverityCell<>()"));
         assertTrue(controller.contains("analysis.column.severity"));
+        assertTrue(controller.contains("analysis.column.source"));
+        assertTrue(controller.contains("analysis.column.finding"));
+        assertFalse(controller.contains("analysis.column.evidenceTarget"));
         assertTrue(controller.contains("analysis.filter.search"));
-        assertTrue(controller.contains("analysis.detail.recommendation"));
+        assertTrue(controller.contains("analysis.detail.solution"));
         assertTrue(controller.contains("analysisPlaceholder("));
         assertTrue(controller.contains("relatedPageNavigator.accept(detail.relatedPageId())"));
         assertTrue(pageView.contains("public record AnalysisPageView("));
-        assertTrue(pageView.contains("TableView<RuleResult> table"));
+        assertTrue(pageView.contains("TableView<DiagnosticFinding> table"));
     }
 
     @Test
@@ -1239,12 +1261,22 @@ class AppShellTest {
 
         assertTrue(analysisPaneView.contains("package io.github.youngledo.jmcfx.ui.analysis;"));
         assertTrue(analysisPaneView.contains("public final class AnalysisPaneView"));
-        assertTrue(analysisPaneView.contains("private final TableView<RuleResult> table = denseTable();"));
-        assertTrue(analysisPaneView.contains("private final TextArea detailExplanationArea = textArea();"));
+        assertTrue(analysisPaneView.contains("private final TableView<DiagnosticFinding> table = denseTable();"));
+        assertTrue(analysisPaneView.contains("private final Label findingsSummaryLabel = new Label();"));
+        assertTrue(analysisPaneView.contains("private final Label ruleAnalysisStatusLabel = new Label();"));
+        assertTrue(analysisPaneView.contains("private final Label detailExplanationArea = detailBodyLabel();"));
+        assertFalse(analysisPaneView.contains("detailEvidenceCaption"));
+        assertFalse(analysisPaneView.contains("detailEvidenceArea"));
+        assertTrue(analysisPaneView.contains("Node ruleDetailsScroll = scrollingPanel(ruleDetails);"));
+        assertTrue(analysisPaneView.contains("rulesTab.setContent(ruleDetailsScroll);"));
+        assertTrue(analysisPaneView.contains("scroll.setFitToWidth(true);"));
+        assertTrue(analysisPaneView.contains("scroll.setHbarPolicy(ScrollPane.ScrollBarPolicy.NEVER);"));
+        assertTrue(analysisPaneView.contains("scroll.setVbarPolicy(ScrollPane.ScrollBarPolicy.AS_NEEDED);"));
+        assertTrue(analysisPaneView.contains("VBox.setVgrow(aiReportView.node(), Priority.ALWAYS);"));
         assertTrue(analysisPaneView.contains("public AnalysisPaneView(VBox pane)"));
         assertTrue(analysisPaneView.contains("public AnalysisPageView view()"));
         assertTrue(analysisPaneView.contains("styles(pane, \"split-table-detail-page\")"));
-        assertTrue(analysisPaneView.contains("pane.getChildren().setAll(titleLabel, filterBar, split);"));
+        assertTrue(analysisPaneView.contains("pane.getChildren().setAll(titleLabel, summaryBar, filterBar, split);"));
     }
 
     @Test
@@ -1933,36 +1965,36 @@ class AppShellTest {
         assertTrue(english.contains("profiling.flame.search.noMatches=No matches"));
         assertTrue(english.contains("profiling.flame.search.matchStatus={0}/{1}"));
         assertTrue(english.contains("profiling.flame.summary.methodProfilingSample={0} event(s) of 1 type(s): Method Profiling Sample[{0}]"));
-        assertTrue(chinese.contains("profiling.tab.callGraph=调用图"));
-        assertTrue(chinese.contains("profiling.tab.dependencyGraph=依赖图"));
-        assertTrue(chinese.contains("profiling.tab.callersFlame=火焰图"));
-        assertTrue(chinese.contains("profiling.tab.calleesFlame=反向火焰图"));
-        assertTrue(chinese.contains("profiling.callGraph.empty=选择一个方法查看调用图。"));
-        assertTrue(chinese.contains("profiling.callGraph.direction=方向"));
-        assertTrue(chinese.contains("profiling.callGraph.direction.callers=调用者"));
-        assertTrue(chinese.contains("profiling.callGraph.direction.callees=被调用者"));
-        assertTrue(chinese.contains("profiling.callGraph.depth=深度"));
-        assertTrue(chinese.contains("profiling.dependency.empty=执行采样中未找到包依赖。"));
-        assertTrue(chinese.contains("profiling.dependency.depth=包深度"));
-        assertTrue(chinese.contains("profiling.dependency.column.source=来源"));
-        assertTrue(chinese.contains("profiling.dependency.column.target=目标"));
-        assertTrue(chinese.contains("profiling.dependency.column.count=次数"));
-        assertTrue(chinese.contains("profiling.dependency.column.percentage=百分比"));
-        assertTrue(chinese.contains("profiling.graph.zoomIn=放大"));
-        assertTrue(chinese.contains("profiling.graph.zoomOut=缩小"));
-        assertTrue(chinese.contains("profiling.graph.resetZoom=重置缩放"));
-        assertTrue(chinese.contains("profiling.graph.fit=适应宽度"));
-        assertTrue(chinese.contains("profiling.flame.empty=选择一个方法查看火焰图。"));
-        assertTrue(chinese.contains("profiling.flame.orientation=切换火焰图/冰柱图方向"));
-        assertTrue(chinese.contains("profiling.flame.orientation.icicle=冰柱图"));
-        assertTrue(chinese.contains("profiling.flame.orientation.flame=火焰图"));
-        assertTrue(chinese.contains("profiling.flame.search.prompt=查找方法"));
-        assertTrue(chinese.contains("profiling.flame.search.previous=上一个匹配"));
-        assertTrue(chinese.contains("profiling.flame.search.next=下一个匹配"));
-        assertTrue(chinese.contains("profiling.flame.search.clear=清除搜索"));
-        assertTrue(chinese.contains("profiling.flame.search.noMatches=无匹配"));
+        assertBundleContains(chinese, "profiling.tab.callGraph=调用图");
+        assertBundleContains(chinese, "profiling.tab.dependencyGraph=依赖图");
+        assertBundleContains(chinese, "profiling.tab.callersFlame=火焰图");
+        assertBundleContains(chinese, "profiling.tab.calleesFlame=反向火焰图");
+        assertBundleContains(chinese, "profiling.callGraph.empty=选择一个方法查看调用图。");
+        assertBundleContains(chinese, "profiling.callGraph.direction=方向");
+        assertBundleContains(chinese, "profiling.callGraph.direction.callers=调用者");
+        assertBundleContains(chinese, "profiling.callGraph.direction.callees=被调用者");
+        assertBundleContains(chinese, "profiling.callGraph.depth=深度");
+        assertBundleContains(chinese, "profiling.dependency.empty=执行采样中未找到包依赖。");
+        assertBundleContains(chinese, "profiling.dependency.depth=包深度");
+        assertBundleContains(chinese, "profiling.dependency.column.source=来源");
+        assertBundleContains(chinese, "profiling.dependency.column.target=目标");
+        assertBundleContains(chinese, "profiling.dependency.column.count=次数");
+        assertBundleContains(chinese, "profiling.dependency.column.percentage=百分比");
+        assertBundleContains(chinese, "profiling.graph.zoomIn=放大");
+        assertBundleContains(chinese, "profiling.graph.zoomOut=缩小");
+        assertBundleContains(chinese, "profiling.graph.resetZoom=重置缩放");
+        assertBundleContains(chinese, "profiling.graph.fit=适应宽度");
+        assertBundleContains(chinese, "profiling.flame.empty=选择一个方法查看火焰图。");
+        assertBundleContains(chinese, "profiling.flame.orientation=切换火焰图/冰柱图方向");
+        assertBundleContains(chinese, "profiling.flame.orientation.icicle=冰柱图");
+        assertBundleContains(chinese, "profiling.flame.orientation.flame=火焰图");
+        assertBundleContains(chinese, "profiling.flame.search.prompt=查找方法");
+        assertBundleContains(chinese, "profiling.flame.search.previous=上一个匹配");
+        assertBundleContains(chinese, "profiling.flame.search.next=下一个匹配");
+        assertBundleContains(chinese, "profiling.flame.search.clear=清除搜索");
+        assertBundleContains(chinese, "profiling.flame.search.noMatches=无匹配");
         assertTrue(chinese.contains("profiling.flame.search.matchStatus={0}/{1}"));
-        assertTrue(chinese.contains("profiling.flame.summary.methodProfilingSample={0}个事件，1种类型：方法分析采样[{0}]"));
+        assertBundleContains(chinese, "profiling.flame.summary.methodProfilingSample={0}个事件，1种类型：方法分析采样[{0}]");
     }
 
     @Test
@@ -2078,19 +2110,19 @@ class AppShellTest {
         assertTrue(english.contains("jvms.overview.metrics.empty=No overview metrics sampled yet."));
         assertTrue(controller.contains("case \"bytes\" -> \"\""));
         assertTrue(english.contains("jvms.overview.axis.memory=Memory"));
-        assertTrue(chinese.contains("jvms.overview.tab=总览"));
-        assertTrue(chinese.contains("jvms.overview.chart=图表"));
-        assertTrue(chinese.contains("jvms.overview.table=表格"));
+        assertBundleContains(chinese, "jvms.overview.tab=总览");
+        assertBundleContains(chinese, "jvms.overview.chart=图表");
+        assertBundleContains(chinese, "jvms.overview.table=表格");
         assertFalse(chinese.contains("jvms.overview.refresh="));
         assertFalse(chinese.contains("jvms.overview.updated="));
         assertFalse(chinese.contains("jvms.overview.updated.empty="));
-        assertTrue(chinese.contains("jvms.overview.persistence.title=JMX数据持久化设置"));
+        assertBundleContains(chinese, "jvms.overview.persistence.title=JMX数据持久化设置");
         assertTrue(chinese.contains("jvms.overview.dashboard.title=Dashboard"));
         assertTrue(chinese.contains("jvms.overview.processor.title=Processor"));
         assertTrue(chinese.contains("jvms.overview.memory.title=Memory"));
-        assertTrue(chinese.contains("jvms.overview.persistence.summary=已为"));
-        assertTrue(chinese.contains("jvms.overview.metrics.empty=尚未采样总览指标。"));
-        assertTrue(chinese.contains("jvms.overview.axis.memory=内存"));
+        assertBundleContains(chinese, "jvms.overview.persistence.summary=已为");
+        assertBundleContains(chinese, "jvms.overview.metrics.empty=尚未采样总览指标。");
+        assertBundleContains(chinese, "jvms.overview.axis.memory=内存");
     }
 
     @Test
@@ -2121,10 +2153,10 @@ class AppShellTest {
         assertTrue(english.contains("jvms.monitoring.addNotification=Add Notification"));
         assertTrue(english.contains("jvms.monitoring.startNotifications=Start Notifications"));
         assertTrue(english.contains("jvms.monitoring.stopNotifications=Stop Notifications"));
-        assertTrue(chinese.contains("jvms.monitoring.addSubscription=添加属性"));
-        assertTrue(chinese.contains("jvms.monitoring.addNotification=添加通知"));
-        assertTrue(chinese.contains("jvms.monitoring.startNotifications=开始通知"));
-        assertTrue(chinese.contains("jvms.monitoring.stopNotifications=停止通知"));
+        assertBundleContains(chinese, "jvms.monitoring.addSubscription=添加属性");
+        assertBundleContains(chinese, "jvms.monitoring.addNotification=添加通知");
+        assertBundleContains(chinese, "jvms.monitoring.startNotifications=开始通知");
+        assertBundleContains(chinese, "jvms.monitoring.stopNotifications=停止通知");
     }
 
     @Test
@@ -2199,35 +2231,53 @@ class AppShellTest {
         assertTrue(analysisController.contains("view.showOkCheckBox().selectedProperty().bindBidirectional"));
         assertTrue(analysisController.contains("view.showIgnoredCheckBox().selectedProperty().bindBidirectional"));
         assertTrue(analysisController.contains("view.showUnavailableCheckBox().selectedProperty().bindBidirectional"));
-        assertTrue(analysisController.contains("localizedColumn(\"analysis.column.resultId\")"));
-        assertTrue(analysisController.contains("localizedColumn(\"analysis.column.rulePage\")"));
-        assertTrue(analysisController.contains("viewModel.selectedResultProperty().set(val)"));
+        assertTrue(analysisController.contains("localizedColumn(\"analysis.column.finding\")"));
+        assertFalse(analysisController.contains("localizedColumn(\"analysis.column.evidenceTarget\")"));
+        assertTrue(analysisController.contains("viewModel.selectedFindingProperty().set(val)"));
+        assertFalse(analysisController.contains("detailOpenEvidenceButton"));
+        assertTrue(analysisController.contains("analysis.findings.summary"));
+        assertTrue(analysisController.contains("analysis.findings.highestSeverity"));
+        assertTrue(analysisController.contains("analysis.findings.rules.status"));
         assertTrue(analysisController.contains("view.table().setRowFactory(table ->"));
         assertTrue(analysisController.contains("event.getButton() == MouseButton.PRIMARY"));
         assertTrue(analysisController.contains("event.getClickCount() == 2"));
         assertTrue(analysisController.contains("openRelatedPage(row.getItem())"));
         assertTrue(analysisController.contains("relatedPageNavigator.accept(detail.relatedPageId())"));
+        assertTrue(analysisController.contains("view.detailTitleLabel().setText(detail.title())"));
+        assertTrue(analysisController.contains("view.detailMetaLabel().setText(detail.meta())"));
+        assertFalse(analysisController.contains("analysis.detail.evidenceTarget"));
         assertFalse(analysisController.contains("analysisRelatedPageButton"));
         assertFalse(analysisController.contains("analysisDetailTitle"));
         assertFalse(analysisController.contains("analysisDetailSummaryArea"));
         assertFalse(analysisController.contains("analysisDetailResultIdLabel"));
         assertFalse(analysisController.contains("analysisDetailMeta"));
-        assertTrue(analysisController.contains("view.detailEvidenceArea().setText(detail.evidence())"));
-        assertTrue(analysisController.contains("view.detailRecommendationArea().setText(detail.recommendation())"));
+        assertFalse(analysisController.contains("detailEvidenceArea"));
+        assertFalse(analysisController.contains("analysis.detail.evidence"));
+        assertTrue(analysisController.contains("analysis.detail.noSelection"));
+        assertTrue(analysisController.contains("setDetailText(view.detailRecommendationArea(), detail.recommendation())"));
 
         assertTrue(english.contains("analysis.filter.search=Search"));
         assertTrue(english.contains("analysis.filter.minimumScore=Min score"));
         assertTrue(english.contains("analysis.filter.showOk=OK"));
         assertTrue(english.contains("analysis.filter.showIgnored=Ignored"));
         assertTrue(english.contains("analysis.filter.showUnavailable=Unavailable"));
-        assertTrue(english.contains("analysis.column.resultId=Result ID"));
-        assertTrue(english.contains("analysis.column.rulePage=Page"));
+        assertTrue(english.contains("analysis.column.finding=Finding"));
+        assertTrue(english.contains("analysis.column.source=Source"));
+        assertFalse(english.contains("analysis.column.evidenceTarget="));
+        assertTrue(english.contains("analysis.findings.summary=Findings: {0}"));
+        assertTrue(english.contains("analysis.findings.rules.status=Rules: {0}"));
+        assertTrue(english.contains("analysis.findings.rules.failed=failed"));
+        assertTrue(english.contains("analysis.findings.ai.unavailable=AI unavailable"));
         assertFalse(english.contains("analysis.detail.title="));
         assertFalse(english.contains("analysis.detail.summary="));
         assertFalse(english.contains("analysis.detail.resultId="));
         assertFalse(english.contains("analysis.detail.openRelatedPage="));
-        assertTrue(english.contains("analysis.detail.evidence=Evidence"));
-        assertTrue(english.contains("analysis.detail.recommendation=Recommendation"));
+        assertFalse(english.contains("analysis.detail.evidence=Evidence"));
+        assertFalse(english.contains("analysis.detail.evidenceTarget="));
+        assertFalse(english.contains("analysis.detail.evidenceTarget.unavailable="));
+        assertFalse(english.contains("analysis.detail.recommendation="));
+        assertTrue(english.contains("analysis.detail.solution=Solution"));
+        assertTrue(english.contains("analysis.detail.noSelection=Select an analysis result to inspect its explanation and solution."));
         assertTrue(english.contains("events.metadata.title=Events / Metadata"));
         assertTrue(english.contains("advancedJfr.heatmap.tab=Heatmap"));
         assertTrue(english.contains("advancedJfr.memory.tab=Memory Analysis"));
@@ -2248,38 +2298,47 @@ class AppShellTest {
         assertTrue(english.contains("advancedJfr.memory.detail.evidence=Evidence: {0}"));
         assertTrue(english.contains("advancedJfr.memory.detail.recommendation=Recommendation: {0}"));
 
-        assertTrue(chinese.contains("analysis.filter.search=搜索"));
-        assertTrue(chinese.contains("analysis.filter.minimumScore=最低分数"));
+        assertTrue(chinese.contains("analysis.filter.search=\\u641C\\u7D22"));
+        assertTrue(chinese.contains("analysis.filter.minimumScore=\\u6700\\u4F4E\\u5206\\u6570"));
         assertTrue(chinese.contains("analysis.filter.showOk=OK"));
-        assertTrue(chinese.contains("analysis.filter.showIgnored=已忽略"));
-        assertTrue(chinese.contains("analysis.filter.showUnavailable=不可用"));
-        assertTrue(chinese.contains("analysis.column.resultId=结果ID"));
-        assertTrue(chinese.contains("analysis.column.rulePage=页面"));
+        assertTrue(chinese.contains("analysis.filter.showIgnored=\\u5DF2\\u5FFD\\u7565"));
+        assertTrue(chinese.contains("analysis.filter.showUnavailable=\\u4E0D\\u53EF\\u7528"));
+        assertTrue(chinese.contains("analysis.column.finding=\\u53D1\\u73B0"));
+        assertTrue(chinese.contains("analysis.column.source=\\u6765\\u6E90"));
+        assertFalse(chinese.contains("analysis.column.evidenceTarget="));
+        assertTrue(chinese.contains("analysis.findings.summary=\\u53D1\\u73B0\\uFF1A{0}"));
+        assertTrue(chinese.contains("analysis.findings.rules.status=\\u89C4\\u5219\\uFF1A{0}"));
+        assertTrue(chinese.contains("analysis.findings.rules.failed=\\u5931\\u8D25"));
+        assertTrue(chinese.contains("analysis.findings.ai.unavailable=AI\\u4E0D\\u53EF\\u7528"));
         assertFalse(chinese.contains("analysis.detail.title="));
         assertFalse(chinese.contains("analysis.detail.summary="));
         assertFalse(chinese.contains("analysis.detail.resultId="));
         assertFalse(chinese.contains("analysis.detail.openRelatedPage="));
-        assertTrue(chinese.contains("analysis.detail.evidence=证据"));
-        assertTrue(chinese.contains("analysis.detail.recommendation=建议"));
-        assertTrue(chinese.contains("events.metadata.title=事件 / 元数据"));
-        assertTrue(chinese.contains("advancedJfr.heatmap.tab=热力图"));
-        assertTrue(chinese.contains("advancedJfr.memory.tab=内存分析"));
-        assertTrue(chinese.contains("advancedJfr.memory.summary=打开JFR记录后加载内存分析。"));
-        assertTrue(chinese.contains("advancedJfr.memory.summary.format={0} 个问题，估算 {1}，{2} 个事件"));
-        assertTrue(chinese.contains("advancedJfr.memory.empty=此记录没有内存问题。"));
-        assertTrue(chinese.contains("advancedJfr.memory.column.severity=严重程度"));
-        assertTrue(chinese.contains("advancedJfr.memory.column.category=类别"));
-        assertTrue(chinese.contains("advancedJfr.memory.column.subject=对象"));
-        assertTrue(chinese.contains("advancedJfr.memory.column.estimatedBytes=估算字节"));
-        assertTrue(chinese.contains("advancedJfr.memory.column.count=数量"));
-        assertTrue(chinese.contains("advancedJfr.memory.column.score=分数"));
+        assertFalse(chinese.contains("analysis.detail.evidence=\\u8BC1\\u636E"));
+        assertFalse(chinese.contains("analysis.detail.evidenceTarget="));
+        assertFalse(chinese.contains("analysis.detail.evidenceTarget.unavailable="));
+        assertFalse(chinese.contains("analysis.detail.recommendation="));
+        assertTrue(chinese.contains("analysis.detail.solution=\\u89E3\\u51B3\\u65B9\\u6848"));
+        assertTrue(chinese.contains("analysis.detail.noSelection=\\u9009\\u62E9\\u4E00\\u6761\\u5206\\u6790\\u7ED3\\u679C\\u4EE5\\u67E5\\u770B\\u8BF4\\u660E\\u548C\\u89E3\\u51B3\\u65B9\\u6848\\u3002"));
+        assertTrue(chinese.contains("events.metadata.title=\\u4E8B\\u4EF6 / \\u5143\\u6570\\u636E"));
+        assertTrue(chinese.contains("advancedJfr.heatmap.tab=\\u70ED\\u529B\\u56FE"));
+        assertTrue(chinese.contains("advancedJfr.memory.tab=\\u5185\\u5B58\\u5206\\u6790"));
+        assertTrue(chinese.contains("advancedJfr.memory.summary=\\u6253\\u5F00JFR\\u8BB0\\u5F55\\u540E\\u52A0\\u8F7D\\u5185\\u5B58\\u5206\\u6790\\u3002"));
+        assertTrue(chinese.contains("advancedJfr.memory.summary.format={0} \\u4E2A\\u95EE\\u9898\\uFF0C\\u4F30\\u7B97 {1}\\uFF0C{2} \\u4E2A\\u4E8B\\u4EF6"));
+        assertTrue(chinese.contains("advancedJfr.memory.empty=\\u6B64\\u8BB0\\u5F55\\u6CA1\\u6709\\u5185\\u5B58\\u95EE\\u9898\\u3002"));
+        assertTrue(chinese.contains("advancedJfr.memory.column.severity=\\u4E25\\u91CD\\u7A0B\\u5EA6"));
+        assertTrue(chinese.contains("advancedJfr.memory.column.category=\\u7C7B\\u522B"));
+        assertTrue(chinese.contains("advancedJfr.memory.column.subject=\\u5BF9\\u8C61"));
+        assertTrue(chinese.contains("advancedJfr.memory.column.estimatedBytes=\\u4F30\\u7B97\\u5B57\\u8282"));
+        assertTrue(chinese.contains("advancedJfr.memory.column.count=\\u6570\\u91CF"));
+        assertTrue(chinese.contains("advancedJfr.memory.column.score=\\u5206\\u6570"));
         assertTrue(chinese.contains("advancedJfr.memory.detail.title={0} - {1}"));
-        assertTrue(chinese.contains("advancedJfr.memory.detail.category=类别：{0}"));
-        assertTrue(chinese.contains("advancedJfr.memory.detail.estimatedBytes=估算字节：{0}"));
-        assertTrue(chinese.contains("advancedJfr.memory.detail.count=数量：{0}"));
-        assertTrue(chinese.contains("advancedJfr.memory.detail.score=分数：{0}"));
-        assertTrue(chinese.contains("advancedJfr.memory.detail.evidence=证据：{0}"));
-        assertTrue(chinese.contains("advancedJfr.memory.detail.recommendation=建议：{0}"));
+        assertTrue(chinese.contains("advancedJfr.memory.detail.category=\\u7C7B\\u522B\\uFF1A{0}"));
+        assertTrue(chinese.contains("advancedJfr.memory.detail.estimatedBytes=\\u4F30\\u7B97\\u5B57\\u8282\\uFF1A{0}"));
+        assertTrue(chinese.contains("advancedJfr.memory.detail.count=\\u6570\\u91CF\\uFF1A{0}"));
+        assertTrue(chinese.contains("advancedJfr.memory.detail.score=\\u5206\\u6570\\uFF1A{0}"));
+        assertTrue(chinese.contains("advancedJfr.memory.detail.evidence=\\u8BC1\\u636E\\uFF1A{0}"));
+        assertTrue(chinese.contains("advancedJfr.memory.detail.recommendation=\\u5EFA\\u8BAE\\uFF1A{0}"));
     }
 
     @Test
@@ -2334,14 +2393,14 @@ class AppShellTest {
         assertTrue(english.contains("metadata.column.id=Event Type"));
         assertTrue(english.contains("metadata.column.eventCount=Events"));
         assertTrue(english.contains("metadata.column.fieldCount=Fields"));
-        assertTrue(chinese.contains("metadata.title=JFR元数据"));
-        assertTrue(chinese.contains("metadata.empty=此记录没有事件元数据。"));
-        assertTrue(chinese.contains("metadata.detail.title=事件类型详情"));
-        assertTrue(chinese.contains("metadata.column.category=类别"));
-        assertTrue(chinese.contains("metadata.column.name=名称"));
-        assertTrue(chinese.contains("metadata.column.id=事件类型"));
-        assertTrue(chinese.contains("metadata.column.eventCount=事件数"));
-        assertTrue(chinese.contains("metadata.column.fieldCount=字段数"));
+        assertBundleContains(chinese, "metadata.title=JFR元数据");
+        assertBundleContains(chinese, "metadata.empty=此记录没有事件元数据。");
+        assertBundleContains(chinese, "metadata.detail.title=事件类型详情");
+        assertBundleContains(chinese, "metadata.column.category=类别");
+        assertBundleContains(chinese, "metadata.column.name=名称");
+        assertBundleContains(chinese, "metadata.column.id=事件类型");
+        assertBundleContains(chinese, "metadata.column.eventCount=事件数");
+        assertBundleContains(chinese, "metadata.column.fieldCount=字段数");
     }
 
 
@@ -2717,7 +2776,12 @@ class AppShellTest {
         assertTrue(overviewController.contains("public void bind(OverviewViewModel nextViewModel)"));
         assertTrue(overviewController.contains("public void refreshLocale()"));
         assertTrue(overviewController.contains("DisplayFormats.formatDuration(recording.durationMillis())"));
+        assertTrue(overviewController.contains("public String formatLiveOriginDetails(LiveFlightRecordingOrigin origin)"));
+        assertTrue(overviewController.contains("overview.liveSource.format"));
         assertTrue(overviewView.contains("public record OverviewPageView("));
+        assertTrue(overviewView.contains("VBox liveOriginPane"));
+        assertTrue(overviewView.contains("Label liveOriginTitleLabel"));
+        assertTrue(overviewView.contains("Label liveOriginDetailsLabel"));
     }
 
     @Test
@@ -2733,6 +2797,8 @@ class AppShellTest {
         assertFalse(appShellView.contains("final Label overviewTitleLabel = new Label();"));
         assertFalse(appShellView.contains("final Label overviewRecordingNameLabel = new Label();"));
         assertFalse(appShellView.contains("final Label overviewRecordingDetailsLabel = new Label();"));
+        assertFalse(appShellView.contains("final Label overviewLiveOriginTitleLabel = new Label();"));
+        assertFalse(appShellView.contains("final Label overviewLiveOriginDetailsLabel = new Label();"));
         assertFalse(appShellView.contains("final Label overviewAnalysisTitleLabel = new Label();"));
         assertFalse(appShellView.contains("final Label overviewAnalysisStatusLabel = new Label();"));
         assertFalse(appShellView.contains("final Label overviewJvmsTitleLabel = new Label();"));
@@ -2742,9 +2808,12 @@ class AppShellTest {
         assertTrue(overviewPaneView.contains("package io.github.youngledo.jmcfx.ui.overview;"));
         assertTrue(overviewPaneView.contains("public final class OverviewPaneView"));
         assertTrue(overviewPaneView.contains("private final Label titleLabel = new Label();"));
+        assertTrue(overviewPaneView.contains("private final VBox liveOriginPane = new VBox();"));
+        assertTrue(overviewPaneView.contains("private final Label liveOriginTitleLabel = new Label();"));
+        assertTrue(overviewPaneView.contains("private final Label liveOriginDetailsLabel = new Label();"));
         assertTrue(overviewPaneView.contains("public OverviewPaneView(VBox pane)"));
         assertTrue(overviewPaneView.contains("public OverviewPageView view()"));
-        assertTrue(overviewPaneView.contains("pane.getChildren().setAll(titleLabel, recording, row);"));
+        assertTrue(overviewPaneView.contains("pane.getChildren().setAll(titleLabel, recording, liveOriginPane, row);"));
     }
 
     @Test
@@ -3447,8 +3516,10 @@ void jvmBrowserSupportsDoubleClickConnectAndNoBottomStatus() throws Exception {
         String shellController = java.nio.file.Files.readString(
                 java.nio.file.Path.of("src/main/java/io/github/youngledo/jmcfx/ui/shell/AppShellController.java"));
         String shellRuntime = shellRuntimeSource();
-        assertTrue(shellRuntime.contains("this::openRecordingInBackground"),
-                "Saved recordings should reuse the existing shell recording open flow through the ViewModel callback");
+        assertTrue(shellRuntime.contains("this::openSavedFlightRecordingInBackground"),
+                "Saved recordings should preserve live origin context when opening the resulting JFR");
+        assertTrue(shellRuntime.contains("workspaceOpenCoordinator.openRecordingInBackground(path)"),
+                "Manual JFR opens should keep the path-only shell recording open flow");
     }
 
     @Test
@@ -3546,10 +3617,10 @@ void jvmBrowserSupportsDoubleClickConnectAndNoBottomStatus() throws Exception {
         assertTrue(english.contains("jvms.agent.apply=Apply Configuration"));
         assertTrue(english.contains("jvms.agent.configuration=Event Probe XML"));
         assertTrue(chinese.contains("jvms.agent.tab=JMC Agent"));
-        assertTrue(chinese.contains("jvms.agent.refresh=刷新"));
-        assertTrue(chinese.contains("jvms.agent.loadPreset=加载预设"));
-        assertTrue(chinese.contains("jvms.agent.apply=应用配置"));
-        assertTrue(chinese.contains("jvms.agent.configuration=事件探针 XML"));
+        assertBundleContains(chinese, "jvms.agent.refresh=刷新");
+        assertBundleContains(chinese, "jvms.agent.loadPreset=加载预设");
+        assertBundleContains(chinese, "jvms.agent.apply=应用配置");
+        assertBundleContains(chinese, "jvms.agent.configuration=事件探针 XML");
     }
 
     @Test
@@ -3736,7 +3807,7 @@ void settingsPageContainsThemeSelectorNextToLanguageSelector() {
                 recording("rec-1", "first-recording.jfr"),
                 new OverviewViewModel(),
                 new EventBrowserViewModel(new BrowseEventsUseCase(new FakeEventQueryService())),
-                new RuleResultsViewModel(AnalyzeRulesUseCase.empty()),
+                new RuleResultsViewModel(AnalyzeRulesUseCase.empty(), new DiagnosticFindingsUseCase()),
                 null, null, null,
                 null, null, null,
                 null, null, null,
@@ -3910,6 +3981,27 @@ void settingsPageContainsThemeSelectorNextToLanguageSelector() {
     }
 
     @Test
+    void recordingWorkspaceKeepsLiveOriginWhenOpenedFromSavedFlightRecording() {
+        PreparedRecordingWorkspace prepared = prepareRecordingWorkspace(recording -> List.of(), null);
+        LiveFlightRecordingOrigin origin = new LiveFlightRecordingOrigin("42", "demo.Main",
+                "service:jmx:local://42", JvmConnectionSource.LOCAL, "42", "26.0.1", 100, "jmcfx-42");
+        PreparedRecordingWorkspace fromLive = prepared.withLiveOrigin(origin);
+        AppShellViewModel viewModel = new AppShellViewModel();
+
+        RecordingWorkspace workspace = viewModel.openRecording(fromLive.recording(), fromLive.overview(),
+                fromLive.events(), fromLive.analysis(), fromLive.profiling(), fromLive.exceptions(),
+                fromLive.threads(), fromLive.fileio(), fromLive.socketio(), fromLive.locks(), fromLive.heap(),
+                fromLive.leakSuspects(), fromLive.tlab(), fromLive.jvmInfo(), fromLive.gcConfig(),
+                fromLive.gcSummary(), fromLive.gcDetails(), fromLive.compilations(), fromLive.codeCache(),
+                fromLive.classLoading(), fromLive.vmOperations(), fromLive.environment(), fromLive.javaAppOverview(),
+                fromLive.security(), fromLive.nativeLibraries(), fromLive.threadDumps(), fromLive.metadata(),
+                fromLive.g1Gc(), fromLive.javaFxEvents(), fromLive.advancedJfr(), fromLive.aiAssistant(),
+                fromLive.liveOrigin(), viewModel.nextOpenGeneration());
+
+        assertEquals(origin, workspace.liveOrigin());
+    }
+
+    @Test
     void sectionLoadingIsQueuedOnRecordingExecutor() throws Exception {
         QueueingRecordingOpenExecutor executor = new QueueingRecordingOpenExecutor();
         AtomicInteger analysisCalls = new AtomicInteger();
@@ -4056,6 +4148,10 @@ void settingsPageContainsThemeSelectorNextToLanguageSelector() {
     }
 
     private static void runFx(Runnable runnable) throws Exception {
+        if (Platform.isFxApplicationThread()) {
+            runnable.run();
+            return;
+        }
         java.util.concurrent.atomic.AtomicReference<Throwable> failure = new java.util.concurrent.atomic.AtomicReference<>();
         CountDownLatch latch = new CountDownLatch(1);
         Platform.runLater(() -> {
@@ -4198,10 +4294,7 @@ void settingsPageContainsThemeSelectorNextToLanguageSelector() {
             if (failure.get() != null) {
                 throw new AssertionError(failure.get());
             }
-            CountDownLatch fxLatch = new CountDownLatch(1);
-            Platform.runLater(fxLatch::countDown);
-            assertTrue(fxLatch.await(FX_TIMEOUT_SECONDS, TimeUnit.SECONDS),
-                    "JavaFX recording-open completion did not run in time.");
+            runFx(() -> { });
         }
     }
 
@@ -4218,6 +4311,16 @@ void settingsPageContainsThemeSelectorNextToLanguageSelector() {
             this.viewModel = viewModel;
             this.controller = controller;
             this.executor = executor;
+        }
+
+        void close() throws Exception {
+            runFx(() -> {
+                if (stage != null) {
+                    stage.close();
+                    stage = null;
+                }
+                controller.close();
+            });
         }
     }
 
@@ -4285,8 +4388,26 @@ private static void collectElements(Element element, Map<Integer, Element> resul
 
     private static void assertJvmBrowserJdpI18n(String bundle, String... expectedLines) {
         for (String expectedLine : expectedLines) {
-            assertTrue(bundle.contains(expectedLine), () -> "Missing i18n line: " + expectedLine);
+            assertBundleContains(bundle, expectedLine);
         }
+    }
+
+    private static void assertBundleContains(String bundle, String expectedLine) {
+        assertTrue(bundle.contains(expectedLine) || bundle.contains(toPropertiesAscii(expectedLine)),
+                () -> "Missing i18n line: " + expectedLine);
+    }
+
+    private static String toPropertiesAscii(String value) {
+        StringBuilder escaped = new StringBuilder(value.length());
+        for (int index = 0; index < value.length(); index++) {
+            char character = value.charAt(index);
+            if (character <= 0x7f) {
+                escaped.append(character);
+            } else {
+                escaped.append("\\u%04X".formatted((int) character));
+            }
+        }
+        return escaped.toString();
     }
 
 }

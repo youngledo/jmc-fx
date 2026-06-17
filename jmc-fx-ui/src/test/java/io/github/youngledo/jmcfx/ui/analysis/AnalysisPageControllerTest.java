@@ -14,11 +14,15 @@ import java.util.concurrent.TimeUnit;
 import java.util.concurrent.atomic.AtomicReference;
 
 import io.github.youngledo.jmcfx.application.AnalyzeRulesUseCase;
+import io.github.youngledo.jmcfx.application.DiagnosticFindingsUseCase;
 import io.github.youngledo.jmcfx.application.ai.AnalyzeRecordingWithAiUseCase;
 import io.github.youngledo.jmcfx.application.ai.AskRecordingAssistantUseCase;
 import io.github.youngledo.jmcfx.application.ai.AiSettingsUseCase;
 import io.github.youngledo.jmcfx.application.ai.BuildRecordingAiContextUseCase;
+import io.github.youngledo.jmcfx.domain.model.DiagnosticFindingSource;
 import io.github.youngledo.jmcfx.domain.model.RecordingSummary;
+import io.github.youngledo.jmcfx.domain.model.RuleResult;
+import io.github.youngledo.jmcfx.domain.model.Severity;
 import io.github.youngledo.jmcfx.domain.model.ai.AiCompletionRequest;
 import io.github.youngledo.jmcfx.domain.model.ai.AiCompletionResponse;
 import io.github.youngledo.jmcfx.domain.model.ai.AiSettings;
@@ -28,6 +32,8 @@ import io.github.youngledo.jmcfx.domain.service.ai.AiSettingsRepository;
 import io.github.youngledo.jmcfx.domain.service.ai.StreamingAiCompletionService;
 import io.github.youngledo.jmcfx.ui.i18n.I18n;
 import io.github.youngledo.jmcfx.ui.i18n.LanguageMode;
+import io.github.youngledo.jmcfx.ui.rules.RuleResultsViewModel;
+import io.github.youngledo.jmcfx.ui.testsupport.FakeRuleAnalysisService;
 import javafx.application.Platform;
 import javafx.scene.Parent;
 import javafx.scene.Node;
@@ -48,6 +54,112 @@ class AnalysisPageControllerTest {
         } catch (IllegalStateException ignored) {
             // Toolkit already initialized by another test class.
         }
+    }
+
+    @Test
+    void showsDiagnosticFindingsSummaryAndDetail() {
+        AnalysisPaneView paneView = new AnalysisPaneView(new VBox());
+        AnalysisPageView view = paneView.view();
+        AnalysisPageController controller = new AnalysisPageController(view, new I18n(Locale.ENGLISH), section -> { });
+        FakeRuleAnalysisService service = new FakeRuleAnalysisService();
+        service.addResult(new RuleResult("gc", "GC Pressure", Severity.WARNING, 70, "GC",
+                "GC pressure is elevated.", "Explanation", "Evidence", "Inspect GC.", "gcDetails"));
+        RuleResultsViewModel rules = new RuleResultsViewModel(
+                new AnalyzeRulesUseCase(service), new DiagnosticFindingsUseCase());
+
+        controller.configure();
+        controller.bind(rules);
+        rules.analyze(recording());
+
+        assertEquals(1, view.table().getItems().size());
+        assertEquals("Findings: 1", view.findingsSummaryLabel().getText());
+        assertEquals("Highest severity: WARNING", view.highestSeverityLabel().getText());
+        assertEquals("Rules: ready", view.ruleAnalysisStatusLabel().getText());
+        assertEquals("AI unavailable", view.aiStatusLabel().getText());
+        assertEquals("GC Pressure", view.table().getItems().getFirst().title());
+        assertEquals("GC Pressure", view.detailTitleLabel().getText());
+        assertEquals("RULE | WARNING | Score 70", view.detailMetaLabel().getText());
+        assertEquals("Explanation", view.detailExplanationArea().getText());
+        assertEquals("Inspect GC.", view.detailRecommendationArea().getText());
+    }
+
+    @Test
+    void ruleDetailsUseOneScrollingPanelInsteadOfSmallIndependentTextAreas() {
+        AnalysisPaneView paneView = new AnalysisPaneView(new VBox());
+        AnalysisPageView view = paneView.view();
+
+        assertTrue(view.detailTabs().getTabs().getFirst().getContent() instanceof ScrollPane);
+        ScrollPane scrollPane = (ScrollPane) view.detailTabs().getTabs().getFirst().getContent();
+        assertTrue(scrollPane.isFitToWidth());
+        assertEquals(ScrollPane.ScrollBarPolicy.NEVER, scrollPane.getHbarPolicy());
+        assertEquals(ScrollPane.ScrollBarPolicy.AS_NEEDED, scrollPane.getVbarPolicy());
+        assertTrue(view.detailExplanationArea().isWrapText());
+        assertTrue(view.detailRecommendationArea().isWrapText());
+    }
+
+    @Test
+    void showsLocalizedEmptyDetailWhenNoAnalysisResultIsSelected() {
+        AnalysisPaneView paneView = new AnalysisPaneView(new VBox());
+        AnalysisPageView view = paneView.view();
+        AnalysisPageController controller = new AnalysisPageController(view, new I18n(Locale.ENGLISH), section -> { });
+
+        controller.configure();
+        controller.bind(new RuleResultsViewModel(AnalyzeRulesUseCase.empty(), new DiagnosticFindingsUseCase()));
+
+        assertEquals("Select an analysis result to inspect its explanation and solution.",
+                view.detailTitleLabel().getText());
+        assertEquals("", view.detailMetaLabel().getText());
+        assertEquals("", view.detailExplanationArea().getText());
+        assertEquals("", view.detailRecommendationArea().getText());
+    }
+
+    @Test
+    void showsRuleAnalysisFailureInSummaryBar() {
+        AnalysisPaneView paneView = new AnalysisPaneView(new VBox());
+        AnalysisPageView view = paneView.view();
+        AnalysisPageController controller = new AnalysisPageController(view, new I18n(Locale.ENGLISH), section -> { });
+        FakeRuleAnalysisService service = new FakeRuleAnalysisService() {
+            @Override
+            public java.util.List<RuleResult> analyze(RecordingSummary recording) {
+                throw new IllegalStateException("rules unavailable");
+            }
+        };
+        RuleResultsViewModel rules = new RuleResultsViewModel(
+                new AnalyzeRulesUseCase(service), new DiagnosticFindingsUseCase());
+
+        controller.configure();
+        controller.bind(rules);
+        try {
+            rules.analyze(recording());
+        } catch (IllegalStateException ignored) {
+            // The shell owns section-load failure handling; this page still reflects the failed state.
+        }
+
+        assertEquals("Rules: failed", view.ruleAnalysisStatusLabel().getText());
+        assertEquals("Findings: 0", view.findingsSummaryLabel().getText());
+    }
+
+    @Test
+    void doubleClickFindingNavigatesToPrimaryEvidencePage() {
+        AnalysisPaneView paneView = new AnalysisPaneView(new VBox());
+        AnalysisPageView view = paneView.view();
+        AtomicReference<String> navigated = new AtomicReference<>();
+        AnalysisPageController controller = new AnalysisPageController(view, new I18n(Locale.ENGLISH),
+                navigated::set);
+        FakeRuleAnalysisService service = new FakeRuleAnalysisService();
+        service.addResult(new RuleResult("gc", "GC Pressure", Severity.WARNING, 70, "GC",
+                "GC pressure is elevated.", "Explanation", "Evidence", "Inspect GC.", "gcDetails"));
+        RuleResultsViewModel rules = new RuleResultsViewModel(
+                new AnalyzeRulesUseCase(service), new DiagnosticFindingsUseCase());
+
+        controller.configure();
+        controller.bind(rules);
+        rules.analyze(recording());
+
+        view.table().getSelectionModel().selectFirst();
+        controller.openSelectedFindingForTest();
+
+        assertEquals("gcDetails", navigated.get());
     }
 
     @Test
@@ -265,6 +377,48 @@ class AnalysisPageControllerTest {
         assertEquals("exceptions", navigated.get());
     }
 
+    @Test
+    void propagatesAiReportToDiagnosticFindings() {
+        AnalysisPaneView paneView = new AnalysisPaneView(new VBox());
+        AnalysisPageView view = paneView.view();
+        AnalysisPageController controller = new AnalysisPageController(view, new I18n(Locale.ENGLISH), section -> { });
+        RuleResultsViewModel rules = new RuleResultsViewModel(
+                AnalyzeRulesUseCase.empty(), new DiagnosticFindingsUseCase());
+        RecordingCompletionService completionService = new RecordingCompletionService("""
+                {
+                  "summaryMarkdown":"Report",
+                  "findings":[{
+                    "title":"Exception spike",
+                    "severity":"critical",
+                    "confidence":0.8,
+                    "relatedPageId":"exceptions",
+                    "recommendedNextStepMarkdown":"Inspect exceptions.",
+                    "limitationsMarkdown":"",
+                    "evidence":[]
+                  }],
+                  "followUpQuestions":[],
+                  "contextLimitations":[]
+                }
+                """);
+        RecordingAiAssistantViewModel ai = aiViewModel(new FakeAiSettingsRepository(Optional.of(
+                new AiSettings(true, "https://api.openai.com/v1", "gpt-test", 0.2, 4_096, false))),
+                Map.of(AiSettingsUseCase.API_KEY_ENVIRONMENT_VARIABLE, "key"),
+                completionService);
+        controller.configure();
+        controller.bind(rules);
+        controller.bindAi(ai);
+        rules.analyze(recording());
+        ai.setRecording(recording());
+
+        view.aiAnalyzeButton().fire();
+
+        assertEquals(1, completionService.calls);
+        assertEquals(1, rules.findingsProperty().size());
+        assertEquals(DiagnosticFindingSource.AI, rules.findingsProperty().getFirst().source());
+        assertEquals("Exception spike", rules.findingsProperty().getFirst().title());
+        assertEquals("exceptions", rules.selectedFindingDetailProperty().get().relatedPageId());
+    }
+
     private static RecordingAiAssistantViewModel unavailableAiViewModel() {
         return aiViewModel(new FakeAiSettingsRepository(Optional.of(
                 new AiSettings(true, "https://api.openai.com/v1", "", 0.2, 4_096, false))), Map.of());
@@ -397,6 +551,7 @@ class AnalysisPageControllerTest {
 
     private static final class RecordingCompletionService implements AiCompletionService {
         private final String response;
+        private int calls;
 
         private RecordingCompletionService(String response) {
             this.response = response;
@@ -404,6 +559,7 @@ class AnalysisPageControllerTest {
 
         @Override
         public AiCompletionResponse complete(AiCompletionRequest request) {
+            calls++;
             return new AiCompletionResponse(response);
         }
     }
