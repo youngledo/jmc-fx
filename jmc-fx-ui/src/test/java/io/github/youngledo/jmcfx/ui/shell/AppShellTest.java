@@ -131,7 +131,7 @@ class AppShellTest {
             runFx(() -> shell.viewModel.openHeapDump(new HeapDumpWorkspace(Path.of("demo.hprof"), null)));
 
             runFx(() -> {
-                assertEquals(3, shell.view.recordingTabs.getTabs().size());
+                assertEquals(4, shell.view.recordingTabs.getTabs().size());
                 assertEquals("demo.hprof", selectedWorkspaceTabTitle(shell.view));
                 assertTrue(shell.view.recordingTabs.isVisible(), "Workspace tabs must stay visible after HPROF opens");
                 assertTrue(shell.view.workspacePanes.heapDumpAnalysisPane.isVisible(), "HPROF pane must be visible");
@@ -139,7 +139,7 @@ class AppShellTest {
                 assertEquals("heapDumpAnalysis", shell.viewModel.selectedSectionProperty().get());
             });
 
-            runFx(() -> shell.view.recordingTabs.getSelectionModel().select(0));
+            runFx(() -> shell.view.recordingTabs.getSelectionModel().select(tabIndexFor(shell.view, "demo.jfr")));
 
             runFx(() -> {
                 assertEquals("demo.jfr", selectedWorkspaceTabTitle(shell.view));
@@ -171,7 +171,7 @@ class AppShellTest {
                 shell.view.root.layout();
                 javafx.geometry.Bounds bounds = shell.view.recordingTabs.localToScene(
                         shell.view.recordingTabs.getBoundsInLocal());
-                assertEquals(1, shell.view.recordingTabs.getTabs().size());
+                assertEquals(2, shell.view.recordingTabs.getTabs().size());
                 assertEquals("demo.jfr", selectedWorkspaceTabTitle(shell.view));
                 assertTrue(shell.view.recordingTabs.isVisible(), "Workspace tabs must be logically visible");
                 assertTrue(shell.view.recordingTabs.isManaged(), "Workspace tabs must participate in layout");
@@ -293,11 +293,11 @@ class AppShellTest {
                                 .anyMatch(pseudoClass -> "selected".equals(pseudoClass.getPseudoClassName())))
                         .toList();
 
-                assertEquals(3, shell.view.recordingTabs.getTabs().size());
+                assertEquals(4, shell.view.recordingTabs.getTabs().size());
                 assertEquals("JVM", selectedWorkspaceTabTitle(shell.view));
-                assertEquals(3, tabNodes.size(), "Workspace tab header must render one node per workspace tab");
+                assertEquals(4, tabNodes.size(), "Workspace tab header must render one node per workspace tab");
                 assertEquals(1, selectedTabNodes.size(), "Only the current workspace tab should render selected");
-                assertTrue(tabNodes.get(2) == selectedTabNodes.getFirst(),
+                assertTrue(tabNodes.get(3) == selectedTabNodes.getFirst(),
                         "The selected visual tab must match the selected JVM workspace");
             });
         } finally {
@@ -320,7 +320,7 @@ class AppShellTest {
             shell.executor.runNextAndWaitForFx();
 
             runFx(() -> {
-                assertEquals(3, shell.view.recordingTabs.getTabs().size());
+                assertEquals(4, shell.view.recordingTabs.getTabs().size());
                 assertEquals("demo.hprof", selectedWorkspaceTabTitle(shell.view));
                 assertTrue(shell.view.recordingTabs.isVisible(), "Workspace tabs must stay visible after JFR completes");
                 assertTrue(shell.view.workspacePanes.heapDumpAnalysisPane.isVisible(), "HPROF pane must keep focus");

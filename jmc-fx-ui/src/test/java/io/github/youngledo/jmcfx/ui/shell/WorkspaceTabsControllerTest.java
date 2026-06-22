@@ -113,12 +113,13 @@ class WorkspaceTabsControllerTest {
 
         viewModel.openHeapDump(heapDump);
 
-        assertEquals(3, tabs.getTabs().size());
+        assertEquals(4, tabs.getTabs().size());
         assertSame(heapDump, tabs.getSelectionModel().getSelectedItem().getUserData());
         assertSame(heapDump, viewModel.selectedWorkspaceTabProperty().get());
         assertSame(heapDump, viewModel.selectedHeapDumpWorkspaceProperty().get());
         assertNull(viewModel.selectedWorkspaceProperty().get());
-        assertSame(recording, tabs.getTabs().getFirst().getUserData());
+        assertSame(GlobalWorkspaceTab.HOME, tabs.getTabs().getFirst().getUserData());
+        assertSame(recording, tabs.getTabs().get(1).getUserData());
         assertFalse(tabs.getTabs().isEmpty());
     }
 
@@ -142,7 +143,7 @@ class WorkspaceTabsControllerTest {
         assertSame(recording, viewModel.selectedWorkspaceProperty().get());
         assertEquals(AppWorkspaceKind.RECORDING, viewModel.activeWorkspaceKindProperty().get());
         assertEquals("analysis", viewModel.selectedSectionProperty().get());
-        assertEquals(3, tabs.getTabs().size());
+        assertEquals(4, tabs.getTabs().size());
         assertEquals(true, tabs.isVisible());
         assertEquals(true, tabs.isManaged());
         assertSame(recordingTab, tabs.getSelectionModel().getSelectedItem());
@@ -160,12 +161,13 @@ class WorkspaceTabsControllerTest {
         viewModel.openLiveJvmWorkspace();
 
         Tab liveJvmTab = tabs.getSelectionModel().getSelectedItem();
-        assertEquals(3, tabs.getTabs().size());
-        assertSame(recording, tabs.getTabs().get(0).getUserData());
-        assertSame(heapDump, tabs.getTabs().get(1).getUserData());
-        assertSame(viewModel.liveJvmWorkspaceProperty().get(), tabs.getTabs().get(2).getUserData());
+        assertEquals(4, tabs.getTabs().size());
+        assertSame(GlobalWorkspaceTab.HOME, tabs.getTabs().get(0).getUserData());
+        assertSame(recording, tabs.getTabs().get(1).getUserData());
+        assertSame(heapDump, tabs.getTabs().get(2).getUserData());
+        assertSame(viewModel.liveJvmWorkspaceProperty().get(), tabs.getTabs().get(3).getUserData());
         assertSame(viewModel.liveJvmWorkspaceProperty().get(), liveJvmTab.getUserData());
-        assertSame(liveJvmTab, tabs.getTabs().get(2));
+        assertSame(liveJvmTab, tabs.getTabs().get(3));
     }
 
     @Test

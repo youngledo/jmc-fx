@@ -92,6 +92,11 @@ public class AppShellViewModel {
     private final ObjectProperty<AppTheme> theme = new SimpleObjectProperty<>(AppTheme.SYSTEM);
     private long openGeneration;
 
+    public AppShellViewModel() {
+        workspaceTabs.add(GlobalWorkspaceTab.HOME);
+        selectedWorkspaceTab.set(GlobalWorkspaceTab.HOME);
+    }
+
     public StringProperty selectedSectionProperty() {
         return selectedSection;
     }

@@ -46,6 +46,8 @@ class AppShellViewModelTest {
         assertEquals("", viewModel.taskSummaryProperty().get());
         assertTrue(viewModel.recordingWorkspacesProperty().isEmpty());
         assertNull(viewModel.selectedWorkspaceProperty().get());
+        assertEquals(List.of(GlobalWorkspaceTab.HOME), viewModel.workspaceTabsProperty());
+        assertSame(GlobalWorkspaceTab.HOME, viewModel.selectedWorkspaceTabProperty().get());
     }
 
     @Test
@@ -264,7 +266,8 @@ class AppShellViewModelTest {
 
         assertSame(first, second);
         assertEquals(List.of(first), viewModel.recordingWorkspacesProperty());
-        assertEquals(List.of(first, GlobalWorkspaceTab.SETTINGS), viewModel.workspaceTabsProperty());
+        assertEquals(List.of(GlobalWorkspaceTab.HOME, first, GlobalWorkspaceTab.SETTINGS),
+                viewModel.workspaceTabsProperty());
         assertSame(first, viewModel.selectedWorkspaceProperty().get());
         assertSame(first, viewModel.selectedWorkspaceTabProperty().get());
         assertEquals(AppWorkspaceKind.RECORDING, viewModel.activeWorkspaceKindProperty().get());
@@ -281,7 +284,8 @@ class AppShellViewModelTest {
         viewModel.openHeapDump(second);
 
         assertEquals(List.of(first), viewModel.heapDumpWorkspacesProperty());
-        assertEquals(List.of(first, GlobalWorkspaceTab.SETTINGS), viewModel.workspaceTabsProperty());
+        assertEquals(List.of(GlobalWorkspaceTab.HOME, first, GlobalWorkspaceTab.SETTINGS),
+                viewModel.workspaceTabsProperty());
         assertSame(first, viewModel.selectedHeapDumpWorkspaceProperty().get());
         assertSame(first, viewModel.selectedWorkspaceTabProperty().get());
         assertEquals(AppWorkspaceKind.HEAP_DUMP, viewModel.activeWorkspaceKindProperty().get());
@@ -344,7 +348,8 @@ class AppShellViewModelTest {
         assertEquals(AppWorkspaceKind.LIVE_JVM, viewModel.activeWorkspaceKindProperty().get());
         assertSame(liveJvm, viewModel.selectedLiveJvmWorkspaceProperty().get());
         assertSame(GlobalWorkspaceTab.SETTINGS, viewModel.selectedWorkspaceTabProperty().get());
-        assertEquals(List.of(liveJvm, GlobalWorkspaceTab.SETTINGS), viewModel.workspaceTabsProperty());
+        assertEquals(List.of(GlobalWorkspaceTab.HOME, liveJvm, GlobalWorkspaceTab.SETTINGS),
+                viewModel.workspaceTabsProperty());
 
         viewModel.showSection("home");
 
@@ -352,7 +357,7 @@ class AppShellViewModelTest {
         assertEquals(AppWorkspaceKind.LIVE_JVM, viewModel.activeWorkspaceKindProperty().get());
         assertSame(liveJvm, viewModel.selectedLiveJvmWorkspaceProperty().get());
         assertSame(GlobalWorkspaceTab.HOME, viewModel.selectedWorkspaceTabProperty().get());
-        assertEquals(List.of(liveJvm, GlobalWorkspaceTab.SETTINGS, GlobalWorkspaceTab.HOME),
+        assertEquals(List.of(GlobalWorkspaceTab.HOME, liveJvm, GlobalWorkspaceTab.SETTINGS),
                 viewModel.workspaceTabsProperty());
     }
 
@@ -367,12 +372,13 @@ class AppShellViewModelTest {
         RecordingWorkspace recording = viewModel.openRecording(
                 recording(), new OverviewViewModel(), eventBrowserViewModel(), ruleResultsViewModel());
 
-        assertEquals(List.of(liveJvm, heapDump, recording), viewModel.workspaceTabsProperty());
+        assertEquals(List.of(GlobalWorkspaceTab.HOME, liveJvm, heapDump, recording),
+                viewModel.workspaceTabsProperty());
         assertSame(recording, viewModel.selectedWorkspaceTabProperty().get());
 
         viewModel.closeHeapDumpWorkspace(heapDump);
 
-        assertEquals(List.of(liveJvm, recording), viewModel.workspaceTabsProperty());
+        assertEquals(List.of(GlobalWorkspaceTab.HOME, liveJvm, recording), viewModel.workspaceTabsProperty());
         assertSame(recording, viewModel.selectedWorkspaceTabProperty().get());
     }
 
@@ -390,7 +396,7 @@ class AppShellViewModelTest {
                 null, null, null, null, null, null, null, null,
                 null, recordingOpenGeneration);
 
-        assertEquals(List.of(heapDump, recording), viewModel.workspaceTabsProperty());
+        assertEquals(List.of(GlobalWorkspaceTab.HOME, heapDump, recording), viewModel.workspaceTabsProperty());
         assertSame(heapDump, viewModel.selectedWorkspaceTabProperty().get());
         assertSame(heapDump, viewModel.selectedHeapDumpWorkspaceProperty().get());
         assertNull(viewModel.selectedWorkspaceProperty().get());
@@ -410,7 +416,8 @@ class AppShellViewModelTest {
 
         viewModel.closeWorkspace(recording);
 
-        assertEquals(List.of(heapDump, viewModel.liveJvmWorkspaceProperty().get()), viewModel.workspaceTabsProperty());
+        assertEquals(List.of(GlobalWorkspaceTab.HOME, heapDump, viewModel.liveJvmWorkspaceProperty().get()),
+                viewModel.workspaceTabsProperty());
         assertNull(viewModel.selectedWorkspaceProperty().get());
         assertSame(heapDump, viewModel.selectedHeapDumpWorkspaceProperty().get());
         assertEquals(AppWorkspaceKind.HEAP_DUMP, viewModel.activeWorkspaceKindProperty().get());
@@ -431,7 +438,7 @@ class AppShellViewModelTest {
 
         viewModel.closeHeapDumpWorkspace(heapDump);
 
-        assertEquals(List.of(liveJvm, recording), viewModel.workspaceTabsProperty());
+        assertEquals(List.of(GlobalWorkspaceTab.HOME, liveJvm, recording), viewModel.workspaceTabsProperty());
         assertNull(viewModel.selectedHeapDumpWorkspaceProperty().get());
         assertSame(recording, viewModel.selectedWorkspaceProperty().get());
         assertEquals(AppWorkspaceKind.RECORDING, viewModel.activeWorkspaceKindProperty().get());
@@ -448,7 +455,7 @@ class AppShellViewModelTest {
 
         viewModel.closeLiveJvmWorkspace();
 
-        assertEquals(List.of(heapDump), viewModel.workspaceTabsProperty());
+        assertEquals(List.of(GlobalWorkspaceTab.HOME, heapDump), viewModel.workspaceTabsProperty());
         assertNull(viewModel.selectedLiveJvmWorkspaceProperty().get());
         assertSame(heapDump, viewModel.selectedHeapDumpWorkspaceProperty().get());
         assertEquals(AppWorkspaceKind.HEAP_DUMP, viewModel.activeWorkspaceKindProperty().get());
@@ -553,7 +560,7 @@ class AppShellViewModelTest {
         assertEquals(AppWorkspaceKind.RECORDING, viewModel.activeWorkspaceKindProperty().get());
         assertSame(recording, viewModel.selectedWorkspaceProperty().get());
         assertSame(GlobalWorkspaceTab.HOME, viewModel.selectedWorkspaceTabProperty().get());
-        assertEquals(List.of(recording, GlobalWorkspaceTab.SETTINGS, GlobalWorkspaceTab.HOME),
+        assertEquals(List.of(GlobalWorkspaceTab.HOME, recording, GlobalWorkspaceTab.SETTINGS),
                 viewModel.workspaceTabsProperty());
     }
 
