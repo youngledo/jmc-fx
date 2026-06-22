@@ -12,6 +12,12 @@ JMC FX is not a pixel-by-pixel clone of the Eclipse RCP/SWT JDK Mission Control 
 
 The familiar concepts remain: JFR recordings, automated rules, event browsing, JVM discovery, MBeans, diagnostic commands, and Flight Recorder control. JavaFX is used to modernize the desktop experience with dense analysis pages, clear state feedback, theme integration, exportable tables, and responsive background work. Guided diagnostics are the product-level differentiator: JMC FX should help users see important findings, inspect evidence, navigate across related pages, and use AI as an optional explanatory layer without replacing deterministic analysis.
 
+### 🎬 Demo
+![home.png](docs/images/home.png)
+![settings.png](docs/images/settings.png)
+![aar.png](docs/images/aar.png)
+![gc-details.png](docs/images/gc-details.png)
+
 ## Requirements
 
 - JDK 26

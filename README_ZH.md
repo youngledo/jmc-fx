@@ -12,6 +12,12 @@ JMC FX 不是对 Eclipse RCP/SWT 版 JDK Mission Control 的逐像素克隆，�
 
 熟悉的概念仍然保留：JFR 录制文件、自动规则分析、事件浏览、JVM 发现、MBeans、Diagnostic Commands 和 Flight Recorder 控制。JavaFX 用来现代化桌面体验，包括高密度分析页面、清晰的状态反馈、主题集成、可导出的表格以及响应式后台任务。诊断引导是产品级差异化：JMC FX 应帮助用户看到重要发现、核对证据、在相关页面之间跳转，并把 AI 作为可选的解释增强层，而不是用 AI 取代确定性分析。
 
+### 🎬 演示
+![home.png](docs/images/home.png)
+![settings.png](docs/images/settings.png)
+![aar.png](docs/images/aar.png)
+![gc-details.png](docs/images/gc-details.png)
+
 ## 环境要求
 
 - JDK 26
