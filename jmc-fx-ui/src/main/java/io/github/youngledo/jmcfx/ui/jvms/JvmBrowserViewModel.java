@@ -758,8 +758,9 @@ public class JvmBrowserViewModel implements AutoCloseable {
             try {
                 JvmConnection liveConnection = liveConnectionFor(selectedConnection);
                 LiveFlightRecordingOrigin origin = LiveFlightRecordingOrigin.from(liveConnection, selectedRecording);
+                Path normalizedDestinationFile = deduplicateJfrExtension(destinationFile);
                 Path saved = useCases.recording().stopAndSaveRecording(new FlightRecordingStopRequest(
-                        liveConnection, selectedRecording.id(), destinationFile));
+                        liveConnection, selectedRecording.id(), normalizedDestinationFile));
                 sessionStartedRecordings.remove(selectedRecording.id());
                 List<FlightRecordingInfo> updated = useCases.recording().recordings(liveConnection);
                 runOnFx(() -> {
@@ -773,6 +774,21 @@ public class JvmBrowserViewModel implements AutoCloseable {
                 failRecording(exception);
             }
         });
+    }
+
+    public void refreshRunningFlightRecordingDurations() {
+        JvmConnection selected = selectedConnection.get();
+        if (!canUseRecordingControl(selected) || !hasRunningFlightRecording()) {
+            return;
+        }
+        try {
+            JvmConnection liveConnection = liveConnectionFor(selected);
+            List<FlightRecordingInfo> updated = useCases.recording().recordings(liveConnection);
+            mergeFlightRecordings(updated);
+            clearRecordingError();
+        } catch (RuntimeException exception) {
+            failRecording(exception);
+        }
     }
 
     public void refreshSelectedMBeanAttributes() {
@@ -1477,6 +1493,25 @@ public class JvmBrowserViewModel implements AutoCloseable {
                 && recordingControlAvailable.get();
     }
 
+    private boolean hasRunningFlightRecording() {
+        return flightRecordings.stream()
+                .anyMatch(recording -> recording.state() == FlightRecordingState.RUNNING);
+    }
+
+    private void mergeFlightRecordings(List<FlightRecordingInfo> updated) {
+        FlightRecordingInfo selected = selectedFlightRecording.get();
+        long selectedId = selected == null ? Long.MIN_VALUE : selected.id();
+        flightRecordings.setAll(updated);
+        if (selected == null) {
+            selectedFlightRecording.set(updated.isEmpty() ? null : updated.getFirst());
+            return;
+        }
+        selectedFlightRecording.set(updated.stream()
+                .filter(recording -> recording.id() == selectedId)
+                .findFirst()
+                .orElse(selected));
+    }
+
     private void loadMBeanBrowser(JvmSessionSnapshot snapshot) {
         if (!canUseMBeanBrowser(snapshot)) {
             clearMBeanBrowser();
@@ -1882,6 +1917,24 @@ public class JvmBrowserViewModel implements AutoCloseable {
             safeId = "jvm";
         }
         return "jmcfx-" + safeId + "-" + LocalDateTime.now(ZoneOffset.UTC).format(RECORDING_NAME_TIMESTAMP);
+    }
+
+    private static Path deduplicateJfrExtension(Path destinationFile) {
+        if (destinationFile == null) {
+            return null;
+        }
+        Path fileName = destinationFile.getFileName();
+        if (fileName == null) {
+            return destinationFile;
+        }
+        String name = fileName.toString();
+        String lowerName = name.toLowerCase(java.util.Locale.ROOT);
+        if (!lowerName.endsWith(".jfr.jfr")) {
+            return destinationFile;
+        }
+        Path normalizedFileName = Path.of(name.substring(0, name.length() - 4));
+        Path parent = destinationFile.getParent();
+        return parent == null ? normalizedFileName : parent.resolve(normalizedFileName);
     }
 
     private void clearRecordingControl() {

@@ -684,6 +684,22 @@ class JvmBrowserViewModelTest {
     }
 
     @Test
+    void tickRunningFlightRecordingsRefreshesDuration() {
+        FakeFlightRecordingService recordings = new FakeFlightRecordingService();
+        FakeJmxConnectionService jmx = new FakeJmxConnectionService();
+        JvmBrowserViewModel viewModel = viewModel(new FakeJvmDiscoveryService(), jmx, recordings);
+        viewModel.selectedConnectionProperty().set(connectedWithFlightRecorder(viewModel, jmx, recordings));
+        FlightRecordingInfo running = viewModel.flightRecordingsProperty().getFirst();
+        recordings.replaceRecording("42", new FlightRecordingInfo(running.id(), running.name(),
+                FlightRecordingState.RUNNING, 2_500, running.sizeBytes()));
+
+        viewModel.refreshRunningFlightRecordingDurations();
+
+        assertEquals(2_500, viewModel.flightRecordingsProperty().getFirst().durationMillis());
+        assertEquals(running.id(), viewModel.selectedFlightRecordingProperty().get().id());
+    }
+
+    @Test
     void stopAndSaveRecordingPublishesSavedFileForOpening() {
         FakeFlightRecordingService recordings = new FakeFlightRecordingService();
         FakeJmxConnectionService jmx = new FakeJmxConnectionService();
@@ -710,6 +726,19 @@ class JvmBrowserViewModelTest {
         assertEquals("Existing", origin.recordingName());
         assertEquals(100, recordings.lastStopRequest().recordingId());
         assertEquals("", viewModel.recordingStatusMessageProperty().get());
+    }
+
+    @Test
+    void stopAndSaveRecordingDoesNotDuplicateJfrExtension() {
+        FakeFlightRecordingService recordings = new FakeFlightRecordingService();
+        FakeJmxConnectionService jmx = new FakeJmxConnectionService();
+        JvmBrowserViewModel viewModel = viewModel(new FakeJvmDiscoveryService(), jmx, recordings);
+        viewModel.selectedConnectionProperty().set(connectedWithFlightRecorder(viewModel, jmx, recordings));
+        viewModel.selectedFlightRecordingProperty().set(viewModel.flightRecordingsProperty().getFirst());
+
+        viewModel.stopAndSaveSelectedFlightRecording(Path.of("target/live-capture.jfr.jfr"));
+
+        assertEquals(Path.of("target/live-capture.jfr"), recordings.lastStopRequest().destinationFile());
     }
 
     @Test

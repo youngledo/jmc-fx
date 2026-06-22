@@ -1,5 +1,6 @@
 package io.github.youngledo.jmcfx.ui.shell;
 
+import io.github.youngledo.jmcfx.ui.i18n.I18n;
 import javafx.collections.ListChangeListener;
 import javafx.scene.control.Tab;
 import javafx.scene.control.TabPane;
@@ -8,11 +9,13 @@ final class WorkspaceTabsController {
 
     private final TabPane tabs;
     private final AppShellViewModel viewModel;
+    private final I18n i18n;
     private boolean updatingTabs;
 
-    WorkspaceTabsController(TabPane tabs, AppShellViewModel viewModel) {
+    WorkspaceTabsController(TabPane tabs, AppShellViewModel viewModel, I18n i18n) {
         this.tabs = tabs;
         this.viewModel = viewModel;
+        this.i18n = i18n;
     }
 
     void configure() {
@@ -25,12 +28,14 @@ final class WorkspaceTabsController {
                 case RecordingWorkspace workspace -> viewModel.selectWorkspace(workspace);
                 case HeapDumpWorkspace workspace -> viewModel.selectHeapDumpWorkspace(workspace);
                 case LiveJvmWorkspace ignored -> viewModel.selectLiveJvmWorkspace();
+                case GlobalWorkspaceTab tab -> viewModel.selectWorkspaceTab(tab);
                 default -> {
                 }
             }
         });
         viewModel.workspaceTabsProperty().addListener((ListChangeListener<Object>) change -> rebuild());
         viewModel.selectedWorkspaceTabProperty().addListener((observable, oldValue, newValue) -> select(newValue));
+        i18n.localeProperty().addListener((observable, oldValue, newValue) -> rebuild());
         rebuild();
     }
 
@@ -76,8 +81,17 @@ final class WorkspaceTabsController {
             case RecordingWorkspace recordingWorkspace -> toRecordingTab(recordingWorkspace);
             case HeapDumpWorkspace heapDumpWorkspace -> toHeapDumpTab(heapDumpWorkspace);
             case LiveJvmWorkspace liveJvmWorkspace -> toLiveJvmTab(liveJvmWorkspace);
+            case GlobalWorkspaceTab globalWorkspaceTab -> toGlobalTab(globalWorkspaceTab);
             default -> throw new IllegalArgumentException("Unsupported workspace tab: " + workspace);
         };
+    }
+
+    private Tab toGlobalTab(GlobalWorkspaceTab tabModel) {
+        Tab tab = new Tab(tabTitleFor(tabModel, i18n));
+        tab.setUserData(tabModel);
+        tab.setClosable(true);
+        tab.setOnClosed(event -> viewModel.closeGlobalTab(tabModel));
+        return tab;
     }
 
     private Tab toRecordingTab(RecordingWorkspace workspace) {
@@ -114,6 +128,10 @@ final class WorkspaceTabsController {
 
     static String tabTitleFor(LiveJvmWorkspace workspace) {
         return workspace.name();
+    }
+
+    static String tabTitleFor(GlobalWorkspaceTab tab, I18n i18n) {
+        return i18n.get(tab.titleKey());
     }
 
     static boolean shouldShowRecordingTabs(int workspaceCount) {

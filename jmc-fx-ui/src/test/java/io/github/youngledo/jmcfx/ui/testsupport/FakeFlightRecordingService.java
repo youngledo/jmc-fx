@@ -39,6 +39,12 @@ public class FakeFlightRecordingService implements FlightRecordingService {
         recordingsByConnectionId.computeIfAbsent(connectionId, ignored -> new ArrayList<>()).add(recording);
     }
 
+    public void replaceRecording(String connectionId, FlightRecordingInfo recording) {
+        recordingsByConnectionId.computeIfPresent(connectionId, (ignored, recordings) -> recordings.stream()
+                .map(existing -> existing.id() == recording.id() ? recording : existing)
+                .toList());
+    }
+
     public void failWith(RuntimeException failure) {
         this.failure = failure;
     }

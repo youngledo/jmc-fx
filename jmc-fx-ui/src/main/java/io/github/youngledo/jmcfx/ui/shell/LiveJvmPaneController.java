@@ -1698,7 +1698,11 @@ public final class LiveJvmPaneController {
     }
 
     private void refreshLiveJvmOverviewCharts() {
-        if (jvmBrowserViewModel == null || jvmBrowserViewModel.overviewLoadingProperty().get()) {
+        if (jvmBrowserViewModel == null) {
+            return;
+        }
+        jvmBrowserViewModel.refreshRunningFlightRecordingDurations();
+        if (jvmBrowserViewModel.overviewLoadingProperty().get()) {
             return;
         }
         jvmBrowserViewModel.refreshOverview();

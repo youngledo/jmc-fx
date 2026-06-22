@@ -18,6 +18,7 @@ import io.github.youngledo.jmcfx.application.BrowseEventsUseCase;
 import io.github.youngledo.jmcfx.application.DiagnosticFindingsUseCase;
 import io.github.youngledo.jmcfx.domain.model.RecordingSummary;
 import io.github.youngledo.jmcfx.ui.events.EventBrowserViewModel;
+import io.github.youngledo.jmcfx.ui.i18n.I18n;
 import io.github.youngledo.jmcfx.ui.overview.OverviewViewModel;
 import io.github.youngledo.jmcfx.ui.rules.RuleResultsViewModel;
 
@@ -39,36 +40,72 @@ class WorkspaceTabsControllerTest {
     }
 
     @Test
-    void globalPagesClearTabSelectionButKeepLiveJvmTabSelectable() {
+    void globalPagesOpenTheirOwnTabsAndKeepLiveJvmTabSelectable() {
         AppShellViewModel viewModel = new AppShellViewModel();
         TabPane tabs = new TabPane();
-        WorkspaceTabsController controller = new WorkspaceTabsController(tabs, viewModel);
+        WorkspaceTabsController controller = new WorkspaceTabsController(tabs, viewModel, new I18n(java.util.Locale.ENGLISH));
         controller.configure();
 
         viewModel.openLiveJvmWorkspace();
         LiveJvmWorkspace workspace = viewModel.liveJvmWorkspaceProperty().get();
-        Tab liveJvmTab = tabs.getTabs().getFirst();
+        Tab liveJvmTab = tabFor(tabs, workspace);
 
         assertSame(workspace, liveJvmTab.getUserData());
         assertEquals(liveJvmTab, tabs.getSelectionModel().getSelectedItem());
 
         viewModel.showSection("home");
 
-        assertNull(viewModel.selectedLiveJvmWorkspaceProperty().get());
-        assertNull(tabs.getSelectionModel().getSelectedItem());
-        assertEquals(1, tabs.getTabs().size());
+        assertSame(workspace, viewModel.selectedLiveJvmWorkspaceProperty().get());
+        assertSame(GlobalWorkspaceTab.HOME, viewModel.selectedWorkspaceTabProperty().get());
+        assertSame(GlobalWorkspaceTab.HOME, tabs.getSelectionModel().getSelectedItem().getUserData());
+        assertEquals(2, tabs.getTabs().size());
 
+        liveJvmTab = tabFor(tabs, workspace);
         tabs.getSelectionModel().select(liveJvmTab);
 
-        assertSame(workspace, viewModel.selectedLiveJvmWorkspaceProperty().get());
         assertEquals("jvms", viewModel.selectedSectionProperty().get());
+        assertSame(workspace, viewModel.selectedWorkspaceTabProperty().get());
+        assertSame(liveJvmTab, tabs.getSelectionModel().getSelectedItem());
+    }
+
+    @Test
+    void globalPagesReuseTheirExistingTabs() {
+        AppShellViewModel viewModel = new AppShellViewModel();
+        TabPane tabs = new TabPane();
+        WorkspaceTabsController controller = new WorkspaceTabsController(tabs, viewModel, new I18n(java.util.Locale.ENGLISH));
+        controller.configure();
+
+        viewModel.openLiveJvmWorkspace();
+        LiveJvmWorkspace workspace = viewModel.liveJvmWorkspaceProperty().get();
+
+        viewModel.showSection("home");
+
+        assertEquals(2, tabs.getTabs().size());
+        assertEquals(true, tabs.isVisible());
+        assertEquals(true, tabs.isManaged());
+        assertSame(GlobalWorkspaceTab.HOME, viewModel.selectedWorkspaceTabProperty().get());
+        assertSame(GlobalWorkspaceTab.HOME, tabs.getSelectionModel().getSelectedItem().getUserData());
+        assertSame(workspace, viewModel.selectedLiveJvmWorkspaceProperty().get());
+
+        viewModel.showSection("settings");
+
+        assertEquals(3, tabs.getTabs().size());
+        assertSame(GlobalWorkspaceTab.SETTINGS, viewModel.selectedWorkspaceTabProperty().get());
+        assertSame(GlobalWorkspaceTab.SETTINGS, tabs.getSelectionModel().getSelectedItem().getUserData());
+        assertSame(workspace, viewModel.selectedLiveJvmWorkspaceProperty().get());
+
+        viewModel.showSection("home");
+
+        assertEquals(3, tabs.getTabs().size());
+        assertSame(GlobalWorkspaceTab.HOME, viewModel.selectedWorkspaceTabProperty().get());
+        assertSame(GlobalWorkspaceTab.HOME, tabs.getSelectionModel().getSelectedItem().getUserData());
     }
 
     @Test
     void openingHeapDumpAfterRecordingAndJvmKeepsHeapDumpTabFocused() {
         AppShellViewModel viewModel = new AppShellViewModel();
         TabPane tabs = new TabPane();
-        WorkspaceTabsController controller = new WorkspaceTabsController(tabs, viewModel);
+        WorkspaceTabsController controller = new WorkspaceTabsController(tabs, viewModel, new I18n(java.util.Locale.ENGLISH));
         controller.configure();
         RecordingWorkspace recording = openRecording(viewModel, "demo.jfr");
         viewModel.openLiveJvmWorkspace();
@@ -89,7 +126,7 @@ class WorkspaceTabsControllerTest {
     void selectingRecordingTabAfterMixedWorkspaceOpensKeepsWorkspaceTabsVisible() {
         AppShellViewModel viewModel = new AppShellViewModel();
         TabPane tabs = new TabPane();
-        WorkspaceTabsController controller = new WorkspaceTabsController(tabs, viewModel);
+        WorkspaceTabsController controller = new WorkspaceTabsController(tabs, viewModel, new I18n(java.util.Locale.ENGLISH));
         controller.configure();
         RecordingWorkspace recording = openRecording(viewModel, "demo.jfr");
         viewModel.openLiveJvmWorkspace();
@@ -115,7 +152,7 @@ class WorkspaceTabsControllerTest {
     void selectingLiveJvmAfterJfrAndHeapDumpClearsPreviousTabSelectionFirst() {
         AppShellViewModel viewModel = new AppShellViewModel();
         TabPane tabs = new TabPane();
-        WorkspaceTabsController controller = new WorkspaceTabsController(tabs, viewModel);
+        WorkspaceTabsController controller = new WorkspaceTabsController(tabs, viewModel, new I18n(java.util.Locale.ENGLISH));
         controller.configure();
         RecordingWorkspace recording = openRecording(viewModel, "app.jfr");
         HeapDumpWorkspace heapDump = new HeapDumpWorkspace(Path.of("jmc-fx.hprof"), null);
@@ -148,5 +185,12 @@ class WorkspaceTabsControllerTest {
                 new OverviewViewModel(),
                 new EventBrowserViewModel(BrowseEventsUseCase.unavailable()),
                 new RuleResultsViewModel(AnalyzeRulesUseCase.empty(), new DiagnosticFindingsUseCase()));
+    }
+
+    private static Tab tabFor(TabPane tabs, Object userData) {
+        return tabs.getTabs().stream()
+                .filter(tab -> tab.getUserData() == userData)
+                .findFirst()
+                .orElseThrow();
     }
 }

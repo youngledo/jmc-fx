@@ -72,7 +72,7 @@ final class ShellRuntimeController {
                 recordingUseCases.aiSettings());
         settingsPaneController.configure();
         pageControllerRegistry.configure();
-        workspaceTabsController = new WorkspaceTabsController(view.recordingTabs, viewModel);
+        workspaceTabsController = new WorkspaceTabsController(view.recordingTabs, viewModel, i18n);
         workspaceTabsController.configure();
         exportMenuInstaller = new ExportMenuInstaller(view.root, viewModel, i18n);
         heapDumpWorkspaceController.configure();

@@ -651,7 +651,7 @@ public class AppShellViewModel {
         selectWorkspaceTab(workspaceTabs.get(nextIndex));
     }
 
-    private void selectWorkspaceTab(Object workspace) {
+    void selectWorkspaceTab(Object workspace) {
         if (workspace instanceof RecordingWorkspace recordingWorkspace) {
             selectWorkspace(recordingWorkspace);
             return;
@@ -662,6 +662,10 @@ public class AppShellViewModel {
         }
         if (workspace instanceof LiveJvmWorkspace) {
             selectLiveJvmWorkspace();
+            return;
+        }
+        if (workspace instanceof GlobalWorkspaceTab globalTab) {
+            selectGlobalTab(globalTab);
         }
     }
 
@@ -674,13 +678,38 @@ public class AppShellViewModel {
     }
 
     private void showGlobalPage(String sectionId) {
-        if (activeWorkspaceKind.get() == AppWorkspaceKind.LIVE_JVM) {
-            clearSelectedWorkspacesExcept(AppWorkspaceKind.GLOBAL);
-            selectedWorkspaceTab.set(null);
+        GlobalWorkspaceTab tab = GlobalWorkspaceTab.forSection(sectionId);
+        if (!workspaceTabs.contains(tab)) {
+            workspaceTabs.add(tab);
+        }
+        selectGlobalTab(tab);
+    }
+
+    void closeGlobalTab(GlobalWorkspaceTab tab) {
+        if (tab == null || !workspaceTabs.contains(tab)) {
+            return;
+        }
+        boolean active = tab.equals(selectedWorkspaceTab.get());
+        int closedIndex = workspaceTabs.indexOf(tab);
+        workspaceTabs.remove(tab);
+        if (!active) {
+            return;
+        }
+        selectNeighborAfterClosing(closedIndex);
+    }
+
+    private void selectGlobalTab(GlobalWorkspaceTab tab) {
+        if (tab == null || !workspaceTabs.contains(tab)) {
+            return;
+        }
+        selectedWorkspaceTab.set(tab);
+        selectedSection.set(tab.sectionId());
+        if (selectedWorkspace.get() == null
+                && selectedHeapDumpWorkspace.get() == null
+                && selectedLiveJvmWorkspace.get() == null) {
             activeWorkspaceKind.set(AppWorkspaceKind.GLOBAL);
             currentTargetName.set("");
         }
-        selectedSection.set(sectionId);
     }
 
     private void clearSelectedWorkspacesExcept(AppWorkspaceKind workspaceKind) {

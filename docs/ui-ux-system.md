@@ -42,13 +42,16 @@ Navigation rules:
 - Left navigation is the durable map of workflows.
 - Home owns start actions such as opening JFR, opening HPROF, and connecting
   JVMs. These actions are not persistent left-navigation items.
-- Workspace tabs represent opened or connected targets. Home is a global page,
-  not a workspace tab.
+- Workspace tabs represent opened global pages and opened or connected targets.
+  Home and Settings use global page tabs when opened from the sidebar, so they
+  do not visually overwrite the selected state of JFR, HPROF, or live JVM tabs.
 - Left navigation must always include a `GLOBAL` group containing Home and
   Settings, followed by the active workspace group when a JFR, HPROF, or live
   JVM workspace is selected.
 - Home and Settings do not close or clear active workspaces. Selecting an
   existing workspace tab restores that workspace's typed navigation context.
+  Selecting an existing global tab restores its global page without duplicating
+  the tab.
 - JFR workspaces show JFR recording workflows; HPROF workspaces show heap dump
   workflows; live JVM workspaces show live JVM workflows.
 - If a workspace tab already represents the active target, the left navigation

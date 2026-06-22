@@ -190,6 +190,80 @@ class AppShellTest {
     }
 
     @Test
+    void shellRuntimeOpensGlobalTabsWithoutHidingLiveJvmTab() throws Exception {
+        ShellHarness shell = createShellHarness();
+        try {
+            runFx(shell.viewModel::openLiveJvmWorkspace);
+            runFx(() -> {
+                assertEquals("JVM", selectedWorkspaceTabTitle(shell.view));
+                assertTrue(shell.view.workspacePanes.jvmsPaneHost.isVisible(), "JVM pane must be visible after opening");
+            });
+
+            runFx(() -> shell.viewModel.showSection("home"));
+
+            runFx(() -> {
+                assertEquals("Home", selectedWorkspaceTabTitle(shell.view));
+                assertEquals(2, shell.view.recordingTabs.getTabs().size());
+                assertTrue(shell.view.recordingTabs.isVisible(), "JVM tab must remain visible on Home");
+                assertTrue(shell.view.workspacePanes.homePane.isVisible(), "Home pane must be visible");
+                assertFalse(shell.view.workspacePanes.jvmsPaneHost.isVisible(), "JVM pane must hide while Home is active");
+            });
+
+            runFx(() -> shell.view.recordingTabs.getSelectionModel().select(tabIndexFor(shell.view, "JVM")));
+
+            runFx(() -> {
+                assertEquals("JVM", selectedWorkspaceTabTitle(shell.view));
+                assertEquals("jvms", shell.viewModel.selectedSectionProperty().get());
+                assertTrue(shell.view.workspacePanes.jvmsPaneHost.isVisible(),
+                        "Selecting the existing JVM tab must restore the JVM pane");
+                assertFalse(shell.view.workspacePanes.homePane.isVisible(), "Home pane must hide after restoring JVM");
+            });
+        } finally {
+            shell.close();
+        }
+    }
+
+    @Test
+    void shellStageSelectsGlobalTabVisuallyOnGlobalPage() throws Exception {
+        ShellHarness shell = createShellHarness();
+
+        runFx(() -> {
+            Stage stage = new Stage();
+            stage.setScene(new Scene(shell.view.root, 1100, 760));
+            stage.show();
+            shell.stage = stage;
+        });
+        try {
+            runFx(shell.viewModel::openLiveJvmWorkspace);
+            runFx(() -> shell.viewModel.showSection("home"));
+
+            runFx(() -> {
+                shell.view.root.applyCss();
+                shell.view.root.layout();
+
+                java.util.List<Node> selectedTabNodes = shell.view.recordingTabs.lookupAll(".tab").stream()
+                        .filter(node -> node.getStyleClass().contains("tab"))
+                        .filter(node -> node.getPseudoClassStates().stream()
+                                .anyMatch(pseudoClass -> "selected".equals(pseudoClass.getPseudoClassName())))
+                        .toList();
+
+                assertEquals(2, shell.view.recordingTabs.getTabs().size());
+                assertEquals("Home", selectedWorkspaceTabTitle(shell.view));
+                assertTrue(shell.view.recordingTabs.isVisible(), "Global and JVM tabs must remain visible on Home");
+                assertEquals(1, selectedTabNodes.size(),
+                        "Only the selected global tab should render as visually selected");
+            });
+        } finally {
+            runFx(() -> {
+                if (shell.stage != null) {
+                    shell.stage.close();
+                }
+            });
+            shell.close();
+        }
+    }
+
+    @Test
     void shellStageKeepsOnlyCurrentWorkspaceTabVisuallySelectedAcrossJfrHeapDumpAndJvm() throws Exception {
         ShellHarness shell = createShellHarness();
 
@@ -552,7 +626,7 @@ class AppShellTest {
                 java.nio.file.Path.of("src/main/java/io/github/youngledo/jmcfx/ui/shell/WorkspaceTabsController.java"));
 
         assertTrue(runtime.contains("private WorkspaceTabsController workspaceTabsController;"));
-        assertTrue(runtime.contains("workspaceTabsController = new WorkspaceTabsController(view.recordingTabs, viewModel);"));
+        assertTrue(runtime.contains("workspaceTabsController = new WorkspaceTabsController(view.recordingTabs, viewModel, i18n);"));
         assertFalse(shell.contains("private boolean updatingRecordingTabs;"));
         assertFalse(shell.contains("private TabPane recordingTabs;"));
         assertFalse(shell.contains("private void configureRecordingTabs("));
@@ -4172,6 +4246,15 @@ void settingsPageContainsThemeSelectorNextToLanguageSelector() {
     private static String selectedWorkspaceTabTitle(AppShellView view) {
         javafx.scene.control.Tab selected = view.recordingTabs.getSelectionModel().getSelectedItem();
         return selected == null ? "" : selected.getText();
+    }
+
+    private static int tabIndexFor(AppShellView view, String title) {
+        for (int index = 0; index < view.recordingTabs.getTabs().size(); index++) {
+            if (title.equals(view.recordingTabs.getTabs().get(index).getText())) {
+                return index;
+            }
+        }
+        throw new AssertionError("No workspace tab titled " + title);
     }
 
     private static RecordingApplicationServices recordingServices() {
