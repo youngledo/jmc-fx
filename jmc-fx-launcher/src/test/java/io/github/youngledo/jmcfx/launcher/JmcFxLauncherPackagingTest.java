@@ -96,10 +96,13 @@ class JmcFxLauncherPackagingTest {
                 childText(execution, "configuration", "appImageDirectory"));
         assertEquals("${project.build.directory}/jpackage-leyden",
                 childText(execution, "configuration", "packageDirectory"));
+        assertEquals("${project.basedir}/src/main/jpackage",
+                childText(execution, "configuration", "resourceDir"));
         assertConfiguredModules(packagerPlugin,
                 "java.desktop",
                 "java.management",
                 "java.naming",
+                "java.net.http",
                 "java.rmi",
                 "java.sql",
                 "jdk.attach",
@@ -112,6 +115,27 @@ class JmcFxLauncherPackagingTest {
         var pomText = java.nio.file.Files.readString(Path.of("pom.xml"));
         assertFalse(pomText.contains("measure-macos-app-startup"),
                 "formal Leyden packaging must not depend on measurement shell scripts");
+    }
+
+    @Test
+    void launcherPackagesUseProjectSpecificIcons() throws Exception {
+        assertTrue(java.nio.file.Files.isRegularFile(Path.of("src/main/jpackage/JMC FX.icns")),
+                "macOS jpackage resource override should provide the JMC FX application icon");
+        assertTrue(java.nio.file.Files.isRegularFile(Path.of("src/main/jpackage/JMC FX-volume.icns")),
+                "macOS DMG volume icon should not fall back to the default Java package icon");
+        assertTrue(java.nio.file.Files.isRegularFile(Path.of("src/main/jpackage/JMC FX.png")),
+                "shared icon source should be available for Linux and release metadata");
+        assertTrue(java.nio.file.Files.isRegularFile(Path.of("src/main/jpackage/jmc-fx-icon.svg")),
+                "vector source should be kept with generated application icons");
+        assertTrue(java.nio.file.Files.isRegularFile(Path.of("src/main/resources/icons/jmc-fx-icon.png")),
+                "launcher runtime icon should be available on the application classpath");
+
+        var launcherSource = java.nio.file.Files.readString(
+                Path.of("src/main/java/io/github/youngledo/jmcfx/launcher/JmcFxLauncher.java"));
+        assertTrue(launcherSource.contains("\"/icons/jmc-fx-icon.png\""),
+                "JavaFX stage icon should use the project-specific icon resource");
+        assertTrue(launcherSource.contains("stage.getIcons().add"),
+                "ordinary JavaFX launches should not fall back to the default JavaFX window icon");
     }
 
     @Test

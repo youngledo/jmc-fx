@@ -99,6 +99,7 @@
                                         <runtimeModule>java.desktop</runtimeModule>
                                         <runtimeModule>java.management</runtimeModule>
                                         <runtimeModule>java.naming</runtimeModule>
+                                        <runtimeModule>java.net.http</runtimeModule>
                                         <runtimeModule>java.rmi</runtimeModule>
                                         <runtimeModule>java.sql</runtimeModule>
                                         <runtimeModule>jdk.attach</runtimeModule>
@@ -116,6 +117,7 @@
                                     <runtimeDirectory>${project.build.directory}/jpackage-leyden-runtime</runtimeDirectory>
                                     <appImageDirectory>${project.build.directory}/jpackage-leyden-app-image</appImageDirectory>
                                     <packageDirectory>${project.build.directory}/jpackage-leyden</packageDirectory>
+                                    <resourceDir>${project.basedir}/src/main/jpackage</resourceDir>
                                     <macPackageIdentifier>io.github.youngledo.jmcfx</macPackageIdentifier>
                                     <macPackageName>JMC FX</macPackageName>
                                     <linuxPackageName>jmc-fx</linuxPackageName>

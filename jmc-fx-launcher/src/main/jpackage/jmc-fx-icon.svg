@@ -1,0 +1,49 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1024 1024" role="img" aria-labelledby="title desc">
+  <title id="title">JMC FX application icon</title>
+  <desc id="desc">A JVM diagnostics workbench mark with a dark rounded square, cyan pulse line, and amber flame graph ridge.</desc>
+  <defs>
+    <linearGradient id="bg" x1="160" y1="96" x2="864" y2="928" gradientUnits="userSpaceOnUse">
+      <stop offset="0" stop-color="#18242b"/>
+      <stop offset="0.52" stop-color="#111820"/>
+      <stop offset="1" stop-color="#28311f"/>
+    </linearGradient>
+    <linearGradient id="rim" x1="214" y1="176" x2="806" y2="838" gradientUnits="userSpaceOnUse">
+      <stop offset="0" stop-color="#72f2dc"/>
+      <stop offset="0.48" stop-color="#38bdf8"/>
+      <stop offset="1" stop-color="#f4b63f"/>
+    </linearGradient>
+    <linearGradient id="flame" x1="244" y1="704" x2="826" y2="464" gradientUnits="userSpaceOnUse">
+      <stop offset="0" stop-color="#f5c95b"/>
+      <stop offset="0.48" stop-color="#f59e38"/>
+      <stop offset="1" stop-color="#e85d3f"/>
+    </linearGradient>
+    <linearGradient id="pulse" x1="196" y1="416" x2="824" y2="416" gradientUnits="userSpaceOnUse">
+      <stop offset="0" stop-color="#65f5d5"/>
+      <stop offset="0.5" stop-color="#47c7ff"/>
+      <stop offset="1" stop-color="#8df4e8"/>
+    </linearGradient>
+    <filter id="shadow" x="-20%" y="-20%" width="140%" height="140%">
+      <feDropShadow dx="0" dy="18" stdDeviation="26" flood-color="#000000" flood-opacity="0.38"/>
+    </filter>
+  </defs>
+
+  <rect x="64" y="64" width="896" height="896" rx="214" fill="url(#bg)"/>
+  <path d="M256 174h512c45 0 82 37 82 82v512c0 45-37 82-82 82H256c-45 0-82-37-82-82V256c0-45 37-82 82-82z"
+        fill="none" stroke="url(#rim)" stroke-width="32" opacity="0.52"/>
+  <path d="M310 254h404c30 0 56 25 56 56v402c0 31-26 56-56 56H310c-31 0-56-25-56-56V310c0-31 25-56 56-56z"
+        fill="#0f151c" opacity="0.72"/>
+
+  <g filter="url(#shadow)">
+    <path d="M224 586h80v154h-80zM326 524h80v216h-80zM428 458h80v282h-80zM530 488h80v252h-80zM632 384h80v356h-80zM734 452h80v288h-80z"
+          fill="url(#flame)"/>
+    <path d="M224 586h80v154h-80zM326 524h80v216h-80zM428 458h80v282h-80zM530 488h80v252h-80zM632 384h80v356h-80zM734 452h80v288h-80z"
+          fill="none" stroke="#fff1bb" stroke-width="10" stroke-opacity="0.18"/>
+  </g>
+
+  <path d="M190 418h154l42-84 72 168 76-238 66 154h234"
+        fill="none" stroke="#081018" stroke-width="50" stroke-linecap="round" stroke-linejoin="round" opacity="0.72"/>
+  <path d="M190 418h154l42-84 72 168 76-238 66 154h234"
+        fill="none" stroke="url(#pulse)" stroke-width="28" stroke-linecap="round" stroke-linejoin="round"/>
+  <circle cx="534" cy="264" r="25" fill="#d7fff8"/>
+  <circle cx="534" cy="264" r="48" fill="none" stroke="#50e7d3" stroke-width="12" opacity="0.32"/>
+</svg>

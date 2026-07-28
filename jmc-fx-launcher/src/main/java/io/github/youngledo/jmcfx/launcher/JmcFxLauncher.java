@@ -10,6 +10,7 @@ import io.github.youngledo.jmcfx.ui.shell.AppShellFactoryDependencies;
 import javafx.application.Application;
 import javafx.application.Platform;
 import javafx.scene.Scene;
+import javafx.scene.image.Image;
 import javafx.stage.Stage;
 
 import org.apache.logging.log4j.LogManager;
@@ -22,6 +23,7 @@ import org.apache.logging.log4j.Logger;
 public class JmcFxLauncher extends Application {
 
     private static final String LEYDEN_TRAINING_PROPERTY = "jmcfx.leyden.training";
+    private static final String APPLICATION_ICON = "/icons/jmc-fx-icon.png";
     private static final Logger LOGGER = LogManager.getLogger(JmcFxLauncher.class);
 
     private AppShell shell;
@@ -41,6 +43,7 @@ public class JmcFxLauncher extends Application {
         Scene scene = new Scene(shell.root(), 1280, 800);
         scene.getStylesheets().add(AppShell.class.getResource("/css/app.css").toExternalForm());
         stage.titleProperty().bind(shell.titleBinding());
+        stage.getIcons().add(new Image(JmcFxLauncher.class.getResource(APPLICATION_ICON).toExternalForm()));
         stage.setScene(scene);
         stage.show();
         if (Boolean.getBoolean(LEYDEN_TRAINING_PROPERTY)) {
